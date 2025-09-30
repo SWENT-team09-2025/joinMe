@@ -29,11 +29,12 @@ jobs:
         run: ./gradlew build test --parallel --build-cache
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5.0.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_PROJECT_KEY: SWENT-team09-2025_joinMe
-          SONAR_ORGANIZATION: swent-team09-2025
+        with:
+          args: >
+            -Dsonar.projectKey=SWENT-team09-2025_joinMe
+            -Dsonar.organization=swent-team09-2025
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
 
 
 
