@@ -1,4 +1,4 @@
-package com.android.sample
+package com.android.joinme
 
 import kotlin.math.sqrt
 
