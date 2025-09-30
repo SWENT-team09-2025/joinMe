@@ -1,4 +1,4 @@
-package com.android.sample
+package com.android.joinme
 
 import org.junit.Assert.*
 import org.junit.Test

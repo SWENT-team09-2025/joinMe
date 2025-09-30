@@ -1,7 +1,7 @@
-package com.android.sample.screen
+package com.android.joinme.screen
 
 import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
-import com.android.sample.resources.C
+import com.android.joinme.resources.C
 import io.github.kakaocup.compose.node.element.ComposeScreen
 import io.github.kakaocup.compose.node.element.KNode
 

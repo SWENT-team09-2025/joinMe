@@ -1,4 +1,4 @@
-package com.android.sample
+package com.android.joinme
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -12,8 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.tooling.preview.Preview
-import com.android.sample.resources.C
-import com.android.sample.ui.theme.SampleAppTheme
+import com.android.joinme.resources.C
+import com.android.joinme.ui.theme.SampleAppTheme
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
