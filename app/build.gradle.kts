@@ -98,34 +98,17 @@ sonar {
         property("sonar.organization", "swent-team09-2025")
         property("sonar.host.url", "https://sonarcloud.io")
 
-        // ✅ Only analyze main source files (production code)
-        property("sonar.sources", "src/main/java")
-
-        // ✅ Exclude tests and generated files from analysis
-        property("sonar.exclusions", "**/test/**, **/androidTest/**, **/generated/**")
-
-        // ✅ Tell Sonar where the tests are
-        property("sonar.tests", "src/test/java, src/androidTest/java")
-
-        // ✅ Unit test results
-        property(
-            "sonar.junit.reportPaths",
-            "${project.layout.buildDirectory.get()}/test-results/testDebugUnitTest/"
-        )
+        // ✅ Unit test results (JUnit XML)
+        property("sonar.junit.reportPaths", "app/build/test-results/testDebugUnitTest")
 
         // ✅ Android Lint report
-        property(
-            "sonar.androidLint.reportPaths",
-            "${project.layout.buildDirectory.get()}/reports/lint-results-debug.xml"
-        )
+        property("sonar.androidLint.reportPaths", "app/build/reports/lint-results-debug.xml")
 
-        // ✅ JaCoCo coverage report
-        property(
-            "sonar.coverage.jacoco.xmlReportPaths",
-            "${project.layout.buildDirectory.get()}/reports/jacoco/jacocoTestReport/jacocoTestReport.xml"
-        )
+        // ✅ JaCoCo XML coverage report
+        property("sonar.coverage.jacoco.xmlReportPaths", "app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
     }
 }
+
 
 // When a library is used both by robolectric and connected tests, use this function
 fun DependencyHandlerScope.globalTestImplementation(dep: Any) {
