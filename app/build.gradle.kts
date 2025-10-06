@@ -91,7 +91,7 @@ android {
     }
 }
 
-sonar {
+/*sonar {
     properties {
         property("sonar.projectKey", "SWENT-team09-2025_joinMe")
         property("sonar.projectName", "joinMe")
@@ -106,7 +106,7 @@ sonar {
         property("sonar.coverage.jacoco.xmlReportPaths", "${project.rootDir}/app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
         property("sonar.sourceEncoding", "UTF-8")
     }
-}
+}*/
 
 
 // When a library is used both by robolectric and connected tests, use this function
