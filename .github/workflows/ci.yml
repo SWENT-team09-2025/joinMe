@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ "*" ]        # toutes les branches
+    branches: [ "*" ]
   pull_request:
-    branches: [ "*" ]        # toutes les PR
+    branches: [ "*" ]
 
 jobs:
   build:
@@ -25,8 +25,15 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      - name: Build and run tests
-        run: ./gradlew build test --parallel --build-cache
+      # ✅ Run unit tests and generate JaCoCo XML report
+      - name: Run tests with coverage
+        run: ./gradlew testDebugUnitTest jacocoTestReport --parallel --build-cache
+
+      # ✅ Upload test results (optional but useful for debugging)
+      - name: List JaCoCo report
+        run: ls -R app/build/reports/jacoco/jacocoTestReport || echo "No report found"
+
+      # ✅ Run SonarCloud analysis *after* coverage generation
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         with:
@@ -35,6 +42,3 @@ jobs:
             -Dsonar.organization=swent-team09-2025
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.token=${{ secrets.SONAR_TOKEN }}
-
-
-
