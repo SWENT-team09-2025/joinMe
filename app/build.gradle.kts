@@ -103,7 +103,8 @@ sonar {
 
         property("sonar.junit.reportPaths", "app/build/test-results/testDebugUnitTest")
         property("sonar.androidLint.reportPaths", "app/build/reports/lint-results-debug.xml")
-        property("sonar.coverage.jacoco.xmlReportPaths", "app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
+        property("sonar.coverage.jacoco.xmlReportPaths", "${project.rootDir}/app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
+        property("sonar.sourceEncoding", "UTF-8")
     }
 }
 
