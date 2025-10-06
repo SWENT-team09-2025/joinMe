@@ -52,7 +52,7 @@ enum class EventVisibility {
  * @return A string representation of the EventType, formatted for display.
  */
 fun EventType.displayString(): String =
-    name.replace("_", " ").lowercase(Locale.ROOT).replaceFirstChar {
+    name.lowercase(Locale.ROOT).replaceFirstChar {
       if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
     }
 
@@ -62,6 +62,6 @@ fun EventType.displayString(): String =
  * @return A string representation of the EventVisibility, formatted for display.
  */
 fun EventVisibility.displayString(): String =
-    name.replace("_", " ").lowercase(Locale.ROOT).replaceFirstChar {
+    name.lowercase(Locale.ROOT).replaceFirstChar {
       if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
     }
