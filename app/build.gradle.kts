@@ -94,17 +94,15 @@ android {
 sonar {
     properties {
         property("sonar.projectKey", "SWENT-team09-2025_joinMe")
-        property("sonar.projectName", "JoinMe")
+        property("sonar.projectName", "joinMe")
         property("sonar.organization", "swent-team09-2025")
         property("sonar.host.url", "https://sonarcloud.io")
 
-        // ✅ Unit test results (JUnit XML)
+        property("sonar.sources", "src/main/java")
+        property("sonar.tests", "src/test/java")
+
         property("sonar.junit.reportPaths", "app/build/test-results/testDebugUnitTest")
-
-        // ✅ Android Lint report
         property("sonar.androidLint.reportPaths", "app/build/reports/lint-results-debug.xml")
-
-        // ✅ JaCoCo XML coverage report
         property("sonar.coverage.jacoco.xmlReportPaths", "app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
     }
 }
