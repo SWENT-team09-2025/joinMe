@@ -15,7 +15,6 @@ object EventsRepositoryProvider {
 
   private val localRepo: EventsRepository by lazy { EventsRepositoryLocal() }
 
-  // Function to get the right repository depending on online status
   fun getRepository(isOnline: Boolean): EventsRepository {
     return if (isOnline) firestoreRepo else localRepo
   }
