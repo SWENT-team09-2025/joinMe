@@ -39,7 +39,7 @@ jobs:
         with:
           api-level: 29
           arch: x86_64
-          script: ./gradlew createDebugAndroidTestCoverageReport
+          script: ./gradlew connectedDebugAndroidTest createDebugCoverageReport --continue
 
       # Upload test results (optional but useful for debugging)
       - name: List coverage reports

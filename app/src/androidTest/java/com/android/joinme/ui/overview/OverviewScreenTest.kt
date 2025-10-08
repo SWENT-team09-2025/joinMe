@@ -3,11 +3,57 @@ package com.android.joinme.ui.overview
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.*
+import com.android.joinme.model.map.Location
+import com.android.joinme.ui.navigation.NavigationTestTags
 import com.google.firebase.Timestamp
 import java.util.*
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
+
+/** Mock repository that throws errors for testing error handling */
+class EventsRepositoryMock(private val shouldThrowError: Boolean = false) : EventsRepository {
+  private val events: MutableList<Event> = mutableListOf()
+  private var counter = 0
+
+  override fun getNewEventId(): String = (counter++).toString()
+
+  override suspend fun getAllEvents(): List<Event> {
+    if (shouldThrowError) {
+      throw Exception("Network error: Failed to fetch events")
+    }
+    return events
+  }
+
+  override suspend fun getEvent(eventId: String): Event {
+    if (shouldThrowError) {
+      throw Exception("Network error")
+    }
+    return events.find { it.eventId == eventId } ?: throw Exception("Event not found")
+  }
+
+  override suspend fun addEvent(event: Event) {
+    events.add(event)
+  }
+
+  override suspend fun editEvent(eventId: String, newValue: Event) {
+    val index = events.indexOfFirst { it.eventId == eventId }
+    if (index != -1) {
+      events[index] = newValue
+    } else {
+      throw Exception("Event not found")
+    }
+  }
+
+  override suspend fun deleteEvent(eventId: String) {
+    val index = events.indexOfFirst { it.eventId == eventId }
+    if (index != -1) {
+      events.removeAt(index)
+    } else {
+      throw Exception("Event not found")
+    }
+  }
+}
 
 class OverviewScreenTest {
 
@@ -144,5 +190,244 @@ class OverviewScreenTest {
     composeTestRule.onNodeWithText("Test Event").performClick()
 
     assert(clicked)
+  }
+
+  @Test
+  fun eventCard_displaysSportsEventType() {
+    val sportsEvent = createEvent("1", "Basketball", EventType.SPORTS)
+
+    composeTestRule.setContent { EventCard(event = sportsEvent, onClick = {}) }
+    composeTestRule.onNodeWithText("Basketball").assertExists()
+  }
+
+  @Test
+  fun eventCard_displaysActivityEventType() {
+    val activityEvent = createEvent("2", "Hiking", EventType.ACTIVITY)
+
+    composeTestRule.setContent { EventCard(event = activityEvent, onClick = {}) }
+    composeTestRule.onNodeWithText("Hiking").assertExists()
+  }
+
+  @Test
+  fun eventCard_displaysSocialEventType() {
+    val socialEvent = createEvent("3", "Party", EventType.SOCIAL)
+
+    composeTestRule.setContent { EventCard(event = socialEvent, onClick = {}) }
+    composeTestRule.onNodeWithText("Party").assertExists()
+  }
+
+  @Test
+  fun eventCard_displaysActualLocation() {
+    val location = Location(latitude = 46.5197, longitude = 6.6323, name = "EPFL")
+    val event =
+        Event(
+            eventId = "1",
+            type = EventType.SPORTS,
+            title = "Football",
+            description = "desc",
+            location = location,
+            date = Timestamp(Date()),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    composeTestRule.setContent { EventCard(event = event, onClick = {}) }
+
+    composeTestRule.onNodeWithText("Place : EPFL").assertExists()
+  }
+
+  @Test
+  fun eventCard_displaysUnknownForNullLocation() {
+    val event = createEvent("1", "Basketball", EventType.SPORTS)
+
+    composeTestRule.setContent { EventCard(event = event, onClick = {}) }
+
+    composeTestRule.onNodeWithText("Place : Unknown").assertExists()
+  }
+
+  @Test
+  fun eventCard_formatsDateCorrectly() {
+    val calendar = Calendar.getInstance()
+    calendar.set(2025, Calendar.JANUARY, 15, 14, 30, 0)
+    val timestamp = Timestamp(calendar.time)
+
+    val event =
+        Event(
+            eventId = "1",
+            type = EventType.SPORTS,
+            title = "Test Event",
+            description = "desc",
+            location = null,
+            date = timestamp,
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    composeTestRule.setContent { EventCard(event = event, onClick = {}) }
+
+    composeTestRule.onNodeWithText("15/01/2025").assertExists()
+    composeTestRule.onNodeWithText("14h30").assertExists()
+  }
+
+  @Test
+  fun overviewScreen_displaysMultipleEvents() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    // Add 5 events
+    runBlocking {
+      for (i in 1..5) {
+        repo.addEvent(createEvent("$i", "Event $i", EventType.SPORTS))
+      }
+    }
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify all events are displayed
+    for (i in 1..5) {
+      composeTestRule
+          .onNodeWithTag(
+              OverviewScreenTestTags.getTestTagForEventItem(
+                  createEvent("$i", "Event $i", EventType.SPORTS)))
+          .assertExists()
+    }
+  }
+
+  @Test
+  fun overviewScreen_displaysCreateEventButton() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
+  }
+
+  @Test
+  fun overviewScreen_handlesErrorWhenFetchingEvents() {
+    val repo = EventsRepositoryMock(shouldThrowError = true)
+    val viewModel = OverviewViewModel(repo)
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    // Wait for error to be processed
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // The screen should show empty state since error occurred
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG).assertExists()
+
+    // Error should have been cleared from UI state
+    assert(viewModel.uiState.value.errorMsg == null)
+  }
+
+  @Test
+  fun overviewScreen_bottomNavigationDisplayed() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+
+    // Verify bottom navigation is displayed
+    composeTestRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertExists()
+
+    // Verify overview tab is selected
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("overview")).assertExists()
+  }
+
+  @Test
+  fun viewModel_clearErrorMsg_removesError() {
+    val repo = EventsRepositoryMock(shouldThrowError = true)
+    val viewModel = OverviewViewModel(repo)
+
+    // Trigger error
+    viewModel.refreshUIState()
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Error should be set
+    assert(viewModel.uiState.value.errorMsg != null)
+
+    // Clear error
+    viewModel.clearErrorMsg()
+
+    // Error should be cleared
+    assert(viewModel.uiState.value.errorMsg == null)
+  }
+
+  @Test
+  fun viewModel_refreshUIState_updatesEvents() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    // Initially empty
+    assert(viewModel.uiState.value.events.isEmpty())
+
+    // Add event and refresh
+    runBlocking { repo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
+    viewModel.refreshUIState()
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Events should be updated
+    assert(viewModel.uiState.value.events.size == 1)
+    assert(viewModel.uiState.value.events[0].title == "Basketball")
+  }
+
+  @Test
+  fun viewModel_setsErrorMessage_whenRepositoryFails() {
+    val repo = EventsRepositoryMock(shouldThrowError = true)
+    val viewModel = OverviewViewModel(repo)
+
+    // Trigger refresh
+    viewModel.refreshUIState()
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Error message should be set
+    assert(viewModel.uiState.value.errorMsg != null)
+    assert(viewModel.uiState.value.errorMsg?.contains("Failed to load events") == true)
+  }
+
+  @Test
+  fun eventCard_displaysMixedEventTypes() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    runBlocking {
+      repo.addEvent(createEvent("1", "Football", EventType.SPORTS))
+      repo.addEvent(createEvent("2", "Museum Visit", EventType.ACTIVITY))
+      repo.addEvent(createEvent("3", "Coffee", EventType.SOCIAL))
+    }
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // All three event types should be displayed
+    composeTestRule.onNodeWithText("Football").assertExists()
+    composeTestRule.onNodeWithText("Museum Visit").assertExists()
+    composeTestRule.onNodeWithText("Coffee").assertExists()
   }
 }
