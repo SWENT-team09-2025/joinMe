@@ -163,6 +163,10 @@ jobs:
 
       # Run SonarCloud analysis after coverage generation
       - name: SonarCloud Scan
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew sonar -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
+        with:
+          args: >
+            -Dsonar.projectKey=SWENT-team09-2025_joinMe
+            -Dsonar.organization=swent-team09-2025
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
