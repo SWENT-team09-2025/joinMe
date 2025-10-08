@@ -101,7 +101,7 @@ sonar {
         property("sonar.organization", "swent-team09-2025")
         property("sonar.host.url", "https://sonarcloud.io")
 
-        property("sonar.sources", "src/main/java")
+        property("sonar.sources", listOf("src/main/java"))
         property("sonar.tests", listOf("src/test/java", "src/androidTest/java"))
 
         // Java bytecode directories for coverage analysis
@@ -115,8 +115,8 @@ sonar {
             "build/tmp/kotlin-classes/debugAndroidTest"
         ))
 
-        property("sonar.junit.reportPaths", "build/test-results/testDebugUnitTest")
-        property("sonar.androidLint.reportPaths", "build/reports/lint-results-debug.xml")
+        property("sonar.junit.reportPaths", listOf("build/test-results/testDebugUnitTest"))
+        property("sonar.androidLint.reportPaths", listOf("build/reports/lint-results-debug.xml"))
         property("sonar.coverage.jacoco.xmlReportPaths", listOf(
             "build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml",
             "build/reports/coverage/androidTest/debug/connected/report.xml"
