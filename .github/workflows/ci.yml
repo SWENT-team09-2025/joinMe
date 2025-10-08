@@ -23,9 +23,9 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      # Run unit tests and generate JaCoCo XML report
+      # Run unit tests and generate coverage data
       - name: Run unit tests with coverage
-        run: ./gradlew testDebugUnitTest jacocoTestReport --parallel --build-cache
+        run: ./gradlew testDebugUnitTest --parallel --build-cache
 
       # Setup Android emulator for instrumented tests
       - name: Enable KVM group perms
@@ -40,6 +40,10 @@ jobs:
           api-level: 29
           arch: x86_64
           script: ./gradlew connectedDebugAndroidTest createDebugCoverageReport --continue
+
+      # Generate combined JaCoCo XML report AFTER both test types complete
+      - name: Generate combined coverage report
+        run: ./gradlew jacocoTestReport
 
       # Upload test results (optional but useful for debugging)
       - name: List coverage reports
