@@ -38,7 +38,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -46,6 +45,7 @@ import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventType
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
+import com.android.joinme.ui.navigation.NavigationTestTags
 import com.android.joinme.ui.navigation.Tab
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -88,6 +88,7 @@ fun OverviewScreen(
       topBar = {
         Column {
           TopAppBar(
+              modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
               title = {
                 Text(
                     text = "Welcome, Mathieu",
@@ -213,8 +214,8 @@ fun EventCard(event: Event, onClick: () -> Unit) {
       }
 }
 
-@Preview
+/*@Preview
 @Composable
 fun OverviewScreenPreview() {
   OverviewScreen()
-}
+}*/

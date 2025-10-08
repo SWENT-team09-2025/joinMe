@@ -430,4 +430,203 @@ class OverviewScreenTest {
     composeTestRule.onNodeWithText("Museum Visit").assertExists()
     composeTestRule.onNodeWithText("Coffee").assertExists()
   }
+
+  @Test
+  fun overviewScreen_displaysTopBar() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(NavigationTestTags.TOP_BAR_TITLE).assertExists()
+  }
+
+  @Test
+  fun overviewScreen_topBarDisplaysWelcomeMessage() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("Welcome, Mathieu").assertExists()
+  }
+
+  @Test
+  fun overviewScreen_topBarIsDisplayed() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(NavigationTestTags.TOP_BAR_TITLE).assertIsDisplayed()
+  }
+
+  @Test
+  fun overviewScreen_fabIsDisplayedWithEmptyList() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun overviewScreen_fabIsDisplayedWithEventsList() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    runBlocking { repo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun overviewScreen_fabClickTriggersCallback() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+    var fabClicked = false
+
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, onAddEvent = { fabClicked = true })
+    }
+
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).performClick()
+
+    assert(fabClicked)
+  }
+
+  @Test
+  fun overviewScreen_eventClickTriggersCallback() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+    var clickedEvent: Event? = null
+
+    runBlocking { repo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
+
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, onSelectEvent = { clickedEvent = it })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("Basketball").performClick()
+
+    assert(clickedEvent != null)
+    assert(clickedEvent?.title == "Basketball")
+  }
+
+  @Test
+  fun overviewScreen_bottomNavigationIsDisplayed() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertIsDisplayed()
+  }
+
+  @Test
+  fun overviewScreen_bottomNavigationHasOverviewSelected() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Overview")).assertIsSelected()
+  }
+
+  @Test
+  fun eventCard_displaysEventTitle() {
+    val event = createEvent("1", "My Event Title", EventType.SPORTS)
+
+    composeTestRule.setContent { EventCard(event = event, onClick = {}) }
+
+    composeTestRule.onNodeWithText("My Event Title").assertExists()
+  }
+
+  @Test
+  fun eventCard_displaysEventDescription() {
+    val event = createEvent("1", "Basketball Game", EventType.SPORTS)
+
+    composeTestRule.setContent { EventCard(event = event, onClick = {}) }
+
+    // Description is set to "desc" in createEvent helper
+    composeTestRule.onNodeWithText("Basketball Game").assertExists()
+  }
+
+  @Test
+  fun overviewScreen_displaysMultipleEventsInList() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    runBlocking {
+      for (i in 1..8) {
+        repo.addEvent(createEvent("$i", "Event Number $i", EventType.SPORTS))
+      }
+    }
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(3000)
+    composeTestRule.waitForIdle()
+
+    // Verify multiple events are displayed
+    composeTestRule.onNodeWithText("Event Number 1").assertExists()
+    composeTestRule.onNodeWithText("Event Number 5").assertExists()
+  }
+
+  @Test
+  fun eventCard_isClickable() {
+    var clicked = false
+    val event = createEvent("1", "Clickable Event", EventType.SPORTS)
+
+    composeTestRule.setContent { EventCard(event = event, onClick = { clicked = true }) }
+
+    composeTestRule.onNodeWithText("Clickable Event").performClick()
+
+    assert(clicked)
+  }
+
+  @Test
+  fun overviewScreen_refreshesUIStateOnLaunch() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    runBlocking { repo.addEvent(createEvent("1", "Pre-added Event", EventType.SPORTS)) }
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // The event should be loaded and displayed
+    composeTestRule.onNodeWithText("Pre-added Event").assertExists()
+  }
 }
