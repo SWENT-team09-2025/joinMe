@@ -1,6 +1,5 @@
 package com.android.joinme.ui.overview
 
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.*
@@ -10,7 +9,6 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 
-@OptIn(ExperimentalMaterial3Api::class)
 class OverviewScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
@@ -37,39 +35,47 @@ class OverviewScreenTest {
 
     composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
 
-    // Wait for Compose to settle (LaunchedEffect + Flow collection)
+    // Attends que le LaunchedEffect se termine
     composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeByFrame()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
 
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG).assertExists()
   }
 
   @Test
   fun overviewScreen_showsList_whenEventsExist() {
-    runBlocking {
-      val repo = EventsRepositoryLocal()
-      val viewModel = OverviewViewModel(repo)
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
 
+    // Ajoute les events AVANT de créer la UI
+    runBlocking {
       repo.addEvent(createEvent("1", "Basketball", EventType.SPORTS))
       repo.addEvent(createEvent("2", "Bar", EventType.SOCIAL))
-
-      composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
-
-      composeTestRule.waitForIdle()
-      composeTestRule.mainClock.advanceTimeByFrame()
-
-      composeTestRule.onNodeWithTag(OverviewScreenTestTags.EVENT_LIST).assertExists()
-      composeTestRule
-          .onNodeWithTag(
-              OverviewScreenTestTags.getTestTagForEventItem(
-                  createEvent("1", "Basketball", EventType.SPORTS)))
-          .assertExists()
-      composeTestRule
-          .onNodeWithTag(
-              OverviewScreenTestTags.getTestTagForEventItem(
-                  createEvent("2", "Bar", EventType.SOCIAL)))
-          .assertExists()
     }
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    // Attends que le LaunchedEffect charge les données
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Vérifie que la liste existe
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.EVENT_LIST).assertExists()
+
+    // Vérifie que les événements sont affichés
+    composeTestRule
+        .onNodeWithTag(
+            OverviewScreenTestTags.getTestTagForEventItem(
+                createEvent("1", "Basketball", EventType.SPORTS)))
+        .assertExists()
+
+    composeTestRule
+        .onNodeWithTag(
+            OverviewScreenTestTags.getTestTagForEventItem(
+                createEvent("2", "Bar", EventType.SOCIAL)))
+        .assertExists()
   }
 
   @Test
@@ -84,15 +90,19 @@ class OverviewScreenTest {
 
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).performClick()
+
     assert(clicked)
   }
 
   @Test
-  fun clickingEvent_triggersOnSelectEvent() = runBlocking {
+  fun clickingEvent_triggersOnSelectEvent() {
     val repo = EventsRepositoryLocal()
     val viewModel = OverviewViewModel(repo)
+
     val event = createEvent("1", "Basketball", EventType.SPORTS)
-    repo.addEvent(event)
+
+    // Ajoute l'event AVANT de créer la UI
+    runBlocking { repo.addEvent(event) }
 
     var selected: Event? = null
 
@@ -100,13 +110,39 @@ class OverviewScreenTest {
       OverviewScreen(overviewViewModel = viewModel, onSelectEvent = { selected = it })
     }
 
+    // Attends que le LaunchedEffect charge les données
     composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeByFrame()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
 
+    // Clique sur l'événement
     composeTestRule
         .onNodeWithTag(OverviewScreenTestTags.getTestTagForEventItem(event))
         .performClick()
 
+    // Vérifie que l'événement a été sélectionné
     assert(selected == event)
+  }
+
+  @Test
+  fun eventCard_displaysCorrectInformation() {
+    val event = createEvent("1", "Basketball Match", EventType.SPORTS)
+
+    composeTestRule.setContent { EventCard(event = event, onClick = {}) }
+
+    composeTestRule.onNodeWithText("Basketball Match").assertExists()
+    composeTestRule.onNodeWithText("Place : Unknown").assertExists()
+  }
+
+  @Test
+  fun eventCard_clickTriggersCallback() {
+    var clicked = false
+    val event = createEvent("1", "Test Event", EventType.SPORTS)
+
+    composeTestRule.setContent { EventCard(event = event, onClick = { clicked = true }) }
+
+    composeTestRule.onNodeWithText("Test Event").performClick()
+
+    assert(clicked)
   }
 }

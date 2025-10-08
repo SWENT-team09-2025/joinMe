@@ -48,6 +48,8 @@ jobs:
           ls -R app/build/reports/jacoco/jacocoTestReport || echo "No unit test report found"
           echo "Instrumented test coverage:"
           ls -R app/build/reports/coverage || echo "No instrumented test report found"
+          echo "Looking for XML files:"
+          find app/build/reports -name "*.xml" -type f
 
       # Run SonarCloud analysis *after* coverage generation
       - name: SonarCloud Scan
