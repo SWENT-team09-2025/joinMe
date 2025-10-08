@@ -155,6 +155,59 @@ jobs:
         run: |
           ./gradlew jacocoTestReport
 
+      # Fix invalid line numbers in JaCoCo XML report (Compose synthetic code issue)
+      - name: Fix JaCoCo XML report
+        run: |
+          python3 << 'EOF'
+          import xml.etree.ElementTree as ET
+          import glob
+          import os
+
+          # Find all JaCoCo XML files
+          xml_files = glob.glob("app/build/reports/jacoco/**/*.xml", recursive=True)
+
+          for xml_file in xml_files:
+              try:
+                  tree = ET.parse(xml_file)
+                  root = tree.getroot()
+
+                  # Track if we made changes
+                  modified = False
+
+                  # Iterate through all sourcefile elements
+                  for sourcefile in root.findall(".//sourcefile"):
+                      sourcefile_name = sourcefile.get('name')
+
+                      # Count actual lines in source file if path exists
+                      source_path = None
+                      for package in root.findall(".//package"):
+                          pkg_name = package.get('name', '').replace('/', '/')
+                          potential_path = f"app/src/main/java/{pkg_name}/{sourcefile_name}"
+                          if os.path.exists(potential_path):
+                              source_path = potential_path
+                              break
+
+                      if source_path and os.path.exists(source_path):
+                          with open(source_path, 'r') as f:
+                              max_line = len(f.readlines())
+
+                          # Remove line elements with invalid line numbers
+                          for line in list(sourcefile.findall("line")):
+                              line_nr = int(line.get('nr', 0))
+                              if line_nr > max_line or line_nr == 65535:
+                                  sourcefile.remove(line)
+                                  modified = True
+
+                  if modified:
+                      tree.write(xml_file, encoding='utf-8', xml_declaration=True)
+                      print(f"Fixed invalid lines in {xml_file}")
+
+              except Exception as e:
+                  print(f"Warning: Could not process {xml_file}: {e}")
+
+          print("JaCoCo XML report validation complete")
+          EOF
+
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
@@ -163,6 +216,10 @@ jobs:
 
       # Run SonarCloud analysis after coverage generation
       - name: SonarCloud Scan
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew sonar -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
+        with:
+          args: >
+            -Dsonar.projectKey=SWENT-team09-2025_joinMe
+            -Dsonar.organization=swent-team09-2025
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
