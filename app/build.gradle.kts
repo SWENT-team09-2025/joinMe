@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.ktfmt)
     alias(libs.plugins.sonar)
     id("jacoco")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -118,6 +119,7 @@ fun DependencyHandlerScope.globalTestImplementation(dep: Any) {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.glance.appwidget)
     implementation(libs.material)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(platform(libs.compose.bom))
@@ -131,6 +133,13 @@ dependencies {
     implementation(libs.firebase.ui.auth)
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.auth)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging.interceptor)
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
+    implementation("com.google.firebase:firebase-auth-ktx:23.0.0")
+    implementation("com.firebaseui:firebase-ui-auth:8.0.0")
+
+
 
     // ------------- Jetpack Compose ------------------
     val composeBom = platform(libs.compose.bom)
@@ -139,6 +148,7 @@ dependencies {
 
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.graphics)
+    implementation(libs.androidx.navigation.compose)
     // Material Design 3
     implementation(libs.compose.material3)
     // Integration with activities
