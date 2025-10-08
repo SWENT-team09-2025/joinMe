@@ -192,7 +192,7 @@ tasks.withType<Test> {
     // Configure Jacoco for each tests
     configure<JacocoTaskExtension> {
         isIncludeNoLocationClasses = true
-        excludes = listOf("jdk.internal.*")
+        excludes = listOf("jdk.internal.*", "**/*\$\$*") // Exclude synthetic classes
     }
 }
 
