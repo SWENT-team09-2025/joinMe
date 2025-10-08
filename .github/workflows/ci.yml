@@ -1,4 +1,4 @@
-name: Bootcamp CI - Test Runner
+name: CI - Test Runner
 
 # Run the workflow when commits are pushed on main or when a PR is modified
 on:
@@ -162,11 +162,9 @@ jobs:
           import xml.etree.ElementTree as ET
           import glob
           import os
-          import re
 
           # Find all JaCoCo XML files
           xml_files = glob.glob("app/build/reports/jacoco/**/*.xml", recursive=True)
-          xml_files.extend(glob.glob("app/build/reports/coverage/**/*.xml", recursive=True))
 
           for xml_file in xml_files:
               try:
@@ -191,25 +189,14 @@ jobs:
 
                       if source_path and os.path.exists(source_path):
                           with open(source_path, 'r') as f:
-                              source_lines = f.readlines()
-                              max_line = len(source_lines)
+                              max_line = len(f.readlines())
 
-                          # Remove line elements with invalid line numbers or synthetic lines
+                          # Remove line elements with invalid line numbers
                           for line in list(sourcefile.findall("line")):
                               line_nr = int(line.get('nr', 0))
-
-                              # Remove if line number is invalid
                               if line_nr > max_line or line_nr == 65535:
                                   sourcefile.remove(line)
                                   modified = True
-                                  continue
-
-                              # Remove if line is only whitespace or closing braces (synthetic)
-                              if 0 < line_nr <= len(source_lines):
-                                  actual_line = source_lines[line_nr - 1].strip()
-                                  if not actual_line or re.match(r'^[}\])\s]*$', actual_line):
-                                      sourcefile.remove(line)
-                                      modified = True
 
                   if modified:
                       tree.write(xml_file, encoding='utf-8', xml_declaration=True)
