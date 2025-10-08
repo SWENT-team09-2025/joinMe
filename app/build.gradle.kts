@@ -102,19 +102,25 @@ sonar {
         property("sonar.host.url", "https://sonarcloud.io")
 
         property("sonar.sources", "src/main/java")
-        property("sonar.tests", "src/test/java,src/androidTest/java")
+        property("sonar.tests", listOf("src/test/java", "src/androidTest/java"))
 
         // Java bytecode directories for coverage analysis
-        property("sonar.java.binaries", "build/intermediates/javac/debug/classes," +
-            "build/tmp/kotlin-classes/debug")
-        property("sonar.java.test.binaries", "build/intermediates/javac/debugUnitTest/classes," +
-            "build/tmp/kotlin-classes/debugUnitTest," +
-            "build/tmp/kotlin-classes/debugAndroidTest")
+        property("sonar.java.binaries", listOf(
+            "build/intermediates/javac/debug/classes",
+            "build/tmp/kotlin-classes/debug"
+        ))
+        property("sonar.java.test.binaries", listOf(
+            "build/intermediates/javac/debugUnitTest/classes",
+            "build/tmp/kotlin-classes/debugUnitTest",
+            "build/tmp/kotlin-classes/debugAndroidTest"
+        ))
 
         property("sonar.junit.reportPaths", "build/test-results/testDebugUnitTest")
         property("sonar.androidLint.reportPaths", "build/reports/lint-results-debug.xml")
-        property("sonar.coverage.jacoco.xmlReportPaths",
-            "build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml,build/reports/coverage/androidTest/debug/connected/report.xml")
+        property("sonar.coverage.jacoco.xmlReportPaths", listOf(
+            "build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml",
+            "build/reports/coverage/androidTest/debug/connected/report.xml"
+        ))
         property("sonar.sourceEncoding", "UTF-8")
     }
 }
