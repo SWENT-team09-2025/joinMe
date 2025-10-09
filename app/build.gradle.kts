@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.ktfmt)
     alias(libs.plugins.sonar)
     id("jacoco")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -16,7 +17,6 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -32,7 +32,6 @@ android {
                 "proguard-rules.pro"
             )
         }
-
         debug {
             enableUnitTestCoverage = true
             enableAndroidTestCoverage = true
@@ -81,7 +80,6 @@ android {
     // This prevent errors from occurring during unit tests
     sourceSets.getByName("testDebug") {
         val test = sourceSets.getByName("test")
-
         java.setSrcDirs(test.java.srcDirs)
         res.setSrcDirs(test.res.srcDirs)
         resources.setSrcDirs(test.resources.srcDirs)
@@ -100,31 +98,36 @@ sonar {
         property("sonar.projectName", "joinMe")
         property("sonar.organization", "swent-team09-2025")
         property("sonar.host.url", "https://sonarcloud.io")
-
         property("sonar.sources", listOf("src/main/java"))
         property("sonar.tests", listOf("src/test/java", "src/androidTest/java"))
-
         // Java bytecode directories for coverage analysis
-        property("sonar.java.binaries", listOf(
-            "build/intermediates/javac/debug/classes",
-            "build/tmp/kotlin-classes/debug"
-        ))
-        property("sonar.java.test.binaries", listOf(
-            "build/intermediates/javac/debugUnitTest/classes",
-            "build/tmp/kotlin-classes/debugUnitTest",
-            "build/tmp/kotlin-classes/debugAndroidTest"
-        ))
-
+        property(
+            "sonar.java.binaries",
+            listOf(
+                "build/intermediates/javac/debug/classes",
+                "build/tmp/kotlin-classes/debug"
+            )
+        )
+        property(
+            "sonar.java.test.binaries",
+            listOf(
+                "build/intermediates/javac/debugUnitTest/classes",
+                "build/tmp/kotlin-classes/debugUnitTest",
+                "build/tmp/kotlin-classes/debugAndroidTest"
+            )
+        )
         property("sonar.junit.reportPaths", listOf("build/test-results/testDebugUnitTest"))
         property("sonar.androidLint.reportPaths", listOf("build/reports/lint-results-debug.xml"))
-        property("sonar.coverage.jacoco.xmlReportPaths", listOf(
-            "build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml",
-            "build/reports/coverage/androidTest/debug/connected/report.xml"
-        ))
+        property(
+            "sonar.coverage.jacoco.xmlReportPaths",
+            listOf(
+                "build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml",
+                "build/reports/coverage/androidTest/debug/connected/report.xml"
+            )
+        )
         property("sonar.sourceEncoding", "UTF-8")
     }
 }
-
 
 // When a library is used both by robolectric and connected tests, use this function
 fun DependencyHandlerScope.globalTestImplementation(dep: Any) {
@@ -135,13 +138,13 @@ fun DependencyHandlerScope.globalTestImplementation(dep: Any) {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.glance.appwidget)
     implementation(libs.material)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(platform(libs.compose.bom))
     testImplementation(libs.junit)
     globalTestImplementation(libs.androidx.junit)
     globalTestImplementation(libs.androidx.espresso.core)
-
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
@@ -159,14 +162,19 @@ dependencies {
     implementation(libs.firebase.ui.auth)
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.auth)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging.interceptor)
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
+    implementation("com.google.firebase:firebase-auth-ktx:23.0.0")
+    implementation("com.firebaseui:firebase-ui-auth:8.0.0")
 
     // ------------- Jetpack Compose ------------------
     val composeBom = platform(libs.compose.bom)
     implementation(composeBom)
     globalTestImplementation(composeBom)
-
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.graphics)
+    implementation(libs.androidx.navigation.compose)
     // Material Design 3
     implementation(libs.compose.material3)
     // Integration with activities
@@ -184,7 +192,7 @@ dependencies {
     globalTestImplementation(libs.kaspresso)
     globalTestImplementation(libs.kaspresso.compose)
 
-    // ----------       Robolectric     ------------
+    // ---------- Robolectric ------------
     testImplementation(libs.robolectric)
 }
 
@@ -192,13 +200,12 @@ tasks.withType<Test> {
     // Configure Jacoco for each tests
     configure<JacocoTaskExtension> {
         isIncludeNoLocationClasses = true
-        excludes = listOf("jdk.internal.*", "**/*\$\$*") // Exclude synthetic classes
+        excludes = listOf("jdk.internal.*", "**/*\$\$*")
     }
 }
 
 tasks.register("jacocoTestReport", JacocoReport::class) {
     mustRunAfter("testDebugUnitTest", "connectedDebugAndroidTest")
-
     reports {
         xml.required = true
         html.required = true
@@ -211,6 +218,10 @@ tasks.register("jacocoTestReport", JacocoReport::class) {
         "**/Manifest*.*",
         "**/*Test*.*",
         "android/**/*.*",
+        "**/AuthRepository\$*",
+        "**/*\$DefaultImpls*",
+        "**/*\$Companion*",
+        "**/*\$*Function*"
     )
 
     val debugTree = fileTree("${project.layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
@@ -220,8 +231,11 @@ tasks.register("jacocoTestReport", JacocoReport::class) {
     val mainSrc = "${project.layout.projectDirectory}/src/main/java"
     sourceDirectories.setFrom(files(mainSrc))
     classDirectories.setFrom(files(debugTree))
-    executionData.setFrom(fileTree(project.layout.buildDirectory.get()) {
-        include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
-        include("outputs/code_coverage/debugAndroidTest/connected/*/coverage.ec")
-    })
+
+    executionData.setFrom(
+        fileTree(project.layout.buildDirectory.get()) {
+            include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
+            include("outputs/code_coverage/debugAndroidTest/connected/*/coverage.ec")
+        }
+    )
 }
