@@ -9,12 +9,12 @@ import com.android.joinme.ui.overview.CreateEventScreenTestTags
 import com.android.joinme.ui.overview.EditEventScreenTestTags
 import com.android.joinme.ui.overview.OverviewScreenTestTags
 import com.google.firebase.Timestamp
+import java.util.*
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.*
 
 @RunWith(AndroidJUnit4::class)
 class MainActivityNavigationTest {
