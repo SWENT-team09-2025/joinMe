@@ -53,7 +53,7 @@ class SignInScreenTest {
 
       composeTestRule.runOnUiThread {
           viewModel.clearErrorMsg() // Just to trigger state update
-      }
+      }hello
 
       composeTestRule.onNodeWithTag(SignInScreenTestTags.LOGIN_BUTTON).assertIsDisplayed()
       composeTestRule.runOnUiThread {
