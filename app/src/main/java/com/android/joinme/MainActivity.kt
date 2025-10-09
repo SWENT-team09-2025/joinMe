@@ -2,6 +2,8 @@ package com.android.joinme
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,11 +15,14 @@ import androidx.credentials.CredentialManager
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navigation
 import com.android.joinme.model.authentification.AuthRepository
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.Screen
+import com.android.joinme.ui.overview.CreateEventScreen
+import com.android.joinme.ui.overview.EditEventScreen
 import com.android.joinme.ui.overview.OverviewScreen
-import com.android.joinme.ui.overview.OverviewViewModel
+import com.android.joinme.ui.overview.SearchScreen
 import com.android.joinme.ui.signIn.SignInScreen
 import com.android.joinme.ui.theme.SampleAppTheme
 import com.google.firebase.auth.FirebaseAuth
@@ -43,27 +48,79 @@ class MainActivity : ComponentActivity() {
 fun JoinMe(
     context: Context = LocalContext.current,
     credentialManager: CredentialManager = CredentialManager.create(context),
+    startDestination: String? = null,
 ) {
   val navController = rememberNavController()
   val navigationActions = NavigationActions(navController)
-  val startDestination =
-      if (FirebaseAuth.getInstance().currentUser != null) Screen.Overview.route
-      else Screen.Auth.route
+  val initialDestination =
+      startDestination
+          ?: if (FirebaseAuth.getInstance().currentUser == null) Screen.Auth.name
+          else Screen.Overview.route
 
-  NavHost(navController = navController, startDestination = startDestination) {
-    composable(Screen.Auth.route) {
-      SignInScreen(
-          credentialManager = credentialManager,
-          onSignedIn = { navigationActions.navigateTo(Screen.Overview) })
+  NavHost(navController = navController, startDestination = initialDestination) {
+    navigation(
+        startDestination = Screen.Auth.route,
+        route = Screen.Auth.name,
+    ) {
+      composable(Screen.Auth.route) {
+        SignInScreen(
+            credentialManager = credentialManager,
+            onSignedIn = { navigationActions.navigateTo(Screen.Overview) })
+      }
     }
 
-    composable(Screen.Overview.route) {
-      OverviewScreen(
-          overviewViewModel = OverviewViewModel(),
-          credentialManager = credentialManager,
-          navigationActions = navigationActions,
-          onAddEvent = { /* to complete */},
-          onSelectEvent = { /* to complete */})
+    navigation(
+        startDestination = Screen.Overview.route,
+        route = Screen.Overview.name,
+    ) {
+      composable(Screen.Overview.route) {
+        OverviewScreen(
+            onSelectEvent = {
+              navigationActions.navigateTo(Screen.EditEvent(it.eventId))
+            }, // to be modified need to naviagte to ShowEvent
+            onAddEvent = { navigationActions.navigateTo(Screen.CreateEvent) },
+            navigationActions = navigationActions,
+            credentialManager = credentialManager)
+      }
+      composable(Screen.CreateEvent.route) {
+        CreateEventScreen(
+            onDone = { navigationActions.navigateTo(Screen.Overview) },
+            onGoBack = { navigationActions.goBack() })
+      }
+      composable(Screen.EditEvent.route) { navBackStackEntry ->
+        val eventId = navBackStackEntry.arguments?.getString("eventId")
+
+        eventId?.let {
+          EditEventScreen(
+              onDone = { navigationActions.navigateTo(Screen.Overview) },
+              onGoBack = { navigationActions.goBack() },
+              eventId = eventId)
+        }
+            ?: run {
+              Log.e("EditToDoScreen", "ToDo UID is null")
+              Toast.makeText(context, "ToDo UID is null", Toast.LENGTH_SHORT).show()
+            }
+      }
+    }
+
+    navigation(
+        startDestination = Screen.Search.route,
+        route = Screen.Search.name,
+    ) {
+      composable(Screen.Search.route) { SearchScreen(onGoBack = { navigationActions.goBack() }) }
+    }
+
+    navigation(
+        startDestination = Screen.Map.route,
+        route = Screen.Map.name,
+    ) {
+      composable(Screen.Map.route) {}
+    }
+    navigation(
+        startDestination = Screen.Profile.route,
+        route = Screen.Profile.name,
+    ) {
+      composable(Screen.Profile.route) {}
     }
   }
 }
