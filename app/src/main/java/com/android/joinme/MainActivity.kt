@@ -48,14 +48,16 @@ class MainActivity : ComponentActivity() {
 fun JoinMe(
     context: Context = LocalContext.current,
     credentialManager: CredentialManager = CredentialManager.create(context),
+    startDestination: String? = null,
 ) {
   val navController = rememberNavController()
   val navigationActions = NavigationActions(navController)
-  val startDestination =
-      if (FirebaseAuth.getInstance().currentUser == null) Screen.Auth.name
-      else Screen.Overview.route
+  val initialDestination =
+      startDestination
+          ?: if (FirebaseAuth.getInstance().currentUser == null) Screen.Auth.name
+          else Screen.Overview.route
 
-  NavHost(navController = navController, startDestination = startDestination) {
+  NavHost(navController = navController, startDestination = initialDestination) {
     navigation(
         startDestination = Screen.Auth.route,
         route = Screen.Auth.name,
