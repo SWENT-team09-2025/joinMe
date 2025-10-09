@@ -17,7 +17,7 @@ sealed class Screen(
 
   object Profile : Screen(route = "profile", name = "Profile", isTopLevelDestination = true)
 
-   object CreateEvent : Screen(route = "create_event", name = "Create a new task")
+  object CreateEvent : Screen(route = "create_event", name = "Create a new task")
 
   data class EditEvent(val eventId: String) :
       Screen(route = "edit_event/${eventId}", name = "Edit Event") {
