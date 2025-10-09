@@ -1,6 +1,7 @@
 package com.android.joinme.ui.overview
 
 import androidx.lifecycle.ViewModel
+import com.android.joinme.model.event.Event
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +21,8 @@ data class SearchUIState(
             SportCategory("football", "Football"),
             SportCategory("tennis", "Tennis"),
             SportCategory("running", "Running")),
-    val categoryExpanded: Boolean = false
+    val categoryExpanded: Boolean = false,
+    val events: List<Event> = emptyList()
 ) {
   val selectedSportsCount: Int
     get() = sportCategories.count { it.isChecked }
@@ -100,5 +102,10 @@ class SearchViewModel : ViewModel() {
         state.copy(
             sportCategories = updatedSports,
             isAllSelected = state.isBarSelected && state.isClubSelected && allSportsChecked)
+  }
+
+  /** Sets the events list (for testing purposes). */
+  fun setEvents(events: List<Event>) {
+    _uiState.value = _uiState.value.copy(events = events)
   }
 }
