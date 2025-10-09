@@ -308,4 +308,52 @@ class SearchViewModelTest {
     assertFalse(state.isAllSelected)
     assertFalse(state.isSelectAllChecked)
   }
+
+  @Test
+  fun `setEvents updates events list`() = runTest {
+    val sampleEvent =
+        com.android.joinme.model.event.Event(
+            eventId = "1",
+            type = com.android.joinme.model.event.EventType.SPORTS,
+            title = "Basketball",
+            description = "Test event",
+            location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
+            date = com.google.firebase.Timestamp.now(),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    viewModel.setEvents(listOf(sampleEvent))
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertEquals(1, viewModel.uiState.value.events.size)
+    assertEquals("Basketball", viewModel.uiState.value.events[0].title)
+  }
+
+  @Test
+  fun `setEvents with empty list clears events`() = runTest {
+    val sampleEvent =
+        com.android.joinme.model.event.Event(
+            eventId = "1",
+            type = com.android.joinme.model.event.EventType.SPORTS,
+            title = "Basketball",
+            description = "Test event",
+            location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
+            date = com.google.firebase.Timestamp.now(),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    viewModel.setEvents(listOf(sampleEvent))
+    testDispatcher.scheduler.advanceUntilIdle()
+    assertEquals(1, viewModel.uiState.value.events.size)
+
+    viewModel.setEvents(emptyList())
+    testDispatcher.scheduler.advanceUntilIdle()
+    assertEquals(0, viewModel.uiState.value.events.size)
+  }
 }
