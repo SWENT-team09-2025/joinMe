@@ -116,7 +116,7 @@ class EditEventViewModel(
    * @param eventId The ID of the event to edit.
    * @return Boolean indicating success.
    */
-  fun editEvent(eventId: String): Boolean {
+  suspend fun editEvent(eventId: String): Boolean {
     val state = _uiState.value
     if (!state.isValid) {
       setErrorMsg("At least one field is not valid")
@@ -150,17 +150,15 @@ class EditEventViewModel(
             visibility = EventVisibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
             ownerId = state.ownerId)
 
-    viewModelScope.launch {
-      try {
-        repository.editEvent(eventId, event)
-        clearErrorMsg()
-      } catch (e: Exception) {
-        Log.e("EditEventViewModel", "Error editing event", e)
-        setErrorMsg("Failed to edit event: ${e.message}")
-      }
+    return try {
+      repository.editEvent(eventId, event)
+      clearErrorMsg()
+      true
+    } catch (e: Exception) {
+      Log.e("EditEventViewModel", "Error editing event", e)
+      setErrorMsg("Failed to edit event: ${e.message}")
+      false
     }
-
-    return true
   }
 
   /**

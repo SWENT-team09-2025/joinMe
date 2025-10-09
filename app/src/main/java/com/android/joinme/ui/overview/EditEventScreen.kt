@@ -1,6 +1,7 @@
 package com.android.joinme.ui.overview
 
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +22,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.displayString
+import kotlinx.coroutines.launch
 
 object EditEventScreenTestTags {
   const val INPUT_EVENT_TYPE = "inputEventType"
@@ -52,6 +54,7 @@ fun EditEventScreen(
   var showVisibilityMenu by remember { mutableStateOf(false) }
 
   val context = LocalContext.current
+  val coroutineScope = rememberCoroutineScope()
 
   LaunchedEffect(errorMsg) {
     if (errorMsg != null) {
@@ -80,7 +83,7 @@ fun EditEventScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
 
               // Event Type Dropdown
-              Box {
+              Box(modifier = Modifier.clickable { showTypeMenu = true }) {
                 OutlinedTextField(
                     value = eventUIState.type.ifBlank { "" },
                     onValueChange = {},
@@ -111,7 +114,8 @@ fun EditEventScreen(
                         onClick = {
                           editEventViewModel.setType(type.name)
                           showTypeMenu = false
-                        })
+                        },
+                        modifier = Modifier.testTag("eventTypeOption_${type.name}"))
                   }
                 }
               }
@@ -235,7 +239,7 @@ fun EditEventScreen(
                   })
 
               // Event Visibility Field
-              Box {
+              Box(modifier = Modifier.clickable { showVisibilityMenu = true }) {
                 OutlinedTextField(
                     value = eventUIState.visibility.ifBlank { "" },
                     onValueChange = {},
@@ -269,7 +273,8 @@ fun EditEventScreen(
                             onClick = {
                               editEventViewModel.setVisibility(vis.name)
                               showVisibilityMenu = false
-                            })
+                            },
+                            modifier = Modifier.testTag("eventVisibilityOption_${vis.name}"))
                       }
                     }
               }
@@ -277,8 +282,10 @@ fun EditEventScreen(
               // Save Button
               Button(
                   onClick = {
-                    if (editEventViewModel.editEvent(eventId)) {
-                      onDone()
+                    coroutineScope.launch {
+                      if (editEventViewModel.editEvent(eventId)) {
+                        onDone()
+                      }
                     }
                   },
                   modifier =

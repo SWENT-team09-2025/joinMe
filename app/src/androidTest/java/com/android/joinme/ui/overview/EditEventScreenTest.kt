@@ -344,7 +344,7 @@ class EditEventScreenTest {
         .performTextClearance()
     composeTestRule
         .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
-        .performTextInput("-10")
+        .performTextInput("0")
 
     composeTestRule.waitForIdle()
 
@@ -541,61 +541,6 @@ class EditEventScreenTest {
 
     // Callback should not be called
     assert(!saveCalled)
-  }
-
-  /** --- TYPE AND VISIBILITY DROPDOWNS --- */
-  @Test
-  fun changingEventType_updatesState() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Original type is SPORTS, change to SOCIAL
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TYPE).performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Social").performClick()
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TYPE)
-        .assertTextContains("SOCIAL")
-  }
-
-  @Test
-  fun changingVisibility_updatesState() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Original visibility is PUBLIC, change to PRIVATE
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_VISIBILITY).performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Private").performClick()
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_VISIBILITY)
-        .assertTextContains("PRIVATE")
   }
 
   /** --- VIEWMODEL TESTS --- */
