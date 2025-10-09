@@ -128,14 +128,14 @@ class CreateEventViewModel(
   // Update functions for all fields
 
   fun setType(type: String) {
-    val validTypes = listOf("SPORTS", "SOCIAL", "OTHER")
+    val validTypes = EventType.values().map { it.name.uppercase(Locale.ROOT) }
     _uiState.value =
         _uiState.value.copy(
             type = type,
             invalidTypeMsg =
                 if (type.isBlank()) "Type cannot be empty"
                 else if (type.uppercase(Locale.ROOT) !in validTypes)
-                    "Type must be one of: SPORT, SOCIAL, OTHER"
+                    "Type must be one of: SPORT, ACTIVITY, SOCIAL, etc."
                 else null)
     updateFormValidity()
   }

@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
+import java.util.Locale
 
 object CreateEventScreenTestTags {
   const val INPUT_EVENT_TYPE = "inputEventType"
@@ -45,7 +46,7 @@ fun CreateEventScreen(
     }
   }
 
-  val eventTypes = listOf(EventType.SPORTS.name, EventType.ACTIVITY.name, EventType.SOCIAL.name)
+  val eventTypes = EventType.values().map { it.name.uppercase(Locale.ROOT) }
   val visibilities = listOf(EventVisibility.PUBLIC.name, EventVisibility.PRIVATE.name)
 
   var showTypeDropdown by remember { mutableStateOf(false) }
