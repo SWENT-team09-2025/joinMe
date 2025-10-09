@@ -12,7 +12,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import com.android.joinme.model.authentification.AuthRepository
 import com.android.joinme.ui.navigation.NavigationActions
@@ -52,11 +51,11 @@ fun JoinMe(
       else Screen.Auth.route
 
   NavHost(navController = navController, startDestination = startDestination) {
-      composable(Screen.Auth.route) {
-        SignInScreen(
-            credentialManager = credentialManager,
-            onSignedIn = { navigationActions.navigateTo(Screen.Overview) })
-      }
+    composable(Screen.Auth.route) {
+      SignInScreen(
+          credentialManager = credentialManager,
+          onSignedIn = { navigationActions.navigateTo(Screen.Overview) })
+    }
 
     composable(Screen.Overview.route) {
       OverviewScreen(
