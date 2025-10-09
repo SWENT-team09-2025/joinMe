@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
@@ -10,6 +13,13 @@ plugins {
 android {
     namespace = "com.android.joinme"
     compileSdk = 34
+    // Load the API key from local.properties
+    val localProperties = Properties()
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localProperties.load(FileInputStream(localPropertiesFile))
+    }
+    val mapsApiKey: String = localProperties.getProperty("MAPS_API_KEY") ?: ""
 
     defaultConfig {
         applicationId = "com.android.joinme"
@@ -21,6 +31,7 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildTypes {
@@ -148,6 +159,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
+    implementation("androidx.compose.material:material-icons-extended:1.6.0")
 
     // --- Unit testing ---
     testImplementation("junit:junit:4.13.2")
@@ -155,6 +167,10 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     //testImplementation("io.mockk:mockk:1.13.8")
     androidTestImplementation("io.mockk:mockk-android:1.13.8")
+
+    // --- Maps ---
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.maps.android:maps-compose:4.3.0")
 
     // Firebase
     implementation(libs.firebase.database.ktx)
