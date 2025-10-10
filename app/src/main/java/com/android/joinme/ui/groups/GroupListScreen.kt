@@ -26,6 +26,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,36 +44,53 @@ import com.android.joinme.model.group.Group
 import com.android.joinme.viewmodel.GroupListViewModel
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import com.android.joinme.viewmodel.GroupListUIState
+
+object GroupListScreenTestTags {
+    const val TITLE = "groups:title"
+    const val ADD_NEW_GROUP = "groups:addNewGroup"
+    const val LIST = "groups:list"
+    const val EMPTY = "groups:empty"
+
+    fun cardTag(id: String) = "group:card:$id"
+    fun moreTag(id: String) = "group:more:$id"
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupListScreen(
-    groupListViewModel: GroupListViewModel = viewModel(),
-    credentialManager: CredentialManager = CredentialManager.create(LocalContext.current),
+    uiState: GroupListUIState,
     onJoinANewGroup: () -> Unit = {},
-    onGroup: () -> Unit = {},
-    onMoreOptionMenu: () -> Unit = {}
+    onGroup: (Group) -> Unit = {},
+    onMoreOptionMenu: (Group) -> Unit = {}
 ) {
-    val context = LocalContext.current
-    val uiState by groupListViewModel.uiState.collectAsState()
     val groups = uiState.groups
-
-    LaunchedEffect(Unit) { groupListViewModel.refreshUIState() }
-
-    LaunchedEffect(uiState.errorMsg) {
-        uiState.errorMsg?.let { message ->
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-            groupListViewModel.clearErrorMsg()
-        }
-    }
-
     Scaffold(
-        topBar = {CenterAlignedTopAppBar(title = {Text("Your groups")})},
-
-        floatingActionButton = { ExtendedFloatingActionButton(
-            onClick = onJoinANewGroup,
-            icon = { Icon(imageVector = Icons.Default.Add, contentDescription = "Join a new group") },
-            text = { Text("Join a new group") }
+        topBar = {
+            CenterAlignedTopAppBar(title = {
+                Text(
+                    "Your groups",
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.testTag(GroupListScreenTestTags.TITLE)
+                )
+            })
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                modifier = Modifier.testTag(GroupListScreenTestTags.ADD_NEW_GROUP),
+                onClick = onJoinANewGroup,
+                icon = {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Join a new group",
+                        tint = Color.White
+                    )
+                },
+                text = { Text("Join a new group", color = Color.White) },
+                containerColor = Color.Black
             )
         },
         floatingActionButtonPosition = FabPosition.Center,
@@ -82,23 +101,25 @@ fun GroupListScreen(
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
                     .padding(bottom = pd.calculateBottomPadding() + 84.dp)
-                    .padding(top = pd.calculateTopPadding()),
+                    .padding(top = pd.calculateTopPadding())
+                    .testTag(GroupListScreenTestTags.LIST),
                 contentPadding = PaddingValues(vertical = 12.dp)
             ) {
                 items(groups) { group ->
                     GroupCard(
                         group = group,
-                        onClick = onGroup,
-                        onMoreOptions = onMoreOptionMenu
+                        onClick = { onGroup(group) },
+                        onMoreOptions = { onMoreOptionMenu(group) }
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(Modifier.height(12.dp))
                 }
             }
         } else {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(pd),
+                    .padding(pd)
+                    .testTag(GroupListScreenTestTags.EMPTY),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -122,7 +143,11 @@ private fun GroupCard(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 86.dp)
-            .clickable { onClick() },
+            .clickable { onClick() }
+            .testTag(GroupListScreenTestTags.cardTag(group.id)),
+            colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFE06B60)
+        )
     ) {
         Row(
             modifier = Modifier
@@ -155,9 +180,40 @@ private fun GroupCard(
                     color = Color.White.copy(alpha = 0.9f)
                 )
             }
-            IconButton(onClick = onMoreOptions) {
-                Icon(imageVector = Icons.Default.MoreVert, contentDescription = "More options", tint = Color.White)
+            IconButton(
+                onClick = onMoreOptions,
+                modifier = Modifier.testTag(GroupListScreenTestTags.moreTag(group.id))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "More options",
+                    tint = Color.White
+                )
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun Test() {
+    val sample = listOf(
+        Group(
+            id = "1", name = "Test", category = "X",
+            description = "12345",
+            membersCount = 25
+        ),
+        Group(
+            id = "2", name = "Gregory le singe", category = "Y",
+            description = "6789A",
+            membersCount = 17
+        )
+    )
+    GroupListScreen(uiState = GroupListUIState(groups = sample))
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun Test2() {
+    GroupListScreen(uiState = GroupListUIState(groups = emptyList()))
 }
