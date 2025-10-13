@@ -23,6 +23,8 @@ import com.android.joinme.ui.overview.CreateEventScreen
 import com.android.joinme.ui.overview.EditEventScreen
 import com.android.joinme.ui.overview.OverviewScreen
 import com.android.joinme.ui.overview.SearchScreen
+import com.android.joinme.ui.profile.EditProfileScreen
+import com.android.joinme.ui.profile.ViewProfileScreen
 import com.android.joinme.ui.signIn.SignInScreen
 import com.android.joinme.ui.theme.SampleAppTheme
 import com.google.firebase.auth.FirebaseAuth
@@ -77,7 +79,7 @@ fun JoinMe(
         OverviewScreen(
             onSelectEvent = {
               navigationActions.navigateTo(Screen.EditEvent(it.eventId))
-            }, // to be modified need to naviagte to ShowEvent
+            }, // to be modified need to navigate to ShowEvent
             onAddEvent = { navigationActions.navigateTo(Screen.CreateEvent) },
             navigationActions = navigationActions,
             credentialManager = credentialManager)
@@ -120,7 +122,37 @@ fun JoinMe(
         startDestination = Screen.Profile.route,
         route = Screen.Profile.name,
     ) {
-      composable(Screen.Profile.route) {}
+      composable(Screen.Profile.route) {
+        ViewProfileScreen(
+            uid = FirebaseAuth.getInstance().currentUser?.uid ?: "",
+            onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
+            onBackClick = { navigationActions.goBack() },
+            onGroupClick = {
+              // TODO },
+            },
+            onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
+            onSignOutComplete = { navigationActions.navigateTo(Screen.Auth) }
+        )
+      }
+    }
+    navigation(
+        startDestination = Screen.EditProfile.route,
+        route = Screen.EditProfile.name,
+    ) {
+      composable(Screen.EditProfile.route) {
+        EditProfileScreen(
+            uid = FirebaseAuth.getInstance().currentUser?.uid ?: "",
+            onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
+            onBackClick = { navigationActions.goBack() },
+            onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
+            onGroupClick = {
+              // TODO
+            },
+            onChangePasswordClick = {
+              // TODO
+            },
+            onSaveSuccess = { navigationActions.navigateTo(Screen.Profile) })
+      }
     }
   }
 }
