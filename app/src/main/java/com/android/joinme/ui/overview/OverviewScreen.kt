@@ -42,11 +42,12 @@ import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.Event
-import com.android.joinme.model.event.EventType
+import com.android.joinme.model.event.getColor
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.NavigationTestTags
 import com.android.joinme.ui.navigation.Tab
+import com.android.joinme.ui.theme.CreateEventButtonColor
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -54,8 +55,6 @@ object OverviewScreenTestTags {
   const val CREATE_EVENT_BUTTON = "createEventFab"
   const val EMPTY_EVENT_LIST_MSG = "emptyEventList"
   const val EVENT_LIST = "eventList"
-  // const val ONGOING_EVENTS_SECTION = "ongoingEventsSection"
-  // const val UPCOMING_EVENTS_SECTION = "upcomingEventsSection"
   const val ONGOING_EVENTS_TITLE = "ongoingEventsTitle"
   const val UPCOMING_EVENTS_TITLE = "upcomingEventsTitle"
 
@@ -95,7 +94,7 @@ fun OverviewScreen(
               modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
               title = {
                 Text(
-                    text = "Welcome, Mathieu",
+                    text = "Welcome, Mathieu", // Hardcoded for now, waiting for profile impl.
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center)
@@ -115,7 +114,7 @@ fun OverviewScreen(
       floatingActionButton = {
         FloatingActionButton(
             onClick = onAddEvent,
-            containerColor = Color(0xFFEDE7F6),
+            containerColor = CreateEventButtonColor,
             modifier = Modifier.testTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON)) {
               Icon(Icons.Default.Add, contentDescription = "Add Event")
             }
@@ -145,7 +144,9 @@ fun OverviewScreen(
                 if (ongoingEvents.isNotEmpty()) {
                   item {
                     Text(
-                        text = "Your ongoing events :",
+                        text =
+                            if (ongoingEvents.size == 1) "Your ongoing event :"
+                            else "Your ongoing events :",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         modifier =
@@ -166,7 +167,9 @@ fun OverviewScreen(
                 if (upcomingEvents.isNotEmpty()) {
                   item {
                     Text(
-                        text = "Events to come :",
+                        text =
+                            if (upcomingEvents.size == 1) "Your upcoming event :"
+                            else "Your upcoming events :",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         modifier =
@@ -187,13 +190,6 @@ fun OverviewScreen(
 
 @Composable
 fun EventCard(event: Event, onClick: () -> Unit) {
-  val backgroundColor =
-      when (event.type) {
-        EventType.SPORTS -> Color(0xFF7E57C2) // Violet
-        EventType.ACTIVITY -> Color(0xFF81C784) // Vert
-        EventType.SOCIAL -> Color(0xFFE57373) // Rouge
-      }
-
   Card(
       modifier =
           Modifier.fillMaxWidth()
@@ -201,10 +197,10 @@ fun EventCard(event: Event, onClick: () -> Unit) {
               .testTag(OverviewScreenTestTags.getTestTagForEventItem(event))
               .clickable(onClick = onClick),
       shape = RoundedCornerShape(12.dp),
-      colors = CardDefaults.cardColors(containerColor = backgroundColor),
+      colors = CardDefaults.cardColors(containerColor = event.type.getColor()),
       elevation = CardDefaults.cardElevation(6.dp)) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-          // Date + Heure Row
+          // Date + Hours Row
           Row(
               modifier = Modifier.fillMaxWidth(),
               horizontalArrangement = Arrangement.SpaceBetween) {
@@ -225,7 +221,7 @@ fun EventCard(event: Event, onClick: () -> Unit) {
 
           Spacer(modifier = Modifier.height(6.dp))
 
-          // Titre
+          // Title
           Text(
               text = event.title,
               style = MaterialTheme.typography.titleMedium,
@@ -234,7 +230,7 @@ fun EventCard(event: Event, onClick: () -> Unit) {
 
           Spacer(modifier = Modifier.height(4.dp))
 
-          // Lieu + flèche
+          // Location + arrow
           Row(
               modifier = Modifier.fillMaxWidth(),
               horizontalArrangement = Arrangement.SpaceBetween,

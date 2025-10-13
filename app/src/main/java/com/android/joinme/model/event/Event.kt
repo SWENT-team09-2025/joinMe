@@ -1,5 +1,6 @@
 package com.android.joinme.model.event
 
+import androidx.compose.ui.graphics.Color
 import com.android.joinme.model.map.Location
 import com.google.firebase.Timestamp
 import java.util.Locale
@@ -63,6 +64,19 @@ fun Event.isActive(): Boolean {
 /** Verify if the event is scheduled for a future date. */
 fun Event.isUpcoming(): Boolean {
   return date.toDate().time > System.currentTimeMillis()
+}
+
+/**
+ * Maps each EventType to a specific color for UI representation.
+ *
+ * @return A Color object corresponding to the EventType.
+ */
+fun EventType.getColor(): Color {
+  return when (this) {
+    EventType.SPORTS -> Color(0xFF7E57C2) // Violet
+    EventType.ACTIVITY -> Color(0xFF81C784) // Vert
+    EventType.SOCIAL -> Color(0xFFE57373) // Rouge
+  }
 }
 
 /**
