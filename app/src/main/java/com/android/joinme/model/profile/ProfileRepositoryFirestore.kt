@@ -20,7 +20,7 @@ private const val F_DOB = "dateOfBirth"
 private const val F_CREATED_AT = "createdAt"
 private const val F_UPDATED_AT = "updatedAt"
 
-class ProfileRepositoryFirestore(private val db: FirebaseFirestore) : ProfileRepository {
+class ProfileRepositoryFirestore(db: FirebaseFirestore) : ProfileRepository {
 
   private val profilesCollection = db.collection(PROFILES_COLLECTION_PATH)
 
