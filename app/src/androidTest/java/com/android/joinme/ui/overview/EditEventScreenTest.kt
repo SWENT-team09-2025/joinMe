@@ -1,0 +1,715 @@
+package com.android.joinme.ui.overview
+
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createComposeRule
+import com.android.joinme.model.event.*
+import com.android.joinme.model.map.Location
+import com.google.firebase.Timestamp
+import java.util.*
+import kotlinx.coroutines.runBlocking
+import org.junit.Rule
+import org.junit.Test
+
+class EditEventScreenTest {
+
+  @get:Rule val composeTestRule = createComposeRule()
+
+  private fun createTestEvent(): Event {
+    val calendar = Calendar.getInstance()
+    calendar.set(2024, Calendar.DECEMBER, 25, 14, 30, 0)
+
+    return Event(
+        eventId = "test-event-1",
+        type = EventType.SPORTS,
+        title = "Basketball Game",
+        description = "Friendly 3v3 basketball match",
+        location = Location(46.5197, 6.6323, "EPFL"),
+        date = Timestamp(calendar.time),
+        duration = 90,
+        participants = listOf("user1", "user2"),
+        maxParticipants = 10,
+        visibility = EventVisibility.PUBLIC,
+        ownerId = "owner123")
+  }
+
+  /** --- BASIC RENDERING --- */
+  @Test
+  fun allFieldsAreDisplayed() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TYPE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DATE).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_VISIBILITY)
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsDisplayed()
+  }
+
+  @Test
+  fun eventDataIsLoadedAndDisplayed() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify loaded data
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TYPE)
+        .assertTextContains("SPORTS")
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
+        .assertTextContains("Basketball Game")
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .assertTextContains("Friendly 3v3 basketball match")
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
+        .assertTextContains("EPFL")
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .assertTextContains("10")
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
+        .assertTextContains("90")
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DATE)
+        .assertTextContains("25/12/2024 14:30")
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_VISIBILITY)
+        .assertTextContains("PUBLIC")
+  }
+
+  /** --- EDITING FUNCTIONALITY --- */
+  @Test
+  fun editingTitle_updatesUIState() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
+        .performTextInput("Updated Title")
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
+        .assertTextContains("Updated Title")
+  }
+
+  @Test
+  fun editingDescription_updatesUIState() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextInput("New description text")
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .assertTextContains("New description text")
+  }
+
+  @Test
+  fun editingLocation_updatesUIState() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
+        .performTextInput("Lausanne Sports Center")
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
+        .assertTextContains("Lausanne Sports Center")
+  }
+
+  @Test
+  fun editingMaxParticipants_updatesUIState() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .performTextInput("20")
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .assertTextContains("20")
+  }
+
+  @Test
+  fun editingDuration_updatesUIState() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
+        .performTextInput("120")
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
+        .assertTextContains("120")
+  }
+
+  @Test
+  fun editingDate_updatesUIState() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DATE).performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DATE)
+        .performTextInput("31/12/2024 20:00")
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DATE)
+        .assertTextContains("31/12/2024 20:00")
+  }
+
+  /** --- VALIDATION --- */
+  @Test
+  fun clearingTitle_showsErrorAndDisablesSaveButton() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
+
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE, useUnmergedTree = true)
+        .assertExists()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsNotEnabled()
+  }
+
+  @Test
+  fun invalidMaxParticipants_showsErrorAndDisablesSaveButton() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .performTextInput("0")
+
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE, useUnmergedTree = true)
+        .assertExists()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsNotEnabled()
+  }
+
+  @Test
+  fun invalidDuration_showsErrorAndDisablesSaveButton() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
+        .performTextInput("0")
+
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE, useUnmergedTree = true)
+        .assertExists()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsNotEnabled()
+  }
+
+  @Test
+  fun invalidDate_showsErrorAndDisablesSaveButton() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DATE).performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DATE)
+        .performTextInput("2024-12-25")
+
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE, useUnmergedTree = true)
+        .assertExists()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsNotEnabled()
+  }
+
+  @Test
+  fun correctingInvalidField_removesErrorAndEnablesSaveButton() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Make field invalid
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
+        .performTextInput("0")
+
+    composeTestRule.waitForIdle()
+
+    // Verify error is shown
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE, useUnmergedTree = true)
+        .assertExists()
+
+    // Fix the field
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
+        .performTextInput("60")
+
+    composeTestRule.waitUntil(timeoutMillis = 5_000) {
+      composeTestRule
+          .onAllNodesWithTag(EditEventScreenTestTags.EVENT_SAVE)
+          .fetchSemanticsNodes()
+          .firstOrNull()
+          ?.config
+          ?.getOrNull(SemanticsProperties.Disabled) == null
+    }
+
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsEnabled()
+  }
+
+  /** --- SAVE FUNCTIONALITY --- */
+  @Test
+  fun clickingSaveWithValidData_callsOnDone() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    var saveCalled = false
+
+    composeTestRule.setContent {
+      EditEventScreen(
+          eventId = event.eventId, editEventViewModel = viewModel, onDone = { saveCalled = true })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Wait for button to be enabled
+    composeTestRule.waitUntil(timeoutMillis = 5_000) {
+      composeTestRule
+          .onAllNodesWithTag(EditEventScreenTestTags.EVENT_SAVE)
+          .fetchSemanticsNodes()
+          .firstOrNull()
+          ?.config
+          ?.getOrNull(SemanticsProperties.Disabled) == null
+    }
+
+    // Click save
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).performClick()
+
+    // Assert callback called
+    assert(saveCalled)
+  }
+
+  @Test
+  fun savingEdits_persistsChanges() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Edit title
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
+        .performTextInput("Updated Basketball Game")
+
+    // Wait for button to be enabled
+    composeTestRule.waitUntil(timeoutMillis = 5_000) {
+      composeTestRule
+          .onAllNodesWithTag(EditEventScreenTestTags.EVENT_SAVE)
+          .fetchSemanticsNodes()
+          .firstOrNull()
+          ?.config
+          ?.getOrNull(SemanticsProperties.Disabled) == null
+    }
+
+    // Save
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).performClick()
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify changes persisted
+    runBlocking {
+      val updatedEvent = repo.getEvent(event.eventId)
+      assert(updatedEvent.title == "Updated Basketball Game")
+    }
+  }
+
+  @Test
+  fun clickingSaveWithInvalidData_doesNotCallOnDone() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    var saveCalled = false
+
+    composeTestRule.setContent {
+      EditEventScreen(
+          eventId = event.eventId, editEventViewModel = viewModel, onDone = { saveCalled = true })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Make data invalid
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
+
+    composeTestRule.waitForIdle()
+
+    // Button should be disabled, but try to verify click doesn't work
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsNotEnabled()
+
+    // Callback should not be called
+    assert(!saveCalled)
+  }
+
+  /** --- VIEWMODEL TESTS --- */
+  @Test
+  fun viewModel_loadEvent_updatesUIState() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    // Initially empty
+    assert(viewModel.uiState.value.title.isEmpty())
+
+    // Load event
+    viewModel.loadEvent(event.eventId)
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify loaded
+    assert(viewModel.uiState.value.title == "Basketball Game")
+    assert(viewModel.uiState.value.type == "SPORTS")
+    assert(viewModel.uiState.value.maxParticipants == "10")
+  }
+
+  @Test
+  fun viewModel_settersUpdateState() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = EditEventViewModel(repo)
+
+    viewModel.setTitle("New Title")
+    assert(viewModel.uiState.value.title == "New Title")
+
+    viewModel.setDescription("New Description")
+    assert(viewModel.uiState.value.description == "New Description")
+
+    viewModel.setLocation("New Location")
+    assert(viewModel.uiState.value.location == "New Location")
+
+    viewModel.setMaxParticipants("5")
+    assert(viewModel.uiState.value.maxParticipants == "5")
+
+    viewModel.setDuration("45")
+    assert(viewModel.uiState.value.duration == "45")
+
+    viewModel.setType("SPORTS")
+    assert(viewModel.uiState.value.type == "SPORTS")
+
+    viewModel.setVisibility("PRIVATE")
+    assert(viewModel.uiState.value.visibility == "PRIVATE")
+  }
+
+  @Test
+  fun viewModel_clearErrorMsg_removesError() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = EditEventViewModel(repo)
+
+    // Load non-existent event to trigger error
+    viewModel.loadEvent("non-existent-id")
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Error should be set
+    assert(viewModel.uiState.value.errorMsg != null)
+
+    // Clear error
+    viewModel.clearErrorMsg()
+
+    // Error should be cleared
+    assert(viewModel.uiState.value.errorMsg == null)
+  }
+
+  @Test
+  fun saveButton_enabledWhenAllFieldsValid() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.waitUntil(timeoutMillis = 5_000) {
+      composeTestRule
+          .onAllNodesWithTag(EditEventScreenTestTags.EVENT_SAVE)
+          .fetchSemanticsNodes()
+          .firstOrNull()
+          ?.config
+          ?.getOrNull(SemanticsProperties.Disabled) == null
+    }
+
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsEnabled()
+  }
+
+  @Test
+  fun whitespaceTitleIsTreatedAsEmpty() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("   ")
+
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsNotEnabled()
+  }
+
+  @Test
+  fun multipleFieldEdits_allPersist() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Edit multiple fields
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
+        .performTextInput("New Title")
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .performTextInput("15")
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
+        .performTextInput("120")
+
+    // Verify all persist in UI state
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
+        .assertTextContains("New Title")
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .assertTextContains("15")
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
+        .assertTextContains("120")
+  }
+}
