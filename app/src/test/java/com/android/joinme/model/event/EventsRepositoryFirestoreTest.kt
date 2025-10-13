@@ -1,0 +1,252 @@
+package com.android.joinme.model.event
+
+import com.android.joinme.model.map.Location
+import com.google.android.gms.tasks.Tasks
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.QuerySnapshot
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.verify
+import java.util.Date
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Before
+import org.junit.Test
+
+class EventsRepositoryFirestoreTest {
+
+  private lateinit var mockDb: FirebaseFirestore
+  private lateinit var mockCollection: CollectionReference
+  private lateinit var mockDocument: DocumentReference
+  private lateinit var mockAuth: FirebaseAuth
+  private lateinit var mockUser: FirebaseUser
+  private lateinit var repository: EventsRepositoryFirestore
+
+  private val testEventId = "testEvent123"
+  private val testUserId = "testUser456"
+  private val testEvent =
+      Event(
+          eventId = testEventId,
+          type = EventType.SOCIAL,
+          title = "Coffee Meetup",
+          description = "Grab a coffee at EPFL Café",
+          location = Location(46.52, 6.63, "EPFL Café"),
+          date = Timestamp(Date()),
+          duration = 60,
+          participants = listOf("user1", "user2"),
+          maxParticipants = 5,
+          visibility = EventVisibility.PUBLIC,
+          ownerId = testUserId)
+
+  @Before
+  fun setup() {
+    // Mock Firestore
+    mockDb = mockk(relaxed = true)
+    mockCollection = mockk(relaxed = true)
+    mockDocument = mockk(relaxed = true)
+
+    // Mock Firebase Auth
+    mockAuth = mockk(relaxed = true)
+    mockUser = mockk(relaxed = true)
+
+    every { mockDb.collection(EVENTS_COLLECTION_PATH) } returns mockCollection
+    every { mockCollection.document(any()) } returns mockDocument
+    every { mockCollection.document() } returns mockDocument
+    every { mockDocument.id } returns testEventId
+
+    repository = EventsRepositoryFirestore(mockDb)
+  }
+
+  @Test
+  fun getNewEventId_returnsValidId() {
+    // When
+    val eventId = repository.getNewEventId()
+
+    // Then
+    assertNotNull(eventId)
+    assertEquals(testEventId, eventId)
+    verify { mockDb.collection(EVENTS_COLLECTION_PATH) }
+    verify { mockCollection.document() }
+  }
+
+  @Test
+  fun addEvent_callsFirestoreSet() = runTest {
+    // Given
+    every { mockDocument.set(any()) } returns Tasks.forResult(null)
+
+    // When
+    repository.addEvent(testEvent)
+
+    // Then
+    verify { mockCollection.document(testEventId) }
+    verify { mockDocument.set(testEvent) }
+  }
+
+  @Test
+  fun getEvent_returnsEventSuccessfully() = runTest {
+    // Given
+    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+    every { mockSnapshot.id } returns testEventId
+    every { mockSnapshot.getString("type") } returns EventType.SOCIAL.name
+    every { mockSnapshot.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot.getString("title") } returns "Coffee Meetup"
+    every { mockSnapshot.getString("description") } returns "Grab a coffee at EPFL Café"
+    every { mockSnapshot.getTimestamp("date") } returns testEvent.date
+    every { mockSnapshot.getLong("duration") } returns 60L
+    every { mockSnapshot.get("participants") } returns listOf("user1", "user2")
+    every { mockSnapshot.getLong("maxParticipants") } returns 5L
+    every { mockSnapshot.getString("ownerId") } returns testUserId
+    every { mockSnapshot.get("location") } returns
+        mapOf("latitude" to 46.52, "longitude" to 6.63, "name" to "EPFL Café")
+
+    // When
+    val result = repository.getEvent(testEventId)
+
+    // Then
+    assertNotNull(result)
+    assertEquals(testEventId, result.eventId)
+    assertEquals("Coffee Meetup", result.title)
+    assertEquals(EventType.SOCIAL, result.type)
+    assertEquals(testUserId, result.ownerId)
+  }
+
+  @Test
+  fun editEvent_callsFirestoreUpdate() = runTest {
+    // Given
+    val updatedEvent = testEvent.copy(title = "Updated Title")
+    every { mockDocument.set(any()) } returns Tasks.forResult(null)
+
+    // When
+    repository.editEvent(testEventId, updatedEvent)
+
+    // Then
+    verify { mockCollection.document(testEventId) }
+    verify { mockDocument.set(updatedEvent) }
+  }
+
+  @Test
+  fun deleteEvent_callsFirestoreDelete() = runTest {
+    // Given
+    every { mockDocument.delete() } returns Tasks.forResult(null)
+
+    // When
+    repository.deleteEvent(testEventId)
+
+    // Then
+    verify { mockCollection.document(testEventId) }
+    verify { mockDocument.delete() }
+  }
+
+  @Test
+  fun getAllEvents_returnsEventsForCurrentUser() = runTest {
+    // Given
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns mockUser
+    every { mockUser.uid } returns testUserId
+
+    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+
+    every { mockCollection.whereEqualTo("ownerId", testUserId) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
+
+    // Setup first event
+    every { mockSnapshot1.id } returns "event1"
+    every { mockSnapshot1.getString("type") } returns EventType.SOCIAL.name
+    every { mockSnapshot1.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot1.getString("title") } returns "Event 1"
+    every { mockSnapshot1.getString("description") } returns "Description 1"
+    every { mockSnapshot1.getTimestamp("date") } returns Timestamp(Date())
+    every { mockSnapshot1.getLong("duration") } returns 30L
+    every { mockSnapshot1.get("participants") } returns emptyList<String>()
+    every { mockSnapshot1.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot1.getString("ownerId") } returns testUserId
+    every { mockSnapshot1.get("location") } returns null
+
+    // Setup second event
+    every { mockSnapshot2.id } returns "event2"
+    every { mockSnapshot2.getString("type") } returns EventType.SPORTS.name
+    every { mockSnapshot2.getString("visibility") } returns EventVisibility.PRIVATE.name
+    every { mockSnapshot2.getString("title") } returns "Event 2"
+    every { mockSnapshot2.getString("description") } returns "Description 2"
+    every { mockSnapshot2.getTimestamp("date") } returns Timestamp(Date())
+    every { mockSnapshot2.getLong("duration") } returns 45L
+    every { mockSnapshot2.get("participants") } returns listOf("user3")
+    every { mockSnapshot2.getLong("maxParticipants") } returns 8L
+    every { mockSnapshot2.getString("ownerId") } returns testUserId
+    every { mockSnapshot2.get("location") } returns null
+
+    // When
+    val result = repository.getAllEvents()
+
+    // Then
+    assertEquals(2, result.size)
+    assertEquals("Event 1", result[0].title)
+    assertEquals("Event 2", result[1].title)
+  }
+
+  @Test(expected = Exception::class)
+  fun getEvent_throwsExceptionWhenNotFound() = runTest {
+    // Given
+    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+    every { mockSnapshot.getString("title") } returns null // Missing required field
+
+    // When
+    repository.getEvent(testEventId)
+
+    // Then - exception is thrown
+  }
+
+  @Test(expected = Exception::class)
+  fun getAllEvents_throwsExceptionWhenUserNotLoggedIn() = runTest {
+    // Given
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null // User not logged in
+
+    // When
+    repository.getAllEvents()
+
+    // Then - exception is thrown
+  }
+
+  @Test(expected = Exception::class)
+  fun documentToEvent_handlesExceptionGracefully() = runTest {
+    // Given
+    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+    every { mockSnapshot.id } returns testEventId
+    every { mockSnapshot.getString("type") } returns "INVALID_TYPE" // Invalid enum value
+    every { mockSnapshot.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot.getString("title") } returns "Test Event"
+    every { mockSnapshot.getString("description") } returns "Description"
+    every { mockSnapshot.getTimestamp("date") } returns Timestamp(Date())
+    every { mockSnapshot.getLong("duration") } returns 60L
+    every { mockSnapshot.get("participants") } returns emptyList<String>()
+    every { mockSnapshot.getLong("maxParticipants") } returns 5L
+    every { mockSnapshot.getString("ownerId") } returns testUserId
+    every { mockSnapshot.get("location") } returns null
+
+    // When - documentToEvent catches the exception and returns null
+    // getEvent then throws because documentToEvent returned null
+    repository.getEvent(testEventId)
+
+    // Then - exception is thrown because documentToEvent returned null
+  }
+}
