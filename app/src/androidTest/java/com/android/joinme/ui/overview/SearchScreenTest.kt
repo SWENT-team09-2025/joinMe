@@ -10,7 +10,7 @@ class SearchScreenTest {
   @get:Rule val composeTestRule = createComposeRule()
 
   private fun setupScreen(viewModel: SearchViewModel = SearchViewModel()) {
-    composeTestRule.setContent { SearchScreen(searchViewModel = viewModel, onGoBack = {}) }
+    composeTestRule.setContent { SearchScreen(searchViewModel = viewModel) }
   }
 
   @Test
@@ -18,13 +18,6 @@ class SearchScreenTest {
     setupScreen()
 
     composeTestRule.onNodeWithText("Search").assertIsDisplayed()
-  }
-
-  @Test
-  fun searchScreen_displaysBackButton() {
-    setupScreen()
-
-    composeTestRule.onNodeWithContentDescription("Back").assertIsDisplayed()
   }
 
   @Test
@@ -84,18 +77,6 @@ class SearchScreenTest {
     composeTestRule.onNodeWithText("Search an event").performTextInput(searchQuery)
 
     composeTestRule.onNodeWithText(searchQuery).assertIsDisplayed()
-  }
-
-  @Test
-  fun searchScreen_backButtonIsClickable() {
-    var backClicked = false
-    composeTestRule.setContent {
-      SearchScreen(searchViewModel = SearchViewModel(), onGoBack = { backClicked = true })
-    }
-
-    composeTestRule.onNodeWithContentDescription("Back").performClick()
-
-    assert(backClicked)
   }
 
   @Test
@@ -544,8 +525,7 @@ class SearchScreenTest {
 
     var eventClicked = false
     composeTestRule.setContent {
-      SearchScreen(
-          searchViewModel = viewModel, onGoBack = {}, onSelectEvent = { eventClicked = true })
+      SearchScreen(searchViewModel = viewModel, onSelectEvent = { eventClicked = true })
     }
 
     val sampleEvent =

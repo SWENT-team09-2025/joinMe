@@ -2,7 +2,6 @@ package com.android.joinme
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -95,11 +94,7 @@ fun JoinMe(
               onDone = { navigationActions.navigateTo(Screen.Overview) },
               onGoBack = { navigationActions.goBack() },
               eventId = eventId)
-        }
-            ?: run {
-              Log.e("EditToDoScreen", "ToDo UID is null")
-              Toast.makeText(context, "ToDo UID is null", Toast.LENGTH_SHORT).show()
-            }
+        } ?: run { Toast.makeText(context, "Event UID is null", Toast.LENGTH_SHORT).show() }
       }
     }
 
@@ -107,7 +102,7 @@ fun JoinMe(
         startDestination = Screen.Search.route,
         route = Screen.Search.name,
     ) {
-      composable(Screen.Search.route) { SearchScreen(onGoBack = { navigationActions.goBack() }) }
+      composable(Screen.Search.route) { SearchScreen(navigationActions = navigationActions) }
     }
 
     navigation(

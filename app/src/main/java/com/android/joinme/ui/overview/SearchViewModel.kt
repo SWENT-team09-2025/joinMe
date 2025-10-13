@@ -1,6 +1,5 @@
 package com.android.joinme.ui.overview
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.Event
@@ -13,10 +12,29 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** Represents a sport category that can be filtered */
+/**
+ * Represents a sport category that can be filtered.
+ *
+ * @property id Unique identifier for the sport
+ * @property name Display name of the sport
+ * @property isChecked Whether the sport category is currently selected
+ */
 data class SportCategory(val id: String, val name: String, val isChecked: Boolean = false)
 
-/** UI state for the Search screen. */
+/**
+ * UI state for the Search screen.
+ *
+ * @property query The current search query text
+ * @property isAllSelected Whether all filters (Social, Activity, and all sports) are selected
+ * @property isSocialSelected Whether the Social event type filter is selected
+ * @property isActivitySelected Whether the Activity event type filter is selected
+ * @property sportCategories List of sport categories with their selection states
+ * @property categoryExpanded Whether the sport category dropdown menu is expanded
+ * @property events List of events to display after applying filters
+ * @property errorMsg Error message to display if fetching events fails
+ * @property selectedSportsCount Computed property returning the count of selected sports
+ * @property isSelectAllChecked Computed property indicating if all sports are selected
+ */
 data class SearchUIState(
     val query: String = "",
     val isAllSelected: Boolean = true,
@@ -35,6 +53,15 @@ data class SearchUIState(
     get() = sportCategories.all { it.isChecked }
 }
 
+/**
+ * ViewModel for the Search screen.
+ *
+ * Manages the search query and filter states (Social, Activity, Sports) for event searching.
+ * Handles filter toggling logic and maintains the relationship between individual filters and the
+ * "All" filter. Fetches events from the repository and applies filters to display relevant results.
+ *
+ * @property eventRepository Repository for fetching event data
+ */
 class SearchViewModel(
     private val eventRepository: EventsRepository =
         EventsRepositoryProvider.getRepository(isOnline = true)
@@ -56,7 +83,11 @@ class SearchViewModel(
     _uiState.value = _uiState.value.copy(errorMsg = errorMsg)
   }
 
-  /** Updates the search query. */
+  /**
+   * Updates the search query.
+   *
+   * @param query The new search query text
+   */
   fun setQuery(query: String) {
     _uiState.value = _uiState.value.copy(query = query)
   }
@@ -98,7 +129,11 @@ class SearchViewModel(
     applyFiltersToUIState()
   }
 
-  /** Sets the category dropdown expanded state. */
+  /**
+   * Sets the category dropdown expanded state.
+   *
+   * @param expanded True to expand the dropdown, false to collapse it
+   */
   fun setCategoryExpanded(expanded: Boolean) {
     _uiState.value = _uiState.value.copy(categoryExpanded = expanded)
   }
@@ -116,7 +151,11 @@ class SearchViewModel(
     applyFiltersToUIState()
   }
 
-  /** Toggles a specific sport filter by ID. */
+  /**
+   * Toggles a specific sport filter by ID.
+   *
+   * @param sportId The unique identifier of the sport to toggle
+   */
   fun toggleSport(sportId: String) {
     val state = _uiState.value
     val updatedSports =
@@ -132,13 +171,29 @@ class SearchViewModel(
     applyFiltersToUIState()
   }
 
-  /** Sets the events list (for testing purposes). */
+  /**
+   * Sets the events list (for testing purposes).
+   *
+   * @param events The list of events to display
+   */
   fun setEvents(events: List<Event>) {
-    Log.d("SearchViewModel", "setEvents: Setting ${events.size} events")
     allEvents = events
     applyFiltersToUIState()
   }
 
+  /**
+   * Refreshes the UI state by fetching all events from the repository.
+   *
+   * This method triggers a fetch of all events from the repository and applies the current filters
+   * to update the displayed events list. It should be called when the screen first loads or when
+   * the user wants to refresh the event data.
+   *
+   * If fetching events fails, an error message is set in the UI state which can be displayed to the
+   * user.
+   *
+   * @see getAllEvents
+   * @see applyFiltersToUIState
+   */
   fun refreshUIState() {
     getAllEvents()
   }
@@ -150,7 +205,6 @@ class SearchViewModel(
         allEvents = eventRepository.getAllEvents()
         applyFiltersToUIState()
       } catch (e: Exception) {
-        Log.e("OverviewViewModel", "Error fetching events", e)
         setErrorMsg("Failed to load events: ${e.message}")
       }
     }
@@ -158,13 +212,8 @@ class SearchViewModel(
 
   /** Applies filters to all events and updates the UI state. */
   private fun applyFiltersToUIState() {
-    Log.d("SearchViewModel", "applyFiltersToUIState: allEvents size = ${allEvents.size}")
     val filteredEvents = applyFilters(allEvents)
-    Log.d("SearchViewModel", "applyFiltersToUIState: filteredEvents size = ${filteredEvents.size}")
     _uiState.value = _uiState.value.copy(events = filteredEvents)
-    Log.d(
-        "SearchViewModel",
-        "applyFiltersToUIState: uiState.events size = ${_uiState.value.events.size}")
   }
 
   /** Applies the current filters to the list of events. */

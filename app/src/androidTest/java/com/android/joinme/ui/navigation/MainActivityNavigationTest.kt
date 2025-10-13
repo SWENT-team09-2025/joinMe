@@ -165,23 +165,6 @@ class MainActivityNavigationTest {
   }
 
   @Test
-  fun searchScreen_goBackNavigatesToPreviousScreen() {
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Navigate to Search
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Search")).performClick()
-    composeTestRule.waitForIdle()
-
-    // Click back button
-    composeTestRule.onNodeWithContentDescription("Back").performClick()
-    composeTestRule.waitForIdle()
-
-    // Verify back navigation occurred (no crash)
-  }
-
-  @Test
   fun bottomNavIsDisplayedOnOverviewScreen() {
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)

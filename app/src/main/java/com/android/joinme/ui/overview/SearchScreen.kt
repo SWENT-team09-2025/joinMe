@@ -14,7 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
@@ -44,13 +43,27 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.Event
+import com.android.joinme.ui.navigation.BottomNavigationMenu
+import com.android.joinme.ui.navigation.NavigationActions
+import com.android.joinme.ui.navigation.Tab
 
+/**
+ * Search screen composable that displays a search interface with filters.
+ *
+ * Provides a search text field, filter chips (All, Social, Activity), and a sport category dropdown
+ * menu. Users can search for events and apply various filters to narrow down results.
+ *
+ * @param searchViewModel ViewModel managing search state and filter logic
+ * @param searchQuery Initial search query (currently unused, reserved for future use)
+ * @param navigationActions Navigation actions for handling tab navigation
+ * @param onSelectEvent Callback invoked when an event is selected from the list
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     searchViewModel: SearchViewModel = viewModel(),
     searchQuery: String = "",
-    onGoBack: () -> Unit,
+    navigationActions: NavigationActions? = null,
     onSelectEvent: (Event) -> Unit = {}
 ) {
   val context = LocalContext.current
@@ -58,15 +71,6 @@ fun SearchScreen(
   val focusManager = LocalFocusManager.current
   val events = uiState.events
 
-  // Debug: Check events list
-  LaunchedEffect(events) {
-    android.util.Log.d("SearchScreen", "Events count: ${events.size}")
-    events.forEach { event ->
-      android.util.Log.d("SearchScreen", "Event: ${event.title} - ${event.type}")
-    }
-  }
-
-  // Don't call refreshUIState() when events are already set from MainActivity
   LaunchedEffect(Unit) { searchViewModel.refreshUIState() }
 
   // Show error message if fetching todos fails
@@ -78,14 +82,12 @@ fun SearchScreen(
   }
 
   Scaffold(
-      topBar = {
-        TopAppBar(
-            title = { Text("Search") },
-            navigationIcon = {
-              IconButton(onClick = onGoBack) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-              }
-            })
+      topBar = { TopAppBar(title = { Text("Search") }) },
+      bottomBar = {
+        BottomNavigationMenu(
+            selectedTab = Tab.Search,
+            onTabSelected = { tab -> navigationActions?.navigateTo(tab.destination) },
+            modifier = Modifier)
       }) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
           Column(

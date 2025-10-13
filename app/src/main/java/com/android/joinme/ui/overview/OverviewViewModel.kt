@@ -1,6 +1,5 @@
 package com.android.joinme.ui.overview
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.Event
@@ -70,7 +69,6 @@ class OverviewViewModel(
         val events = eventRepository.getAllEvents()
         _uiState.value = OverviewUIState(events = events)
       } catch (e: Exception) {
-        Log.e("OverviewViewModel", "Error fetching events", e)
         setErrorMsg("Failed to load events: ${e.message}")
       }
     }
