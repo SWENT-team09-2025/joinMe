@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
+import com.android.joinme.model.event.isActive
+import com.android.joinme.model.event.isUpcoming
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,13 +16,13 @@ import kotlinx.coroutines.launch
 /**
  * Represents the UI state for the Overview screen.
  *
- * @property events A list of `Event` items to be displayed in the Overview screen. Defaults to an
- *   empty list if no items are available.
- * @property errorMsg An error message to be shown when fetching todos fails. `null` if no error is
- *   present.
+ * @property ongoingEvents Events that have started (active or ongoing)
+ * @property upcomingEvents Events that haven't started yet
+ * @property errorMsg An error message to be shown when fetching events fails
  */
 data class OverviewUIState(
-    val events: List<Event> = emptyList(),
+    val ongoingEvents: List<Event> = emptyList(),
+    val upcomingEvents: List<Event> = emptyList(),
     val errorMsg: String? = null,
 )
 
@@ -67,8 +69,13 @@ class OverviewViewModel(
   private fun getAllEvents() {
     viewModelScope.launch {
       try {
-        val events = eventRepository.getAllEvents()
-        _uiState.value = OverviewUIState(events = events)
+        val allEvents = eventRepository.getAllEvents()
+
+        val ongoing = allEvents.filter { it.isActive() }.sortedBy { it.date.toDate().time }
+
+        val upcoming = allEvents.filter { it.isUpcoming() }.sortedBy { it.date.toDate().time }
+
+        _uiState.value = OverviewUIState(ongoingEvents = ongoing, upcomingEvents = upcoming)
       } catch (e: Exception) {
         Log.e("OverviewViewModel", "Error fetching events", e)
         setErrorMsg("Failed to load events: ${e.message}")

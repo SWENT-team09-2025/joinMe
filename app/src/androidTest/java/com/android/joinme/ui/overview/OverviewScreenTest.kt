@@ -376,7 +376,8 @@ class OverviewScreenTest {
     val viewModel = OverviewViewModel(repo)
 
     // Initially empty
-    assert(viewModel.uiState.value.events.isEmpty())
+    assert(viewModel.uiState.value.ongoingEvents.isEmpty())
+    assert(viewModel.uiState.value.upcomingEvents.isEmpty())
 
     // Add event and refresh
     runBlocking { repo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
@@ -387,8 +388,9 @@ class OverviewScreenTest {
     composeTestRule.waitForIdle()
 
     // Events should be updated
-    assert(viewModel.uiState.value.events.size == 1)
-    assert(viewModel.uiState.value.events[0].title == "Basketball")
+    val totalEvents =
+        viewModel.uiState.value.ongoingEvents.size + viewModel.uiState.value.upcomingEvents.size
+    assert(totalEvents == 1)
   }
 
   @Test
@@ -628,5 +630,130 @@ class OverviewScreenTest {
 
     // The event should be loaded and displayed
     composeTestRule.onNodeWithText("Pre-added Event").assertExists()
+  }
+
+  @Test
+  fun overviewScreen_displaysOngoingEventsTitle_whenOngoingEventsExist() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    // Create an ongoing event (started but not finished)
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -1) // Started 1 hour ago
+    val ongoingEvent =
+        Event(
+            eventId = "1",
+            type = EventType.SPORTS,
+            title = "Ongoing Event",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendar.time),
+            duration = 180, // 3 hours duration
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    runBlocking { repo.addEvent(ongoingEvent) }
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.ONGOING_EVENTS_TITLE).assertExists()
+  }
+
+  @Test
+  fun overviewScreen_displaysUpcomingEventsTitle_whenUpcomingEventsExist() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    // Create an upcoming event (not started yet)
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 2) // Starts in 2 hours
+    val upcomingEvent =
+        Event(
+            eventId = "1",
+            type = EventType.SPORTS,
+            title = "Upcoming Event",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendar.time),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    runBlocking { repo.addEvent(upcomingEvent) }
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.UPCOMING_EVENTS_TITLE).assertExists()
+  }
+
+  @Test
+  fun overviewScreen_displaysBothSections_whenBothEventTypesExist() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    // Create an ongoing event
+    val calendarOngoing = Calendar.getInstance()
+    calendarOngoing.add(Calendar.HOUR, -1)
+    val ongoingEvent =
+        Event(
+            eventId = "1",
+            type = EventType.SPORTS,
+            title = "Ongoing Event",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendarOngoing.time),
+            duration = 180,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    // Create an upcoming event
+    val calendarUpcoming = Calendar.getInstance()
+    calendarUpcoming.add(Calendar.HOUR, 2)
+    val upcomingEvent =
+        Event(
+            eventId = "2",
+            type = EventType.SOCIAL,
+            title = "Upcoming Event",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendarUpcoming.time),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    runBlocking {
+      repo.addEvent(ongoingEvent)
+      repo.addEvent(upcomingEvent)
+    }
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Both section titles should exist
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.ONGOING_EVENTS_TITLE).assertExists()
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.UPCOMING_EVENTS_TITLE).assertExists()
+
+    // Both events should be displayed
+    composeTestRule.onNodeWithText("Ongoing Event").assertExists()
+    composeTestRule.onNodeWithText("Upcoming Event").assertExists()
   }
 }
