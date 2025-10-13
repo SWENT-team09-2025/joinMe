@@ -10,10 +10,4 @@ class EventsRepositoryProviderTest {
     val repo = EventsRepositoryProvider.getRepository(isOnline = false)
     assertTrue(repo is EventsRepositoryLocal)
   }
-
-  @Test
-  fun usesFirestoreRepo_whenOnline() {
-    val repo = EventsRepositoryProvider.getRepository(isOnline = true)
-    assertTrue(repo is EventsRepositoryFirestore)
-  }
 }

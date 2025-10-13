@@ -23,7 +23,7 @@ object EventsRepositoryProvider {
    * @param isOnline whether the app is online
    * @param context required for initializing Firebase if needed
    */
-  fun getRepository(isOnline: Boolean, context: Context? = null): EventsRepository {
+  fun getRepository(isOnline: Boolean = true, context: Context? = null): EventsRepository {
     return if (isOnline) getFirestoreRepo(context) else localRepo
   }
 
@@ -36,10 +36,5 @@ object EventsRepositoryProvider {
       firestoreRepo = EventsRepositoryFirestore(Firebase.firestore)
     }
     return firestoreRepo!!
-  }
-
-  /** Resets both repositories — used for testing. */
-  internal fun resetForTesting() {
-    firestoreRepo = null
   }
 }
