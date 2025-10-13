@@ -1,5 +1,6 @@
 package com.android.joinme.model.event
 
+import androidx.compose.ui.graphics.Color
 import com.android.joinme.model.map.Location
 import com.google.firebase.Timestamp
 import java.util.Locale
@@ -44,6 +45,38 @@ enum class EventType {
 enum class EventVisibility {
   PUBLIC,
   PRIVATE
+}
+
+/** Verify if the event has already occurred based on its date and duration. */
+fun Event.isExpired(): Boolean {
+  val endTimeMillis = date.toDate().time + (duration * 60 * 1000)
+  return endTimeMillis < System.currentTimeMillis()
+}
+
+/** Verify if the event is currently ongoing based on its date and duration. */
+fun Event.isActive(): Boolean {
+  val now = System.currentTimeMillis()
+  val startTime = date.toDate().time
+  val endTime = startTime + (duration * 60 * 1000)
+  return now >= startTime && now < endTime
+}
+
+/** Verify if the event is scheduled for a future date. */
+fun Event.isUpcoming(): Boolean {
+  return date.toDate().time > System.currentTimeMillis()
+}
+
+/**
+ * Maps each EventType to a specific color for UI representation.
+ *
+ * @return A Color object corresponding to the EventType.
+ */
+fun EventType.getColor(): Color {
+  return when (this) {
+    EventType.SPORTS -> Color(0xFF7E57C2) // Violet
+    EventType.ACTIVITY -> Color(0xFF81C784) // Vert
+    EventType.SOCIAL -> Color(0xFFE57373) // Rouge
+  }
 }
 
 /**
