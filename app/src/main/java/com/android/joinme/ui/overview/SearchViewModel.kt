@@ -7,6 +7,7 @@ import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
+import com.android.joinme.model.sport.Sports
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,11 +23,7 @@ data class SearchUIState(
     val isSocialSelected: Boolean = true,
     val isActivitySelected: Boolean = true,
     val sportCategories: List<SportCategory> =
-        listOf(
-            SportCategory("basket", "Basket", isChecked = true),
-            SportCategory("football", "Football", isChecked = true),
-            SportCategory("tennis", "Tennis", isChecked = true),
-            SportCategory("running", "Running", isChecked = true)),
+        Sports.ALL.map { SportCategory(it.id, it.name, isChecked = true) },
     val categoryExpanded: Boolean = false,
     val events: List<Event> = emptyList(),
     val errorMsg: String? = null,
@@ -165,7 +162,9 @@ class SearchViewModel(
     val filteredEvents = applyFilters(allEvents)
     Log.d("SearchViewModel", "applyFiltersToUIState: filteredEvents size = ${filteredEvents.size}")
     _uiState.value = _uiState.value.copy(events = filteredEvents)
-    Log.d("SearchViewModel", "applyFiltersToUIState: uiState.events size = ${_uiState.value.events.size}")
+    Log.d(
+        "SearchViewModel",
+        "applyFiltersToUIState: uiState.events size = ${_uiState.value.events.size}")
   }
 
   /** Applies the current filters to the list of events. */

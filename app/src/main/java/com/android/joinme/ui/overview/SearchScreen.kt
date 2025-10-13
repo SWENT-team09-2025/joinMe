@@ -67,7 +67,7 @@ fun SearchScreen(
   }
 
   // Don't call refreshUIState() when events are already set from MainActivity
-   LaunchedEffect(Unit) { searchViewModel.refreshUIState() }
+  LaunchedEffect(Unit) { searchViewModel.refreshUIState() }
 
   // Show error message if fetching todos fails
   LaunchedEffect(uiState.errorMsg) {
