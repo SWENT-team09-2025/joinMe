@@ -47,8 +47,8 @@ class OverviewViewModelTest {
 
     val state = viewModel.uiState.value
     assertNull(state.errorMsg)
-    assertEquals(2, state.events.size)
-    assertEquals("Event 1", state.events[0].title)
+    val totalEvents = state.ongoingEvents.size + state.upcomingEvents.size
+    assertEquals(2, totalEvents)
   }
 
   @Test
@@ -64,7 +64,8 @@ class OverviewViewModelTest {
 
     val state = viewModel.uiState.value
     assertNotNull(state.errorMsg)
-    assertTrue(state.events.isEmpty())
+    assertTrue(state.ongoingEvents.isEmpty())
+    assertTrue(state.upcomingEvents.isEmpty())
   }
 
   @Test
@@ -87,8 +88,36 @@ class OverviewViewModelTest {
     testDispatcher.scheduler.advanceUntilIdle()
 
     val state = viewModel.uiState.value
-    assertEquals(2, state.events.size)
-    assertEquals("Event 2", state.events[1].title)
+    val totalEvents = state.ongoingEvents.size + state.upcomingEvents.size
+    assertEquals(2, totalEvents)
+  }
+
+  @Test
+  fun `events are sorted by date in ascending order`() = runTest {
+    fakeRepository.shouldThrow = false
+
+    viewModel.refreshUIState()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+
+    // Check ongoing events are sorted
+    if (state.ongoingEvents.size > 1) {
+      for (i in 0 until state.ongoingEvents.size - 1) {
+        assertTrue(
+            state.ongoingEvents[i].date.toDate().time <=
+                state.ongoingEvents[i + 1].date.toDate().time)
+      }
+    }
+
+    // Check upcoming events are sorted
+    if (state.upcomingEvents.size > 1) {
+      for (i in 0 until state.upcomingEvents.size - 1) {
+        assertTrue(
+            state.upcomingEvents[i].date.toDate().time <=
+                state.upcomingEvents[i + 1].date.toDate().time)
+      }
+    }
   }
 
   /** Fake implementation of [EventsRepository] for isolated ViewModel testing. */
