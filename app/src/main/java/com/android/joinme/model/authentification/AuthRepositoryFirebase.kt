@@ -54,7 +54,11 @@ class AuthRepositoryFirebase(
     }
   }
 
-  override fun signOut(): Result<Unit> {
+  override suspend fun getCurrentUser(): FirebaseUser? = auth.currentUser
+
+  override suspend fun getCurrentUserEmail(): String? = auth.currentUser?.email
+
+  override suspend fun signOut(): Result<Unit> {
     return try {
       // Firebase sign out
       auth.signOut()
