@@ -1,19 +1,45 @@
 package com.android.joinme.model.event
 
+import android.content.Context
+import com.google.firebase.FirebaseApp
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+
 /**
- * Provides a single instance of the repository in the app. 'repository' is mutable for testing
- * purposes.
+ * Provides the correct [EventsRepository] implementation depending on connectivity. Uses Firestore
+ * when online, local repository otherwise.
  */
 object EventsRepositoryProvider {
 
-  //  private val firestoreRepo: EventsRepository by lazy {
-  //    EventsRepositoryFirestore(db = Firebase.firestore)
-  //  }
-
+  // Local repository (in-memory)
   private val localRepo: EventsRepository by lazy { EventsRepositoryLocal() }
 
-  fun getRepository(isOnline: Boolean): EventsRepository {
-    // return if (isOnline) firestoreRepo else localRepo
-    return localRepo
+  // Firestore repository (initialized lazily)
+  private var firestoreRepo: EventsRepository? = null
+
+  /**
+   * Returns the appropriate repository based on network availability.
+   *
+   * @param isOnline whether the app is online
+   * @param context required for initializing Firebase if needed
+   */
+  fun getRepository(isOnline: Boolean, context: Context? = null): EventsRepository {
+    return if (isOnline) getFirestoreRepo(context) else localRepo
+  }
+
+  private fun getFirestoreRepo(context: Context?): EventsRepository {
+    if (firestoreRepo == null) {
+      if (FirebaseApp.getApps(context ?: FirebaseApp.getInstance().applicationContext).isEmpty()) {
+        requireNotNull(context) { "Context is required to initialize Firebase" }
+        FirebaseApp.initializeApp(context)
+      }
+      firestoreRepo = EventsRepositoryFirestore(Firebase.firestore)
+    }
+    return firestoreRepo!!
+  }
+
+  /** Resets both repositories — used for testing. */
+  internal fun resetForTesting() {
+    firestoreRepo = null
   }
 }
