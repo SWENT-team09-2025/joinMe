@@ -756,4 +756,250 @@ class OverviewScreenTest {
     composeTestRule.onNodeWithText("Ongoing Event").assertExists()
     composeTestRule.onNodeWithText("Upcoming Event").assertExists()
   }
+
+  @Test
+  fun overviewScreen_displaysSingularTitle_whenOnlyOneOngoingEvent() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    // Create a single ongoing event
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -1)
+    val ongoingEvent =
+        Event(
+            eventId = "1",
+            type = EventType.SPORTS,
+            title = "Single Ongoing",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendar.time),
+            duration = 180,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    runBlocking { repo.addEvent(ongoingEvent) }
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Should display singular form
+    composeTestRule.onNodeWithText("Your ongoing event :").assertExists()
+  }
+
+  @Test
+  fun overviewScreen_displaysPluralTitle_whenMultipleOngoingEvents() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    // Create multiple ongoing events
+    val calendar1 = Calendar.getInstance()
+    calendar1.add(Calendar.HOUR, -1)
+    val ongoingEvent1 =
+        Event(
+            eventId = "1",
+            type = EventType.SPORTS,
+            title = "First Ongoing",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendar1.time),
+            duration = 180,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    val calendar2 = Calendar.getInstance()
+    calendar2.add(Calendar.MINUTE, -30)
+    val ongoingEvent2 =
+        Event(
+            eventId = "2",
+            type = EventType.ACTIVITY,
+            title = "Second Ongoing",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendar2.time),
+            duration = 120,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    runBlocking {
+      repo.addEvent(ongoingEvent1)
+      repo.addEvent(ongoingEvent2)
+    }
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Should display plural form
+    composeTestRule.onNodeWithText("Your ongoing events :").assertExists()
+  }
+
+  @Test
+  fun overviewScreen_displaysSingularTitle_whenOnlyOneUpcomingEvent() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    // Create a single upcoming event
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 2)
+    val upcomingEvent =
+        Event(
+            eventId = "1",
+            type = EventType.SPORTS,
+            title = "Single Upcoming",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendar.time),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    runBlocking { repo.addEvent(upcomingEvent) }
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Should display singular form
+    composeTestRule.onNodeWithText("Your upcoming event :").assertExists()
+  }
+
+  @Test
+  fun overviewScreen_displaysPluralTitle_whenMultipleUpcomingEvents() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    // Create multiple upcoming events
+    val calendar1 = Calendar.getInstance()
+    calendar1.add(Calendar.HOUR, 1)
+    val upcomingEvent1 =
+        Event(
+            eventId = "1",
+            type = EventType.SPORTS,
+            title = "First Upcoming",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendar1.time),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    val calendar2 = Calendar.getInstance()
+    calendar2.add(Calendar.HOUR, 3)
+    val upcomingEvent2 =
+        Event(
+            eventId = "2",
+            type = EventType.SOCIAL,
+            title = "Second Upcoming",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendar2.time),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    runBlocking {
+      repo.addEvent(upcomingEvent1)
+      repo.addEvent(upcomingEvent2)
+    }
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Should display plural form
+    composeTestRule.onNodeWithText("Your upcoming events :").assertExists()
+  }
+
+  @Test
+  fun overviewScreen_displaysSingularAndPluralTitles_whenOneOngoingAndMultipleUpcoming() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    // Create one ongoing event
+    val calendarOngoing = Calendar.getInstance()
+    calendarOngoing.add(Calendar.HOUR, -1)
+    val ongoingEvent =
+        Event(
+            eventId = "1",
+            type = EventType.SPORTS,
+            title = "Ongoing Event",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendarOngoing.time),
+            duration = 180,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    // Create multiple upcoming events
+    val calendarUpcoming1 = Calendar.getInstance()
+    calendarUpcoming1.add(Calendar.HOUR, 1)
+    val upcomingEvent1 =
+        Event(
+            eventId = "2",
+            type = EventType.SOCIAL,
+            title = "First Upcoming",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendarUpcoming1.time),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    val calendarUpcoming2 = Calendar.getInstance()
+    calendarUpcoming2.add(Calendar.HOUR, 3)
+    val upcomingEvent2 =
+        Event(
+            eventId = "3",
+            type = EventType.ACTIVITY,
+            title = "Second Upcoming",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendarUpcoming2.time),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    runBlocking {
+      repo.addEvent(ongoingEvent)
+      repo.addEvent(upcomingEvent1)
+      repo.addEvent(upcomingEvent2)
+    }
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Should display singular for ongoing and plural for upcoming
+    composeTestRule.onNodeWithText("Your ongoing event :").assertExists()
+    composeTestRule.onNodeWithText("Your upcoming events :").assertExists()
+  }
 }
