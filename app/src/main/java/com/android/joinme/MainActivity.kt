@@ -131,8 +131,7 @@ fun JoinMe(
               // TODO },
             },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
-            onSignOutComplete = { navigationActions.navigateTo(Screen.Auth) }
-        )
+            onSignOutComplete = { navigationActions.navigateTo(Screen.Auth) })
       }
     }
     navigation(
