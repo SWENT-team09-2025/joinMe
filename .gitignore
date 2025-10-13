@@ -33,3 +33,4 @@ app/google-services.json
 # Android Profiling
 *.hprof
 app/base64_google_services.txt
+.DS_Store
