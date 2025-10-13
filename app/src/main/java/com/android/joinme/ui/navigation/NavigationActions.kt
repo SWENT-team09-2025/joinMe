@@ -19,6 +19,8 @@ sealed class Screen(
 
   object CreateEvent : Screen(route = "create_event", name = "Create a new task")
 
+  object EditProfile : Screen(route = "edit_profile", name = "Edit Profile")
+
   data class EditEvent(val eventId: String) :
       Screen(route = "edit_event/${eventId}", name = "Edit Event") {
     companion object {
