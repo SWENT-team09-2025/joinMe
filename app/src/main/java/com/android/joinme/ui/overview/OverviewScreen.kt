@@ -43,7 +43,7 @@ import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.NavigationTestTags
 import com.android.joinme.ui.navigation.Tab
-import com.android.joinme.ui.theme.CreateEventButtonColor
+import com.android.joinme.ui.theme.OverviewScreenButtonColor
 
 object OverviewScreenTestTags {
   const val CREATE_EVENT_BUTTON = "createEventFab"
@@ -108,7 +108,7 @@ fun OverviewScreen(
       floatingActionButton = {
         FloatingActionButton(
             onClick = onAddEvent,
-            containerColor = CreateEventButtonColor,
+            containerColor = OverviewScreenButtonColor,
             modifier = Modifier.testTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON)) {
               Icon(Icons.Default.Add, contentDescription = "Add Event")
             }
@@ -180,7 +180,7 @@ fun OverviewScreen(
           // FAB History en bas à gauche
           FloatingActionButton(
               onClick = onGoToHistory,
-              containerColor = CreateEventButtonColor,
+              containerColor = OverviewScreenButtonColor,
               modifier =
                   Modifier.align(Alignment.BottomStart)
                       .padding(start = 16.dp, bottom = 16.dp)

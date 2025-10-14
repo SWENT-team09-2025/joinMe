@@ -100,9 +100,7 @@ fun JoinMe(
       }
       composable(Screen.History.route) {
         HistoryScreen(
-            onSelectEvent = {
-              navigationActions.navigateTo(Screen.EditEvent(it.eventId))
-            }, // to be modified need to naviagte to ShowEvent},
+            onSelectEvent = {}, // to be modified need to navigate to ShowEvent},
             onGoBack = { navigationActions.goBack() })
       }
     }
