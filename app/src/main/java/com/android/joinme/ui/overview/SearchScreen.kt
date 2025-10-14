@@ -43,9 +43,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.Event
+import com.android.joinme.ui.components.EventCard
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.Tab
+
+object SearchScreenTestTags {
+  const val SEARCH_TEXT_FIELD = "searchTextField"
+  const val EVENT_LIST = "searchEventList"
+  const val EMPTY_EVENT_LIST_MSG = "emptySearchEventList"
+
+  fun getTestTagForEventItem(event: Event): String = "searchEventItem${event.eventId}"
+}
 
 /**
  * Search screen composable that displays a search interface with filters.
@@ -127,7 +136,8 @@ fun SearchScreen(
                               }
                             }),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testTag("searchTextField"))
+                    modifier =
+                        Modifier.fillMaxWidth().testTag(SearchScreenTestTags.SEARCH_TEXT_FIELD))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -192,10 +202,13 @@ fun SearchScreen(
                     Modifier.fillMaxWidth()
                         .weight(1f)
                         .padding(horizontal = 16.dp)
-                        .testTag(OverviewScreenTestTags.EVENT_LIST)) {
+                        .testTag(SearchScreenTestTags.EVENT_LIST)) {
                   items(events.size) { index ->
                     val event = events[index]
-                    EventCard(event = event, onClick = { onSelectEvent(event) })
+                    EventCard(
+                        event = event,
+                        onClick = { onSelectEvent(event) },
+                        testTag = SearchScreenTestTags.getTestTagForEventItem(event))
                   }
                 }
           } else {
@@ -207,7 +220,7 @@ fun SearchScreen(
                       text = "You have no events yet. Join one, or create your own event.",
                       textAlign = TextAlign.Center,
                       style = MaterialTheme.typography.bodyMedium,
-                      modifier = Modifier.testTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG))
+                      modifier = Modifier.testTag(SearchScreenTestTags.EMPTY_EVENT_LIST_MSG))
                 }
           }
         }

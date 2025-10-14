@@ -1,23 +1,19 @@
 package com.android.joinme.ui.overview
 
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -42,17 +38,16 @@ import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.Event
-import com.android.joinme.model.event.getColor
+import com.android.joinme.ui.components.EventCard
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.NavigationTestTags
 import com.android.joinme.ui.navigation.Tab
 import com.android.joinme.ui.theme.CreateEventButtonColor
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 object OverviewScreenTestTags {
   const val CREATE_EVENT_BUTTON = "createEventFab"
+  const val HISTORY_BUTTON = "historyButton"
   const val EMPTY_EVENT_LIST_MSG = "emptyEventList"
   const val EVENT_LIST = "eventList"
   const val ONGOING_EVENTS_TITLE = "ongoingEventsTitle"
@@ -68,6 +63,7 @@ fun OverviewScreen(
     credentialManager: CredentialManager = CredentialManager.create(LocalContext.current),
     onSelectEvent: (Event) -> Unit = {},
     onAddEvent: () -> Unit = {},
+    onGoToHistory: () -> Unit = {},
     navigationActions: NavigationActions? = null,
 ) {
 
@@ -76,10 +72,8 @@ fun OverviewScreen(
   val ongoingEvents = uiState.ongoingEvents
   val upcomingEvents = uiState.upcomingEvents
 
-  // Fetch events when the screen is recomposed
   LaunchedEffect(Unit) { overviewViewModel.refreshUIState() }
 
-  // Show error message if fetching events fails
   LaunchedEffect(uiState.errorMsg) {
     uiState.errorMsg?.let { message ->
       Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -94,7 +88,7 @@ fun OverviewScreen(
               modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
               title = {
                 Text(
-                    text = "Welcome, Mathieu", // Hardcoded for now, waiting for profile impl.
+                    text = "Welcome, Mathieu",
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center)
@@ -119,130 +113,79 @@ fun OverviewScreen(
               Icon(Icons.Default.Add, contentDescription = "Add Event")
             }
       }) { innerPadding ->
-        if (ongoingEvents.isEmpty() && upcomingEvents.isEmpty()) {
-          // Empty state
-          Column(
-              modifier = Modifier.fillMaxSize().padding(innerPadding),
-              verticalArrangement = Arrangement.Center,
-              horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "You have no events yet. Join one, or create your own event.",
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.testTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG))
-              }
-        } else {
-          // Events list with sections
-          LazyColumn(
-              contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+          if (ongoingEvents.isEmpty() && upcomingEvents.isEmpty()) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                  Text(
+                      text = "You have no events yet. Join one, or create your own event.",
+                      textAlign = TextAlign.Center,
+                      style = MaterialTheme.typography.bodyMedium,
+                      modifier = Modifier.testTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG))
+                }
+          } else {
+            LazyColumn(
+                contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth().testTag(OverviewScreenTestTags.EVENT_LIST)) {
+                  if (ongoingEvents.isNotEmpty()) {
+                    item {
+                      Text(
+                          text =
+                              if (ongoingEvents.size == 1) "Your ongoing event :"
+                              else "Your ongoing events :",
+                          style = MaterialTheme.typography.titleMedium,
+                          fontWeight = FontWeight.Bold,
+                          modifier =
+                              Modifier.padding(vertical = 8.dp, horizontal = 8.dp)
+                                  .testTag(OverviewScreenTestTags.ONGOING_EVENTS_TITLE))
+                    }
+
+                    items(ongoingEvents.size) { index ->
+                      EventCard(
+                          event = ongoingEvents[index],
+                          onClick = { onSelectEvent(ongoingEvents[index]) },
+                          testTag =
+                              OverviewScreenTestTags.getTestTagForEventItem(ongoingEvents[index]))
+                    }
+
+                    item { Spacer(modifier = Modifier.height(16.dp)) }
+                  }
+
+                  if (upcomingEvents.isNotEmpty()) {
+                    item {
+                      Text(
+                          text =
+                              if (upcomingEvents.size == 1) "Your upcoming event :"
+                              else "Your upcoming events :",
+                          style = MaterialTheme.typography.titleMedium,
+                          fontWeight = FontWeight.Bold,
+                          modifier =
+                              Modifier.padding(vertical = 8.dp, horizontal = 8.dp)
+                                  .testTag(OverviewScreenTestTags.UPCOMING_EVENTS_TITLE))
+                    }
+
+                    items(upcomingEvents.size) { index ->
+                      EventCard(
+                          event = upcomingEvents[index],
+                          onClick = { onSelectEvent(upcomingEvents[index]) },
+                          testTag =
+                              OverviewScreenTestTags.getTestTagForEventItem(upcomingEvents[index]))
+                    }
+                  }
+                }
+          }
+
+          // FAB History en bas à gauche
+          FloatingActionButton(
+              onClick = onGoToHistory,
+              containerColor = CreateEventButtonColor,
               modifier =
-                  Modifier.fillMaxWidth()
-                      .padding(innerPadding)
-                      .testTag(OverviewScreenTestTags.EVENT_LIST)) {
-
-                // Ongoing Events Section
-                if (ongoingEvents.isNotEmpty()) {
-                  item {
-                    Text(
-                        text =
-                            if (ongoingEvents.size == 1) "Your ongoing event :"
-                            else "Your ongoing events :",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier =
-                            Modifier.padding(vertical = 8.dp, horizontal = 8.dp)
-                                .testTag(OverviewScreenTestTags.ONGOING_EVENTS_TITLE))
-                  }
-
-                  items(ongoingEvents.size) { index ->
-                    EventCard(
-                        event = ongoingEvents[index],
-                        onClick = { onSelectEvent(ongoingEvents[index]) })
-                  }
-
-                  item { Spacer(modifier = Modifier.height(16.dp)) }
-                }
-
-                // Upcoming Events Section
-                if (upcomingEvents.isNotEmpty()) {
-                  item {
-                    Text(
-                        text =
-                            if (upcomingEvents.size == 1) "Your upcoming event :"
-                            else "Your upcoming events :",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier =
-                            Modifier.padding(vertical = 8.dp, horizontal = 8.dp)
-                                .testTag(OverviewScreenTestTags.UPCOMING_EVENTS_TITLE))
-                  }
-
-                  items(upcomingEvents.size) { index ->
-                    EventCard(
-                        event = upcomingEvents[index],
-                        onClick = { onSelectEvent(upcomingEvents[index]) })
-                  }
-                }
-              }
-        }
-      }
-}
-
-@Composable
-fun EventCard(event: Event, onClick: () -> Unit) {
-  Card(
-      modifier =
-          Modifier.fillMaxWidth()
-              .padding(vertical = 6.dp, horizontal = 8.dp)
-              .testTag(OverviewScreenTestTags.getTestTagForEventItem(event))
-              .clickable(onClick = onClick),
-      shape = RoundedCornerShape(12.dp),
-      colors = CardDefaults.cardColors(containerColor = event.type.getColor()),
-      elevation = CardDefaults.cardElevation(6.dp)) {
-        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-          // Date + Hours Row
-          Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(
-                    text =
-                        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                            .format(event.date.toDate()),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White)
-
-                Text(
-                    text =
-                        SimpleDateFormat("HH'h'mm", Locale.getDefault())
-                            .format(event.date.toDate()),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White)
-              }
-
-          Spacer(modifier = Modifier.height(6.dp))
-
-          // Title
-          Text(
-              text = event.title,
-              style = MaterialTheme.typography.titleMedium,
-              fontWeight = FontWeight.Bold,
-              color = Color.White)
-
-          Spacer(modifier = Modifier.height(4.dp))
-
-          // Location + arrow
-          Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Place : ${event.location?.name ?: "Unknown"}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.9f))
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = Color.White)
+                  Modifier.align(Alignment.BottomStart)
+                      .padding(start = 16.dp, bottom = 16.dp)
+                      .testTag(OverviewScreenTestTags.HISTORY_BUTTON)) {
+                Icon(Icons.Default.History, contentDescription = "View History")
               }
         }
       }

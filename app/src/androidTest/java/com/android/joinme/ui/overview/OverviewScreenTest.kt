@@ -4,6 +4,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.*
 import com.android.joinme.model.map.Location
+import com.android.joinme.ui.components.EventCard
 import com.android.joinme.ui.navigation.NavigationTestTags
 import com.google.firebase.Timestamp
 import java.util.*
@@ -174,7 +175,7 @@ class OverviewScreenTest {
   fun eventCard_displaysCorrectInformation() {
     val event = createEvent("1", "Basketball Match", EventType.SPORTS)
 
-    composeTestRule.setContent { EventCard(event = event, onClick = {}) }
+    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
 
     composeTestRule.onNodeWithText("Basketball Match").assertExists()
     composeTestRule.onNodeWithText("Place : Unknown").assertExists()
@@ -185,7 +186,9 @@ class OverviewScreenTest {
     var clicked = false
     val event = createEvent("1", "Test Event", EventType.SPORTS)
 
-    composeTestRule.setContent { EventCard(event = event, onClick = { clicked = true }) }
+    composeTestRule.setContent {
+      EventCard(event = event, onClick = { clicked = true }, testTag = "testCard")
+    }
 
     composeTestRule.onNodeWithText("Test Event").performClick()
 
@@ -196,7 +199,9 @@ class OverviewScreenTest {
   fun eventCard_displaysSportsEventType() {
     val sportsEvent = createEvent("1", "Basketball", EventType.SPORTS)
 
-    composeTestRule.setContent { EventCard(event = sportsEvent, onClick = {}) }
+    composeTestRule.setContent {
+      EventCard(event = sportsEvent, onClick = {}, testTag = "testCard")
+    }
     composeTestRule.onNodeWithText("Basketball").assertExists()
   }
 
@@ -204,7 +209,9 @@ class OverviewScreenTest {
   fun eventCard_displaysActivityEventType() {
     val activityEvent = createEvent("2", "Hiking", EventType.ACTIVITY)
 
-    composeTestRule.setContent { EventCard(event = activityEvent, onClick = {}) }
+    composeTestRule.setContent {
+      EventCard(event = activityEvent, onClick = {}, testTag = "testCard")
+    }
     composeTestRule.onNodeWithText("Hiking").assertExists()
   }
 
@@ -212,7 +219,9 @@ class OverviewScreenTest {
   fun eventCard_displaysSocialEventType() {
     val socialEvent = createEvent("3", "Party", EventType.SOCIAL)
 
-    composeTestRule.setContent { EventCard(event = socialEvent, onClick = {}) }
+    composeTestRule.setContent {
+      EventCard(event = socialEvent, onClick = {}, testTag = "testCard")
+    }
     composeTestRule.onNodeWithText("Party").assertExists()
   }
 
@@ -233,7 +242,7 @@ class OverviewScreenTest {
             visibility = EventVisibility.PUBLIC,
             ownerId = "owner")
 
-    composeTestRule.setContent { EventCard(event = event, onClick = {}) }
+    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
 
     composeTestRule.onNodeWithText("Place : EPFL").assertExists()
   }
@@ -242,7 +251,7 @@ class OverviewScreenTest {
   fun eventCard_displaysUnknownForNullLocation() {
     val event = createEvent("1", "Basketball", EventType.SPORTS)
 
-    composeTestRule.setContent { EventCard(event = event, onClick = {}) }
+    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
 
     composeTestRule.onNodeWithText("Place : Unknown").assertExists()
   }
@@ -267,7 +276,7 @@ class OverviewScreenTest {
             visibility = EventVisibility.PUBLIC,
             ownerId = "owner")
 
-    composeTestRule.setContent { EventCard(event = event, onClick = {}) }
+    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
 
     composeTestRule.onNodeWithText("15/01/2025").assertExists()
     composeTestRule.onNodeWithText("14h30").assertExists()
@@ -566,7 +575,7 @@ class OverviewScreenTest {
   fun eventCard_displaysEventTitle() {
     val event = createEvent("1", "My Event Title", EventType.SPORTS)
 
-    composeTestRule.setContent { EventCard(event = event, onClick = {}) }
+    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
 
     composeTestRule.onNodeWithText("My Event Title").assertExists()
   }
@@ -575,7 +584,7 @@ class OverviewScreenTest {
   fun eventCard_displaysEventDescription() {
     val event = createEvent("1", "Basketball Game", EventType.SPORTS)
 
-    composeTestRule.setContent { EventCard(event = event, onClick = {}) }
+    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
 
     // Description is set to "desc" in createEvent helper
     composeTestRule.onNodeWithText("Basketball Game").assertExists()
@@ -608,7 +617,9 @@ class OverviewScreenTest {
     var clicked = false
     val event = createEvent("1", "Clickable Event", EventType.SPORTS)
 
-    composeTestRule.setContent { EventCard(event = event, onClick = { clicked = true }) }
+    composeTestRule.setContent {
+      EventCard(event = event, onClick = { clicked = true }, testTag = "testCard")
+    }
 
     composeTestRule.onNodeWithText("Clickable Event").performClick()
 
@@ -1001,5 +1012,71 @@ class OverviewScreenTest {
     // Should display singular for ongoing and plural for upcoming
     composeTestRule.onNodeWithText("Your ongoing event :").assertExists()
     composeTestRule.onNodeWithText("Your upcoming events :").assertExists()
+  }
+
+  @Test
+  fun overviewScreen_displaysHistoryButton() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).assertExists()
+  }
+
+  @Test
+  fun overviewScreen_historyButtonIsDisplayed() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun overviewScreen_historyButtonHasCorrectDescription() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithContentDescription("View History").assertExists()
+  }
+
+  @Test
+  fun clickingHistoryButton_triggersOnGoToHistory() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+    var historyClicked = false
+
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, onGoToHistory = { historyClicked = true })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).performClick()
+
+    assert(historyClicked)
+  }
+
+  @Test
+  fun overviewScreen_bothFabsDisplayedTogether() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+
+    // Both FABs should be displayed
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).assertIsDisplayed()
   }
 }
