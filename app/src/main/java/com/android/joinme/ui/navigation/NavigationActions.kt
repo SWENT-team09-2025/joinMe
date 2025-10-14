@@ -20,6 +20,7 @@ sealed class Screen(
   object CreateEvent : Screen(route = "create_event", name = "Create a new task")
 
   object EditProfile : Screen(route = "edit_profile", name = "Edit Profile")
+
   object History : Screen(route = "history", name = "History")
 
   data class EditEvent(val eventId: String) :
