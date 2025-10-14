@@ -12,3 +12,4 @@ val Pink40 = Color(0xFF7D5260)
 
 val JoinMeColor = Color(0xFF101D26)
 val CreateEventButtonColor = Color(0xFFEDE7F6)
+val OverviewScreenButtonColor = Color(0xFFEDE7F6)

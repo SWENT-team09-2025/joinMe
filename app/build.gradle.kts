@@ -180,9 +180,12 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
-    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
-    implementation("com.google.firebase:firebase-auth-ktx:23.0.0")
-    implementation("com.firebaseui:firebase-ui-auth:8.0.0")
+
+    // Credential Manager (for Google Sign-In)
+    implementation(libs.credentials)
+    implementation(libs.credentials.play.services.auth)
+    implementation(libs.googleid)
+    implementation(libs.play.services.auth)
 
     // ------------- Jetpack Compose ------------------
     val composeBom = platform(libs.compose.bom)

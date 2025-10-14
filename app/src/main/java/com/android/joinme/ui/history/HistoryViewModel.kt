@@ -17,11 +17,13 @@ import kotlinx.coroutines.launch
  *
  * @property expiredEvents A list of expired `Event` items to be displayed in the History screen.
  *   Defaults to an empty list if no items are available.
+ * @property isLoading Indicates whether the screen is currently loading data.
  * @property errorMsg An error message to be shown when fetching events fails. `null` if no error is
  *   present.
  */
 data class HistoryUIState(
     val expiredEvents: List<Event> = emptyList(),
+    val isLoading: Boolean = false,
     val errorMsg: String? = null,
 )
 
@@ -59,16 +61,18 @@ class HistoryViewModel(
   /** Fetches all expired events from the repository and updates the UI state. */
   private fun getExpiredEvents() {
     viewModelScope.launch {
+      _uiState.value = _uiState.value.copy(isLoading = true)
       try {
         val allEvents = eventRepository.getAllEvents()
 
         val expired =
             allEvents.filter { it.isExpired() }.sortedByDescending { it.date.toDate().time }
 
-        _uiState.value = HistoryUIState(expiredEvents = expired)
+        _uiState.value = HistoryUIState(expiredEvents = expired, isLoading = false)
       } catch (e: Exception) {
         Log.e("HistoryViewModel", "Error fetching expired events", e)
         setErrorMsg("Failed to load history: ${e.message}")
+        _uiState.value = _uiState.value.copy(isLoading = false)
       }
     }
   }
