@@ -39,6 +39,7 @@ class MainActivityNavigationTest {
   @Before
   fun setup() {
     // Setup repository with test data
+    System.setProperty("IS_TEST_ENV", "true")
     val repo = EventsRepositoryProvider.getRepository(isOnline = false)
     if (repo is EventsRepositoryLocal) {
       runBlocking {
