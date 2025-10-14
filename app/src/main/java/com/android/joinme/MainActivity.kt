@@ -30,10 +30,18 @@ import com.android.joinme.ui.theme.SampleAppTheme
 import com.google.firebase.auth.FirebaseAuth
 import okhttp3.OkHttpClient
 
+/** Provides a singleton OkHttpClient instance for network operations. */
 object HttpClientProvider {
   var client: OkHttpClient = OkHttpClient()
 }
 
+/**
+ * MainActivity is the single activity for the JoinMe application.
+ *
+ * This activity follows the single-activity architecture pattern, hosting all navigation
+ * and screens within Jetpack Compose. The activity's only responsibility is to set up
+ * the content view with the JoinMe composable, which handles all navigation and UI logic.
+ */
 class MainActivity : ComponentActivity() {
 
   private lateinit var auth: FirebaseAuth
@@ -46,6 +54,18 @@ class MainActivity : ComponentActivity() {
   }
 }
 
+/**
+* JoinMe is the root composable of the application, managing all navigation and screen routing.
+*
+* This composable sets up the NavHost and defines all navigation graphs for the application,
+* including authentication, overview/events, search, map, and profile flows. It uses
+* AuthRepositoryProvider to determine the initial destination based on user authentication state.
+*
+* @param context The context used for showing toasts and other system interactions. Defaults to LocalContext.
+* @param credentialManager The CredentialManager used for Google Sign-In. Defaults to a new instance.
+* @param startDestination Optional override for the initial navigation destination. Primarily used for testing.
+*                         If null, determines destination based on authentication state (Auth or Overview).
+*/
 @Composable
 fun JoinMe(
     context: Context = LocalContext.current,
@@ -79,7 +99,7 @@ fun JoinMe(
         OverviewScreen(
             onSelectEvent = {
               navigationActions.navigateTo(Screen.EditEvent(it.eventId))
-            }, // to be modified need to navigate to ShowEvent
+            }, // TODO navigate to event details screen
             onAddEvent = { navigationActions.navigateTo(Screen.CreateEvent) },
             onGoToHistory = { navigationActions.navigateTo(Screen.History) },
             navigationActions = navigationActions,
@@ -129,9 +149,7 @@ fun JoinMe(
             uid = FirebaseAuth.getInstance().currentUser?.uid ?: "",
             onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
             onBackClick = { navigationActions.goBack() },
-            onGroupClick = {
-              // TODO },
-            },
+            onGroupClick = {}, // TODO navigate to groups screen
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
             onSignOutComplete = { navigationActions.navigateTo(Screen.Auth) })
       }
@@ -146,12 +164,8 @@ fun JoinMe(
             onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
             onBackClick = { navigationActions.goBack() },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
-            onGroupClick = {
-              // TODO
-            },
-            onChangePasswordClick = {
-              // TODO
-            },
+            onGroupClick = {}, // TODO navigate to groups screen
+            onChangePasswordClick = {}, // TODO implement change password flow in a future update
             onSaveSuccess = { navigationActions.navigateTo(Screen.Profile) })
       }
     }

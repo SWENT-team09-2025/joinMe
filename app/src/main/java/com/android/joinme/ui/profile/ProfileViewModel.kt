@@ -19,7 +19,25 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
-/** ViewModel for managing profile-related UI state and operations. */
+/**
+ * ViewModel for managing profile-related UI state and operations.
+ *
+ * This ViewModel handles all profile data operations including loading, creating, updating,
+ * and deleting user profiles. It coordinates with [ProfileRepository] for data persistence
+ * and [AuthRepository] for authentication-related operations. All operations are performed
+ * asynchronously using coroutines and expose state via StateFlows.
+ *
+ * The ViewModel implements profile bootstrapping: if a profile doesn't exist for a user,
+ * it automatically creates one with default values derived from authentication data.
+ *
+ * State management:
+ * - [profile]: The current user's profile data, or null if not loaded or doesn't exist
+ * - [isLoading]: Indicates whether a profile operation is in progress
+ * - [error]: Contains error messages from failed operations, or null if no error
+ *
+ * @param repository The [ProfileRepository] for profile data operations. Defaults to the provider instance.
+ * @param authRepository The [AuthRepository] for authentication operations. Defaults to the provider instance.
+ */
 class ProfileViewModel(
     private val repository: ProfileRepository = ProfileRepositoryProvider.repository,
     private val authRepository: AuthRepository = AuthRepositoryProvider.repository,
@@ -35,8 +53,13 @@ class ProfileViewModel(
   val error: StateFlow<String?> = _error.asStateFlow()
 
   /**
-   * Loads a user profile by UID. If it doesn't exist yet, bootstrap it: create a new Profile with
-   * email from auth and a derived username.
+   * Loads a user profile by UID, with automatic profile creation if it doesn't exist.
+   *
+   * This method first attempts to fetch an existing profile. If no profile exists,
+   * it bootstraps a new profile using the user's email from authentication and a
+   * derived username. The operation has a 10-second timeout to prevent indefinite waiting.
+   *
+   * @param uid The unique identifier of the user whose profile should be loaded.
    */
   fun loadProfile(uid: String) {
     viewModelScope.launch(Dispatchers.Main) {
@@ -100,7 +123,14 @@ class ProfileViewModel(
     }
   }
 
-  /** Creates or updates a user profile. */
+  /**
+   * Creates or updates a user profile in the repository.
+   *
+   * This method persists profile changes and updates the local state upon success.
+   * The operation has a 10-second timeout to prevent indefinite waiting.
+   *
+   * @param profile The [Profile] object to create or update.
+   */
   fun createOrUpdateProfile(profile: Profile) {
     viewModelScope.launch {
       try {
@@ -122,7 +152,14 @@ class ProfileViewModel(
     }
   }
 
-  /** Deletes a user profile by UID. */
+  /**
+   * Deletes a user profile by UID.
+   *
+   * This method removes the profile from the repository and clears the local state.
+   * The operation has a 10-second timeout to prevent indefinite waiting.
+   *
+   * @param uid The unique identifier of the profile to delete.
+   */
   fun deleteProfile(uid: String) {
     viewModelScope.launch {
       try {
@@ -149,6 +186,7 @@ class ProfileViewModel(
     _error.value = null
   }
 
+    /** Sets an error message. */
   fun setError(message: String) {
     _error.value = message
   }
@@ -158,7 +196,18 @@ class ProfileViewModel(
     _profile.value = null
   }
 
-  /** Username validation helper. */
+  /**
+  * Validates a username according to app requirements.
+  *
+  * Username requirements:
+  * - Not empty
+  * - At least 3 characters long
+  * - At most 30 characters long
+  * - Only contains letters, numbers, spaces, and underscores
+  *
+  * @param username The username to validate.
+  * @return An error message if validation fails, or null if the username is valid.
+  */
   fun getUsernameError(username: String): String? {
     return when {
       username.isEmpty() -> "Username is required"
@@ -170,7 +219,12 @@ class ProfileViewModel(
     }
   }
 
-  /** Date validation helper. */
+  /**
+   * Validates a date of birth string in dd/MM/yyyy format.
+   *
+   * @param dateOfBirth The date string to validate. Empty strings are considered valid.
+   * @return An error message if validation fails, or null if the date is valid or empty.
+   */
   fun getDateOfBirthError(dateOfBirth: String): String? {
     if (dateOfBirth.isBlank()) return null
     if (!dateOfBirth.matches(Regex("^\\d{2}/\\d{2}/\\d{4}$"))) {
@@ -185,6 +239,12 @@ class ProfileViewModel(
     }
   }
 
+  /**
+  * Signs out the current user via the authentication repository.
+  *
+  * @param onComplete Callback invoked after successful sign-out.
+  * @param onError Callback invoked if sign-out fails, receiving the error message.
+  */
   fun signOut(onComplete: () -> Unit, onError: (String) -> Unit) {
     viewModelScope.launch {
       try {
@@ -197,7 +257,16 @@ class ProfileViewModel(
     }
   }
 
-  /** Turn "name@example.com" → "name". If not available, fallback to a short uid suffix. */
+  /**
+  * Derives a default username from an email address or UID.
+  *
+  * This method extracts the local part of an email (before @) and sanitizes it,
+  * or falls back to "user_" + last 6 characters of UID if the email is invalid.
+  *
+  * @param email The user's email address.
+  * @param uid The user's unique identifier, used as fallback.
+  * @return A sanitized username suitable for the app, max 30 characters.
+  */
   private fun deriveDefaultUsername(email: String, uid: String): String {
     val base = email.substringBefore('@').ifBlank { "user_${uid.takeLast(6)}" }
     return base.replace(Regex("[^A-Za-z0-9_ ]"), "_").take(30).ifBlank { "user_${uid.takeLast(6)}" }
