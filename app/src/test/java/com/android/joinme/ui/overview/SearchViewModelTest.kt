@@ -1,12 +1,8 @@
 package com.android.joinme.ui.overview
 
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -19,17 +15,7 @@ class SearchViewModelTest {
 
   @Before
   fun setup() {
-    try {
-      Dispatchers.setMain(testDispatcher)
-    } catch (e: IllegalStateException) {
-      println("CI environment has no Main dispatcher; continuing with testDispatcher only.")
-    }
     viewModel = SearchViewModel()
-  }
-
-  @After
-  fun tearDown() {
-    Dispatchers.resetMain()
   }
 
   @Test
