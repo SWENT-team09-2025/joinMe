@@ -16,6 +16,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
 import com.android.joinme.model.authentification.AuthRepository
+import com.android.joinme.ui.history.HistoryScreen
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.Screen
 import com.android.joinme.ui.overview.CreateEventScreen
@@ -78,6 +79,7 @@ fun JoinMe(
               navigationActions.navigateTo(Screen.EditEvent(it.eventId))
             }, // to be modified need to naviagte to ShowEvent
             onAddEvent = { navigationActions.navigateTo(Screen.CreateEvent) },
+            onGoToHistory = { navigationActions.navigateTo(Screen.History) },
             navigationActions = navigationActions,
             credentialManager = credentialManager)
       }
@@ -95,6 +97,11 @@ fun JoinMe(
               onGoBack = { navigationActions.goBack() },
               eventId = eventId)
         } ?: run { Toast.makeText(context, "Event UID is null", Toast.LENGTH_SHORT).show() }
+      }
+      composable(Screen.History.route) {
+        HistoryScreen(
+            onSelectEvent = {}, // to be modified need to navigate to ShowEvent},
+            onGoBack = { navigationActions.goBack() })
       }
     }
 

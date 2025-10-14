@@ -358,10 +358,8 @@ class SearchScreenTest {
 
     composeTestRule.waitForIdle()
 
-    // Empty events should show message
-    composeTestRule
-        .onNodeWithText("You have no events yet. Join one, or create your own event.")
-        .assertIsDisplayed()
+    // Empty events should show message using SearchScreenTestTags
+    composeTestRule.onNodeWithTag(SearchScreenTestTags.EMPTY_EVENT_LIST_MSG).assertIsDisplayed()
   }
 
   @Test
@@ -551,6 +549,119 @@ class SearchScreenTest {
     composeTestRule.onNodeWithText("Basketball Game").performClick()
 
     assert(eventClicked)
+  }
+
+  @Test
+  fun searchScreen_eventList_displaysWithTestTag() {
+    val viewModel = SearchViewModel()
+    setupScreen(viewModel)
+
+    val sampleEvent =
+        com.android.joinme.model.event.Event(
+            eventId = "1",
+            type = com.android.joinme.model.event.EventType.SPORTS,
+            title = "Basketball Game",
+            description = "Fun basketball game",
+            location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
+            date = com.google.firebase.Timestamp.now(),
+            duration = 60,
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    // Set events
+    viewModel.setEvents(listOf(sampleEvent))
+
+    composeTestRule.waitForIdle()
+
+    // Event list should have proper test tag
+    composeTestRule.onNodeWithTag(SearchScreenTestTags.EVENT_LIST).assertIsDisplayed()
+  }
+
+  @Test
+  fun searchScreen_eventCard_hasCorrectTestTag() {
+    val viewModel = SearchViewModel()
+    setupScreen(viewModel)
+
+    val sampleEvent =
+        com.android.joinme.model.event.Event(
+            eventId = "123",
+            type = com.android.joinme.model.event.EventType.SPORTS,
+            title = "Test Event",
+            description = "Test description",
+            location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
+            date = com.google.firebase.Timestamp.now(),
+            duration = 60,
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    // Set events
+    viewModel.setEvents(listOf(sampleEvent))
+
+    composeTestRule.waitForIdle()
+
+    // Event card should have correct test tag based on eventId
+    composeTestRule
+        .onNodeWithTag(SearchScreenTestTags.getTestTagForEventItem(sampleEvent))
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun searchScreen_multipleEventCards_haveUniqueTestTags() {
+    val viewModel = SearchViewModel()
+    setupScreen(viewModel)
+
+    val event1 =
+        com.android.joinme.model.event.Event(
+            eventId = "1",
+            type = com.android.joinme.model.event.EventType.SPORTS,
+            title = "Event 1",
+            description = "Description 1",
+            location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
+            date = com.google.firebase.Timestamp.now(),
+            duration = 60,
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    val event2 =
+        com.android.joinme.model.event.Event(
+            eventId = "2",
+            type = com.android.joinme.model.event.EventType.SOCIAL,
+            title = "Event 2",
+            description = "Description 2",
+            location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
+            date = com.google.firebase.Timestamp.now(),
+            duration = 90,
+            participants = listOf("user2"),
+            maxParticipants = 15,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = "owner2")
+
+    // Set events
+    viewModel.setEvents(listOf(event1, event2))
+
+    composeTestRule.waitForIdle()
+
+    // Both event cards should have unique test tags
+    composeTestRule
+        .onNodeWithTag(SearchScreenTestTags.getTestTagForEventItem(event1))
+        .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(SearchScreenTestTags.getTestTagForEventItem(event2))
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun searchScreen_searchTextField_hasCorrectTestTag() {
+    setupScreen()
+
+    // Search text field should have proper test tag
+    composeTestRule.onNodeWithTag(SearchScreenTestTags.SEARCH_TEXT_FIELD).assertIsDisplayed()
   }
 
   //  @Test
