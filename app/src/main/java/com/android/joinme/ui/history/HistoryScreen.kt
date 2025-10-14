@@ -12,8 +12,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Divider
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,10 +43,22 @@ object HistoryScreenTestTags {
   const val BACK_BUTTON = "historyBackButton"
   const val EMPTY_HISTORY_MSG = "emptyHistoryMessage"
   const val HISTORY_LIST = "historyList"
+  const val LOADING_INDICATOR = "historyLoadingIndicator"
 
   fun getTestTagForEventItem(event: Event): String = "historyEventItem${event.eventId}"
 }
 
+/**
+ * Screen displaying a list of expired events from the user's history.
+ *
+ * Shows all events that have passed their end time (date + duration), sorted by date in descending
+ * order (most recent first). Users can tap on events to view details or navigate back to the
+ * previous screen.
+ *
+ * @param historyViewModel ViewModel managing the history state and expired events data.
+ * @param onSelectEvent Callback invoked when a user taps on an event card.
+ * @param onGoBack Callback invoked when the user taps the back button.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
@@ -56,6 +69,7 @@ fun HistoryScreen(
   val context = LocalContext.current
   val uiState by historyViewModel.uiState.collectAsState()
   val expiredEvents = uiState.expiredEvents
+  val isLoading = uiState.isLoading
 
   LaunchedEffect(Unit) { historyViewModel.refreshUIState() }
 
@@ -95,37 +109,53 @@ fun HistoryScreen(
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
-          Divider(color = Color.Black, thickness = 1.dp)
+          HorizontalDivider(color = Color.Black, thickness = 1.dp)
         }
       }) { innerPadding ->
-        if (expiredEvents.isEmpty()) {
-          Column(
-              modifier = Modifier.fillMaxSize().padding(innerPadding),
-              verticalArrangement = Arrangement.Center,
-              horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text =
-                        "You have nothing in your history yet. Participate at an event to see it here!",
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier =
-                        Modifier.padding(horizontal = 32.dp)
-                            .testTag(HistoryScreenTestTags.EMPTY_HISTORY_MSG))
-              }
-        } else {
-          LazyColumn(
-              contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .padding(innerPadding)
-                      .testTag(HistoryScreenTestTags.HISTORY_LIST)) {
-                items(expiredEvents.size) { index ->
-                  EventCard(
-                      event = expiredEvents[index],
-                      onClick = { onSelectEvent(expiredEvents[index]) },
-                      testTag = HistoryScreenTestTags.getTestTagForEventItem(expiredEvents[index]))
+        when {
+          isLoading -> {
+            // Loading state
+            Box(
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                contentAlignment = Alignment.Center) {
+                  CircularProgressIndicator(
+                      modifier = Modifier.testTag(HistoryScreenTestTags.LOADING_INDICATOR))
                 }
-              }
+          }
+          expiredEvents.isEmpty() -> {
+            // Empty state
+            Column(
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                  Text(
+                      text =
+                          "You have nothing in your history yet. Participate at an event to see it here!",
+                      textAlign = TextAlign.Center,
+                      style = MaterialTheme.typography.bodyMedium,
+                      modifier =
+                          Modifier.padding(horizontal = 32.dp)
+                              .testTag(HistoryScreenTestTags.EMPTY_HISTORY_MSG))
+                }
+          }
+          else -> {
+            // Content state
+            LazyColumn(
+                contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .padding(innerPadding)
+                        .testTag(HistoryScreenTestTags.HISTORY_LIST)) {
+                  items(expiredEvents.size) { index ->
+                    EventCard(
+                        modifier = Modifier.padding(vertical = 6.dp),
+                        event = expiredEvents[index],
+                        onClick = { onSelectEvent(expiredEvents[index]) },
+                        testTag =
+                            HistoryScreenTestTags.getTestTagForEventItem(expiredEvents[index]))
+                  }
+                }
+          }
         }
       }
 }

@@ -493,11 +493,65 @@ class HistoryScreenTest {
     composeTestRule.onNodeWithTag(HistoryScreenTestTags.SCREEN).assertExists()
   }
 
+  @Test
+  fun historyScreen_displaysLoadingIndicator_whenLoading() {
+    val repo = FakeHistoryRepository(delayMillis = 1000) // Delay to keep loading state
+    val viewModel = HistoryViewModel(eventRepository = repo)
+
+    composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
+
+    // Loading indicator should be displayed initially
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.LOADING_INDICATOR).assertExists()
+  }
+
+  @Test
+  fun historyScreen_hidesLoadingIndicator_afterDataLoaded() {
+    val repo = FakeHistoryRepository()
+    val expiredEvent = createExpiredEvent("1", "Test Event", EventType.SPORTS)
+
+    runBlocking { repo.addEvent(expiredEvent) }
+
+    val viewModel = HistoryViewModel(eventRepository = repo)
+
+    composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Loading indicator should not be displayed after loading
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.LOADING_INDICATOR).assertDoesNotExist()
+    // Event should be displayed
+    composeTestRule.onNodeWithText("Test Event").assertIsDisplayed()
+  }
+
+  @Test
+  fun historyScreen_showsEmptyMessage_afterLoadingWithNoEvents() {
+    val repo = FakeHistoryRepository()
+    val viewModel = HistoryViewModel(eventRepository = repo)
+
+    composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Loading indicator should not be displayed
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.LOADING_INDICATOR).assertDoesNotExist()
+    // Empty message should be displayed
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.EMPTY_HISTORY_MSG).assertIsDisplayed()
+  }
+
   /** Fake repository for testing */
-  private class FakeHistoryRepository : EventsRepository {
+  private class FakeHistoryRepository(private val delayMillis: Long = 0) : EventsRepository {
     private val events: MutableList<Event> = mutableListOf()
 
-    override suspend fun getAllEvents(): List<Event> = events
+    override suspend fun getAllEvents(): List<Event> {
+      if (delayMillis > 0) {
+        kotlinx.coroutines.delay(delayMillis)
+      }
+      return events
+    }
 
     override suspend fun getEvent(eventId: String): Event = events.first { it.eventId == eventId }
 

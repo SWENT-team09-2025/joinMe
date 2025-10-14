@@ -206,6 +206,7 @@ fun SearchScreen(
                   items(events.size) { index ->
                     val event = events[index]
                     EventCard(
+                        modifier = Modifier.padding(vertical = 6.dp),
                         event = event,
                         onClick = { onSelectEvent(event) },
                         testTag = SearchScreenTestTags.getTestTagForEventItem(event))

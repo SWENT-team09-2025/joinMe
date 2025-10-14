@@ -144,6 +144,7 @@ fun OverviewScreen(
 
                     items(ongoingEvents.size) { index ->
                       EventCard(
+                          modifier = Modifier.padding(vertical = 6.dp),
                           event = ongoingEvents[index],
                           onClick = { onSelectEvent(ongoingEvents[index]) },
                           testTag =
@@ -168,6 +169,7 @@ fun OverviewScreen(
 
                     items(upcomingEvents.size) { index ->
                       EventCard(
+                          modifier = Modifier.padding(vertical = 6.dp),
                           event = upcomingEvents[index],
                           onClick = { onSelectEvent(upcomingEvents[index]) },
                           testTag =
