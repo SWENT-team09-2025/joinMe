@@ -243,7 +243,7 @@ class SearchViewModel(private val eventRepository: EventsRepository? = null) : V
     filteredEvents = filteredEvents.filter { it.type in allowedTypes }
 
     // TODO: Add sport-specific filtering when sport metadata is added to Event model
-    // For now, all SPORTS events pass through if any sport is selected
+    // For now all SPORTS events pass through if any sport is selected
 
     return filteredEvents
   }
