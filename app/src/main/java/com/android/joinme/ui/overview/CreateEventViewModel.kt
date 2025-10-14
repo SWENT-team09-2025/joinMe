@@ -9,7 +9,9 @@ import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.map.Location
+import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.auth
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,7 +64,7 @@ data class CreateEventUIState(
 /** ViewModel for the CreateEvent screen. */
 class CreateEventViewModel(
     private val repository: EventsRepository =
-        EventsRepositoryProvider.getRepository(isOnline = false)
+        EventsRepositoryProvider.getRepository(isOnline = true)
 ) : ViewModel() {
 
   private val _uiState = MutableStateFlow(CreateEventUIState())
@@ -110,7 +112,7 @@ class CreateEventViewModel(
             participants = emptyList(),
             maxParticipants = state.maxParticipants.toInt(),
             visibility = EventVisibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
-            ownerId = "placeholderUser")
+            ownerId = Firebase.auth.currentUser?.uid ?: "unknown")
 
     viewModelScope.launch {
       try {

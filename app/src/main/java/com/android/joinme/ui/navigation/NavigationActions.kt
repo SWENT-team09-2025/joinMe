@@ -19,6 +19,10 @@ sealed class Screen(
 
   object CreateEvent : Screen(route = "create_event", name = "Create a new task")
 
+  object EditProfile : Screen(route = "edit_profile", name = "Edit Profile")
+
+  object History : Screen(route = "history", name = "History")
+
   data class EditEvent(val eventId: String) :
       Screen(route = "edit_event/${eventId}", name = "Edit Event") {
     companion object {
@@ -27,6 +31,16 @@ sealed class Screen(
   }
 }
 
+/**
+ * NavigationActions provides type-safe navigation methods for the JoinMe application.
+ *
+ * This class wraps a [NavHostController] and provides convenient methods for navigating between
+ * screens and navigation graphs. It ensures consistent navigation behavior throughout the app and
+ * reduces boilerplate in UI code.
+ *
+ * @param navController The [NavHostController] that manages navigation state and performs
+ *   navigation actions.
+ */
 open class NavigationActions(
     private val navController: NavHostController,
 ) {

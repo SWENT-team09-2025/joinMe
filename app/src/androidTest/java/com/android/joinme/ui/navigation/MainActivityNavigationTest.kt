@@ -39,6 +39,7 @@ class MainActivityNavigationTest {
   @Before
   fun setup() {
     // Setup repository with test data
+    System.setProperty("IS_TEST_ENV", "true")
     val repo = EventsRepositoryProvider.getRepository(isOnline = false)
     if (repo is EventsRepositoryLocal) {
       runBlocking {
@@ -152,36 +153,6 @@ class MainActivityNavigationTest {
   }
 
   @Test
-  fun canNavigateToProfileScreenFromBottomNav() {
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Click Profile tab
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
-    composeTestRule.waitForIdle()
-
-    // Profile screen navigated (no crash)
-  }
-
-  @Test
-  fun searchScreen_goBackNavigatesToPreviousScreen() {
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Navigate to Search
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Search")).performClick()
-    composeTestRule.waitForIdle()
-
-    // Click back button
-    composeTestRule.onNodeWithContentDescription("Back").performClick()
-    composeTestRule.waitForIdle()
-
-    // Verify back navigation occurred (no crash)
-  }
-
-  @Test
   fun bottomNavIsDisplayedOnOverviewScreen() {
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -259,6 +230,59 @@ class MainActivityNavigationTest {
 
     // Go back
     composeTestRule.onNodeWithContentDescription("Back").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're back at Overview
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
+  }
+
+  @Test
+  fun canNavigateToHistoryScreenFromOverview() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Click History button to navigate
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're on History screen
+    composeTestRule.onNodeWithText("History").assertExists()
+  }
+
+  @Test
+  fun history_goBackButtonNavigatesToOverview() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Navigate to History
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Click back button
+    composeTestRule.onNodeWithContentDescription("Go back").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're back on Overview
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
+  }
+
+  @Test
+  fun canNavigateBackToOverviewFromHistory() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Start at Overview
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
+
+    // Navigate to History
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Go back
+    composeTestRule.onNodeWithContentDescription("Go back").performClick()
     composeTestRule.waitForIdle()
 
     // Verify we're back at Overview

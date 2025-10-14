@@ -64,7 +64,7 @@ data class EditEventUIState(
 /** ViewModel for the EditEvent screen. */
 class EditEventViewModel(
     private val repository: EventsRepository =
-        EventsRepositoryProvider.getRepository(isOnline = false),
+        EventsRepositoryProvider.getRepository(isOnline = true),
     initialState: EditEventUIState = EditEventUIState()
 ) : ViewModel() {
 

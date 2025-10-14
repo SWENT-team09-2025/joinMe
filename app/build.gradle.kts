@@ -167,6 +167,7 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     //testImplementation("io.mockk:mockk:1.13.8")
     androidTestImplementation("io.mockk:mockk-android:1.13.8")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
 
     // --- Maps ---
     implementation("com.google.android.gms:play-services-maps:18.2.0")
@@ -183,6 +184,13 @@ dependencies {
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
     implementation("com.google.firebase:firebase-auth-ktx:23.0.0")
     implementation("com.firebaseui:firebase-ui-auth:8.0.0")
+    implementation("com.google.protobuf:protobuf-javalite:3.25.1")
+
+    // Credential Manager (for Google Sign-In)
+    implementation(libs.credentials)
+    implementation(libs.credentials.play.services.auth)
+    implementation(libs.googleid)
+    implementation(libs.play.services.auth)
 
     // ------------- Jetpack Compose ------------------
     val composeBom = platform(libs.compose.bom)
@@ -254,4 +262,10 @@ tasks.register("jacocoTestReport", JacocoReport::class) {
             include("outputs/code_coverage/debugAndroidTest/connected/*/coverage.ec")
         }
     )
+
+    configurations.all {
+        resolutionStrategy {
+            force("com.google.protobuf:protobuf-javalite:3.25.1")
+        }
+    }
 }
