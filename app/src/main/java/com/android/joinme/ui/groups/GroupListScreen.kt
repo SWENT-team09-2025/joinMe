@@ -39,17 +39,55 @@ import androidx.compose.ui.unit.dp
 import com.android.joinme.model.group.Group
 import com.android.joinme.viewmodel.GroupListUIState
 
+/**
+ * Contains test tags for UI elements in the GroupListScreen.
+ *
+ * These tags are used in instrumentation tests to identify and interact with specific UI
+ * components.
+ */
 object GroupListScreenTestTags {
+  /** Test tag for the screen title. */
   const val TITLE = "groups:title"
+
+  /** Test tag for the "Join a new group" floating action button. */
   const val ADD_NEW_GROUP = "groups:addNewGroup"
+
+  /** Test tag for the lazy column containing the list of groups. */
   const val LIST = "groups:list"
+
+  /** Test tag for the empty state view when no groups are present. */
   const val EMPTY = "groups:empty"
 
+  /**
+   * Generates a test tag for a specific group card.
+   *
+   * @param id The unique identifier of the group.
+   * @return A string test tag in the format "group:card:{id}".
+   */
   fun cardTag(id: String) = "group:card:$id"
 
+  /**
+   * Generates a test tag for the "more options" button of a specific group.
+   *
+   * @param id The unique identifier of the group.
+   * @return A string test tag in the format "group:more:{id}".
+   */
   fun moreTag(id: String) = "group:more:$id"
 }
 
+/**
+ * Displays a list of groups that the user belongs to.
+ *
+ * This screen shows all groups with their names, descriptions, and member counts. If no groups
+ * exist, an empty state message is displayed. Users can tap on a group card to view details, access
+ * a menu via the more options button, or join a new group via the floating action button.
+ *
+ * @param uiState The current UI state containing the list of groups and other state information.
+ * @param onJoinANewGroup Callback invoked when the user taps the "Join a new group" button.
+ * @param onGroup Callback invoked when the user taps on a group card, receiving the selected
+ *   [Group].
+ * @param onMoreOptionMenu Callback invoked when the user taps the more options button for a group.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupListScreen(
@@ -111,6 +149,16 @@ fun GroupListScreen(
   }
 }
 
+/**
+ * Displays a single group as a card with its information and action buttons.
+ *
+ * The card shows the group's name, description (if present), and member count. It includes a
+ * clickable surface to view the group details and a more options button for additional actions.
+ *
+ * @param group The [Group] object containing the group's data to display.
+ * @param onClick Callback invoked when the user taps anywhere on the card.
+ * @param onMoreOptions Callback invoked when the user taps the more options button.
+ */
 @Composable
 private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: () -> Unit) {
   Card(
