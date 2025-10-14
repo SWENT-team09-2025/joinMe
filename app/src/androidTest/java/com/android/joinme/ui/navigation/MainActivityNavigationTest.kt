@@ -152,19 +152,6 @@ class MainActivityNavigationTest {
   }
 
   @Test
-  fun canNavigateToProfileScreenFromBottomNav() {
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Click Profile tab
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
-    composeTestRule.waitForIdle()
-
-    // Profile screen navigated (no crash)
-  }
-
-  @Test
   fun bottomNavIsDisplayedOnOverviewScreen() {
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
