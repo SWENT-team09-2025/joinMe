@@ -20,7 +20,17 @@ private const val F_DOB = "dateOfBirth"
 private const val F_CREATED_AT = "createdAt"
 private const val F_UPDATED_AT = "updatedAt"
 
-class ProfileRepositoryFirestore(private val db: FirebaseFirestore) : ProfileRepository {
+/**
+ * Firestore implementation of [ProfileRepository] that manages user profile data in Firebase
+ * Firestore.
+ *
+ * This repository provides CRUD operations for user profiles, storing them in a Firestore
+ * collection. Each profile document is keyed by the user's UID. All operations are asynchronous and
+ * use Kotlin coroutines for clean, non-blocking execution.
+ *
+ * @param db The Firestore database instance. Defaults to the primary Firebase Firestore instance.
+ */
+class ProfileRepositoryFirestore(db: FirebaseFirestore) : ProfileRepository {
 
   private val profilesCollection = db.collection(PROFILES_COLLECTION_PATH)
 
