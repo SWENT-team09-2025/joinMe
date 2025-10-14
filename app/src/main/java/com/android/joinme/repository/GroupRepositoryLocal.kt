@@ -1,9 +1,8 @@
 package com.android.joinme.repository
 
 import com.android.joinme.model.group.Group
-import com.google.firebase.firestore.FirebaseFirestore
 
-class GroupRepositoryLocal(private val db: FirebaseFirestore) : GroupRepository {
+class GroupRepositoryLocal: GroupRepository {
 
   private val groups: MutableList<Group> = mutableListOf()
 
@@ -31,7 +30,5 @@ class GroupRepositoryLocal(private val db: FirebaseFirestore) : GroupRepository 
   //        TODO("Not yet implemented")
   //    }
 
-  override suspend fun getGroup(id: String): Group? {
-    return groups[id.toInt()]
-  }
+  override suspend fun getGroup(id: String): Group? = groups.find { it.id == id }
 }

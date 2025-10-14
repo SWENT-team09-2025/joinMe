@@ -1,8 +1,6 @@
 package com.android.joinme.repository
 
 import com.android.joinme.model.group.Group
-import com.google.firebase.firestore.FirebaseFirestore
-import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
@@ -15,13 +13,11 @@ import org.junit.Test
  */
 class GroupRepositoryLocalTest {
 
-  private lateinit var mockFirestore: FirebaseFirestore
   private lateinit var repository: GroupRepositoryLocal
 
   @Before
   fun setUp() {
-    mockFirestore = mockk(relaxed = true)
-    repository = GroupRepositoryLocal(mockFirestore)
+    repository = GroupRepositoryLocal()
   }
 
   @Test
@@ -32,9 +28,9 @@ class GroupRepositoryLocalTest {
   }
 
   @Test
-  fun getGroup_withNumericId_returnsGroupAtIndex() = runTest {
-    val exception = assertThrows(Exception::class.java) { runTest { repository.getGroup("0") } }
-    assertNotNull(exception)
+  fun getGroup_withNonExistentId_returnsNull() = runTest {
+    val result = repository.getGroup("non-existent-id")
+    assertNull(result)
   }
 
   /**
@@ -122,7 +118,7 @@ class GroupRepositoryLocalTest {
   }
 
   @Test
-  fun getGroup_withValidIndex_returnsCorrectGroup() = runTest {
+  fun getGroup_withValidId_returnsCorrectGroup() = runTest {
     val testGroups =
         listOf(
             Group(id = "id-0", name = "First Group", membersCount = 10),
@@ -130,9 +126,9 @@ class GroupRepositoryLocalTest {
             Group(id = "id-2", name = "Third Group", membersCount = 30))
     addGroupsViaReflection(testGroups)
 
-    val group0 = repository.getGroup("0")
-    val group1 = repository.getGroup("1")
-    val group2 = repository.getGroup("2")
+    val group0 = repository.getGroup("id-0")
+    val group1 = repository.getGroup("id-1")
+    val group2 = repository.getGroup("id-2")
 
     assertNotNull(group0)
     assertEquals("First Group", group0?.name)
@@ -148,20 +144,22 @@ class GroupRepositoryLocalTest {
   }
 
   @Test
-  fun getGroup_withOutOfBoundsIndex_throwsException() = runTest {
+  fun getGroup_withNonMatchingId_returnsNull() = runTest {
     val testGroups = listOf(Group(id = "1", name = "Only Group"))
     addGroupsViaReflection(testGroups)
 
-    val exception = assertThrows(Exception::class.java) { runTest { repository.getGroup("5") } }
-    assertNotNull(exception)
+    val result = repository.getGroup("999")
+    assertNull(result)
   }
 
   @Test
-  fun getGroup_withNegativeIndex_throwsException() = runTest {
+  fun getGroup_afterLeaving_returnsNull() = runTest {
     val testGroups = listOf(Group(id = "1", name = "Test"))
     addGroupsViaReflection(testGroups)
-    val exception = assertThrows(Exception::class.java) { runTest { repository.getGroup("-1") } }
-    assertNotNull(exception)
+
+    repository.leaveGroup("1")
+    val result = repository.getGroup("1")
+    assertNull(result)
   }
 
   @Test
