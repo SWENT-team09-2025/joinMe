@@ -11,11 +11,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
 import com.android.joinme.model.authentification.AuthRepository
+import com.android.joinme.ui.map.MapScreen
+import com.android.joinme.ui.map.MapViewModel
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.Screen
 import com.android.joinme.ui.overview.CreateEventScreen
@@ -109,7 +112,10 @@ fun JoinMe(
         startDestination = Screen.Map.route,
         route = Screen.Map.name,
     ) {
-      composable(Screen.Map.route) {}
+      composable(Screen.Map.route) { backStackEntry ->
+        val mapViewModel: MapViewModel = viewModel(backStackEntry)
+        MapScreen(viewModel = mapViewModel, navigationActions = navigationActions)
+      }
     }
     navigation(
         startDestination = Screen.Profile.route,

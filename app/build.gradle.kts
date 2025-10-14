@@ -171,6 +171,8 @@ dependencies {
     // --- Maps ---
     implementation("com.google.android.gms:play-services-maps:18.2.0")
     implementation("com.google.maps.android:maps-compose:4.3.0")
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
 
     // Firebase
     implementation(libs.firebase.database.ktx)

@@ -1,42 +1,45 @@
 package com.android.joinme.ui.map
 
-// import com.google.android.gms.maps.model.LatLng
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.Event
-import com.android.joinme.model.map.Location
+import com.android.joinme.model.map.UserLocation
+import com.android.joinme.ui.map.userLocation.UserLocationService
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 data class MapUIState(
-    // val target: LatLng = LatLng(0.0, 0.0),
+    val userLocation: UserLocation? = null,
     val todos: List<Event> = emptyList(),
     val errorMsg: String? = null,
     val isLoading: Boolean = false
 )
 
-// class MapViewModel(private val repository: EventsRepository) : ViewModel() {
-class MapViewModel() : ViewModel() {
+class MapViewModel(private var locationService: UserLocationService? = null) : ViewModel() {
   private val _uiState = MutableStateFlow(MapUIState())
   val uiState: StateFlow<MapUIState> = _uiState.asStateFlow()
-
-  companion object {
-    private val EPFL_LOCATION =
-        Location(46.5191, 6.5668, "École Polytechnique Fédérale de Lausanne (EPFL), Switzerland")
-
-    /*private fun toLatLng(location: Location): LatLng {
-      return LatLng(location.latitude, location.longitude)
-    }*/
-  }
 
   init {
     Firebase.auth.addAuthStateListener {
       if (it.currentUser != null) {
-        // ToDo fetchLocalizableTodos()
+        // ToDo fetchLocalizableEvent()
+      }
+    }
+  }
+
+  private fun startLocationUpdates() {
+    locationService?.let { service ->
+      viewModelScope.launch {
+        service.getUserLocationFlow().filterNotNull().collect { location ->
+          Log.d("MapViewModel", "New location received: $location")
+          _uiState.value = _uiState.value.copy(userLocation = location)
+        }
       }
     }
   }
@@ -49,8 +52,9 @@ class MapViewModel() : ViewModel() {
     _uiState.value = _uiState.value.copy(errorMsg = null)
   }
 
-  fun refreshUIState() {
-    // ToDo
+  fun initLocationService(service: UserLocationService) {
+    locationService = service
+    startLocationUpdates()
   }
 
   private fun fetchLocalizableEvent() {
@@ -58,8 +62,13 @@ class MapViewModel() : ViewModel() {
       try {
         // ToDo
       } catch (e: Exception) {
-        setErrorMsg("Failed to load todos: ${e.message}")
+        setErrorMsg("Failed to load events: ${e.message}")
       }
     }
+  }
+
+  override fun onCleared() {
+    super.onCleared()
+    locationService?.stopLocationUpdates()
   }
 }
