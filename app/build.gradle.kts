@@ -186,6 +186,12 @@ dependencies {
     implementation("com.firebaseui:firebase-ui-auth:8.0.0")
     implementation("com.google.protobuf:protobuf-javalite:3.25.1")
 
+    // Credential Manager (for Google Sign-In)
+    implementation(libs.credentials)
+    implementation(libs.credentials.play.services.auth)
+    implementation(libs.googleid)
+    implementation(libs.play.services.auth)
+
     // ------------- Jetpack Compose ------------------
     val composeBom = platform(libs.compose.bom)
     implementation(composeBom)

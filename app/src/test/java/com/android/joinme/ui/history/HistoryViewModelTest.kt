@@ -125,6 +125,58 @@ class HistoryViewModelTest {
   }
 
   @Test
+  fun `uiState starts with isLoading false`() = runTest {
+    val state = viewModel.uiState.value
+    assertEquals(false, state.isLoading)
+  }
+
+  @Test
+  fun `isLoading is true during data fetch`() = runTest {
+    fakeRepository.shouldThrow = false
+    fakeRepository.setDelay(1000) // Add delay to capture loading state
+
+    viewModel.refreshUIState()
+
+    // Advance dispatcher to allow coroutine to start and set isLoading = true
+    testDispatcher.scheduler.runCurrent()
+
+    // Check loading state after coroutine has started
+    val loadingState = viewModel.uiState.value
+    assertEquals(true, loadingState.isLoading)
+
+    // Advance time to complete the operation
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    // Loading should be false after completion
+    val finalState = viewModel.uiState.value
+    assertEquals(false, finalState.isLoading)
+  }
+
+  @Test
+  fun `isLoading is false after successful fetch`() = runTest {
+    fakeRepository.shouldThrow = false
+
+    viewModel.refreshUIState()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertEquals(false, state.isLoading)
+    assertEquals(1, state.expiredEvents.size)
+  }
+
+  @Test
+  fun `isLoading is false after failed fetch`() = runTest {
+    fakeRepository.shouldThrow = true
+
+    viewModel.refreshUIState()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertEquals(false, state.isLoading)
+    assertNotNull(state.errorMsg)
+  }
+
+  @Test
   fun `refreshUIState handles empty repository`() = runTest {
     fakeRepository.clearAllEvents()
 
@@ -175,8 +227,13 @@ class HistoryViewModelTest {
   /** Fake implementation of [EventsRepository] for isolated ViewModel testing. */
   private class FakeEventsRepository : EventsRepository {
     var shouldThrow = false
+    private var delayMillis: Long = 0
 
     private val fakeEvents = mutableListOf<Event>()
+
+    fun setDelay(millis: Long) {
+      delayMillis = millis
+    }
 
     init {
       // Add default test events
@@ -275,6 +332,9 @@ class HistoryViewModelTest {
     }
 
     override suspend fun getAllEvents(): List<Event> {
+      if (delayMillis > 0) {
+        kotlinx.coroutines.delay(delayMillis)
+      }
       if (shouldThrow) throw RuntimeException("Repository error")
       return fakeEvents
     }
