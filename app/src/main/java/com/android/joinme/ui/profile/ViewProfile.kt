@@ -29,8 +29,8 @@ import com.android.joinme.ui.theme.JoinMeColor
 import com.google.firebase.Timestamp
 
 /**
- * ViewProfileTestTags contains test tag constants for the ViewProfile screen.
- * These tags enable UI testing by providing consistent identifiers for composables.
+ * ViewProfileTestTags contains test tag constants for the ViewProfile screen. These tags enable UI
+ * testing by providing consistent identifiers for composables.
  */
 object ViewProfileTestTags {
   const val SCREEN = "viewProfileScreen"
@@ -48,7 +48,6 @@ object ViewProfileTestTags {
   const val INTERESTS_FIELD = "viewProfileInterestsField"
   const val BIO_FIELD = "viewProfileBioField"
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -15,8 +15,8 @@ import androidx.compose.ui.unit.dp
 import com.android.joinme.ui.theme.JoinMeColor
 
 /**
- * ProfileScreen enum defines the different profile-related screens in the application.
- * Used to determine which top bar configuration to display.
+ * ProfileScreen enum defines the different profile-related screens in the application. Used to
+ * determine which top bar configuration to display.
  */
 enum class ProfileScreen {
   VIEW_PROFILE,
@@ -31,11 +31,13 @@ enum class ProfileScreen {
  *
  * The top bar follows Material Design 3 guidelines and uses the app's branded color scheme.
  *
- * @param currentScreen The current profile screen being displayed, determining which buttons to show.
+ * @param currentScreen The current profile screen being displayed, determining which buttons to
+ *   show.
  * @param onBackClick Callback invoked when the back navigation button is pressed.
  * @param onProfileClick Callback invoked when the profile icon is pressed (currently not shown).
  * @param onGroupClick Callback invoked when the group icon button is pressed.
- * @param onEditClick Callback invoked when the edit icon button is pressed. Only shown on VIEW_PROFILE.
+ * @param onEditClick Callback invoked when the edit icon button is pressed. Only shown on
+ *   VIEW_PROFILE.
  */
 @Composable
 fun ProfileTopBar(

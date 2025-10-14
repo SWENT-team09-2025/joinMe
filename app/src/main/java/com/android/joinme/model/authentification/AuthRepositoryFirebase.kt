@@ -25,55 +25,51 @@ class AuthRepositoryFirebase(
     private val helper: GoogleSignInHelper = DefaultGoogleSignInHelper()
 ) : AuthRepository {
 
-    /**
-     * Creates a Google Sign-In option configured with the provided server client ID.
-     *
-     * @param serverClientId The OAuth 2.0 web client ID from Google Cloud Console.
-     * @return A configured [GetSignInWithGoogleOption] for use with Credential Manager.
-     */
-    fun getGoogleSignInOption(serverClientId: String) =
-        GetSignInWithGoogleOption.Builder(serverClientId = serverClientId).build()
+  /**
+   * Creates a Google Sign-In option configured with the provided server client ID.
+   *
+   * @param serverClientId The OAuth 2.0 web client ID from Google Cloud Console.
+   * @return A configured [GetSignInWithGoogleOption] for use with Credential Manager.
+   */
+  fun getGoogleSignInOption(serverClientId: String) =
+      GetSignInWithGoogleOption.Builder(serverClientId = serverClientId).build()
 
-    override suspend fun signInWithGoogle(credential: Credential): Result<FirebaseUser> {
-        return try {
-            if (credential is CustomCredential && credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                val idToken = helper.extractIdTokenCredential(credential.data).idToken
-                val firebaseCred = helper.toFirebaseCredential(idToken)
+  override suspend fun signInWithGoogle(credential: Credential): Result<FirebaseUser> {
+    return try {
+      if (credential is CustomCredential && credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+        val idToken = helper.extractIdTokenCredential(credential.data).idToken
+        val firebaseCred = helper.toFirebaseCredential(idToken)
 
-                // Sign in with Firebase
-                val user =
-                    auth.signInWithCredential(firebaseCred).await().user
-                        ?: return Result.failure(
-                            IllegalStateException("Login failed : Could not retrieve user information")
-                        )
+        // Sign in with Firebase
+        val user =
+            auth.signInWithCredential(firebaseCred).await().user
+                ?: return Result.failure(
+                    IllegalStateException("Login failed : Could not retrieve user information"))
 
-                return Result.success(user)
-            } else {
-                return Result.failure(
-                    IllegalStateException("Login failed: Credential is not of type Google ID")
-                )
-            }
-        } catch (e: Exception) {
-            Result.failure(
-                IllegalStateException("Login failed: ${e.localizedMessage ?: "Unexpected error."}")
-            )
-        }
+        return Result.success(user)
+      } else {
+        return Result.failure(
+            IllegalStateException("Login failed: Credential is not of type Google ID"))
+      }
+    } catch (e: Exception) {
+      Result.failure(
+          IllegalStateException("Login failed: ${e.localizedMessage ?: "Unexpected error."}"))
     }
+  }
 
-    override suspend fun getCurrentUser(): FirebaseUser? = auth.currentUser
+  override suspend fun getCurrentUser(): FirebaseUser? = auth.currentUser
 
-    override suspend fun getCurrentUserEmail(): String? = auth.currentUser?.email
+  override suspend fun getCurrentUserEmail(): String? = auth.currentUser?.email
 
-    override suspend fun signOut(): Result<Unit> {
-        return try {
-            // Firebase sign out
-            auth.signOut()
+  override suspend fun signOut(): Result<Unit> {
+    return try {
+      // Firebase sign out
+      auth.signOut()
 
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(
-                IllegalStateException("Logout failed: ${e.localizedMessage ?: "Unexpected error."}")
-            )
-        }
+      Result.success(Unit)
+    } catch (e: Exception) {
+      Result.failure(
+          IllegalStateException("Logout failed: ${e.localizedMessage ?: "Unexpected error."}"))
     }
+  }
 }
