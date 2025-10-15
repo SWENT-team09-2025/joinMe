@@ -19,9 +19,7 @@ import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import java.util.Locale
 
-/**
- * Data class representing the test tags for event form fields.
- */
+/** Data class representing the test tags for event form fields. */
 data class EventFormTestTags(
     val inputEventType: String,
     val inputEventTitle: String,
@@ -35,9 +33,7 @@ data class EventFormTestTags(
     val errorMessage: String
 )
 
-/**
- * Data class representing the state of the event form.
- */
+/** Data class representing the state of the event form. */
 data class EventFormState(
     val type: String,
     val title: String,
@@ -132,9 +128,7 @@ fun EventFormScreen(
                           ExposedDropdownMenuDefaults.TrailingIcon(expanded = showTypeDropdown)
                         },
                         modifier =
-                            Modifier.menuAnchor()
-                                .fillMaxWidth()
-                                .testTag(testTags.inputEventType))
+                            Modifier.menuAnchor().fillMaxWidth().testTag(testTags.inputEventType))
                     ExposedDropdownMenu(
                         expanded = showTypeDropdown,
                         onDismissRequest = { showTypeDropdown = false }) {
@@ -182,7 +176,9 @@ fun EventFormScreen(
                     }
                   },
                   modifier =
-                      Modifier.fillMaxWidth().height(150.dp).testTag(testTags.inputEventDescription))
+                      Modifier.fillMaxWidth()
+                          .height(150.dp)
+                          .testTag(testTags.inputEventDescription))
 
               // Location
               OutlinedTextField(
@@ -234,7 +230,9 @@ fun EventFormScreen(
                                       disabledTrailingIconColor =
                                           MaterialTheme.colorScheme.onSurfaceVariant),
                               enabled = false,
-                              modifier = Modifier.fillMaxWidth())
+                              modifier =
+                                  Modifier.fillMaxWidth()
+                                      .testTag(testTags.inputEventMaxParticipants))
                         }
 
                     if (showParticipantsDialog) {
@@ -299,7 +297,7 @@ fun EventFormScreen(
                                   disabledTrailingIconColor =
                                       MaterialTheme.colorScheme.onSurfaceVariant),
                           enabled = false,
-                          modifier = Modifier.fillMaxWidth())
+                          modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventDuration))
                     }
 
                     if (showDurationDialog) {
@@ -388,7 +386,7 @@ fun EventFormScreen(
                                   disabledTrailingIconColor =
                                       MaterialTheme.colorScheme.onSurfaceVariant),
                           enabled = false,
-                          modifier = Modifier.fillMaxWidth())
+                          modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventDate))
                     }
 
                     val timePickerDialog = remember {

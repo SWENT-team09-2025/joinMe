@@ -245,7 +245,8 @@ class EditEventViewModel(
     _uiState.value =
         _uiState.value.copy(
             date = date,
-            invalidDateMsg = if (!valid && date.isNotBlank()) "Invalid format (must be dd/MM/yyyy)" else null)
+            invalidDateMsg =
+                if (!valid && date.isNotBlank()) "Invalid format (must be dd/MM/yyyy)" else null)
   }
 
   fun setTime(time: String) {

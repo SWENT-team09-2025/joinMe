@@ -77,7 +77,7 @@ class EventCardTest {
       EventCard(event = event, onClick = { clicked = true }, testTag = "testCard")
     }
 
-    composeTestRule.onNodeWithText("Test Event").performClick()
+    composeTestRule.onNodeWithTag("testCard").performClick()
 
     assert(clicked)
   }
