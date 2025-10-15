@@ -1,12 +1,8 @@
 package com.android.joinme.ui.overview
 
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -19,13 +15,28 @@ class SearchViewModelTest {
 
   @Before
   fun setup() {
-    Dispatchers.setMain(testDispatcher)
-    viewModel = SearchViewModel()
-  }
+    val fakeRepository =
+        object : com.android.joinme.model.event.EventsRepository {
+          override fun getNewEventId(): String = "fake-id"
 
-  @After
-  fun tearDown() {
-    Dispatchers.resetMain()
+          override suspend fun getAllEvents(): List<com.android.joinme.model.event.Event> =
+              emptyList()
+
+          override suspend fun getEvent(eventId: String): com.android.joinme.model.event.Event {
+            throw Exception("Not implemented in fake repo")
+          }
+
+          override suspend fun addEvent(event: com.android.joinme.model.event.Event) {}
+
+          override suspend fun editEvent(
+              eventId: String,
+              newValue: com.android.joinme.model.event.Event
+          ) {}
+
+          override suspend fun deleteEvent(eventId: String) {}
+        }
+
+    viewModel = SearchViewModel(fakeRepository)
   }
 
   @Test

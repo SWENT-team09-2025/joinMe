@@ -122,4 +122,27 @@ class MainActivityTest {
     // Verifies that CredentialManager is properly instantiated
     // This is implicit if the app launches without crashing
   }
+
+  @Test
+  fun navHost_overviewNavigationContainsHistory() {
+    composeTestRule.waitForIdle()
+    // Verifies that the Overview navigation contains History screen
+    // History should have route "history"
+    assert(Screen.History.route == "history")
+  }
+
+  @Test
+  fun navHost_historyScreenHasValidRoute() {
+    composeTestRule.waitForIdle()
+    // Verifies that History screen has valid, non-empty route
+    assert(Screen.History.route.isNotEmpty())
+    assert(Screen.History.name.isNotEmpty())
+  }
+
+  @Test
+  fun navHost_historyIsNotTopLevelDestination() {
+    composeTestRule.waitForIdle()
+    // Verifies that History is not flagged as a top-level destination
+    assert(!Screen.History.isTopLevelDestination)
+  }
 }

@@ -50,6 +50,13 @@ class JoinMeNavigationTest {
   }
 
   @Test
+  fun screen_History_hasCorrectRoute() {
+    assertEquals("history", Screen.History.route)
+    assertEquals("History", Screen.History.name)
+    assertFalse(Screen.History.isTopLevelDestination)
+  }
+
+  @Test
   fun screen_EditEvent_hasCorrectRoutePattern() {
     assertEquals("edit_event/{eventId}", Screen.EditEvent.Companion.route)
   }
@@ -81,7 +88,8 @@ class JoinMeNavigationTest {
 
   @Test
   fun nonTopLevelDestinations_areCorrectlyFlagged() {
-    val nonTopLevelScreens = listOf(Screen.Auth, Screen.CreateEvent, Screen.EditEvent("test-id"))
+    val nonTopLevelScreens =
+        listOf(Screen.Auth, Screen.CreateEvent, Screen.EditEvent("test-id"), Screen.History)
 
     nonTopLevelScreens.forEach { screen ->
       assertFalse(
@@ -99,6 +107,7 @@ class JoinMeNavigationTest {
             Screen.Map.route,
             Screen.Profile.route,
             Screen.CreateEvent.route,
+            Screen.History.route,
             Screen.EditEvent.Companion.route)
 
     val uniqueRoutes = routes.toSet()
@@ -114,7 +123,8 @@ class JoinMeNavigationTest {
             Screen.Search,
             Screen.Map,
             Screen.Profile,
-            Screen.CreateEvent)
+            Screen.CreateEvent,
+            Screen.History)
 
     screens.forEach { screen ->
       assertTrue("${screen.name} route should not be empty", screen.route.isNotEmpty())
@@ -136,6 +146,7 @@ class JoinMeNavigationTest {
             Screen.Map,
             Screen.Profile,
             Screen.CreateEvent,
+            Screen.History,
             Screen.EditEvent("test-id"))
 
     screens.forEach { screen ->

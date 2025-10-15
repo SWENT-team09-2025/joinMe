@@ -62,10 +62,11 @@ data class SearchUIState(
  *
  * @property eventRepository Repository for fetching event data
  */
-class SearchViewModel(
-    private val eventRepository: EventsRepository =
-        EventsRepositoryProvider.getRepository(isOnline = true)
-) : ViewModel() {
+class SearchViewModel(private val eventRepository: EventsRepository? = null) : ViewModel() {
+
+  private val repo: EventsRepository by lazy {
+    eventRepository ?: EventsRepositoryProvider.getRepository(isOnline = true)
+  }
   // Search UI state
   private val _uiState = MutableStateFlow(SearchUIState())
   val uiState: StateFlow<SearchUIState> = _uiState.asStateFlow()
@@ -202,7 +203,7 @@ class SearchViewModel(
   private fun getAllEvents() {
     viewModelScope.launch {
       try {
-        allEvents = eventRepository.getAllEvents()
+        allEvents = repo.getAllEvents()
         applyFiltersToUIState()
       } catch (e: Exception) {
         setErrorMsg("Failed to load events: ${e.message}")
