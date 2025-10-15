@@ -6,7 +6,6 @@ import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
-import com.android.joinme.model.event.isActive
 import com.android.joinme.model.event.isUpcoming
 import com.android.joinme.model.sport.Sports
 import kotlinx.coroutines.flow.MutableStateFlow
