@@ -114,7 +114,8 @@ class OverviewScreenTest {
     val profileViewModel = ProfileViewModel(ProfileRepositoryMock())
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = profileViewModel)
+      OverviewScreen(
+          uid = "test-uid", overviewViewModel = viewModel, profileViewModel = profileViewModel)
     }
 
     // Attends que le LaunchedEffect se termine
@@ -137,7 +138,10 @@ class OverviewScreenTest {
     }
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     // Attends que le LaunchedEffect charge les données
@@ -340,7 +344,10 @@ class OverviewScreenTest {
     }
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -363,7 +370,10 @@ class OverviewScreenTest {
     val viewModel = OverviewViewModel(repo)
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -377,7 +387,10 @@ class OverviewScreenTest {
     val viewModel = OverviewViewModel(repo)
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     // Wait for error to be processed
@@ -399,7 +412,8 @@ class OverviewScreenTest {
     val profileViewModel = ProfileViewModel(ProfileRepositoryMock())
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = profileViewModel)
+      OverviewScreen(
+          uid = "test-uid", overviewViewModel = viewModel, profileViewModel = profileViewModel)
     }
 
     composeTestRule.waitForIdle()
@@ -485,7 +499,10 @@ class OverviewScreenTest {
     }
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -504,7 +521,10 @@ class OverviewScreenTest {
     val viewModel = OverviewViewModel(repo)
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -518,7 +538,10 @@ class OverviewScreenTest {
     val viewModel = OverviewViewModel(repo)
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -534,7 +557,10 @@ class OverviewScreenTest {
     val viewModel = OverviewViewModel(repo)
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -548,7 +574,10 @@ class OverviewScreenTest {
     val viewModel = OverviewViewModel(repo)
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -566,7 +595,10 @@ class OverviewScreenTest {
     runBlocking { repo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -629,7 +661,10 @@ class OverviewScreenTest {
     val viewModel = OverviewViewModel(repo)
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -643,7 +678,10 @@ class OverviewScreenTest {
     val viewModel = OverviewViewModel(repo)
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -682,7 +720,10 @@ class OverviewScreenTest {
     }
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -716,7 +757,10 @@ class OverviewScreenTest {
     runBlocking { repo.addEvent(createEvent("1", "Pre-added Event", EventType.SPORTS)) }
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -752,7 +796,10 @@ class OverviewScreenTest {
     runBlocking { repo.addEvent(ongoingEvent) }
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -787,7 +834,10 @@ class OverviewScreenTest {
     runBlocking { repo.addEvent(upcomingEvent) }
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -842,7 +892,10 @@ class OverviewScreenTest {
     }
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -883,7 +936,10 @@ class OverviewScreenTest {
     runBlocking { repo.addEvent(ongoingEvent) }
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -938,7 +994,10 @@ class OverviewScreenTest {
     }
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -974,7 +1033,10 @@ class OverviewScreenTest {
     runBlocking { repo.addEvent(upcomingEvent) }
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -1029,7 +1091,10 @@ class OverviewScreenTest {
     }
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -1102,7 +1167,10 @@ class OverviewScreenTest {
     }
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -1120,7 +1188,10 @@ class OverviewScreenTest {
     val viewModel = OverviewViewModel(repo)
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -1134,7 +1205,10 @@ class OverviewScreenTest {
     val viewModel = OverviewViewModel(repo)
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -1148,7 +1222,10 @@ class OverviewScreenTest {
     val viewModel = OverviewViewModel(repo)
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
@@ -1182,7 +1259,10 @@ class OverviewScreenTest {
     val viewModel = OverviewViewModel(repo)
 
     composeTestRule.setContent {
-      OverviewScreen(uid = "test-uid", overviewViewModel = viewModel, profileViewModel = createMockProfileViewModel())
+      OverviewScreen(
+          uid = "test-uid",
+          overviewViewModel = viewModel,
+          profileViewModel = createMockProfileViewModel())
     }
 
     composeTestRule.waitForIdle()
