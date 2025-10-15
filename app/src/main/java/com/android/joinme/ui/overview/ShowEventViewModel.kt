@@ -51,7 +51,7 @@ data class ShowEventUIState(
 /** ViewModel for the ShowEvent screen. */
 class ShowEventViewModel(
     private val repository: EventsRepository =
-        EventsRepositoryProvider.getRepository(isOnline = false),
+        EventsRepositoryProvider.getRepository(isOnline = true),
     initialState: ShowEventUIState = ShowEventUIState()
 ) : ViewModel() {
 
