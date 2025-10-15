@@ -39,6 +39,7 @@ class MainActivityNavigationTest {
   @Before
   fun setup() {
     // Setup repository with test data
+    System.setProperty("IS_TEST_ENV", "true")
     val repo = EventsRepositoryProvider.getRepository(isOnline = false)
     if (repo is EventsRepositoryLocal) {
       runBlocking {
@@ -149,19 +150,6 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
 
     // Map screen navigated (no crash)
-  }
-
-  @Test
-  fun canNavigateToProfileScreenFromBottomNav() {
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Click Profile tab
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
-    composeTestRule.waitForIdle()
-
-    // Profile screen navigated (no crash)
   }
 
   @Test

@@ -20,7 +20,28 @@ class SearchViewModelTest {
   @Before
   fun setup() {
     Dispatchers.setMain(testDispatcher)
-    viewModel = SearchViewModel()
+    val fakeRepository =
+        object : com.android.joinme.model.event.EventsRepository {
+          override fun getNewEventId(): String = "fake-id"
+
+          override suspend fun getAllEvents(): List<com.android.joinme.model.event.Event> =
+              emptyList()
+
+          override suspend fun getEvent(eventId: String): com.android.joinme.model.event.Event {
+            throw Exception("Not implemented in fake repo")
+          }
+
+          override suspend fun addEvent(event: com.android.joinme.model.event.Event) {}
+
+          override suspend fun editEvent(
+              eventId: String,
+              newValue: com.android.joinme.model.event.Event
+          ) {}
+
+          override suspend fun deleteEvent(eventId: String) {}
+        }
+
+    viewModel = SearchViewModel(fakeRepository)
   }
 
   @After
@@ -347,5 +368,191 @@ class SearchViewModelTest {
     viewModel.setEvents(emptyList())
     testDispatcher.scheduler.advanceUntilIdle()
     assertEquals(0, viewModel.uiState.value.events.size)
+  }
+
+  @Test
+  fun `refreshUIState filters out past events`() = runTest {
+    val now = System.currentTimeMillis()
+    val pastEvent =
+        com.android.joinme.model.event.Event(
+            eventId = "1",
+            type = com.android.joinme.model.event.EventType.SPORTS,
+            title = "Past Basketball Game",
+            description = "This event already happened",
+            location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
+            date = com.google.firebase.Timestamp((now / 1000) - 7200, 0), // 2 hours ago
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    val upcomingEvent =
+        com.android.joinme.model.event.Event(
+            eventId = "2",
+            type = com.android.joinme.model.event.EventType.SOCIAL,
+            title = "Future Party",
+            description = "This event is upcoming",
+            location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
+            date = com.google.firebase.Timestamp((now / 1000) + 3600, 0), // 1 hour from now
+            duration = 120,
+            participants = emptyList(),
+            maxParticipants = 20,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = "owner2")
+
+    val fakeRepository =
+        object : com.android.joinme.model.event.EventsRepository {
+          override fun getNewEventId(): String = "fake-id"
+
+          override suspend fun getAllEvents(): List<com.android.joinme.model.event.Event> =
+              listOf(pastEvent, upcomingEvent)
+
+          override suspend fun getEvent(eventId: String): com.android.joinme.model.event.Event {
+            throw Exception("Not implemented in fake repo")
+          }
+
+          override suspend fun addEvent(event: com.android.joinme.model.event.Event) {}
+
+          override suspend fun editEvent(
+              eventId: String,
+              newValue: com.android.joinme.model.event.Event
+          ) {}
+
+          override suspend fun deleteEvent(eventId: String) {}
+        }
+
+    val testViewModel = SearchViewModel(fakeRepository)
+    testViewModel.refreshUIState()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    // Only upcoming event should be present
+    val events = testViewModel.uiState.value.events
+    assertEquals(1, events.size)
+    assertEquals("Future Party", events[0].title)
+    assertEquals("2", events[0].eventId)
+  }
+
+  @Test
+  fun `refreshUIState shows only upcoming events when all are past`() = runTest {
+    val now = System.currentTimeMillis()
+    val pastEvent1 =
+        com.android.joinme.model.event.Event(
+            eventId = "1",
+            type = com.android.joinme.model.event.EventType.SPORTS,
+            title = "Old Event 1",
+            description = "Past event",
+            location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
+            date = com.google.firebase.Timestamp((now / 1000) - 86400, 0), // 1 day ago
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    val pastEvent2 =
+        com.android.joinme.model.event.Event(
+            eventId = "2",
+            type = com.android.joinme.model.event.EventType.ACTIVITY,
+            title = "Old Event 2",
+            description = "Another past event",
+            location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
+            date = com.google.firebase.Timestamp((now / 1000) - 3600, 0), // 1 hour ago
+            duration = 90,
+            participants = emptyList(),
+            maxParticipants = 15,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = "owner2")
+
+    val fakeRepository =
+        object : com.android.joinme.model.event.EventsRepository {
+          override fun getNewEventId(): String = "fake-id"
+
+          override suspend fun getAllEvents(): List<com.android.joinme.model.event.Event> =
+              listOf(pastEvent1, pastEvent2)
+
+          override suspend fun getEvent(eventId: String): com.android.joinme.model.event.Event {
+            throw Exception("Not implemented in fake repo")
+          }
+
+          override suspend fun addEvent(event: com.android.joinme.model.event.Event) {}
+
+          override suspend fun editEvent(
+              eventId: String,
+              newValue: com.android.joinme.model.event.Event
+          ) {}
+
+          override suspend fun deleteEvent(eventId: String) {}
+        }
+
+    val testViewModel = SearchViewModel(fakeRepository)
+    testViewModel.refreshUIState()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    // No events should be present
+    assertEquals(0, testViewModel.uiState.value.events.size)
+  }
+
+  @Test
+  fun `refreshUIState includes upcoming events`() = runTest {
+    val now = System.currentTimeMillis()
+    val upcomingEvent1 =
+        com.android.joinme.model.event.Event(
+            eventId = "1",
+            type = com.android.joinme.model.event.EventType.SPORTS,
+            title = "Tomorrow's Game",
+            description = "Future event",
+            location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
+            date = com.google.firebase.Timestamp((now / 1000) + 86400, 0), // 1 day from now
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    val upcomingEvent2 =
+        com.android.joinme.model.event.Event(
+            eventId = "2",
+            type = com.android.joinme.model.event.EventType.SOCIAL,
+            title = "Next Week Party",
+            description = "Another future event",
+            location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
+            date = com.google.firebase.Timestamp((now / 1000) + 604800, 0), // 1 week from now
+            duration = 120,
+            participants = emptyList(),
+            maxParticipants = 20,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = "owner2")
+
+    val fakeRepository =
+        object : com.android.joinme.model.event.EventsRepository {
+          override fun getNewEventId(): String = "fake-id"
+
+          override suspend fun getAllEvents(): List<com.android.joinme.model.event.Event> =
+              listOf(upcomingEvent1, upcomingEvent2)
+
+          override suspend fun getEvent(eventId: String): com.android.joinme.model.event.Event {
+            throw Exception("Not implemented in fake repo")
+          }
+
+          override suspend fun addEvent(event: com.android.joinme.model.event.Event) {}
+
+          override suspend fun editEvent(
+              eventId: String,
+              newValue: com.android.joinme.model.event.Event
+          ) {}
+
+          override suspend fun deleteEvent(eventId: String) {}
+        }
+
+    val testViewModel = SearchViewModel(fakeRepository)
+    testViewModel.refreshUIState()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    // Both upcoming events should be present
+    val events = testViewModel.uiState.value.events
+    assertEquals(2, events.size)
+    assertTrue(events.any { it.title == "Tomorrow's Game" })
+    assertTrue(events.any { it.title == "Next Week Party" })
   }
 }

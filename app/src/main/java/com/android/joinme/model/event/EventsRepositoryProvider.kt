@@ -1,19 +1,47 @@
 package com.android.joinme.model.event
 
+import android.content.Context
+import com.google.firebase.FirebaseApp
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+
 /**
- * Provides a single instance of the repository in the app. 'repository' is mutable for testing
- * purposes.
+ * Provides the correct [EventsRepository] implementation depending on connectivity. Uses Firestore
+ * when online, local repository otherwise.
  */
 object EventsRepositoryProvider {
 
-  //  private val firestoreRepo: EventsRepository by lazy {
-  //    EventsRepositoryFirestore(db = Firebase.firestore)
-  //  }
-
+  // Local repository (in-memory)
   private val localRepo: EventsRepository by lazy { EventsRepositoryLocal() }
 
-  fun getRepository(isOnline: Boolean): EventsRepository {
-    // return if (isOnline) firestoreRepo else localRepo
-    return localRepo
+  // Firestore repository (initialized lazily)
+  private var firestoreRepo: EventsRepository? = null
+
+  /**
+   * Returns the appropriate repository based on network availability.
+   *
+   * @param isOnline whether the app is online
+   * @param context required for initializing Firebase if needed
+   */
+  fun getRepository(isOnline: Boolean, context: Context? = null): EventsRepository {
+    // ✅ detect instrumented test environment
+    val isTestEnv =
+        android.os.Build.FINGERPRINT == "robolectric" ||
+            android.os.Debug.isDebuggerConnected() ||
+            System.getProperty("IS_TEST_ENV") == "true"
+
+    return if (isTestEnv || !isOnline) localRepo else getFirestoreRepo(context)
+  }
+
+  private fun getFirestoreRepo(context: Context?): EventsRepository {
+    if (firestoreRepo == null) {
+      val ctx = context ?: FirebaseApp.getInstance().applicationContext
+      val apps = FirebaseApp.getApps(ctx)
+      if (apps.isEmpty()) {
+        FirebaseApp.initializeApp(ctx)
+      }
+      firestoreRepo = EventsRepositoryFirestore(Firebase.firestore)
+    }
+    return firestoreRepo!!
   }
 }

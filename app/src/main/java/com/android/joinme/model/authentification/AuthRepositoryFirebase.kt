@@ -1,7 +1,6 @@
 package com.android.joinme.model.authentification
 
 import androidx.credentials.Credential
-import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
@@ -17,8 +16,6 @@ import kotlinx.coroutines.tasks.await
  * Retrieves a Google ID token via Credential Manager and authenticates the user with Firebase. Also
  * handles sign-out and credential state clearing.
  *
- * @param context Used to launch the Credential Manager UI and load string resources.
- * @param credentialManager The [CredentialManager] used to retrieve credentials.
  * @param auth The [FirebaseAuth] instance for Firebase authentication.
  * @param helper A [GoogleSignInHelper] to extract Google ID token credentials and convert them to
  *   Firebase credentials.
@@ -28,6 +25,12 @@ class AuthRepositoryFirebase(
     private val helper: GoogleSignInHelper = DefaultGoogleSignInHelper()
 ) : AuthRepository {
 
+  /**
+   * Creates a Google Sign-In option configured with the provided server client ID.
+   *
+   * @param serverClientId The OAuth 2.0 web client ID from Google Cloud Console.
+   * @return A configured [GetSignInWithGoogleOption] for use with Credential Manager.
+   */
   fun getGoogleSignInOption(serverClientId: String) =
       GetSignInWithGoogleOption.Builder(serverClientId = serverClientId).build()
 
@@ -54,7 +57,11 @@ class AuthRepositoryFirebase(
     }
   }
 
-  override fun signOut(): Result<Unit> {
+  override suspend fun getCurrentUser(): FirebaseUser? = auth.currentUser
+
+  override suspend fun getCurrentUserEmail(): String? = auth.currentUser?.email
+
+  override suspend fun signOut(): Result<Unit> {
     return try {
       // Firebase sign out
       auth.signOut()

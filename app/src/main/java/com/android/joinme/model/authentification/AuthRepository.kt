@@ -13,10 +13,16 @@ interface AuthRepository {
    */
   suspend fun signInWithGoogle(credential: Credential): Result<FirebaseUser>
 
+  /** Returns the currently authenticated [FirebaseUser], or `null` if no user is signed in. */
+  suspend fun getCurrentUser(): FirebaseUser?
+
+  /** Returns the email of the currently authenticated user, or `null` if no user is signed in. */
+  suspend fun getCurrentUserEmail(): String?
+
   /**
    * Signs out the currently authenticated user and clears the credential state.
    *
    * @return A [Result] indicating success or failure.
    */
-  fun signOut(): Result<Unit>
+  suspend fun signOut(): Result<Unit>
 }
