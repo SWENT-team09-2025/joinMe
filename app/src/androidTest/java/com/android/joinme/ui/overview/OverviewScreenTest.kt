@@ -455,7 +455,7 @@ class OverviewScreenTest {
   }
 
   @Test
-  fun overviewScreen_topBarDisplaysWelcomeMessage() {
+  fun overviewScreen_topBarDisplaysOverviewTitle() {
     val repo = EventsRepositoryLocal()
     val viewModel = OverviewViewModel(repo)
 
@@ -463,7 +463,7 @@ class OverviewScreenTest {
 
     composeTestRule.waitForIdle()
 
-    composeTestRule.onNodeWithText("Welcome, Mathieu").assertExists()
+    composeTestRule.onNodeWithText("Overview").assertExists()
   }
 
   @Test
