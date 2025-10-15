@@ -2,12 +2,20 @@ package com.android.joinme.ui.overview
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import com.android.joinme.model.filter.FilterRepository
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
 class SearchScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
+
+  @Before
+  fun setup() {
+    // Reset FilterRepository before each test to ensure clean state
+    FilterRepository.reset()
+  }
 
   private fun setupScreen(viewModel: SearchViewModel = SearchViewModel()) {
     composeTestRule.setContent { SearchScreen(searchViewModel = viewModel) }
@@ -65,6 +73,8 @@ class SearchScreenTest {
   @Test
   fun searchScreen_sportFilterHasDropdownIcon() {
     setupScreen()
+
+    composeTestRule.waitForIdle()
 
     composeTestRule.onNodeWithContentDescription("Dropdown").assertIsDisplayed()
   }
@@ -291,7 +301,7 @@ class SearchScreenTest {
     setupScreen(viewModel)
 
     // Initially all filters are selected
-    assert(viewModel.uiState.value.isAllSelected)
+    assert(viewModel.filterState.value.isAllSelected)
 
     // Click to deselect
     composeTestRule.onNodeWithText("All").performClick()
@@ -299,7 +309,7 @@ class SearchScreenTest {
     composeTestRule.waitForIdle()
 
     // After toggle, should be deselected
-    assert(!viewModel.uiState.value.isAllSelected)
+    assert(!viewModel.filterState.value.isAllSelected)
   }
 
   @Test
@@ -311,7 +321,7 @@ class SearchScreenTest {
 
     composeTestRule.waitForIdle()
 
-    assert(!viewModel.uiState.value.isSocialSelected)
+    assert(!viewModel.filterState.value.isSocialSelected)
   }
 
   @Test
@@ -323,7 +333,7 @@ class SearchScreenTest {
 
     composeTestRule.waitForIdle()
 
-    assert(!viewModel.uiState.value.isActivitySelected)
+    assert(!viewModel.filterState.value.isActivitySelected)
   }
 
   @Test
@@ -332,7 +342,7 @@ class SearchScreenTest {
     setupScreen(viewModel)
 
     // Initially basket is checked
-    val basketSportBefore = viewModel.uiState.value.sportCategories.find { it.id == "basket" }
+    val basketSportBefore = viewModel.filterState.value.sportCategories.find { it.id == "basket" }
     assert(basketSportBefore?.isChecked == true)
 
     // Open dropdown
@@ -344,7 +354,7 @@ class SearchScreenTest {
     composeTestRule.waitForIdle()
 
     // After toggle, basket should be unchecked
-    val basketSportAfter = viewModel.uiState.value.sportCategories.find { it.id == "basket" }
+    val basketSportAfter = viewModel.filterState.value.sportCategories.find { it.id == "basket" }
     assert(basketSportAfter?.isChecked == false)
   }
 
