@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,10 +20,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.ui.theme.*
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
 
+/**
+ * Test tags for the ShowEventScreen UI components.
+ *
+ * These constants are used to identify UI elements in instrumented tests, enabling reliable test
+ * assertions and interactions.
+ */
 object ShowEventScreenTestTags {
   const val SCREEN = "showEventScreen"
   const val EVENT_TYPE = "eventType"
@@ -39,6 +47,25 @@ object ShowEventScreenTestTags {
   const val DELETE_BUTTON = "deleteButton"
 }
 
+/**
+ * Screen that displays detailed information about a specific event.
+ *
+ * This screen shows comprehensive event details including type, title, description, location, date,
+ * duration, visibility, participants, and owner information. The UI adapts based on the current
+ * user's relationship to the event:
+ * - **Event owners** see Edit and Delete buttons to manage their event
+ * - **Other users** see a Join/Quit button to manage their participation
+ * - **Past events** show no action buttons
+ *
+ * The screen includes a confirmation dialog for event deletion and displays error messages via
+ * toasts when operations fail.
+ *
+ * @param eventId The unique identifier of the event to display
+ * @param currentUserId The ID of the currently authenticated user (defaults to Firebase auth user)
+ * @param showEventViewModel ViewModel managing event state and operations
+ * @param onGoBack Callback invoked when the user navigates back
+ * @param onEditEvent Callback invoked when the owner wants to edit the event, receives the event ID
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShowEventScreen(
@@ -148,11 +175,11 @@ fun ShowEventScreen(
                         text = eventUIState.type,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0xFF7C3AED), // Purple color for event type
+                        color = Purple40, // Purple color for event type
                         modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_TYPE))
                   }
 
-              Divider(color = Color.Gray, thickness = 1.dp)
+              HorizontalDivider(thickness = 1.dp, color = Color.Gray)
 
               // Description
               Text(
@@ -164,7 +191,7 @@ fun ShowEventScreen(
                           .heightIn(min = 80.dp)
                           .testTag(ShowEventScreenTestTags.EVENT_DESCRIPTION))
 
-              Divider(color = Color.Gray, thickness = 1.dp)
+              HorizontalDivider(thickness = 1.dp, color = Color.Gray)
 
               // Location
               Text(
@@ -174,7 +201,7 @@ fun ShowEventScreen(
                   modifier =
                       Modifier.fillMaxWidth().testTag(ShowEventScreenTestTags.EVENT_LOCATION))
 
-              Divider(color = Color.Gray, thickness = 1.dp)
+              HorizontalDivider(thickness = 1.dp, color = Color.Gray)
 
               // Members and Duration row
               Row(
@@ -194,7 +221,7 @@ fun ShowEventScreen(
                         modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_DURATION))
                   }
 
-              Divider(color = Color.Gray, thickness = 1.dp)
+              HorizontalDivider(thickness = 1.dp, color = Color.Gray)
 
               // Owner display
               Text(
