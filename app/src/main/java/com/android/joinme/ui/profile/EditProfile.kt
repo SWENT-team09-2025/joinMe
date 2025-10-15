@@ -9,14 +9,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -236,6 +234,7 @@ private fun EditProfileContent(
             modifier = Modifier.padding(vertical = 16.dp).testTag(EditProfileTestTags.TITLE))
 
         ProfilePictureSection(
+            photoUrl = profile.photoUrl,
             isUploadingPhoto = isUploadingPhoto,
             onPictureEditClick = onPictureEditClick
         )
@@ -326,6 +325,7 @@ private fun EditProfileContent(
 
 @Composable
 private fun ProfilePictureSection(
+    photoUrl: String?,
     isUploadingPhoto: Boolean,
     onPictureEditClick: () -> Unit
 ) {
@@ -346,18 +346,30 @@ private fun ProfilePictureSection(
                 )
             }
 
-            // Blurred profile picture placeholder
-            Icon(
-                imageVector = Icons.Default.AccountCircle,
+            // Display actual profile photo with blur effect
+            ProfilePhotoImage(
+                photoUrl = photoUrl,
                 contentDescription = "Profile Picture",
-                modifier = Modifier.size(140.dp).blur(5.dp),
-                tint = JoinMeColor)
+                size = 140.dp,
+                showLoadingIndicator = false
+            )
+
+            // Blur overlay using a semi-transparent box
+            Box(
+                modifier = Modifier
+                    .size(140.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.3f))
+            )
 
             // Edit button (disabled while uploading)
             Button(
                 onClick = { if (!isUploadingPhoto) onPictureEditClick() },
                 enabled = !isUploadingPhoto,
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent
+                ),
                 shape = CircleShape,
                 modifier = Modifier.size(120.dp).testTag(EditProfileTestTags.EDIT_PHOTO_BUTTON)) {
                 Box(
