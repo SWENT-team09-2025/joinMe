@@ -47,6 +47,7 @@ class OverviewViewModelTest {
 
     val state = viewModel.uiState.value
     assertNull(state.errorMsg)
+    assertFalse(state.isLoading)
     val totalEvents = state.ongoingEvents.size + state.upcomingEvents.size
     assertEquals(2, totalEvents)
   }
@@ -64,6 +65,7 @@ class OverviewViewModelTest {
 
     val state = viewModel.uiState.value
     assertNotNull(state.errorMsg)
+    assertFalse(state.isLoading)
     assertTrue(state.ongoingEvents.isEmpty())
     assertTrue(state.upcomingEvents.isEmpty())
   }
@@ -88,6 +90,7 @@ class OverviewViewModelTest {
     testDispatcher.scheduler.advanceUntilIdle()
 
     val state = viewModel.uiState.value
+    assertFalse(state.isLoading)
     val totalEvents = state.ongoingEvents.size + state.upcomingEvents.size
     assertEquals(2, totalEvents)
   }
@@ -100,6 +103,7 @@ class OverviewViewModelTest {
     testDispatcher.scheduler.advanceUntilIdle()
 
     val state = viewModel.uiState.value
+    assertFalse(state.isLoading)
 
     // Check ongoing events are sorted
     if (state.ongoingEvents.size > 1) {
@@ -118,6 +122,39 @@ class OverviewViewModelTest {
                 state.upcomingEvents[i + 1].date.toDate().time)
       }
     }
+  }
+
+  @Test
+  fun `initial state has isLoading true`() = runTest {
+    val state = viewModel.uiState.value
+    assertTrue(state.isLoading)
+  }
+
+  @Test
+  fun `isLoading is true during fetch and false after completion`() = runTest {
+    fakeRepository.shouldThrow = false
+
+    viewModel.refreshUIState()
+
+    // Should be loading at start
+    assertTrue(viewModel.uiState.value.isLoading)
+
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    // Should not be loading after completion
+    assertFalse(viewModel.uiState.value.isLoading)
+  }
+
+  @Test
+  fun `isLoading is false after error`() = runTest {
+    fakeRepository.shouldThrow = true
+
+    viewModel.refreshUIState()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertFalse(state.isLoading)
+    assertNotNull(state.errorMsg)
   }
 
   /** Fake implementation of [EventsRepository] for isolated ViewModel testing. */

@@ -14,9 +14,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material3.Divider
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -52,6 +53,7 @@ object OverviewScreenTestTags {
   const val EVENT_LIST = "eventList"
   const val ONGOING_EVENTS_TITLE = "ongoingEventsTitle"
   const val UPCOMING_EVENTS_TITLE = "upcomingEventsTitle"
+  const val LOADING_INDICATOR = "overviewLoadingIndicator"
 
   fun getTestTagForEventItem(event: Event): String = "eventItem${event.eventId}"
 }
@@ -71,6 +73,7 @@ fun OverviewScreen(
   val uiState by overviewViewModel.uiState.collectAsState()
   val ongoingEvents = uiState.ongoingEvents
   val upcomingEvents = uiState.upcomingEvents
+  val isLoading = uiState.isLoading
 
   LaunchedEffect(Unit) { overviewViewModel.refreshUIState() }
 
@@ -88,7 +91,7 @@ fun OverviewScreen(
               modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
               title = {
                 Text(
-                    text = "Welcome, Mathieu",
+                    text = "Overview",
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center)
@@ -96,7 +99,7 @@ fun OverviewScreen(
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
-          Divider(color = Color.Black, thickness = 1.dp)
+          HorizontalDivider(color = Color.Black, thickness = 1.dp)
         }
       },
       bottomBar = {
@@ -110,73 +113,86 @@ fun OverviewScreen(
             onClick = onAddEvent,
             containerColor = OverviewScreenButtonColor,
             modifier = Modifier.testTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON)) {
-              Icon(Icons.Default.Add, contentDescription = "Add Event")
+              Icon(Icons.Default.Add, contentDescription = "Add Event", tint = Color.Black)
             }
       }) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-          if (ongoingEvents.isEmpty() && upcomingEvents.isEmpty()) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally) {
-                  Text(
-                      text = "You have no events yet. Join one, or create your own event.",
-                      textAlign = TextAlign.Center,
-                      style = MaterialTheme.typography.bodyMedium,
-                      modifier = Modifier.testTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG))
-                }
-          } else {
-            LazyColumn(
-                contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
-                modifier = Modifier.fillMaxWidth().testTag(OverviewScreenTestTags.EVENT_LIST)) {
-                  if (ongoingEvents.isNotEmpty()) {
-                    item {
-                      Text(
-                          text =
-                              if (ongoingEvents.size == 1) "Your ongoing event :"
-                              else "Your ongoing events :",
-                          style = MaterialTheme.typography.titleMedium,
-                          fontWeight = FontWeight.Bold,
-                          modifier =
-                              Modifier.padding(vertical = 8.dp, horizontal = 8.dp)
-                                  .testTag(OverviewScreenTestTags.ONGOING_EVENTS_TITLE))
-                    }
-
-                    items(ongoingEvents.size) { index ->
-                      EventCard(
-                          modifier = Modifier.padding(vertical = 6.dp),
-                          event = ongoingEvents[index],
-                          onClick = { onSelectEvent(ongoingEvents[index]) },
-                          testTag =
-                              OverviewScreenTestTags.getTestTagForEventItem(ongoingEvents[index]))
-                    }
-
-                    item { Spacer(modifier = Modifier.height(16.dp)) }
+          when {
+            isLoading -> {
+              // Loading state
+              Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    modifier = Modifier.testTag(OverviewScreenTestTags.LOADING_INDICATOR))
+              }
+            }
+            ongoingEvents.isEmpty() && upcomingEvents.isEmpty() -> {
+              // Empty state
+              Column(
+                  modifier = Modifier.fillMaxSize(),
+                  verticalArrangement = Arrangement.Center,
+                  horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "You have no events yet. Join one, or create your own event.",
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.testTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG))
                   }
+            }
+            else -> {
+              // Content state
+              LazyColumn(
+                  contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
+                  modifier = Modifier.fillMaxWidth().testTag(OverviewScreenTestTags.EVENT_LIST)) {
+                    if (ongoingEvents.isNotEmpty()) {
+                      item {
+                        Text(
+                            text =
+                                if (ongoingEvents.size == 1) "Your ongoing event :"
+                                else "Your ongoing events :",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier =
+                                Modifier.padding(vertical = 8.dp, horizontal = 8.dp)
+                                    .testTag(OverviewScreenTestTags.ONGOING_EVENTS_TITLE))
+                      }
 
-                  if (upcomingEvents.isNotEmpty()) {
-                    item {
-                      Text(
-                          text =
-                              if (upcomingEvents.size == 1) "Your upcoming event :"
-                              else "Your upcoming events :",
-                          style = MaterialTheme.typography.titleMedium,
-                          fontWeight = FontWeight.Bold,
-                          modifier =
-                              Modifier.padding(vertical = 8.dp, horizontal = 8.dp)
-                                  .testTag(OverviewScreenTestTags.UPCOMING_EVENTS_TITLE))
+                      items(ongoingEvents.size) { index ->
+                        EventCard(
+                            modifier = Modifier.padding(vertical = 6.dp),
+                            event = ongoingEvents[index],
+                            onClick = { onSelectEvent(ongoingEvents[index]) },
+                            testTag =
+                                OverviewScreenTestTags.getTestTagForEventItem(ongoingEvents[index]))
+                      }
+
+                      item { Spacer(modifier = Modifier.height(16.dp)) }
                     }
 
-                    items(upcomingEvents.size) { index ->
-                      EventCard(
-                          modifier = Modifier.padding(vertical = 6.dp),
-                          event = upcomingEvents[index],
-                          onClick = { onSelectEvent(upcomingEvents[index]) },
-                          testTag =
-                              OverviewScreenTestTags.getTestTagForEventItem(upcomingEvents[index]))
+                    if (upcomingEvents.isNotEmpty()) {
+                      item {
+                        Text(
+                            text =
+                                if (upcomingEvents.size == 1) "Your upcoming event :"
+                                else "Your upcoming events :",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier =
+                                Modifier.padding(vertical = 8.dp, horizontal = 8.dp)
+                                    .testTag(OverviewScreenTestTags.UPCOMING_EVENTS_TITLE))
+                      }
+
+                      items(upcomingEvents.size) { index ->
+                        EventCard(
+                            modifier = Modifier.padding(vertical = 6.dp),
+                            event = upcomingEvents[index],
+                            onClick = { onSelectEvent(upcomingEvents[index]) },
+                            testTag =
+                                OverviewScreenTestTags.getTestTagForEventItem(
+                                    upcomingEvents[index]))
+                      }
                     }
                   }
-                }
+            }
           }
 
           // FAB History en bas à gauche
@@ -187,7 +203,7 @@ fun OverviewScreen(
                   Modifier.align(Alignment.BottomStart)
                       .padding(start = 16.dp, bottom = 16.dp)
                       .testTag(OverviewScreenTestTags.HISTORY_BUTTON)) {
-                Icon(Icons.Default.History, contentDescription = "View History")
+                Icon(Icons.Default.History, contentDescription = "View History", tint = Color.Black)
               }
         }
       }

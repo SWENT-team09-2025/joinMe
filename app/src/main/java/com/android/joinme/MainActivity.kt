@@ -11,18 +11,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
 import com.android.joinme.model.authentification.AuthRepository
 import com.android.joinme.ui.history.HistoryScreen
+import com.android.joinme.ui.map.MapScreen
+import com.android.joinme.ui.map.MapViewModel
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.Screen
 import com.android.joinme.ui.overview.CreateEventScreen
 import com.android.joinme.ui.overview.EditEventScreen
 import com.android.joinme.ui.overview.OverviewScreen
 import com.android.joinme.ui.overview.SearchScreen
+import com.android.joinme.ui.overview.ShowEventScreen
 import com.android.joinme.ui.profile.EditProfileScreen
 import com.android.joinme.ui.profile.ViewProfileScreen
 import com.android.joinme.ui.signIn.SignInScreen
@@ -99,9 +103,7 @@ fun JoinMe(
     ) {
       composable(Screen.Overview.route) {
         OverviewScreen(
-            onSelectEvent = {
-              navigationActions.navigateTo(Screen.EditEvent(it.eventId))
-            }, // TODO navigate to event details screen
+            onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
             onAddEvent = { navigationActions.navigateTo(Screen.CreateEvent) },
             onGoToHistory = { navigationActions.navigateTo(Screen.History) },
             navigationActions = navigationActions,
@@ -124,8 +126,18 @@ fun JoinMe(
       }
       composable(Screen.History.route) {
         HistoryScreen(
-            onSelectEvent = {}, // to be modified need to navigate to ShowEvent},
+            onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
             onGoBack = { navigationActions.goBack() })
+      }
+      composable(Screen.ShowEventScreen.route) { navBackStackEntry ->
+        val eventId = navBackStackEntry.arguments?.getString("eventId")
+
+        eventId?.let {
+          ShowEventScreen(
+              eventId = eventId,
+              onGoBack = { navigationActions.goBack() },
+              onEditEvent = { id -> navigationActions.navigateTo(Screen.EditEvent(id)) })
+        } ?: run { Toast.makeText(context, "Event UID is null", Toast.LENGTH_SHORT).show() }
       }
     }
 
@@ -133,14 +145,21 @@ fun JoinMe(
         startDestination = Screen.Search.route,
         route = Screen.Search.name,
     ) {
-      composable(Screen.Search.route) { SearchScreen(navigationActions = navigationActions) }
+      composable(Screen.Search.route) {
+        SearchScreen(
+            navigationActions = navigationActions,
+            onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) })
+      }
     }
 
     navigation(
         startDestination = Screen.Map.route,
         route = Screen.Map.name,
     ) {
-      composable(Screen.Map.route) {}
+      composable(Screen.Map.route) { backStackEntry ->
+        val mapViewModel: MapViewModel = viewModel(backStackEntry)
+        MapScreen(viewModel = mapViewModel, navigationActions = navigationActions)
+      }
     }
     navigation(
         startDestination = Screen.Profile.route,

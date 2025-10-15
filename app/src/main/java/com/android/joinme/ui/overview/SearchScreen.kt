@@ -77,6 +77,7 @@ fun SearchScreen(
 ) {
   val context = LocalContext.current
   val uiState by searchViewModel.uiState.collectAsState()
+  val filterState by searchViewModel.filterState.collectAsState()
   val focusManager = LocalFocusManager.current
   val events = uiState.events
 
@@ -143,24 +144,24 @@ fun SearchScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                       FilterChip(
-                          selected = uiState.isAllSelected,
+                          selected = filterState.isAllSelected,
                           onClick = { searchViewModel.toggleAll() },
                           label = { Text("All") })
 
                       FilterChip(
-                          selected = uiState.isSocialSelected,
+                          selected = filterState.isSocialSelected,
                           onClick = { searchViewModel.toggleSocial() },
                           label = { Text("Social") })
 
                       FilterChip(
-                          selected = uiState.isActivitySelected,
+                          selected = filterState.isActivitySelected,
                           onClick = { searchViewModel.toggleActivity() },
                           label = { Text("Activity") })
 
                       // Dropdown filter
                       Box {
                         FilterChip(
-                            selected = uiState.selectedSportsCount >= 1,
+                            selected = filterState.selectedSportsCount >= 1,
                             onClick = { searchViewModel.setCategoryExpanded(true) },
                             label = { Text("Sport") },
                             trailingIcon = {
@@ -177,12 +178,12 @@ fun SearchScreen(
                                   onClick = { searchViewModel.toggleSelectAll() },
                                   trailingIcon = {
                                     Checkbox(
-                                        checked = uiState.isSelectAllChecked,
+                                        checked = filterState.isSelectAllChecked,
                                         onCheckedChange = null)
                                   })
 
                               // Loop through all sport categories dynamically
-                              uiState.sportCategories.forEach { sport ->
+                              filterState.sportCategories.forEach { sport ->
                                 DropdownMenuItem(
                                     text = { Text(sport.name) },
                                     onClick = { searchViewModel.toggleSport(sport.id) },
