@@ -10,8 +10,8 @@ import androidx.compose.runtime.remember
 /**
  * Composable that provides a photo picker launcher for selecting images.
  *
- * Uses the Android Photo Picker (PickVisualMedia) which provides a modern,
- * system-integrated UI for selecting photos. Falls back gracefully on older devices.
+ * Uses the Android Photo Picker (PickVisualMedia) which provides a modern, system-integrated UI for
+ * selecting photos. Falls back gracefully on older devices.
  *
  * Usage:
  * ```
@@ -41,34 +41,31 @@ fun rememberPhotoPickerLauncher(
     onError: (String) -> Unit = {}
 ): PhotoPickerLauncher {
 
-    // Set up the photo picker launcher
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri: Uri? ->
+  // Set up the photo picker launcher
+  val launcher =
+      rememberLauncherForActivityResult(contract = ActivityResultContracts.PickVisualMedia()) {
+          uri: Uri? ->
         if (uri != null) {
-            onPhotoPicked(uri)
+          onPhotoPicked(uri)
         } else {
-            // User cancelled or no photo was selected
-            // Not necessarily an error, so we don't call onError
+          // User cancelled or no photo was selected
+          // Not necessarily an error, so we don't call onError
         }
-    }
+      }
 
-    return remember {
-        PhotoPickerLauncher(
-            launch = {
-                try {
-                    // Launch the photo picker requesting only images
-                    launcher.launch(
-                        PickVisualMediaRequest(
-                            mediaType = ActivityResultContracts.PickVisualMedia.ImageOnly
-                        )
-                    )
-                } catch (e: Exception) {
-                    onError("Failed to open photo picker: ${e.message}")
-                }
-            }
-        )
-    }
+  return remember {
+    PhotoPickerLauncher(
+        launch = {
+          try {
+            // Launch the photo picker requesting only images
+            launcher.launch(
+                PickVisualMediaRequest(
+                    mediaType = ActivityResultContracts.PickVisualMedia.ImageOnly))
+          } catch (e: Exception) {
+            onError("Failed to open photo picker: ${e.message}")
+          }
+        })
+  }
 }
 
 /**
@@ -78,6 +75,4 @@ fun rememberPhotoPickerLauncher(
  *
  * @property launch Function to trigger the photo picker
  */
-data class PhotoPickerLauncher(
-    val launch: () -> Unit
-)
+data class PhotoPickerLauncher(val launch: () -> Unit)
