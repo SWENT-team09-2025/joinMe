@@ -88,7 +88,7 @@ fun OverviewScreen(
               modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
               title = {
                 Text(
-                    text = "Welcome, Mathieu",
+                    text = "Overview",
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center)
