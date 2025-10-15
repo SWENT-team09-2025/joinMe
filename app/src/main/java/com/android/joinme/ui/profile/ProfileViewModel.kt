@@ -45,8 +45,8 @@ import kotlinx.coroutines.withTimeout
  *   provider instance.
  */
 class ProfileViewModel(
-  private val repository: ProfileRepository = ProfileRepositoryProvider.repository,
-  private val authRepository: AuthRepository = AuthRepositoryProvider.repository,
+    private val repository: ProfileRepository = ProfileRepositoryProvider.repository,
+    private val authRepository: AuthRepository = AuthRepositoryProvider.repository,
 ) : ViewModel() {
 
   private val _profile = MutableStateFlow<Profile?>(null)
@@ -83,39 +83,39 @@ class ProfileViewModel(
       try {
         // Try to fetch the profile (with timeout to prevent infinite waiting)
         val fetched =
-          withTimeout(10000L) {
-            try {
-              repository.getProfile(uid)
-            } catch (_: NoSuchElementException) {
-              null // Profile doesn't exist, will bootstrap
+            withTimeout(10000L) {
+              try {
+                repository.getProfile(uid)
+              } catch (_: NoSuchElementException) {
+                null // Profile doesn't exist, will bootstrap
+              }
             }
-          }
 
         if (fetched != null) {
           _profile.value = fetched
         } else {
           // Bootstrap: create a new profile
           val email =
-            try {
-              authRepository.getCurrentUserEmail() ?: ""
-            } catch (e: Exception) {
-              Log.e(TAG, "Error getting email", e)
-              ""
-            }
+              try {
+                authRepository.getCurrentUserEmail() ?: ""
+              } catch (e: Exception) {
+                Log.e(TAG, "Error getting email", e)
+                ""
+              }
 
           val username = deriveDefaultUsername(email, uid)
 
           val newProfile =
-            Profile(
-              uid = uid,
-              email = email,
-              username = username,
-              dateOfBirth = null,
-              country = null,
-              interests = emptyList(),
-              bio = null,
-              createdAt = Timestamp.now(),
-              updatedAt = Timestamp.now())
+              Profile(
+                  uid = uid,
+                  email = email,
+                  username = username,
+                  dateOfBirth = null,
+                  country = null,
+                  interests = emptyList(),
+                  bio = null,
+                  createdAt = Timestamp.now(),
+                  updatedAt = Timestamp.now())
 
           // Create profile with timeout
           withTimeout(10000L) { repository.createOrUpdateProfile(newProfile) }
@@ -180,10 +180,10 @@ class ProfileViewModel(
    * @param onError Callback invoked if upload fails, receives error message
    */
   fun uploadProfilePhoto(
-    context: Context,
-    imageUri: Uri,
-    onSuccess: () -> Unit = {},
-    onError: (String) -> Unit = {}
+      context: Context,
+      imageUri: Uri,
+      onSuccess: () -> Unit = {},
+      onError: (String) -> Unit = {}
   ) {
     val currentProfile = _profile.value
     if (currentProfile == null) {
@@ -204,9 +204,9 @@ class ProfileViewModel(
         // Upload photo and get download URL
         // The repository handles image processing, upload, and Firestore update
         val downloadUrl =
-          withTimeout(30000L) { // 30 second timeout for upload
-            repository.uploadProfilePhoto(context, currentProfile.uid, imageUri)
-          }
+            withTimeout(30000L) { // 30 second timeout for upload
+              repository.uploadProfilePhoto(context, currentProfile.uid, imageUri)
+            }
 
         Log.d(TAG, "Photo uploaded successfully: $downloadUrl")
 
@@ -351,7 +351,7 @@ class ProfileViewModel(
       username.length < 3 -> "Username must be at least 3 characters"
       username.length > 30 -> "Username must not exceed 30 characters"
       !username.matches(Regex("^[a-zA-Z0-9_ ]+$")) ->
-        "Only letters, numbers, spaces, and underscores allowed"
+          "Only letters, numbers, spaces, and underscores allowed"
       else -> null
     }
   }

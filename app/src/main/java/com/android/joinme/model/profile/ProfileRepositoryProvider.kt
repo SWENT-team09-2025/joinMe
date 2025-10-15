@@ -12,10 +12,7 @@ import com.google.firebase.storage.FirebaseStorage
 object ProfileRepositoryProvider {
 
   private val _repository: ProfileRepository by lazy {
-    ProfileRepositoryFirestore(
-      db = Firebase.firestore,
-      storage = FirebaseStorage.getInstance()
-    )
+    ProfileRepositoryFirestore(db = Firebase.firestore, storage = FirebaseStorage.getInstance())
   }
 
   var repository: ProfileRepository = _repository

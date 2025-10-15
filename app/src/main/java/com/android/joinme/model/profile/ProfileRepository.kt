@@ -31,9 +31,9 @@ interface ProfileRepository {
   /**
    * Uploads a profile photo for the given user and updates their profile.
    *
-   * The photo will be stored at a deterministic path (users/{uid}/profile.jpg)
-   * to ensure idempotency - subsequent uploads will replace the previous photo.
-   * After successful upload, the profile's photoUrl field is automatically updated.
+   * The photo will be stored at a deterministic path (users/{uid}/profile.jpg) to ensure
+   * idempotency - subsequent uploads will replace the previous photo. After successful upload, the
+   * profile's photoUrl field is automatically updated.
    *
    * @param context Android context for reading and processing the image
    * @param uid The unique identifier of the user

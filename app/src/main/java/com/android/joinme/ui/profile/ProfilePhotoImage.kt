@@ -45,66 +45,43 @@ fun ProfilePhotoImage(
     shape: Shape = androidx.compose.foundation.shape.CircleShape,
     showLoadingIndicator: Boolean = true
 ) {
-    Box(
-        modifier = modifier.size(size),
-        contentAlignment = Alignment.Center
-    ) {
-        if (photoUrl != null) {
-            // Load remote image with Coil
-            SubcomposeAsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(photoUrl)
-                    .crossfade(true) // Smooth transition when image loads
-                    .build(),
-                contentDescription = contentDescription,
-                modifier = Modifier
-                    .size(size)
-                    .clip(shape),
-                contentScale = ContentScale.Crop, // Fill the space, cropping if needed
-                loading = {
-                    // Show loading state
-                    if (showLoadingIndicator) {
-                        Box(
-                            modifier = Modifier.size(size),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(size / 3),
-                                color = JoinMeColor
-                            )
-                        }
-                    }
-                },
-                error = {
-                    // Show default avatar on error
-                    DefaultProfileAvatar(
-                        contentDescription = contentDescription,
-                        size = size
-                    )
-                }
-            )
-        } else {
-            // No photo URL, show default avatar
-            DefaultProfileAvatar(
-                contentDescription = contentDescription,
-                size = size
-            )
-        }
+  Box(modifier = modifier.size(size), contentAlignment = Alignment.Center) {
+    if (photoUrl != null) {
+      // Load remote image with Coil
+      SubcomposeAsyncImage(
+          model =
+              ImageRequest.Builder(LocalContext.current)
+                  .data(photoUrl)
+                  .crossfade(true) // Smooth transition when image loads
+                  .build(),
+          contentDescription = contentDescription,
+          modifier = Modifier.size(size).clip(shape),
+          contentScale = ContentScale.Crop, // Fill the space, cropping if needed
+          loading = {
+            // Show loading state
+            if (showLoadingIndicator) {
+              Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(modifier = Modifier.size(size / 3), color = JoinMeColor)
+              }
+            }
+          },
+          error = {
+            // Show default avatar on error
+            DefaultProfileAvatar(contentDescription = contentDescription, size = size)
+          })
+    } else {
+      // No photo URL, show default avatar
+      DefaultProfileAvatar(contentDescription = contentDescription, size = size)
     }
+  }
 }
 
-/**
- * The default profile avatar icon shown when no photo is available.
- */
+/** The default profile avatar icon shown when no photo is available. */
 @Composable
-private fun DefaultProfileAvatar(
-    contentDescription: String,
-    size: Dp
-) {
-    Icon(
-        imageVector = Icons.Sharp.AccountCircle,
-        contentDescription = contentDescription,
-        modifier = Modifier.size(size),
-        tint = JoinMeColor
-    )
+private fun DefaultProfileAvatar(contentDescription: String, size: Dp) {
+  Icon(
+      imageVector = Icons.Sharp.AccountCircle,
+      contentDescription = contentDescription,
+      modifier = Modifier.size(size),
+      tint = JoinMeColor)
 }

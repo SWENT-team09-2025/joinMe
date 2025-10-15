@@ -31,24 +31,24 @@ import com.android.joinme.ui.theme.JoinMeColor
 import com.google.firebase.Timestamp
 
 object EditProfileTestTags {
-    const val NO_LOADING_PROFILE_MESSAGE = "noLoadingProfileMessage"
-    const val SCREEN = "editProfileScreen"
-    const val LOADING_INDICATOR = "editProfileLoadingIndicator"
-    const val TITLE = "editProfileTitle"
-    const val PROFILE_PICTURE = "editProfilePicture"
-    const val EDIT_PHOTO_BUTTON = "editProfilePhotoButton"
-    const val USERNAME_FIELD = "editProfileUsernameField"
-    const val USERNAME_ERROR = "editProfileUsernameError"
-    const val EMAIL_FIELD = "editProfileEmailField"
-    const val DATE_OF_BIRTH_FIELD = "editProfileDateOfBirthField"
-    const val DATE_OF_BIRTH_ERROR = "editProfileDateOfBirthError"
-    const val INTERESTS_FIELD = "editProfileInterestsField"
-    const val PASSWORD_SECTION = "editProfilePasswordSection"
-    const val CHANGE_PASSWORD_BUTTON = "editProfileChangePasswordButton"
-    const val COUNTRY_FIELD = "editProfileCountryField"
-    const val BIO_FIELD = "editProfileBioField"
-    const val SAVE_BUTTON = "editProfileSaveButton"
-    const val PHOTO_UPLOADING_INDICATOR = "editProfilePhotoUploadingIndicator"
+  const val NO_LOADING_PROFILE_MESSAGE = "noLoadingProfileMessage"
+  const val SCREEN = "editProfileScreen"
+  const val LOADING_INDICATOR = "editProfileLoadingIndicator"
+  const val TITLE = "editProfileTitle"
+  const val PROFILE_PICTURE = "editProfilePicture"
+  const val EDIT_PHOTO_BUTTON = "editProfilePhotoButton"
+  const val USERNAME_FIELD = "editProfileUsernameField"
+  const val USERNAME_ERROR = "editProfileUsernameError"
+  const val EMAIL_FIELD = "editProfileEmailField"
+  const val DATE_OF_BIRTH_FIELD = "editProfileDateOfBirthField"
+  const val DATE_OF_BIRTH_ERROR = "editProfileDateOfBirthError"
+  const val INTERESTS_FIELD = "editProfileInterestsField"
+  const val PASSWORD_SECTION = "editProfilePasswordSection"
+  const val CHANGE_PASSWORD_BUTTON = "editProfileChangePasswordButton"
+  const val COUNTRY_FIELD = "editProfileCountryField"
+  const val BIO_FIELD = "editProfileBioField"
+  const val SAVE_BUTTON = "editProfileSaveButton"
+  const val PHOTO_UPLOADING_INDICATOR = "editProfilePhotoUploadingIndicator"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,142 +63,137 @@ fun EditProfileScreen(
     onChangePasswordClick: () -> Unit = {},
     onSaveSuccess: () -> Unit = {}
 ) {
-    val context = LocalContext.current
-    val profile by profileViewModel.profile.collectAsState()
-    val isLoading by profileViewModel.isLoading.collectAsState()
-    val isUploadingPhoto by profileViewModel.isUploadingPhoto.collectAsState()
-    val photoUploadError by profileViewModel.photoUploadError.collectAsState()
+  val context = LocalContext.current
+  val profile by profileViewModel.profile.collectAsState()
+  val isLoading by profileViewModel.isLoading.collectAsState()
+  val isUploadingPhoto by profileViewModel.isUploadingPhoto.collectAsState()
+  val photoUploadError by profileViewModel.photoUploadError.collectAsState()
 
-    var username by remember { mutableStateOf("") }
-    var dateOfBirth by remember { mutableStateOf("") }
-    var country by remember { mutableStateOf("") }
-    var interests by remember { mutableStateOf("") }
-    var bio by remember { mutableStateOf("") }
+  var username by remember { mutableStateOf("") }
+  var dateOfBirth by remember { mutableStateOf("") }
+  var country by remember { mutableStateOf("") }
+  var interests by remember { mutableStateOf("") }
+  var bio by remember { mutableStateOf("") }
 
-    var usernameError by remember { mutableStateOf<String?>(null) }
-    var dateOfBirthError by remember { mutableStateOf<String?>(null) }
-    var hasInteracted by remember { mutableStateOf(false) }
+  var usernameError by remember { mutableStateOf<String?>(null) }
+  var dateOfBirthError by remember { mutableStateOf<String?>(null) }
+  var hasInteracted by remember { mutableStateOf(false) }
 
-    // Set up the photo picker
-    val photoPicker = rememberPhotoPickerLauncher(
-        onPhotoPicked = { uri ->
+  // Set up the photo picker
+  val photoPicker =
+      rememberPhotoPickerLauncher(
+          onPhotoPicked = { uri ->
             profileViewModel.uploadProfilePhoto(
                 context = context,
                 imageUri = uri,
                 onSuccess = {
-                    Toast.makeText(context, "Photo uploaded successfully", Toast.LENGTH_SHORT).show()
+                  Toast.makeText(context, "Photo uploaded successfully", Toast.LENGTH_SHORT).show()
                 },
-                onError = { error ->
-                    Toast.makeText(context, error, Toast.LENGTH_LONG).show()
-                }
-            )
-        },
-        onError = { error ->
-            Toast.makeText(context, error, Toast.LENGTH_LONG).show()
-        }
-    )
+                onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
+          },
+          onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
 
-    LaunchedEffect(uid) { profileViewModel.loadProfile(uid) }
+  LaunchedEffect(uid) { profileViewModel.loadProfile(uid) }
 
-    LaunchedEffect(profile) {
-        profile?.let {
-            username = it.username
-            dateOfBirth = it.dateOfBirth ?: ""
-            country = it.country ?: ""
-            interests = it.interests.joinToString(", ")
-            bio = it.bio ?: ""
-        }
+  LaunchedEffect(profile) {
+    profile?.let {
+      username = it.username
+      dateOfBirth = it.dateOfBirth ?: ""
+      country = it.country ?: ""
+      interests = it.interests.joinToString(", ")
+      bio = it.bio ?: ""
     }
+  }
 
-    LaunchedEffect(username, dateOfBirth) {
-        if (hasInteracted) {
-            usernameError = profileViewModel.getUsernameError(username)
-            dateOfBirthError = profileViewModel.getDateOfBirthError(dateOfBirth)
-        }
+  LaunchedEffect(username, dateOfBirth) {
+    if (hasInteracted) {
+      usernameError = profileViewModel.getUsernameError(username)
+      dateOfBirthError = profileViewModel.getDateOfBirthError(dateOfBirth)
     }
+  }
 
-    // Show photo upload errors as toasts
-    LaunchedEffect(photoUploadError) {
-        photoUploadError?.let {
-            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
-            profileViewModel.clearPhotoUploadError()
-        }
+  // Show photo upload errors as toasts
+  LaunchedEffect(photoUploadError) {
+    photoUploadError?.let {
+      Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+      profileViewModel.clearPhotoUploadError()
     }
+  }
 
-    val isFormValid = usernameError == null && dateOfBirthError == null && username.isNotEmpty()
+  val isFormValid = usernameError == null && dateOfBirthError == null && username.isNotEmpty()
 
-    Scaffold(
-        modifier = Modifier.testTag(EditProfileTestTags.SCREEN),
-        containerColor = Color.White,
-        topBar = {
-            ProfileTopBar(
-                currentScreen = ProfileScreen.EDIT_PROFILE,
-                onBackClick = onBackClick,
-                onProfileClick = onProfileClick,
-                onGroupClick = onGroupClick,
-                onEditClick = {})
-        },
-        bottomBar = {
-            BottomNavigationMenu(selectedTab = Tab.Profile, onTabSelected = onTabSelected)
-        }) { padding ->
+  Scaffold(
+      modifier = Modifier.testTag(EditProfileTestTags.SCREEN),
+      containerColor = Color.White,
+      topBar = {
+        ProfileTopBar(
+            currentScreen = ProfileScreen.EDIT_PROFILE,
+            onBackClick = onBackClick,
+            onProfileClick = onProfileClick,
+            onGroupClick = onGroupClick,
+            onEditClick = {})
+      },
+      bottomBar = {
+        BottomNavigationMenu(selectedTab = Tab.Profile, onTabSelected = onTabSelected)
+      }) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            when {
-                isLoading -> {
-                    CircularProgressIndicator(
-                        modifier =
-                            Modifier.align(Alignment.Center)
-                                .testTag(EditProfileTestTags.LOADING_INDICATOR))
-                }
-                profile != null -> {
-                    EditProfileContent(
-                        profile = profile!!,
-                        isUploadingPhoto = isUploadingPhoto,
-                        onPictureEditClick = { photoPicker.launch() },
-                        username = username,
-                        onUsernameChange = {
-                            username = it
-                            hasInteracted = true
-                        },
-                        usernameError = usernameError,
-                        dateOfBirth = dateOfBirth,
-                        onDateOfBirthChange = {
-                            dateOfBirth = it
-                            hasInteracted = true
-                        },
-                        dateOfBirthError = dateOfBirthError,
-                        country = country,
-                        onCountryChange = { country = it },
-                        interests = interests,
-                        onInterestsChange = { interests = it },
-                        bio = bio,
-                        onBioChange = { bio = it },
-                        isFormValid = isFormValid,
-                        onChangePasswordClick = onChangePasswordClick,
-                        onSaveClick = {
-                            if (isFormValid) {
-                                val updatedProfile =
-                                    profile!!.copy(
-                                        username = username,
-                                        dateOfBirth = dateOfBirth.ifBlank { null },
-                                        country = country.ifBlank { null },
-                                        interests =
-                                            interests.split(",").map { it.trim() }.filter { it.isNotEmpty() },
-                                        bio = bio.ifBlank { null })
-                                profileViewModel.createOrUpdateProfile(updatedProfile)
-                                onSaveSuccess()
-                            }
-                        })
-                }
-                else -> {
-                    Text(
-                        text = "No profile data available",
-                        modifier =
-                            Modifier.align(Alignment.Center)
-                                .testTag(EditProfileTestTags.NO_LOADING_PROFILE_MESSAGE))
-                }
+          when {
+            isLoading -> {
+              CircularProgressIndicator(
+                  modifier =
+                      Modifier.align(Alignment.Center)
+                          .testTag(EditProfileTestTags.LOADING_INDICATOR))
             }
+            profile != null -> {
+              EditProfileContent(
+                  profile = profile!!,
+                  isUploadingPhoto = isUploadingPhoto,
+                  onPictureEditClick = { photoPicker.launch() },
+                  username = username,
+                  onUsernameChange = {
+                    username = it
+                    hasInteracted = true
+                  },
+                  usernameError = usernameError,
+                  dateOfBirth = dateOfBirth,
+                  onDateOfBirthChange = {
+                    dateOfBirth = it
+                    hasInteracted = true
+                  },
+                  dateOfBirthError = dateOfBirthError,
+                  country = country,
+                  onCountryChange = { country = it },
+                  interests = interests,
+                  onInterestsChange = { interests = it },
+                  bio = bio,
+                  onBioChange = { bio = it },
+                  isFormValid = isFormValid,
+                  onChangePasswordClick = onChangePasswordClick,
+                  onSaveClick = {
+                    if (isFormValid) {
+                      val updatedProfile =
+                          profile!!.copy(
+                              username = username,
+                              dateOfBirth = dateOfBirth.ifBlank { null },
+                              country = country.ifBlank { null },
+                              interests =
+                                  interests.split(",").map { it.trim() }.filter { it.isNotEmpty() },
+                              bio = bio.ifBlank { null })
+                      profileViewModel.createOrUpdateProfile(updatedProfile)
+                      onSaveSuccess()
+                    }
+                  })
+            }
+            else -> {
+              Text(
+                  text = "No profile data available",
+                  modifier =
+                      Modifier.align(Alignment.Center)
+                          .testTag(EditProfileTestTags.NO_LOADING_PROFILE_MESSAGE))
+            }
+          }
         }
-    }
+      }
 }
 
 @Composable
@@ -222,11 +217,11 @@ private fun EditProfileContent(
     onChangePasswordClick: () -> Unit,
     onSaveClick: () -> Unit
 ) {
-    Column(
-        modifier =
-            Modifier.fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp)) {
+  Column(
+      modifier =
+          Modifier.fillMaxSize()
+              .verticalScroll(rememberScrollState())
+              .padding(horizontal = 24.dp)) {
         Text(
             text = "Edit Profile",
             fontSize = 24.sp,
@@ -236,8 +231,7 @@ private fun EditProfileContent(
         ProfilePictureSection(
             photoUrl = profile.photoUrl,
             isUploadingPhoto = isUploadingPhoto,
-            onPictureEditClick = onPictureEditClick
-        )
+            onPictureEditClick = onPictureEditClick)
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -265,7 +259,7 @@ private fun EditProfileContent(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column(modifier = Modifier.weight(1f)) {
+              Column(modifier = Modifier.weight(1f)) {
                 EditTextField(
                     label = "Date of Birth",
                     value = dateOfBirth,
@@ -275,17 +269,17 @@ private fun EditProfileContent(
                     supportingText = "dd/mm/yyyy",
                     testTag = EditProfileTestTags.DATE_OF_BIRTH_FIELD,
                     errorTestTag = EditProfileTestTags.DATE_OF_BIRTH_ERROR)
-            }
+              }
 
-            Column(modifier = Modifier.weight(1f)) {
+              Column(modifier = Modifier.weight(1f)) {
                 EditTextField(
                     label = "Interests",
                     value = interests,
                     onValueChange = onInterestsChange,
                     placeholder = "Golf, Nature",
                     testTag = EditProfileTestTags.INTERESTS_FIELD)
+              }
             }
-        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -316,11 +310,11 @@ private fun EditProfileContent(
                     containerColor = if (isFormValid) JoinMeColor else Color.LightGray,
                     disabledContainerColor = Color.LightGray),
             shape = RoundedCornerShape(12.dp)) {
-            Text("SAVE", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        }
+              Text("SAVE", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            }
 
         Spacer(modifier = Modifier.height(32.dp))
-    }
+      }
 }
 
 @Composable
@@ -329,82 +323,79 @@ private fun ProfilePictureSection(
     isUploadingPhoto: Boolean,
     onPictureEditClick: () -> Unit
 ) {
-    Box(
-        modifier =
-            Modifier.fillMaxWidth()
-                .padding(vertical = 24.dp)
-                .testTag(EditProfileTestTags.PROFILE_PICTURE),
-        contentAlignment = Alignment.Center) {
+  Box(
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(vertical = 24.dp)
+              .testTag(EditProfileTestTags.PROFILE_PICTURE),
+      contentAlignment = Alignment.Center) {
         Box(modifier = Modifier.size(140.dp), contentAlignment = Alignment.Center) {
-            // Show loading indicator while uploading
-            if (isUploadingPhoto) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(140.dp)
-                        .testTag(EditProfileTestTags.PHOTO_UPLOADING_INDICATOR),
-                    color = JoinMeColor,
-                    strokeWidth = 4.dp
-                )
-            }
+          // Show loading indicator while uploading
+          if (isUploadingPhoto) {
+            CircularProgressIndicator(
+                modifier =
+                    Modifier.size(140.dp).testTag(EditProfileTestTags.PHOTO_UPLOADING_INDICATOR),
+                color = JoinMeColor,
+                strokeWidth = 4.dp)
+          }
 
-            // Display actual profile photo with blur effect
-            ProfilePhotoImage(
-                photoUrl = photoUrl,
-                contentDescription = "Profile Picture",
-                size = 140.dp,
-                showLoadingIndicator = false
-            )
+          // Display actual profile photo with blur effect
+          ProfilePhotoImage(
+              photoUrl = photoUrl,
+              contentDescription = "Profile Picture",
+              size = 140.dp,
+              showLoadingIndicator = false)
 
-            // Blur overlay using a semi-transparent box
-            Box(
-                modifier = Modifier
-                    .size(140.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.3f))
-            )
+          // Blur overlay using a semi-transparent box
+          Box(
+              modifier =
+                  Modifier.size(140.dp)
+                      .clip(CircleShape)
+                      .background(Color.Black.copy(alpha = 0.3f)))
 
-            // Edit button (disabled while uploading)
-            Button(
-                onClick = { if (!isUploadingPhoto) onPictureEditClick() },
-                enabled = !isUploadingPhoto,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent
-                ),
-                shape = CircleShape,
-                modifier = Modifier.size(120.dp).testTag(EditProfileTestTags.EDIT_PHOTO_BUTTON)) {
+          // Edit button (disabled while uploading)
+          Button(
+              onClick = { if (!isUploadingPhoto) onPictureEditClick() },
+              enabled = !isUploadingPhoto,
+              colors =
+                  ButtonDefaults.buttonColors(
+                      containerColor = Color.Transparent,
+                      disabledContainerColor = Color.Transparent),
+              shape = CircleShape,
+              modifier = Modifier.size(120.dp).testTag(EditProfileTestTags.EDIT_PHOTO_BUTTON)) {
                 Box(
                     modifier = Modifier.size(50.dp).clip(CircleShape).background(Color.Transparent),
                     contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Outlined.Edit,
-                        contentDescription = "Edit Photo",
-                        tint = Color.White,
-                        modifier = Modifier.size(56.dp))
-                }
-            }
+                      Icon(
+                          imageVector = Icons.Outlined.Edit,
+                          contentDescription = "Edit Photo",
+                          tint = Color.White,
+                          modifier = Modifier.size(56.dp))
+                    }
+              }
         }
-    }
+      }
 }
 
 @Composable
 private fun PasswordSection(onChangePasswordClick: () -> Unit) {
-    Column(modifier = Modifier.testTag(EditProfileTestTags.PASSWORD_SECTION)) {
-        Text(
-            text = "Password",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp))
-        Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp))
-                    .padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically) {
+  Column(modifier = Modifier.testTag(EditProfileTestTags.PASSWORD_SECTION)) {
+    Text(
+        text = "Password",
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(bottom = 8.dp))
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp))
+                .padding(16.dp)) {
+          Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "************", fontSize = 16.sp, color = Color.Gray)
+                  Text(text = "************", fontSize = 16.sp, color = Color.Gray)
                 }
 
                 Button(
@@ -414,42 +405,42 @@ private fun PasswordSection(onChangePasswordClick: () -> Unit) {
                     modifier =
                         Modifier.height(40.dp)
                             .testTag(EditProfileTestTags.CHANGE_PASSWORD_BUTTON)) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Change password", fontSize = 12.sp)
-                }
-            }
+                      Icon(
+                          imageVector = Icons.Default.Edit,
+                          contentDescription = null,
+                          modifier = Modifier.size(16.dp))
+                      Spacer(modifier = Modifier.width(4.dp))
+                      Text("Change password", fontSize = 12.sp)
+                    }
+              }
         }
-    }
+  }
 }
 
 @Composable
 private fun BioSection(bio: String, onBioChange: (String) -> Unit) {
-    Column {
-        Text(
-            text = "Bio",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp))
-        OutlinedTextField(
-            value = bio,
-            onValueChange = onBioChange,
-            modifier =
-                Modifier.fillMaxWidth().heightIn(min = 120.dp).testTag(EditProfileTestTags.BIO_FIELD),
-            placeholder = {
-                Text(
-                    "Tell others a bit about yourself – your passions, what you enjoy doing, or what you're looking for on JoinMe.",
-                    fontSize = 12.sp,
-                    color = Color.Gray)
-            },
-            colors =
-                OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = Color.LightGray, focusedBorderColor = JoinMeColor),
-            shape = RoundedCornerShape(12.dp))
-    }
+  Column {
+    Text(
+        text = "Bio",
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(bottom = 8.dp))
+    OutlinedTextField(
+        value = bio,
+        onValueChange = onBioChange,
+        modifier =
+            Modifier.fillMaxWidth().heightIn(min = 120.dp).testTag(EditProfileTestTags.BIO_FIELD),
+        placeholder = {
+          Text(
+              "Tell others a bit about yourself – your passions, what you enjoy doing, or what you're looking for on JoinMe.",
+              fontSize = 12.sp,
+              color = Color.Gray)
+        },
+        colors =
+            OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray, focusedBorderColor = JoinMeColor),
+        shape = RoundedCornerShape(12.dp))
+  }
 }
 
 @Composable
@@ -466,91 +457,91 @@ private fun EditTextField(
     testTag: String = "",
     errorTestTag: String = ""
 ) {
-    Column {
-        Text(
-            text = label,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp))
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier =
-                if (testTag.isNotEmpty()) modifier.fillMaxWidth().testTag(testTag)
-                else modifier.fillMaxWidth(),
-            enabled = enabled,
-            isError = isError,
-            placeholder = placeholder?.let { { Text(it, color = Color.LightGray) } },
-            colors =
-                OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = if (isError) Color.Red else Color.LightGray,
-                    focusedBorderColor = if (isError) Color.Red else JoinMeColor,
-                    disabledBorderColor = Color.LightGray,
-                    disabledTextColor = Color.Gray),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true)
+  Column {
+    Text(
+        text = label,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(bottom = 8.dp))
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier =
+            if (testTag.isNotEmpty()) modifier.fillMaxWidth().testTag(testTag)
+            else modifier.fillMaxWidth(),
+        enabled = enabled,
+        isError = isError,
+        placeholder = placeholder?.let { { Text(it, color = Color.LightGray) } },
+        colors =
+            OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = if (isError) Color.Red else Color.LightGray,
+                focusedBorderColor = if (isError) Color.Red else JoinMeColor,
+                disabledBorderColor = Color.LightGray,
+                disabledTextColor = Color.Gray),
+        shape = RoundedCornerShape(12.dp),
+        singleLine = true)
 
-        val textToShow = if (isError && errorMessage != null) errorMessage else supportingText
+    val textToShow = if (isError && errorMessage != null) errorMessage else supportingText
 
-        if (textToShow != null) {
-            Text(
-                text = textToShow,
-                fontSize = 11.sp,
-                color = if (isError) Color.Red else Color.Gray,
-                modifier =
-                    if (isError) Modifier.padding(start = 12.dp, top = 4.dp).testTag(errorTestTag)
-                    else Modifier.padding(start = 12.dp, top = 4.dp))
-        }
+    if (textToShow != null) {
+      Text(
+          text = textToShow,
+          fontSize = 11.sp,
+          color = if (isError) Color.Red else Color.Gray,
+          modifier =
+              if (isError) Modifier.padding(start = 12.dp, top = 4.dp).testTag(errorTestTag)
+              else Modifier.padding(start = 12.dp, top = 4.dp))
     }
+  }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun EditProfileScreenPreview() {
-    val mockProfile =
-        Profile(
-            uid = "preview-uid",
-            username = "Mathieu Pfeffer",
-            email = "pfeffer@gmail.com",
-            dateOfBirth = "12/12/2012",
-            country = "Nigeria",
-            interests = listOf("Golf", "Nature"),
-            bio = "I am a EPFL student, 21 and I like horses and golf.",
-            createdAt = Timestamp.now(),
-            updatedAt = Timestamp.now())
+  val mockProfile =
+      Profile(
+          uid = "preview-uid",
+          username = "Mathieu Pfeffer",
+          email = "pfeffer@gmail.com",
+          dateOfBirth = "12/12/2012",
+          country = "Nigeria",
+          interests = listOf("Golf", "Nature"),
+          bio = "I am a EPFL student, 21 and I like horses and golf.",
+          createdAt = Timestamp.now(),
+          updatedAt = Timestamp.now())
 
-    Scaffold(
-        containerColor = Color.White,
-        topBar = {
-            ProfileTopBar(
-                currentScreen = ProfileScreen.EDIT_PROFILE,
-                onBackClick = {},
-                onProfileClick = {},
-                onGroupClick = {},
-                onEditClick = {})
-        },
-        bottomBar = { BottomNavigationMenu(selectedTab = Tab.Profile, onTabSelected = {}) }) { padding
+  Scaffold(
+      containerColor = Color.White,
+      topBar = {
+        ProfileTopBar(
+            currentScreen = ProfileScreen.EDIT_PROFILE,
+            onBackClick = {},
+            onProfileClick = {},
+            onGroupClick = {},
+            onEditClick = {})
+      },
+      bottomBar = { BottomNavigationMenu(selectedTab = Tab.Profile, onTabSelected = {}) }) { padding
         ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            EditProfileContent(
-                profile = mockProfile,
-                isUploadingPhoto = false,
-                username = "Mathieu Pfeffer",
-                onPictureEditClick = {},
-                onUsernameChange = {},
-                usernameError = null,
-                dateOfBirth = "12/12/2012",
-                onDateOfBirthChange = {},
-                dateOfBirthError = null,
-                country = "Nigeria",
-                onCountryChange = {},
-                interests = "Golf, Nature",
-                onInterestsChange = {},
-                bio = "I am a EPFL student, 21 and I like horses and golf.",
-                onBioChange = {},
-                isFormValid = true,
-                onChangePasswordClick = {},
-                onSaveClick = {})
+          EditProfileContent(
+              profile = mockProfile,
+              isUploadingPhoto = false,
+              username = "Mathieu Pfeffer",
+              onPictureEditClick = {},
+              onUsernameChange = {},
+              usernameError = null,
+              dateOfBirth = "12/12/2012",
+              onDateOfBirthChange = {},
+              dateOfBirthError = null,
+              country = "Nigeria",
+              onCountryChange = {},
+              interests = "Golf, Nature",
+              onInterestsChange = {},
+              bio = "I am a EPFL student, 21 and I like horses and golf.",
+              onBioChange = {},
+              isFormValid = true,
+              onChangePasswordClick = {},
+              onSaveClick = {})
         }
-    }
+      }
 }
