@@ -170,7 +170,7 @@ fun JoinMe(
             uid = FirebaseAuth.getInstance().currentUser?.uid ?: "",
             onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
             onBackClick = { navigationActions.goBack() },
-            onGroupClick = {}, // TODO navigate to groups screen
+            onGroupClick = {Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()}, // TODO navigate to groups screen
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
             onSignOutComplete = { navigationActions.navigateTo(Screen.Auth) })
       }
@@ -185,7 +185,7 @@ fun JoinMe(
             onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
             onBackClick = { navigationActions.goBack() },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
-            onGroupClick = {}, // TODO navigate to groups screen
+            onGroupClick = {Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()}, // TODO navigate to groups screen
             onChangePasswordClick = {}, // TODO implement change password flow in a future update
             onSaveSuccess = { navigationActions.navigateTo(Screen.Profile) })
       }

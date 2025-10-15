@@ -1,5 +1,6 @@
 package com.android.joinme.ui.profile
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -15,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -63,6 +65,7 @@ fun ViewProfileScreen(
   val profile by profileViewModel.profile.collectAsState()
   val isLoading by profileViewModel.isLoading.collectAsState()
   val error by profileViewModel.error.collectAsState()
+    val context = LocalContext.current
 
   // Load profile when screen is first displayed
   LaunchedEffect(uid) { profileViewModel.loadProfile(uid) }
@@ -75,7 +78,10 @@ fun ViewProfileScreen(
             currentScreen = ProfileScreen.VIEW_PROFILE,
             onBackClick = onBackClick,
             onProfileClick = {},
-            onGroupClick = onGroupClick,
+//            onGroupClick = onGroupClick,
+            onGroupClick = {
+                Toast.makeText(context, "Not yet implemented", Toast.LENGTH_SHORT).show()
+            },
             onEditClick = onEditClick)
       },
       bottomBar = {
