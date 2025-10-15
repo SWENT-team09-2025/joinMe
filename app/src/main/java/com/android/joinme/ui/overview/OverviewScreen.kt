@@ -113,7 +113,7 @@ fun OverviewScreen(
             onClick = onAddEvent,
             containerColor = OverviewScreenButtonColor,
             modifier = Modifier.testTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON)) {
-              Icon(Icons.Default.Add, contentDescription = "Add Event")
+              Icon(Icons.Default.Add, contentDescription = "Add Event", tint = Color.Black)
             }
       }) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
@@ -203,7 +203,7 @@ fun OverviewScreen(
                   Modifier.align(Alignment.BottomStart)
                       .padding(start = 16.dp, bottom = 16.dp)
                       .testTag(OverviewScreenTestTags.HISTORY_BUTTON)) {
-                Icon(Icons.Default.History, contentDescription = "View History")
+                Icon(Icons.Default.History, contentDescription = "View History", tint = Color.Black)
               }
         }
       }
