@@ -29,6 +29,13 @@ sealed class Screen(
       const val route = "edit_event/{eventId}"
     }
   }
+
+  data class ShowEventScreen(val eventId: String) :
+      Screen(route = "show_event/${eventId}", name = "Show Event") {
+    companion object {
+      const val route = "show_event/{eventId}"
+    }
+  }
 }
 
 /**
