@@ -99,13 +99,13 @@ fun JoinMe(
     ) {
       composable(Screen.Overview.route) {
         OverviewScreen(
+            uid = FirebaseAuth.getInstance().currentUser?.uid ?: "",
             onSelectEvent = {
               navigationActions.navigateTo(Screen.EditEvent(it.eventId))
             }, // TODO navigate to event details screen
             onAddEvent = { navigationActions.navigateTo(Screen.CreateEvent) },
             onGoToHistory = { navigationActions.navigateTo(Screen.History) },
-            navigationActions = navigationActions,
-            credentialManager = credentialManager)
+            navigationActions = navigationActions)
       }
       composable(Screen.CreateEvent.route) {
         CreateEventScreen(

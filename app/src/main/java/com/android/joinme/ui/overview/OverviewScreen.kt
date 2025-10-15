@@ -43,6 +43,7 @@ import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.NavigationTestTags
 import com.android.joinme.ui.navigation.Tab
+import com.android.joinme.ui.profile.ProfileViewModel
 import com.android.joinme.ui.theme.OverviewScreenButtonColor
 
 object OverviewScreenTestTags {
@@ -59,8 +60,9 @@ object OverviewScreenTestTags {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OverviewScreen(
+    uid: String,
     overviewViewModel: OverviewViewModel = viewModel(),
-    credentialManager: CredentialManager = CredentialManager.create(LocalContext.current),
+    profileViewModel: ProfileViewModel = viewModel(),
     onSelectEvent: (Event) -> Unit = {},
     onAddEvent: () -> Unit = {},
     onGoToHistory: () -> Unit = {},
@@ -71,8 +73,12 @@ fun OverviewScreen(
   val uiState by overviewViewModel.uiState.collectAsState()
   val ongoingEvents = uiState.ongoingEvents
   val upcomingEvents = uiState.upcomingEvents
+  val profile by profileViewModel.profile.collectAsState()
 
-  LaunchedEffect(Unit) { overviewViewModel.refreshUIState() }
+  LaunchedEffect(uid) {
+    overviewViewModel.refreshUIState()
+    profileViewModel.loadProfile(uid)
+  }
 
   LaunchedEffect(uiState.errorMsg) {
     uiState.errorMsg?.let { message ->
@@ -88,7 +94,7 @@ fun OverviewScreen(
               modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
               title = {
                 Text(
-                    text = "Welcome, Mathieu",
+                    text = "Welcome, ${profile?.username ?: "Guest"}",
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center)
