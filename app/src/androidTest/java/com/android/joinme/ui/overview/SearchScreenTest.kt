@@ -74,7 +74,11 @@ class SearchScreenTest {
   fun searchScreen_sportFilterHasDropdownIcon() {
     setupScreen()
 
+    // Wait for composition and filter state to settle
     composeTestRule.waitForIdle()
+
+    // Ensure Sport filter chip is displayed first
+    composeTestRule.onNodeWithText("Sport").assertIsDisplayed()
 
     composeTestRule.onNodeWithContentDescription("Dropdown").assertIsDisplayed()
   }

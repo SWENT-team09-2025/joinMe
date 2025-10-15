@@ -5,10 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
+import com.android.joinme.model.event.isUpcoming
 import com.android.joinme.model.filter.FilterRepository
 import com.android.joinme.model.filter.FilterState
-import com.android.joinme.model.event.isUpcoming
-import com.android.joinme.model.sport.Sports
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -74,12 +73,13 @@ class SearchViewModel(
   }
 
   /**
-   * Updates the search query.
+   * Updates the search query and re-applies filters.
    *
    * @param query The new search query text
    */
   fun setQuery(query: String) {
     _uiState.value = _uiState.value.copy(query = query)
+    applyFiltersToUIState()
   }
 
   /** Toggles the "All" filter. Delegates to FilterRepository. */
@@ -159,9 +159,21 @@ class SearchViewModel(
     }
   }
 
-  /** Applies filters to all events and updates the UI state. */
+  /** Applies filters and search query to all events and updates the UI state. */
   private fun applyFiltersToUIState() {
-    val filteredEvents = filterRepository.applyFilters(allEvents)
+    // First apply category filters (Social, Activity, Sports)
+    var filteredEvents = filterRepository.applyFilters(allEvents)
+
+    // Then apply search query filter if query is not empty
+    val query = _uiState.value.query
+    if (query.isNotBlank()) {
+      filteredEvents =
+          filteredEvents.filter {
+            it.title.contains(query, ignoreCase = true) ||
+                it.description.contains(query, ignoreCase = true)
+          }
+    }
+
     _uiState.value = _uiState.value.copy(events = filteredEvents)
   }
 }
