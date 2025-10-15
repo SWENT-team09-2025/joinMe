@@ -185,8 +185,8 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx:23.0.0")
     implementation("com.firebaseui:firebase-ui-auth:8.0.0")
     implementation("com.google.protobuf:protobuf-javalite:3.25.1")
-    implementation("com.google.firebase:firebase-storage-ktx")
-
+    implementation("com.google.firebase:firebase-storage-ktx:21.0.1")
+    
     // Credential Manager (for Google Sign-In)
     implementation(libs.credentials)
     implementation(libs.credentials.play.services.auth)
