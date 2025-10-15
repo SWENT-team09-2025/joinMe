@@ -7,6 +7,8 @@ import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.filter.FilterRepository
 import com.android.joinme.model.filter.FilterState
+import com.android.joinme.model.event.isUpcoming
+import com.android.joinme.model.sport.Sports
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -149,7 +151,7 @@ class SearchViewModel(
   private fun getAllEvents() {
     viewModelScope.launch {
       try {
-        allEvents = repo.getAllEvents()
+        allEvents = repo.getAllEvents().filter { it.isUpcoming() }
         applyFiltersToUIState()
       } catch (e: Exception) {
         setErrorMsg("Failed to load events: ${e.message}")
