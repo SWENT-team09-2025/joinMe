@@ -45,6 +45,18 @@ object MapScreenTestTags {
   fun getTestTagForEventMarker(eventId: String): String = "eventMarker$eventId"
 }
 
+/**
+ * Displays the main map screen of the application.
+ *
+ * This composable handles:
+ * - Initializing the user location service via the [MapViewModel].
+ * - Requesting and managing location permissions.
+ * - Displaying a Google Map centered on the user's location (if available).
+ * - Rendering a bottom navigation menu and a filter button overlay.
+ *
+ * @param viewModel The [MapViewModel] managing location and UI state.
+ * @param navigationActions Optional navigation actions for switching tabs or screens.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun MapScreen(
@@ -56,6 +68,7 @@ fun MapScreen(
   // --- Initialization of localisation service ---
   LaunchedEffect(Unit) { viewModel.initLocationService(LocationServiceImpl(context)) }
 
+  // --- Collect the current UI state from the ViewModel ---
   val uiState by
       produceState(initialValue = MapUIState(), viewModel) {
         viewModel.uiState.collect { newState -> value = newState }
@@ -75,7 +88,7 @@ fun MapScreen(
     }
   }
 
-  // Position view initialisation
+  // --- Initialize the map camera position ---
   val cameraPositionState = rememberCameraPositionState {
     position = CameraPosition.fromLatLngZoom(LatLng(46.5187, 6.5629), 10f)
   }
@@ -83,7 +96,7 @@ fun MapScreen(
   val currentLat = uiState.userLocation?.latitude
   val currentLng = uiState.userLocation?.longitude
 
-  // Centre the camera when the position changes
+  // --- Center the map when the user location changes ---
   LaunchedEffect(currentLat, currentLng) {
     if (currentLat != null && currentLng != null) {
       try {
@@ -94,11 +107,11 @@ fun MapScreen(
     }
   }
 
-  // --- Map property ---
+  // --- Map properties configuration ---
   val mapProperties =
       MapProperties(isMyLocationEnabled = locationPermissionsState.allPermissionsGranted)
 
-  // --- View Structure ---
+  // --- Composable Structure ---
   Scaffold(
       modifier = Modifier.fillMaxSize().testTag(MapScreenTestTags.GOOGLE_MAP_SCREEN),
       bottomBar = {

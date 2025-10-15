@@ -217,18 +217,25 @@ dependencies {
     // --------- Kaspresso test framework ----------
     globalTestImplementation(libs.kaspresso)
     globalTestImplementation(libs.kaspresso.compose)
+    testImplementation("org.mockito:mockito-core:5.12.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
 
     // ---------- Robolectric ------------
     testImplementation(libs.robolectric)
 }
 
-tasks.withType<Test> {
-    // Configure Jacoco for each tests
-    configure<JacocoTaskExtension> {
+tasks.withType<Test>().configureEach {
+    extensions.configure<JacocoTaskExtension> {
         isIncludeNoLocationClasses = true
-        excludes = listOf("jdk.internal.*", "**/*\$\$*")
+        excludes = listOf(
+            "jdk.internal.*",
+            "jdk.proxy.*",
+            "**/*$$*"
+        )
     }
 }
+
 
 tasks.register("jacocoTestReport", JacocoReport::class) {
     mustRunAfter("testDebugUnitTest", "connectedDebugAndroidTest")
@@ -252,6 +259,7 @@ tasks.register("jacocoTestReport", JacocoReport::class) {
 
     val debugTree = fileTree("${project.layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
         exclude(fileFilter)
+        exclude("jdk.proxy.*", "jdk.internal.*", "**/*$$*")
     }
 
     val mainSrc = "${project.layout.projectDirectory}/src/main/java"

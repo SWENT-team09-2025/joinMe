@@ -9,11 +9,26 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
+/**
+ * Implementation of [UserLocationService] that uses the Fused Location Provider API to retrieve and
+ * stream the user's current location.
+ *
+ * @param context The application context used to access location services.
+ */
 class LocationServiceImpl(private val context: Context) : UserLocationService {
 
   private val fusedLocationClient: FusedLocationProviderClient =
       LocationServices.getFusedLocationProviderClient(context)
 
+  /**
+   * Continuously emits the user's location as a [Flow].
+   *
+   * Uses the Fused Location Provider to request location updates every few seconds. Each new
+   * location is sent through the flow until it is closed.
+   *
+   * @return A cold [Flow] emitting [UserLocation] objects as updates are received. Emits `null` if
+   *   no valid location is available.
+   */
   @SuppressLint("MissingPermission")
   override fun getUserLocationFlow(): Flow<UserLocation?> = callbackFlow {
     val locationCallback =
@@ -40,6 +55,14 @@ class LocationServiceImpl(private val context: Context) : UserLocationService {
     awaitClose { fusedLocationClient.removeLocationUpdates(locationCallback) }
   }
 
+  /**
+   * Retrieves the user's most recent known location once.
+   *
+   * This method does not continuously listen for updates.
+   *
+   * @return A [UserLocation] object representing the last known position, or `null` if no location
+   *   data is available.
+   */
   @SuppressLint("MissingPermission")
   override suspend fun getCurrentLocation(): UserLocation? {
     return try {
@@ -52,7 +75,19 @@ class LocationServiceImpl(private val context: Context) : UserLocationService {
     }
   }
 
+  /**
+   * Starts location updates.
+   *
+   * This implementation is currently a no-op since continuous updates are handled directly by
+   * [getUserLocationFlow].
+   */
   override fun startLocationUpdates() {}
 
+  /**
+   * Stops location updates.
+   *
+   * This implementation is currently a no-op since cleanup is handled automatically when the
+   * [getUserLocationFlow] is closed.
+   */
   override fun stopLocationUpdates() {}
 }
