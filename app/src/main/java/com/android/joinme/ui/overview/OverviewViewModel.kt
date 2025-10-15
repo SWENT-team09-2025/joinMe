@@ -17,11 +17,13 @@ import kotlinx.coroutines.launch
  *
  * @property ongoingEvents Events that have started (active or ongoing)
  * @property upcomingEvents Events that haven't started yet
+ * @property isLoading Indicates whether the screen is currently loading data.
  * @property errorMsg An error message to be shown when fetching events fails
  */
 data class OverviewUIState(
     val ongoingEvents: List<Event> = emptyList(),
     val upcomingEvents: List<Event> = emptyList(),
+    val isLoading: Boolean = true,
     val errorMsg: String? = null,
 )
 
@@ -67,6 +69,7 @@ class OverviewViewModel(
   /** Fetches all events from the repository and updates the UI state. */
   private fun getAllEvents() {
     viewModelScope.launch {
+      _uiState.value = _uiState.value.copy(isLoading = true)
       try {
         val allEvents = eventRepository.getAllEvents()
 
@@ -74,9 +77,11 @@ class OverviewViewModel(
 
         val upcoming = allEvents.filter { it.isUpcoming() }.sortedBy { it.date.toDate().time }
 
-        _uiState.value = OverviewUIState(ongoingEvents = ongoing, upcomingEvents = upcoming)
+        _uiState.value =
+            OverviewUIState(ongoingEvents = ongoing, upcomingEvents = upcoming, isLoading = false)
       } catch (e: Exception) {
         setErrorMsg("Failed to load events: ${e.message}")
+        _uiState.value = _uiState.value.copy(isLoading = false)
       }
     }
   }

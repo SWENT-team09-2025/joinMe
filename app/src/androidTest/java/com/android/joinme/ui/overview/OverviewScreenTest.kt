@@ -1079,4 +1079,57 @@ class OverviewScreenTest {
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertIsDisplayed()
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).assertIsDisplayed()
   }
+
+  @Test
+  fun overviewScreen_showsLoadingIndicator_whileLoadingEvents() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    composeTestRule.mainClock.autoAdvance = false
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    // Loading indicator should be visible initially
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.LOADING_INDICATOR).assertExists()
+
+    composeTestRule.mainClock.autoAdvance = true
+  }
+
+  @Test
+  fun overviewScreen_hidesLoadingIndicator_afterEventsLoaded() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    runBlocking { repo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    // Wait for loading to complete
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Loading indicator should not exist after loading
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.LOADING_INDICATOR).assertDoesNotExist()
+    // Events list should be displayed
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.EVENT_LIST).assertExists()
+  }
+
+  @Test
+  fun overviewScreen_hidesLoadingIndicator_whenNoEvents() {
+    val repo = EventsRepositoryLocal()
+    val viewModel = OverviewViewModel(repo)
+
+    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+
+    // Wait for loading to complete
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Loading indicator should not exist after loading
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.LOADING_INDICATOR).assertDoesNotExist()
+    // Empty message should be displayed
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG).assertExists()
+  }
 }
