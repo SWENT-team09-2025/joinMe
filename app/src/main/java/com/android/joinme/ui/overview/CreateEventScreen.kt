@@ -1,6 +1,9 @@
 package com.android.joinme.ui.overview
 
+import android.annotation.SuppressLint
+import android.widget.NumberPicker
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -10,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
@@ -28,6 +32,7 @@ object CreateEventScreenTestTags {
   const val ERROR_MESSAGE = "errorMessage"
 }
 
+@SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateEventScreen(
@@ -155,67 +160,233 @@ fun CreateEventScreen(
                       Modifier.fillMaxWidth()
                           .testTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION))
 
+              // Max Participants and Duration pickers
               Row(
                   modifier = Modifier.fillMaxWidth(),
                   horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    // Max Participants
-                    OutlinedTextField(
-                        value = uiState.maxParticipants,
-                        onValueChange = { createEventViewModel.setMaxParticipants(it) },
-                        label = { Text("Max Participants") },
-                        placeholder = { Text("e.g. 10") },
-                        isError = uiState.invalidMaxParticipantsMsg != null,
-                        supportingText = {
-                          uiState.invalidMaxParticipantsMsg?.let {
-                            Text(
-                                it,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier =
-                                    Modifier.testTag(CreateEventScreenTestTags.ERROR_MESSAGE))
-                          }
-                        },
-                        modifier =
-                            Modifier.weight(1f)
-                                .testTag(CreateEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS))
+                    var showParticipantsDialog by remember { mutableStateOf(false) }
+                    var tempParticipants by remember {
+                      mutableIntStateOf(uiState.maxParticipants.toIntOrNull() ?: 1)
+                    }
 
-                    // Duration
-                    OutlinedTextField(
-                        value = uiState.duration,
-                        onValueChange = { createEventViewModel.setDuration(it) },
-                        label = { Text("Duration (minutes)") },
-                        placeholder = { Text("e.g. 60") },
-                        isError = uiState.invalidDurationMsg != null,
-                        supportingText = {
-                          uiState.invalidDurationMsg?.let {
-                            Text(
-                                it,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier =
-                                    Modifier.testTag(CreateEventScreenTestTags.ERROR_MESSAGE))
-                          }
-                        },
+                    Box(
                         modifier =
-                            Modifier.weight(1f)
-                                .testTag(CreateEventScreenTestTags.INPUT_EVENT_DURATION))
+                            Modifier.weight(1f).clickable { showParticipantsDialog = true }) {
+                          OutlinedTextField(
+                              value = uiState.maxParticipants,
+                              onValueChange = {},
+                              readOnly = true,
+                              label = { Text("Max Participants") },
+                              placeholder = { Text("Select number") },
+                              colors =
+                                  OutlinedTextFieldDefaults.colors(
+                                      disabledTextColor =
+                                          LocalContentColor.current.copy(
+                                              LocalContentColor.current.alpha),
+                                      disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                      disabledLabelColor =
+                                          MaterialTheme.colorScheme.onSurfaceVariant,
+                                      disabledPlaceholderColor =
+                                          MaterialTheme.colorScheme.onSurfaceVariant,
+                                      disabledLeadingIconColor =
+                                          MaterialTheme.colorScheme.onSurfaceVariant,
+                                      disabledTrailingIconColor =
+                                          MaterialTheme.colorScheme.onSurfaceVariant),
+                              enabled = false,
+                              modifier = Modifier.fillMaxWidth())
+                        }
+
+                    if (showParticipantsDialog) {
+                      AlertDialog(
+                          onDismissRequest = { showParticipantsDialog = false },
+                          title = { Text("Select Max Participants") },
+                          text = {
+                            AndroidView(
+                                factory = { context ->
+                                  NumberPicker(context).apply {
+                                    minValue = 1
+                                    maxValue = 100
+                                    value = tempParticipants
+                                    wrapSelectorWheel = true
+                                    setOnValueChangedListener { _, _, newVal ->
+                                      tempParticipants = newVal
+                                    }
+                                  }
+                                },
+                                update = { picker -> picker.value = tempParticipants },
+                                modifier = Modifier.fillMaxWidth())
+                          },
+                          confirmButton = {
+                            TextButton(
+                                onClick = {
+                                  createEventViewModel.setMaxParticipants(
+                                      tempParticipants.toString())
+                                  showParticipantsDialog = false
+                                }) {
+                                  Text("OK")
+                                }
+                          },
+                          dismissButton = {
+                            TextButton(onClick = { showParticipantsDialog = false }) {
+                              Text("Cancel")
+                            }
+                          })
+                    }
+
+                    var showDurationDialog by remember { mutableStateOf(false) }
+                    var tempDuration by remember {
+                      mutableIntStateOf(uiState.duration.toIntOrNull() ?: 10)
+                    }
+
+                    Box(modifier = Modifier.weight(1f).clickable { showDurationDialog = true }) {
+                      OutlinedTextField(
+                          value = uiState.duration,
+                          onValueChange = {},
+                          readOnly = true,
+                          label = { Text("Duration (min)") },
+                          placeholder = { Text("Select duration") },
+                          colors =
+                              OutlinedTextFieldDefaults.colors(
+                                  disabledTextColor =
+                                      LocalContentColor.current.copy(
+                                          LocalContentColor.current.alpha),
+                                  disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                  disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                  disabledPlaceholderColor =
+                                      MaterialTheme.colorScheme.onSurfaceVariant,
+                                  disabledLeadingIconColor =
+                                      MaterialTheme.colorScheme.onSurfaceVariant,
+                                  disabledTrailingIconColor =
+                                      MaterialTheme.colorScheme.onSurfaceVariant),
+                          enabled = false,
+                          modifier = Modifier.fillMaxWidth())
+                    }
+
+                    if (showDurationDialog) {
+                      AlertDialog(
+                          onDismissRequest = { showDurationDialog = false },
+                          title = { Text("Select Duration (min)") },
+                          text = {
+                            AndroidView(
+                                factory = { context ->
+                                  NumberPicker(context).apply {
+                                    minValue = 10
+                                    maxValue = 300
+                                    value = tempDuration
+                                    wrapSelectorWheel = true
+                                    setOnValueChangedListener { _, _, newVal ->
+                                      tempDuration = newVal
+                                    }
+                                  }
+                                },
+                                update = { picker -> picker.value = tempDuration },
+                                modifier = Modifier.fillMaxWidth())
+                          },
+                          confirmButton = {
+                            TextButton(
+                                onClick = {
+                                  createEventViewModel.setDuration(tempDuration.toString())
+                                  showDurationDialog = false
+                                }) {
+                                  Text("OK")
+                                }
+                          },
+                          dismissButton = {
+                            TextButton(onClick = { showDurationDialog = false }) { Text("Cancel") }
+                          })
+                    }
                   }
 
-              // Date + Time
-              OutlinedTextField(
-                  value = uiState.date,
-                  onValueChange = { createEventViewModel.setDate(it) },
-                  label = { Text("Date & Time") },
-                  placeholder = { Text("dd/MM/yyyy HH:mm") },
-                  isError = uiState.invalidDateMsg != null,
-                  supportingText = {
-                    uiState.invalidDateMsg?.let {
-                      Text(
-                          it,
-                          color = MaterialTheme.colorScheme.error,
-                          modifier = Modifier.testTag(CreateEventScreenTestTags.ERROR_MESSAGE))
+              // Date and Time pickers
+              Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    val context = LocalContext.current
+                    val calendar = remember { java.util.Calendar.getInstance() }
+                    val (year, month, day) =
+                        listOf(
+                            calendar.get(java.util.Calendar.YEAR),
+                            calendar.get(java.util.Calendar.MONTH),
+                            calendar.get(java.util.Calendar.DAY_OF_MONTH))
+                    val (hour, minute) =
+                        listOf(
+                            calendar.get(java.util.Calendar.HOUR_OF_DAY),
+                            calendar.get(java.util.Calendar.MINUTE))
+
+                    val datePickerDialog = remember {
+                      android.app.DatePickerDialog(
+                          context,
+                          { _, selectedYear, selectedMonth, selectedDay ->
+                            val newDate =
+                                String.format(
+                                    "%02d/%02d/%04d", selectedDay, selectedMonth + 1, selectedYear)
+                            createEventViewModel.setDate(newDate)
+                          },
+                          year,
+                          month,
+                          day)
                     }
-                  },
-                  modifier =
-                      Modifier.fillMaxWidth().testTag(CreateEventScreenTestTags.INPUT_EVENT_DATE))
+
+                    Box(modifier = Modifier.weight(1f).clickable { datePickerDialog.show() }) {
+                      OutlinedTextField(
+                          value = uiState.date,
+                          onValueChange = {},
+                          readOnly = true,
+                          label = { Text("Date") },
+                          placeholder = { Text("Select date") },
+                          colors =
+                              OutlinedTextFieldDefaults.colors(
+                                  disabledTextColor =
+                                      LocalContentColor.current.copy(
+                                          LocalContentColor.current.alpha),
+                                  disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                  disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                  disabledPlaceholderColor =
+                                      MaterialTheme.colorScheme.onSurfaceVariant,
+                                  disabledLeadingIconColor =
+                                      MaterialTheme.colorScheme.onSurfaceVariant,
+                                  disabledTrailingIconColor =
+                                      MaterialTheme.colorScheme.onSurfaceVariant),
+                          enabled = false,
+                          modifier = Modifier.fillMaxWidth())
+                    }
+
+                    val timePickerDialog = remember {
+                      android.app.TimePickerDialog(
+                          context,
+                          { _, selectedHour, selectedMinute ->
+                            val newTime = String.format("%02d:%02d", selectedHour, selectedMinute)
+                            createEventViewModel.setTime(newTime)
+                          },
+                          hour,
+                          minute,
+                          true)
+                    }
+
+                    Box(modifier = Modifier.weight(1f).clickable { timePickerDialog.show() }) {
+                      OutlinedTextField(
+                          value = uiState.time,
+                          onValueChange = {},
+                          readOnly = true,
+                          label = { Text("Time") },
+                          placeholder = { Text("Select time") },
+                          colors =
+                              OutlinedTextFieldDefaults.colors(
+                                  disabledTextColor =
+                                      LocalContentColor.current.copy(
+                                          LocalContentColor.current.alpha),
+                                  disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                  disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                  disabledPlaceholderColor =
+                                      MaterialTheme.colorScheme.onSurfaceVariant,
+                                  disabledLeadingIconColor =
+                                      MaterialTheme.colorScheme.onSurfaceVariant,
+                                  disabledTrailingIconColor =
+                                      MaterialTheme.colorScheme.onSurfaceVariant),
+                          enabled = false,
+                          modifier = Modifier.fillMaxWidth())
+                    }
+                  }
 
               // Visibility dropdown
               ExposedDropdownMenuBox(
