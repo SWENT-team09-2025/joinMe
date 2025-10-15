@@ -2,7 +2,7 @@ package com.android.joinme.repository
 
 import com.android.joinme.model.group.Group
 
-class GroupRepositoryLocal: GroupRepository {
+class GroupRepositoryLocal : GroupRepository {
 
   private val groups: MutableList<Group> = mutableListOf()
 
