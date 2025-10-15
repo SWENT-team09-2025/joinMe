@@ -1,6 +1,5 @@
 package com.android.joinme.ui.overview
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.EventsRepository
@@ -105,7 +104,6 @@ class ShowEventViewModel(
                 participants = event.participants,
                 isPastEvent = isPast)
       } catch (e: Exception) {
-        Log.e("ShowEventViewModel", "Error loading Event by ID: $eventId", e)
         setErrorMsg("Failed to load Event: ${e.message}")
       }
     }
@@ -158,7 +156,6 @@ class ShowEventViewModel(
       loadEvent(eventId)
       clearErrorMsg()
     } catch (e: Exception) {
-      Log.e("ShowEventViewModel", "Error toggling participation", e)
       setErrorMsg("Failed to update participation: ${e.message}")
     }
   }
@@ -173,7 +170,6 @@ class ShowEventViewModel(
       repository.deleteEvent(eventId)
       clearErrorMsg()
     } catch (e: Exception) {
-      Log.e("ShowEventViewModel", "Error deleting Event", e)
       setErrorMsg("Failed to delete Event: ${e.message}")
     }
   }
