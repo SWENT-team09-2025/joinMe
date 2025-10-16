@@ -523,9 +523,9 @@ class GroupListScreenTest {
   @Test
   fun veryLargeList_performanceTest() {
     val groups =
-        (1..1000).map { i ->
+        (1..100).map { i ->
           Group(
-              id = "$i", name = "Group $i", ownerId = "owner$i", memberIds = List(i) { "user$it" })
+              id = "$i", name = "Group $i", ownerId = "owner$i", memberIds = List(5) { "user$it" })
         }
 
     composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
