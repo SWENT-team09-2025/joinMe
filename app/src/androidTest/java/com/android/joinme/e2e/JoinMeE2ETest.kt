@@ -90,10 +90,18 @@ class JoinMeE2ETest {
     // Start app at Overview screen since we've already authenticated
     composeTestRule.setContent { JoinMe(startDestination = Screen.Overview.route) }
 
-    // Wait for initial load
+    // Wait for initial load - give extra time on CI emulators
     composeTestRule.waitForIdle()
-    Thread.sleep(1000) // Give time for initial screen to load
+    Thread.sleep(2000) // Give time for initial screen to load
     composeTestRule.waitForIdle()
+
+    // Wait for the Overview screen to be actually visible
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
+      composeTestRule
+          .onAllNodesWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
   }
 
   // ==================== HELPER METHODS ====================
