@@ -70,7 +70,8 @@ class EditEventViewModelTest {
     assertEquals("EPFL", state.location)
     assertEquals("10", state.maxParticipants)
     assertEquals("90", state.duration)
-    assertEquals("25/12/2024 14:30", state.date)
+    assertEquals("25/12/2024", state.date)
+    assertEquals("14:30", state.time)
     assertEquals("PUBLIC", state.visibility)
     assertEquals("owner123", state.ownerId)
     assertEquals(listOf("user1", "user2"), state.participants)
@@ -267,10 +268,10 @@ class EditEventViewModelTest {
   /** --- SET DATE TESTS --- */
   @Test
   fun setDate_validDate_updatesStateWithoutError() = runBlocking {
-    viewModel.setDate("25/12/2024 14:30")
+    viewModel.setDate("25/12/2024")
 
     val state = viewModel.uiState.first()
-    assertEquals("25/12/2024 14:30", state.date)
+    assertEquals("25/12/2024", state.date)
     assertNull(state.invalidDateMsg)
   }
 
@@ -280,7 +281,7 @@ class EditEventViewModelTest {
 
     val state = viewModel.uiState.first()
     assertEquals("2024-12-25", state.date)
-    assertEquals("Invalid format (must be dd/MM/yyyy HH:mm)", state.invalidDateMsg)
+    assertEquals("Invalid format (must be dd/MM/yyyy)", state.invalidDateMsg)
   }
 
   @Test
@@ -289,7 +290,7 @@ class EditEventViewModelTest {
 
     val state = viewModel.uiState.first()
     assertEquals("not-a-date", state.date)
-    assertEquals("Invalid format (must be dd/MM/yyyy HH:mm)", state.invalidDateMsg)
+    assertEquals("Invalid format (must be dd/MM/yyyy)", state.invalidDateMsg)
   }
 
   /** --- SET VISIBILITY TESTS --- */
@@ -338,7 +339,8 @@ class EditEventViewModelTest {
     viewModel.setLocation("EPFL")
     viewModel.setMaxParticipants("10")
     viewModel.setDuration("60")
-    viewModel.setDate("25/12/2024 14:30")
+    viewModel.setDate("25/12/2024")
+    viewModel.setTime("14:30")
     viewModel.setVisibility("PUBLIC")
 
     val state = viewModel.uiState.first()
