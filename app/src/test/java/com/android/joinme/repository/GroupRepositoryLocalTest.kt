@@ -41,9 +41,12 @@ class GroupRepositoryLocalTest {
   fun leaveGroup_afterAddingGroups_removesCorrectGroup() = runTest {
     val testGroups =
         listOf(
-            Group(id = "1", name = "Group 1", membersCount = 10),
-            Group(id = "2", name = "Group 2", membersCount = 20),
-            Group(id = "3", name = "Group 3", membersCount = 30))
+            Group(
+                id = "1", name = "Group 1", ownerId = "owner1", memberIds = List(10) { "user$it" }),
+            Group(
+                id = "2", name = "Group 2", ownerId = "owner2", memberIds = List(20) { "user$it" }),
+            Group(
+                id = "3", name = "Group 3", ownerId = "owner3", memberIds = List(30) { "user$it" }))
 
     addGroupsViaReflection(testGroups)
 
@@ -60,9 +63,9 @@ class GroupRepositoryLocalTest {
   fun leaveGroup_withFirstGroup_removesCorrectly() = runTest {
     val testGroups =
         listOf(
-            Group(id = "1", name = "First"),
-            Group(id = "2", name = "Second"),
-            Group(id = "3", name = "Third"))
+            Group(id = "1", name = "First", ownerId = "owner1"),
+            Group(id = "2", name = "Second", ownerId = "owner2"),
+            Group(id = "3", name = "Third", ownerId = "owner3"))
     addGroupsViaReflection(testGroups)
 
     repository.leaveGroup("1")
@@ -76,9 +79,9 @@ class GroupRepositoryLocalTest {
   fun leaveGroup_withLastGroup_removesCorrectly() = runTest {
     val testGroups =
         listOf(
-            Group(id = "1", name = "First"),
-            Group(id = "2", name = "Second"),
-            Group(id = "3", name = "Third"))
+            Group(id = "1", name = "First", ownerId = "owner1"),
+            Group(id = "2", name = "Second", ownerId = "owner2"),
+            Group(id = "3", name = "Third", ownerId = "owner3"))
     addGroupsViaReflection(testGroups)
 
     repository.leaveGroup("3")
@@ -89,7 +92,7 @@ class GroupRepositoryLocalTest {
 
   @Test
   fun leaveGroup_withOnlyGroup_leavesEmptyList() = runTest {
-    val testGroups = listOf(Group(id = "1", name = "Only Group"))
+    val testGroups = listOf(Group(id = "1", name = "Only Group", ownerId = "owner1"))
     addGroupsViaReflection(testGroups)
 
     repository.leaveGroup("1")
@@ -102,10 +105,10 @@ class GroupRepositoryLocalTest {
   fun leaveGroup_multipleTimes_removesAllCorrectly() = runTest {
     val testGroups =
         listOf(
-            Group(id = "1", name = "Group 1"),
-            Group(id = "2", name = "Group 2"),
-            Group(id = "3", name = "Group 3"),
-            Group(id = "4", name = "Group 4"))
+            Group(id = "1", name = "Group 1", ownerId = "owner1"),
+            Group(id = "2", name = "Group 2", ownerId = "owner2"),
+            Group(id = "3", name = "Group 3", ownerId = "owner3"),
+            Group(id = "4", name = "Group 4", ownerId = "owner4"))
     addGroupsViaReflection(testGroups)
 
     repository.leaveGroup("2")
@@ -121,9 +124,21 @@ class GroupRepositoryLocalTest {
   fun getGroup_withValidId_returnsCorrectGroup() = runTest {
     val testGroups =
         listOf(
-            Group(id = "id-0", name = "First Group", membersCount = 10),
-            Group(id = "id-1", name = "Second Group", membersCount = 20),
-            Group(id = "id-2", name = "Third Group", membersCount = 30))
+            Group(
+                id = "id-0",
+                name = "First Group",
+                ownerId = "owner1",
+                memberIds = List(10) { "user$it" }),
+            Group(
+                id = "id-1",
+                name = "Second Group",
+                ownerId = "owner2",
+                memberIds = List(20) { "user$it" }),
+            Group(
+                id = "id-2",
+                name = "Third Group",
+                ownerId = "owner3",
+                memberIds = List(30) { "user$it" }))
     addGroupsViaReflection(testGroups)
 
     val group0 = repository.getGroup("id-0")
@@ -145,7 +160,7 @@ class GroupRepositoryLocalTest {
 
   @Test
   fun getGroup_withNonMatchingId_returnsNull() = runTest {
-    val testGroups = listOf(Group(id = "1", name = "Only Group"))
+    val testGroups = listOf(Group(id = "1", name = "Only Group", ownerId = "owner1"))
     addGroupsViaReflection(testGroups)
 
     val result = repository.getGroup("999")
@@ -154,7 +169,7 @@ class GroupRepositoryLocalTest {
 
   @Test
   fun getGroup_afterLeaving_returnsNull() = runTest {
-    val testGroups = listOf(Group(id = "1", name = "Test"))
+    val testGroups = listOf(Group(id = "1", name = "Test", ownerId = "owner1"))
     addGroupsViaReflection(testGroups)
 
     repository.leaveGroup("1")
@@ -168,9 +183,10 @@ class GroupRepositoryLocalTest {
         Group(
             id = "test-123",
             name = "Test Group",
-            category = "Sports",
             description = "A detailed description",
-            membersCount = 42)
+            ownerId = "owner123",
+            memberIds = List(42) { "user$it" },
+            eventIds = listOf("event1", "event2", "event3"))
     addGroupsViaReflection(listOf(testGroup))
 
     val groups = repository.userGroups()
@@ -178,17 +194,27 @@ class GroupRepositoryLocalTest {
     val retrievedGroup = groups.first()
     assertEquals("test-123", retrievedGroup.id)
     assertEquals("Test Group", retrievedGroup.name)
-    assertEquals("Sports", retrievedGroup.category)
     assertEquals("A detailed description", retrievedGroup.description)
+    assertEquals("owner123", retrievedGroup.ownerId)
     assertEquals(42, retrievedGroup.membersCount)
+    assertEquals(42, retrievedGroup.memberIds.size)
+    assertEquals(3, retrievedGroup.eventIds.size)
   }
 
   @Test
   fun userGroups_withSpecialCharacters_preservesCorrectly() = runTest {
     val testGroups =
         listOf(
-            Group(id = "1", name = "Café & Restaurant", membersCount = 25),
-            Group(id = "2", name = "Chess Game", membersCount = 10))
+            Group(
+                id = "1",
+                name = "Café & Restaurant",
+                ownerId = "owner1",
+                memberIds = List(25) { "user$it" }),
+            Group(
+                id = "2",
+                name = "Chess Game",
+                ownerId = "owner2",
+                memberIds = List(10) { "user$it" }))
     addGroupsViaReflection(testGroups)
 
     val groups = repository.userGroups()
@@ -199,7 +225,13 @@ class GroupRepositoryLocalTest {
 
   @Test
   fun userGroups_withEmptyDescription_handlesCorrectly() = runTest {
-    val testGroup = Group(id = "1", name = "No Description", description = "", membersCount = 5)
+    val testGroup =
+        Group(
+            id = "1",
+            name = "No Description",
+            description = "",
+            ownerId = "owner1",
+            memberIds = List(5) { "user$it" })
     addGroupsViaReflection(listOf(testGroup))
 
     val groups = repository.userGroups()
@@ -209,7 +241,8 @@ class GroupRepositoryLocalTest {
 
   @Test
   fun userGroups_withZeroMembers_handlesCorrectly() = runTest {
-    val testGroup = Group(id = "1", name = "Empty Group", membersCount = 0)
+    val testGroup =
+        Group(id = "1", name = "Empty Group", ownerId = "owner1", memberIds = emptyList())
     addGroupsViaReflection(listOf(testGroup))
 
     val groups = repository.userGroups()
@@ -221,10 +254,10 @@ class GroupRepositoryLocalTest {
   fun leaveGroup_maintainsOrderOfRemainingGroups() = runTest {
     val testGroups =
         listOf(
-            Group(id = "1", name = "First"),
-            Group(id = "2", name = "Second"),
-            Group(id = "3", name = "Third"),
-            Group(id = "4", name = "Fourth"))
+            Group(id = "1", name = "First", ownerId = "owner1"),
+            Group(id = "2", name = "Second", ownerId = "owner2"),
+            Group(id = "3", name = "Third", ownerId = "owner3"),
+            Group(id = "4", name = "Fourth", ownerId = "owner4"))
     addGroupsViaReflection(testGroups)
 
     repository.leaveGroup("2")

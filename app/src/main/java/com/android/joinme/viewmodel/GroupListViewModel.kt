@@ -1,6 +1,5 @@
 package com.android.joinme.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.group.Group
@@ -78,7 +77,6 @@ class GroupListViewModel(private val repo: GroupRepository = GroupRepositoryProv
         val groups = repo.userGroups()
         _uiState.value = GroupListUIState(groups = groups, isLoading = false)
       } catch (e: Exception) {
-        Log.e("GroupListViewModel", "Error fetching groups", e)
         _uiState.value = GroupListUIState(errorMsg = e.message, isLoading = false)
       }
     }

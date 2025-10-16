@@ -158,18 +158,21 @@ class GroupRepositoryFirestoreTest {
     every { mockDocRef.get() } returns Tasks.forResult(mockDocSnapshot)
     every { mockDocSnapshot.id } returns groupId
     every { mockDocSnapshot.getString("name") } returns "Test Group"
-    every { mockDocSnapshot.getString("category") } returns "Test Category"
+    every { mockDocSnapshot.getString("ownerId") } returns "owner-123"
     every { mockDocSnapshot.getString("description") } returns "Test Description"
-    every { mockDocSnapshot.getLong("membersCount") } returns 25L
+    every { mockDocSnapshot.get("memberIds") } returns listOf("user1", "user2", "user3")
+    every { mockDocSnapshot.get("eventIds") } returns listOf("event1", "event2")
 
     val result = repository.getGroup(groupId)
 
     assertNotNull(result)
     assertEquals(groupId, result?.id)
     assertEquals("Test Group", result?.name)
-    assertEquals("Test Category", result?.category)
+    assertEquals("owner-123", result?.ownerId)
     assertEquals("Test Description", result?.description)
-    assertEquals(25, result?.membersCount)
+    assertEquals(3, result?.membersCount)
+    assertEquals(listOf("user1", "user2", "user3"), result?.memberIds)
+    assertEquals(listOf("event1", "event2"), result?.eventIds)
     verify { mockGroupsCollection.document(groupId) }
   }
 
@@ -183,6 +186,7 @@ class GroupRepositoryFirestoreTest {
     every { mockDocRef.get() } returns Tasks.forResult(mockDocSnapshot)
     every { mockDocSnapshot.id } returns groupId
     every { mockDocSnapshot.getString("name") } returns null
+    every { mockDocSnapshot.getString("ownerId") } returns null
 
     val result = repository.getGroup(groupId)
 
@@ -199,17 +203,20 @@ class GroupRepositoryFirestoreTest {
     every { mockDocRef.get() } returns Tasks.forResult(mockDocSnapshot)
     every { mockDocSnapshot.id } returns groupId
     every { mockDocSnapshot.getString("name") } returns "Minimal Group"
-    every { mockDocSnapshot.getString("category") } returns null
+    every { mockDocSnapshot.getString("ownerId") } returns "owner-456"
     every { mockDocSnapshot.getString("description") } returns null
-    every { mockDocSnapshot.getLong("membersCount") } returns null
+    every { mockDocSnapshot.get("memberIds") } returns null
+    every { mockDocSnapshot.get("eventIds") } returns null
 
     val result = repository.getGroup(groupId)
 
     assertNotNull(result)
     assertEquals("Minimal Group", result?.name)
-    assertEquals("", result?.category)
+    assertEquals("owner-456", result?.ownerId)
     assertEquals("", result?.description)
     assertEquals(0, result?.membersCount)
+    assertEquals(emptyList<String>(), result?.memberIds)
+    assertEquals(emptyList<String>(), result?.eventIds)
   }
 
   @Test
@@ -222,16 +229,18 @@ class GroupRepositoryFirestoreTest {
     every { mockDocRef.get() } returns Tasks.forResult(mockDocSnapshot)
     every { mockDocSnapshot.id } returns groupId
     every { mockDocSnapshot.getString("name") } returns "Café & Restaurant 🍽️"
-    every { mockDocSnapshot.getString("category") } returns "日本語"
+    every { mockDocSnapshot.getString("ownerId") } returns "owner-James-123"
     every { mockDocSnapshot.getString("description") } returns "Special: €$£¥"
-    every { mockDocSnapshot.getLong("membersCount") } returns 15L
+    every { mockDocSnapshot.get("memberIds") } returns listOf("user1", "user2")
+    every { mockDocSnapshot.get("eventIds") } returns emptyList<String>()
 
     val result = repository.getGroup(groupId)
 
     assertNotNull(result)
     assertEquals("Café & Restaurant 🍽️", result?.name)
-    assertEquals("日本語", result?.category)
+    assertEquals("owner-James-123", result?.ownerId)
     assertEquals("Special: €$£¥", result?.description)
+    assertEquals(2, result?.membersCount)
   }
 
   @Test

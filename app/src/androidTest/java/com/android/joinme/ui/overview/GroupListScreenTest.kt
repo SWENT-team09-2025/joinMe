@@ -55,7 +55,10 @@ class GroupListScreenTest {
 
   @Test
   fun groupCards_areDisplayed() {
-    val groups = listOf(Group(id = "1", name = "Football"), Group(id = "2", name = "Hiking"))
+    val groups =
+        listOf(
+            Group(id = "1", name = "Football", ownerId = "owner1"),
+            Group(id = "2", name = "Hiking", ownerId = "owner2"))
 
     composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
 
@@ -71,9 +74,9 @@ class GroupListScreenTest {
         Group(
             id = "1",
             name = "Basketball Club",
-            category = "Sports",
             description = "Weekly basketball games",
-            membersCount = 15)
+            ownerId = "owner",
+            memberIds = List(15) { "user$it" })
 
     composeTestRule.setContent {
       GroupListScreen(uiState = GroupListUIState(groups = listOf(group)))
@@ -90,9 +93,10 @@ class GroupListScreenTest {
   fun multipleGroups_allDisplayed() {
     val groups =
         listOf(
-            Group(id = "1", name = "Football", membersCount = 20),
-            Group(id = "2", name = "Hiking", membersCount = 10),
-            Group(id = "3", name = "Chess", membersCount = 5))
+            Group(
+                id = "1", name = "Football", ownerId = "owner", memberIds = List(20) { "user$it" }),
+            Group(id = "2", name = "Hiking", ownerId = "owner", memberIds = List(10) { "user$it" }),
+            Group(id = "3", name = "Chess", ownerId = "owner", memberIds = List(5) { "user$it" }))
 
     composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
 
@@ -107,9 +111,9 @@ class GroupListScreenTest {
         Group(
             id = "test1",
             name = "Rock Climbing",
-            category = "Adventure",
             description = "Indoor and outdoor climbing sessions",
-            membersCount = 25)
+            ownerId = "owner",
+            memberIds = List(25) { "user$it" })
 
     composeTestRule.setContent {
       GroupListScreen(uiState = GroupListUIState(groups = listOf(group)))
@@ -126,9 +130,9 @@ class GroupListScreenTest {
         Group(
             id = "test1",
             name = "Yoga Group",
-            category = "Wellness",
             description = "",
-            membersCount = 12)
+            ownerId = "owner",
+            memberIds = List(12) { "user$it" })
 
     composeTestRule.setContent {
       GroupListScreen(uiState = GroupListUIState(groups = listOf(group)))
@@ -144,9 +148,9 @@ class GroupListScreenTest {
         Group(
             id = "test1",
             name = "Running Club",
-            category = "Sports",
             description = "   ",
-            membersCount = 8)
+            ownerId = "owner",
+            memberIds = List(8) { "user$it" })
 
     composeTestRule.setContent {
       GroupListScreen(uiState = GroupListUIState(groups = listOf(group)))
@@ -159,7 +163,12 @@ class GroupListScreenTest {
   @Test
   fun groupCard_withZeroMembers_displaysZero() {
     val group =
-        Group(id = "test1", name = "New Group", description = "Just created", membersCount = 0)
+        Group(
+            id = "test1",
+            name = "New Group",
+            description = "Just created",
+            ownerId = "owner",
+            memberIds = List(0) { "user$it" })
 
     composeTestRule.setContent {
       GroupListScreen(uiState = GroupListUIState(groups = listOf(group)))
@@ -172,7 +181,11 @@ class GroupListScreenTest {
   fun groupCard_withLargeNumberOfMembers_displaysCorrectly() {
     val group =
         Group(
-            id = "test1", name = "Popular Group", description = "Very popular", membersCount = 999)
+            id = "test1",
+            name = "Popular Group",
+            description = "Very popular",
+            ownerId = "owner",
+            memberIds = List(999) { "user$it" })
 
     composeTestRule.setContent {
       GroupListScreen(uiState = GroupListUIState(groups = listOf(group)))
@@ -183,7 +196,10 @@ class GroupListScreenTest {
 
   @Test
   fun cardClick_callsOnGroup() {
-    val groups = listOf(Group(id = "1", name = "Football"), Group(id = "2", name = "Hiking"))
+    val groups =
+        listOf(
+            Group(id = "1", name = "Football", ownerId = "owner1"),
+            Group(id = "2", name = "Hiking", ownerId = "owner2"))
     var clickedName: String? = null
 
     composeTestRule.setContent {
@@ -202,9 +218,10 @@ class GroupListScreenTest {
         Group(
             id = "abc123",
             name = "Test Group",
-            category = "Testing",
             description = "A test group",
-            membersCount = 42)
+            ownerId = "owner",
+            memberIds = List(42) { "user$it" })
+
     var clickedGroup: Group? = null
 
     composeTestRule.setContent {
@@ -222,9 +239,9 @@ class GroupListScreenTest {
   fun multipleCardClicks_callOnGroupMultipleTimes() {
     val groups =
         listOf(
-            Group(id = "1", name = "Group A"),
-            Group(id = "2", name = "Group B"),
-            Group(id = "3", name = "Group C"))
+            Group(id = "1", name = "Group A", ownerId = "owner1"),
+            Group(id = "2", name = "Group B", ownerId = "owner2"),
+            Group(id = "3", name = "Group C", ownerId = "owner3"))
     val clickedGroups = mutableListOf<String>()
 
     composeTestRule.setContent {
@@ -241,7 +258,10 @@ class GroupListScreenTest {
 
   @Test
   fun moreMenuClick_callsOnMoreOptionMenu() {
-    val groups = listOf(Group(id = "1", name = "Football"), Group(id = "2", name = "Hiking"))
+    val groups =
+        listOf(
+            Group(id = "1", name = "Football", ownerId = "owner1"),
+            Group(id = "2", name = "Hiking", ownerId = "owner2"))
     var moreClickedId: String? = null
 
     composeTestRule.setContent {
@@ -259,9 +279,9 @@ class GroupListScreenTest {
         Group(
             id = "xyz789",
             name = "More Menu Test",
-            category = "Test",
             description = "Testing more menu",
-            membersCount = 7)
+            ownerId = "owner",
+            memberIds = List(7) { "user$it" })
     var clickedGroup: Group? = null
 
     composeTestRule.setContent {
@@ -277,7 +297,7 @@ class GroupListScreenTest {
 
   @Test
   fun moreMenuClick_doesNotTriggerCardClick() {
-    val group = Group(id = "1", name = "Test Group")
+    val group = Group(id = "1", name = "Test Group", ownerId = "owner1")
     var cardClicked = false
     var moreClicked = false
 
@@ -311,7 +331,7 @@ class GroupListScreenTest {
 
   @Test
   fun addNewGroupButton_withGroups_stillDisplayedAndWorks() {
-    val groups = listOf(Group(id = "1", name = "Existing Group"))
+    val groups = listOf(Group(id = "1", name = "Existing Group", ownerId = "owner1"))
     var buttonClicked = false
 
     composeTestRule.setContent {
@@ -343,7 +363,7 @@ class GroupListScreenTest {
 
   @Test
   fun list_isScrollable_and_reaches_last_item() {
-    val groups = (1..50).map { i -> Group(id = "$i", name = "Group $i") }
+    val groups = (1..50).map { i -> Group(id = "$i", name = "Group $i", ownerId = "owner$i") }
     val lastId = "50"
 
     composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
@@ -357,7 +377,7 @@ class GroupListScreenTest {
 
   @Test
   fun list_scrollToMiddleItem() {
-    val groups = (1..50).map { i -> Group(id = "$i", name = "Group $i") }
+    val groups = (1..50).map { i -> Group(id = "$i", name = "Group $i", ownerId = "owner$i") }
 
     composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
 
@@ -370,7 +390,7 @@ class GroupListScreenTest {
 
   @Test
   fun list_firstItemInitiallyVisible() {
-    val groups = (1..50).map { i -> Group(id = "$i", name = "Group $i") }
+    val groups = (1..50).map { i -> Group(id = "$i", name = "Group $i", ownerId = "owner$i") }
 
     composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
 
@@ -399,7 +419,7 @@ class GroupListScreenTest {
 
   @Test
   fun list_afterScrolling_canClickMoreOptions() {
-    val groups = (1..50).map { i -> Group(id = "$i", name = "Group $i") }
+    val groups = (1..50).map { i -> Group(id = "$i", name = "Group $i", ownerId = "owner$i") }
     var clickedGroupId: String? = null
 
     composeTestRule.setContent {
@@ -424,7 +444,8 @@ class GroupListScreenTest {
             id = "1",
             name =
                 "This is a very long group name that should be handled properly by the UI component",
-            membersCount = 10)
+            ownerId = "owner",
+            memberIds = List(10) { "user$it" })
 
     composeTestRule.setContent {
       GroupListScreen(uiState = GroupListUIState(groups = listOf(group)))
@@ -441,7 +462,8 @@ class GroupListScreenTest {
             name = "Group",
             description =
                 "This is a very long description that should be handled properly by the UI and might need to be truncated or ellipsized to fit properly in the card layout without breaking the design",
-            membersCount = 10)
+            ownerId = "owner",
+            memberIds = List(10) { "user$it" })
 
     composeTestRule.setContent {
       GroupListScreen(uiState = GroupListUIState(groups = listOf(group)))
@@ -454,9 +476,18 @@ class GroupListScreenTest {
   fun groupsWithSpecialCharactersInNames_displayCorrectly() {
     val groups =
         listOf(
-            Group(id = "1", name = "Café & Chill", membersCount = 5),
-            Group(id = "2", name = "€$ Money Talk", membersCount = 3),
-            Group(id = "3", name = "日本語 Group", membersCount = 7))
+            Group(
+                id = "1",
+                name = "Café & Chill",
+                ownerId = "owner",
+                memberIds = List(5) { "user$it" }),
+            Group(
+                id = "2",
+                name = "€$ Money Talk",
+                ownerId = "owner",
+                memberIds = List(3) { "user$it" }),
+            Group(
+                id = "3", name = "日本語 Group", ownerId = "owner", memberIds = List(7) { "user$it" }))
 
     composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
 
@@ -473,12 +504,14 @@ class GroupListScreenTest {
                 id = "1",
                 name = "Football",
                 description = "Let's do a 5v5 match!",
-                membersCount = 11),
+                ownerId = "owner",
+                memberIds = List(11) { "user$it" }),
             Group(
                 id = "2",
                 name = "Gaming",
                 description = "Let's play Minecraft SkyWars!",
-                membersCount = 20))
+                ownerId = "owner",
+                memberIds = List(20) { "user$it" }))
 
     composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
 
@@ -514,7 +547,7 @@ class GroupListScreenTest {
 
   @Test
   fun topBar_displayedWithGroups() {
-    val groups = listOf(Group(id = "1", name = "Test"))
+    val groups = listOf(Group(id = "1", name = "Test", ownerId = "owner1"))
 
     composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
 
@@ -523,7 +556,10 @@ class GroupListScreenTest {
 
   @Test
   fun transitionFromEmpty_toNonEmpty_displaysGroups() {
-    val groups = listOf(Group(id = "1", name = "New Group", membersCount = 5))
+    val groups =
+        listOf(
+            Group(
+                id = "1", name = "New Group", ownerId = "owner", memberIds = List(5) { "user$it" }))
 
     composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
 
@@ -536,9 +572,9 @@ class GroupListScreenTest {
   fun allCards_haveMoreOptionsButton() {
     val groups =
         listOf(
-            Group(id = "1", name = "Group A"),
-            Group(id = "2", name = "Group B"),
-            Group(id = "3", name = "Group C"))
+            Group(id = "1", name = "Group A", ownerId = "owner1"),
+            Group(id = "2", name = "Group B", ownerId = "owner2"),
+            Group(id = "3", name = "Group C", ownerId = "owner3"))
 
     composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
 
@@ -551,9 +587,9 @@ class GroupListScreenTest {
   fun eachMoreButton_triggersCorrectCallback() {
     val groups =
         listOf(
-            Group(id = "a", name = "Group A"),
-            Group(id = "b", name = "Group B"),
-            Group(id = "c", name = "Group C"))
+            Group(id = "a", name = "Group A", ownerId = "ownera"),
+            Group(id = "b", name = "Group B", ownerId = "ownerb"),
+            Group(id = "c", name = "Group C", ownerId = "ownerc"))
     val clickedIds = mutableListOf<String>()
 
     composeTestRule.setContent {

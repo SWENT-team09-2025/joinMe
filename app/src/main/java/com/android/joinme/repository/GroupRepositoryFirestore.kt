@@ -1,6 +1,5 @@
 package com.android.joinme.repository
 
-import android.util.Log
 import com.android.joinme.model.group.Group
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
@@ -55,22 +54,34 @@ class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupReposit
     return documentToGroup(doc)
   }
 
+  /**
+   * Converts a Firestore document snapshot to a [Group] object.
+   *
+   * This helper method safely extracts group data from a Firestore document, handling missing or
+   * malformed fields gracefully. The group's name and ownerId are required - if missing, null is
+   * returned. Optional fields (description, memberIds, eventIds) default to empty values.
+   *
+   * @param document The Firestore document snapshot to convert.
+   * @return A [Group] object if conversion succeeds and required fields are present, null
+   *   otherwise.
+   */
   private fun documentToGroup(document: DocumentSnapshot): Group? {
     return try {
       val id = document.id
       val name = document.getString("name") ?: return null
-      val category = document.getString("category") ?: ""
       val description = document.getString("description") ?: ""
-      val membersCount = document.getLong("membersCount")?.toInt() ?: 0
+      val ownerId = document.getString("ownerId") ?: return null
+      val memberIds = document.get("memberIds") as? List<*>
+      val eventIds = document.get("eventIds") as? List<*>
 
       Group(
           id = id,
           name = name,
-          category = category,
           description = description,
-          membersCount = membersCount)
+          ownerId = ownerId,
+          memberIds = memberIds?.filterIsInstance<String>() ?: emptyList(),
+          eventIds = eventIds?.filterIsInstance<String>() ?: emptyList())
     } catch (e: Exception) {
-      Log.e("GroupRepositoryFirestore", "Error converting document to Group", e)
       null
     }
   }

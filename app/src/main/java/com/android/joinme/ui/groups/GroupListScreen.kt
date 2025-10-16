@@ -34,7 +34,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.android.joinme.model.group.Group
 import com.android.joinme.viewmodel.GroupListUIState
@@ -97,12 +96,13 @@ fun GroupListScreen(
     onMoreOptionMenu: (Group) -> Unit = {}
 ) {
   val groups = uiState.groups
+  val numberOfGroups = uiState.groups.size
   Scaffold(
       topBar = {
         CenterAlignedTopAppBar(
             title = {
               Text(
-                  "Your groups",
+                  if (numberOfGroups == 1) "Your group" else "Your groups",
                   fontWeight = FontWeight.Bold,
                   modifier = Modifier.testTag(GroupListScreenTestTags.TITLE))
             })
@@ -183,13 +183,13 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: () -> Un
                   style = MaterialTheme.typography.bodySmall,
                   maxLines = 2,
                   overflow = TextOverflow.Ellipsis,
-                  color = Color.White.copy(alpha = 0.9f))
+                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f))
             }
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "members: ${group.membersCount}",
                 style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.9f))
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f))
           }
           IconButton(
               onClick = onMoreOptions,
@@ -197,29 +197,28 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: () -> Un
                 Icon(
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = "More options",
-                    tint = Color.White)
+                    tint = MaterialTheme.colorScheme.onSurface)
               }
         }
       }
 }
 
-@Preview(showBackground = true)
-@Composable
-private fun Test() {
-  val sample =
-      listOf(
-          Group(id = "1", name = "Test", category = "X", description = "12345", membersCount = 25),
-          Group(
-              id = "2",
-              name = "Gregory le singe",
-              category = "Y",
-              description = "6789A",
-              membersCount = 17))
-  GroupListScreen(uiState = GroupListUIState(groups = sample))
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun Test2() {
-  GroupListScreen(uiState = GroupListUIState(groups = emptyList()))
-}
+// @Composable
+// private fun Test() {
+//  val sample =
+//      listOf(
+//          Group(id = "1", name = "Test", category = "X", description = "12345", membersCount =
+// 25),
+//          Group(
+//              id = "2",
+//              name = "Gregory le singe",
+//              category = "Y",
+//              description = "6789A",
+//              membersCount = 17))
+//  GroupListScreen(uiState = GroupListUIState(groups = sample))
+// }
+//
+// @Composable
+// private fun Test2() {
+//  GroupListScreen(uiState = GroupListUIState(groups = emptyList()))
+// }

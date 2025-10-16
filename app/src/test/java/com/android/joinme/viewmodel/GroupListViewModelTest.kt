@@ -67,8 +67,10 @@ class GroupListViewModelTest {
   fun init_loadsGroupsAutomatically() = runTest {
     val testGroups =
         listOf(
-            Group(id = "1", name = "Group 1", membersCount = 10),
-            Group(id = "2", name = "Group 2", membersCount = 20))
+            Group(
+                id = "1", name = "Group 1", ownerId = "owner1", memberIds = List(10) { "user$it" }),
+            Group(
+                id = "2", name = "Group 2", ownerId = "owner2", memberIds = List(20) { "user$it" }))
     fakeRepo.setGroups(testGroups)
 
     viewModel = GroupListViewModel(fakeRepo)
@@ -111,13 +113,14 @@ class GroupListViewModelTest {
 
   @Test
   fun refreshUIState_reloadsGroups() = runTest {
-    fakeRepo.setGroups(listOf(Group(id = "1", name = "Initial Group")))
+    fakeRepo.setGroups(listOf(Group(id = "1", name = "Initial Group", ownerId = "owner1")))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
 
     fakeRepo.setGroups(
         listOf(
-            Group(id = "2", name = "Updated Group 1"), Group(id = "3", name = "Updated Group 2")))
+            Group(id = "2", name = "Updated Group 1", ownerId = "owner2"),
+            Group(id = "3", name = "Updated Group 2", ownerId = "owner3")))
     viewModel.refreshUIState()
     advanceUntilIdle()
 
@@ -136,7 +139,7 @@ class GroupListViewModelTest {
     assertNotNull(viewModel.uiState.value.errorMsg)
 
     fakeRepo.shouldThrowError = false
-    fakeRepo.setGroups(listOf(Group(id = "1", name = "Recovered Group")))
+    fakeRepo.setGroups(listOf(Group(id = "1", name = "Recovered Group", ownerId = "owner1")))
     viewModel.refreshUIState()
     advanceUntilIdle()
 
@@ -148,7 +151,7 @@ class GroupListViewModelTest {
 
   @Test
   fun refreshUIState_withError_setsErrorMessage() = runTest {
-    fakeRepo.setGroups(listOf(Group(id = "1", name = "Initial")))
+    fakeRepo.setGroups(listOf(Group(id = "1", name = "Initial", ownerId = "owner1")))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
 
@@ -164,19 +167,19 @@ class GroupListViewModelTest {
 
   @Test
   fun multipleRefreshCalls_workCorrectly() = runTest {
-    fakeRepo.setGroups(listOf(Group(id = "1", name = "First")))
+    fakeRepo.setGroups(listOf(Group(id = "1", name = "First", ownerId = "owner1")))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
 
-    fakeRepo.setGroups(listOf(Group(id = "2", name = "Second")))
+    fakeRepo.setGroups(listOf(Group(id = "2", name = "Second", ownerId = "owner2")))
     viewModel.refreshUIState()
     advanceUntilIdle()
 
-    fakeRepo.setGroups(listOf(Group(id = "3", name = "Third")))
+    fakeRepo.setGroups(listOf(Group(id = "3", name = "Third", ownerId = "owner3")))
     viewModel.refreshUIState()
     advanceUntilIdle()
 
-    fakeRepo.setGroups(listOf(Group(id = "4", name = "Fourth")))
+    fakeRepo.setGroups(listOf(Group(id = "4", name = "Fourth", ownerId = "owner4")))
     viewModel.refreshUIState()
     advanceUntilIdle()
 
@@ -214,7 +217,7 @@ class GroupListViewModelTest {
 
   @Test
   fun clearErrorMsg_whenNoError_doesNothing() = runTest {
-    fakeRepo.setGroups(listOf(Group(id = "1", name = "Test")))
+    fakeRepo.setGroups(listOf(Group(id = "1", name = "Test", ownerId = "owner1")))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
     assertNull(viewModel.uiState.value.errorMsg)
@@ -232,9 +235,10 @@ class GroupListViewModelTest {
         Group(
             id = "test-123",
             name = "Test Group",
-            category = "Sports",
+            ownerId = "owner-123",
             description = "A test group for sports",
-            membersCount = 42)
+            memberIds = List(42) { "user$it" },
+            eventIds = listOf("event1", "event2"))
     fakeRepo.setGroups(listOf(testGroup))
 
     viewModel = GroupListViewModel(fakeRepo)
@@ -244,18 +248,21 @@ class GroupListViewModelTest {
     val loadedGroup = state.groups.first()
     assertEquals("test-123", loadedGroup.id)
     assertEquals("Test Group", loadedGroup.name)
-    assertEquals("Sports", loadedGroup.category)
+    assertEquals("owner-123", loadedGroup.ownerId)
     assertEquals("A test group for sports", loadedGroup.description)
     assertEquals(42, loadedGroup.membersCount)
+    assertEquals(42, loadedGroup.memberIds.size)
+    assertEquals(2, loadedGroup.eventIds.size)
   }
 
   @Test
   fun loadGroups_withMultipleGroups_maintainsOrder() = runTest {
     val groups =
         listOf(
-            Group(id = "1", name = "First", membersCount = 10),
-            Group(id = "2", name = "Second", membersCount = 20),
-            Group(id = "3", name = "Third", membersCount = 30))
+            Group(id = "1", name = "First", ownerId = "owner1", memberIds = List(10) { "user$it" }),
+            Group(
+                id = "2", name = "Second", ownerId = "owner2", memberIds = List(20) { "user$it" }),
+            Group(id = "3", name = "Third", ownerId = "owner3", memberIds = List(30) { "user$it" }))
     fakeRepo.setGroups(groups)
 
     viewModel = GroupListViewModel(fakeRepo)
@@ -270,7 +277,14 @@ class GroupListViewModelTest {
 
   @Test
   fun loadGroups_withManyGroups_loadsAll() = runTest {
-    val manyGroups = (1..100).map { Group(id = "$it", name = "Group $it", membersCount = it) }
+    val manyGroups =
+        (1..100).map {
+          Group(
+              id = "$it",
+              name = "Group $it",
+              ownerId = "owner$it",
+              memberIds = List(it) { i -> "user$i" })
+        }
     fakeRepo.setGroups(manyGroups)
 
     viewModel = GroupListViewModel(fakeRepo)
@@ -286,9 +300,21 @@ class GroupListViewModelTest {
   fun loadGroups_withSpecialCharacters_handlesCorrectly() = runTest {
     val groups =
         listOf(
-            Group(id = "1", name = "Café & Brunch", membersCount = 5),
-            Group(id = "2", name = "Chess Game", membersCount = 10),
-            Group(id = "3", name = "Group with emojis", membersCount = 15))
+            Group(
+                id = "1",
+                name = "Café & Brunch",
+                ownerId = "owner1",
+                memberIds = List(5) { "user$it" }),
+            Group(
+                id = "2",
+                name = "Chess Game",
+                ownerId = "owner2",
+                memberIds = List(10) { "user$it" }),
+            Group(
+                id = "3",
+                name = "Group with emojis",
+                ownerId = "owner3",
+                memberIds = List(15) { "user$it" }))
     fakeRepo.setGroups(groups)
 
     viewModel = GroupListViewModel(fakeRepo)
@@ -303,7 +329,7 @@ class GroupListViewModelTest {
 
   @Test
   fun loadGroups_withZeroMembers_handlesCorrectly() = runTest {
-    val group = Group(id = "1", name = "Empty Group", membersCount = 0)
+    val group = Group(id = "1", name = "Empty Group", ownerId = "owner1", memberIds = emptyList())
     fakeRepo.setGroups(listOf(group))
 
     viewModel = GroupListViewModel(fakeRepo)
@@ -315,7 +341,13 @@ class GroupListViewModelTest {
 
   @Test
   fun loadGroups_withEmptyDescription_handlesCorrectly() = runTest {
-    val group = Group(id = "1", name = "No Description", description = "", membersCount = 10)
+    val group =
+        Group(
+            id = "1",
+            name = "No Description",
+            ownerId = "owner1",
+            description = "",
+            memberIds = List(10) { "user$it" })
     fakeRepo.setGroups(listOf(group))
 
     viewModel = GroupListViewModel(fakeRepo)
@@ -345,7 +377,7 @@ class GroupListViewModelTest {
     assertNotNull(viewModel.uiState.value.errorMsg)
 
     fakeRepo.shouldThrowError = false
-    fakeRepo.setGroups(listOf(Group(id = "1", name = "Success")))
+    fakeRepo.setGroups(listOf(Group(id = "1", name = "Success", ownerId = "owner1")))
     viewModel.refreshUIState()
     advanceUntilIdle()
 
@@ -357,7 +389,7 @@ class GroupListViewModelTest {
 
   @Test
   fun uiState_afterLoading_hasConsistentState() = runTest {
-    fakeRepo.setGroups(listOf(Group(id = "1", name = "Test")))
+    fakeRepo.setGroups(listOf(Group(id = "1", name = "Test", ownerId = "owner1")))
 
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
@@ -384,7 +416,7 @@ class GroupListViewModelTest {
 
   @Test
   fun refreshUIState_clearsGroupsOnError() = runTest {
-    fakeRepo.setGroups(listOf(Group(id = "1", name = "Test")))
+    fakeRepo.setGroups(listOf(Group(id = "1", name = "Test", ownerId = "owner1")))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
     assertEquals(1, viewModel.uiState.value.groups.size)
