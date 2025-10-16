@@ -132,6 +132,13 @@ jobs:
           # To run the CI with debug information, add --info
           ./gradlew check --parallel --build-cache
 
+      # Upload the APK as an artifact so it can be downloaded
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+
       # Start Firebase emulators for instrumentation tests
       - name: Start Firebase emulators
         run: |
