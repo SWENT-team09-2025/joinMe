@@ -73,11 +73,14 @@ class GroupListViewModel(private val repo: GroupRepository = GroupRepositoryProv
   private fun getAllGroups() {
     viewModelScope.launch {
       try {
-        _uiState.value = _uiState.value.copy(isLoading = true)
+        _uiState.value = _uiState.value.copy(isLoading = true, errorMsg = null)
         val groups = repo.userGroups()
-        _uiState.value = GroupListUIState(groups = groups, isLoading = false)
+        _uiState.value = _uiState.value.copy(groups = groups)
       } catch (e: Exception) {
-        _uiState.value = GroupListUIState(errorMsg = e.message, isLoading = false)
+        _uiState.value =
+            _uiState.value.copy(groups = emptyList(), errorMsg = e.message ?: "Unknown error")
+      } finally {
+        _uiState.value = _uiState.value.copy(isLoading = false)
       }
     }
   }

@@ -18,7 +18,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
@@ -30,12 +29,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.android.joinme.model.group.Group
+import com.android.joinme.ui.profile.ProfileScreen
+import com.android.joinme.ui.profile.ProfileTopBar
 import com.android.joinme.viewmodel.GroupListUIState
 
 /**
@@ -86,6 +85,9 @@ object GroupListScreenTestTags {
  * @param onGroup Callback invoked when the user taps on a group card, receiving the selected
  *   [Group].
  * @param onMoreOptionMenu Callback invoked when the user taps the more options button for a group.
+ * @param onBackClick Callback invoked when the user taps the back button in the top bar.
+ * @param onProfileClick Callback invoked when the user taps the profile icon in the top bar.
+ * @param onEditClick Callback invoked when the user taps the edit icon in the top bar.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,29 +95,33 @@ fun GroupListScreen(
     uiState: GroupListUIState,
     onJoinANewGroup: () -> Unit = {},
     onGroup: (Group) -> Unit = {},
-    onMoreOptionMenu: (Group) -> Unit = {}
+    onMoreOptionMenu: (Group) -> Unit = {},
+    onBackClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {},
+    onEditClick: () -> Unit = {}
 ) {
   val groups = uiState.groups
-  val numberOfGroups = uiState.groups.size
   Scaffold(
       topBar = {
-        CenterAlignedTopAppBar(
-            title = {
-              Text(
-                  if (numberOfGroups == 1) "Your group" else "Your groups",
-                  fontWeight = FontWeight.Bold,
-                  modifier = Modifier.testTag(GroupListScreenTestTags.TITLE))
-            })
+        ProfileTopBar(
+            currentScreen = ProfileScreen.GROUPS,
+            onBackClick = onBackClick,
+            onProfileClick = onProfileClick,
+            onGroupClick = {},
+            onEditClick = onEditClick)
       },
       floatingActionButton = {
         ExtendedFloatingActionButton(
             modifier = Modifier.testTag(GroupListScreenTestTags.ADD_NEW_GROUP),
             onClick = onJoinANewGroup,
             icon = {
-              Icon(Icons.Default.Add, contentDescription = "Join a new group", tint = Color.White)
+              Icon(
+                  Icons.Default.Add,
+                  contentDescription = "Join a new group",
+                  tint = MaterialTheme.colorScheme.onPrimary)
             },
-            text = { Text("Join a new group", color = Color.White) },
-            containerColor = Color.Black)
+            text = { Text("Join a new group", color = MaterialTheme.colorScheme.onPrimary) },
+            containerColor = MaterialTheme.colorScheme.primary)
       },
       floatingActionButtonPosition = FabPosition.Center,
   ) { pd ->
@@ -140,10 +146,16 @@ fun GroupListScreen(
       Box(
           modifier = Modifier.fillMaxSize().padding(pd).testTag(GroupListScreenTestTags.EMPTY),
           contentAlignment = Alignment.Center) {
-            Text(
-                text = "You are currently not\nassigned to a group…",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+              Text(
+                  text = "You are currently not",
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+              Text(
+                  text = "assigned to a group…",
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+            }
           }
     }
   }
@@ -167,7 +179,8 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: () -> Un
               .heightIn(min = 86.dp)
               .clickable { onClick() }
               .testTag(GroupListScreenTestTags.cardTag(group.id)),
-      colors = CardDefaults.cardColors(containerColor = Color(0xFFE06B60))) {
+      colors =
+          CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.Top) {
           Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -175,7 +188,7 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: () -> Un
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = Color.White)
+                color = MaterialTheme.colorScheme.onPrimaryContainer)
             Spacer(Modifier.height(4.dp))
             if (group.description.isNotBlank()) {
               Text(
@@ -183,13 +196,13 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: () -> Un
                   style = MaterialTheme.typography.bodySmall,
                   maxLines = 2,
                   overflow = TextOverflow.Ellipsis,
-                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f))
+                  color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
             }
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "members: ${group.membersCount}",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f))
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
           }
           IconButton(
               onClick = onMoreOptions,
@@ -197,28 +210,8 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: () -> Un
                 Icon(
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = "More options",
-                    tint = MaterialTheme.colorScheme.onSurface)
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer)
               }
         }
       }
 }
-
-// @Composable
-// private fun Test() {
-//  val sample =
-//      listOf(
-//          Group(id = "1", name = "Test", category = "X", description = "12345", membersCount =
-// 25),
-//          Group(
-//              id = "2",
-//              name = "Gregory le singe",
-//              category = "Y",
-//              description = "6789A",
-//              membersCount = 17))
-//  GroupListScreen(uiState = GroupListUIState(groups = sample))
-// }
-//
-// @Composable
-// private fun Test2() {
-//  GroupListScreen(uiState = GroupListUIState(groups = emptyList()))
-// }

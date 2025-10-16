@@ -1,7 +1,6 @@
 package com.android.joinme.ui.overview
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -33,9 +32,8 @@ class GroupListScreenTest {
   fun emptyState_showsCorrectMessage() {
     composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = emptyList())) }
 
-    composeTestRule
-        .onNodeWithText("You are currently not\nassigned to a group…")
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithText("You are currently not").assertIsDisplayed()
+    composeTestRule.onNodeWithText("assigned to a group…").assertIsDisplayed()
   }
 
   @Test
@@ -46,11 +44,10 @@ class GroupListScreenTest {
   }
 
   @Test
-  fun emptyState_titleIsDisplayed() {
+  fun emptyState_fabIsDisplayed() {
     composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = emptyList())) }
 
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.TITLE).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.TITLE).assertTextContains("Your groups")
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).assertIsDisplayed()
   }
 
   @Test
@@ -399,7 +396,11 @@ class GroupListScreenTest {
 
   @Test
   fun list_afterScrolling_canClickItems() {
-    val groups = (1..50).map { i -> Group(id = "$i", name = "Group $i", membersCount = i) }
+    val groups =
+        (1..50).map { i ->
+          Group(
+              id = "$i", name = "Group $i", ownerId = "owner$i", memberIds = List(i) { "user$it" })
+        }
     var clickedGroup: Group? = null
 
     composeTestRule.setContent {
@@ -521,37 +522,16 @@ class GroupListScreenTest {
 
   @Test
   fun veryLargeList_performanceTest() {
-    val groups = (1..1000).map { i -> Group(id = "$i", name = "Group $i", membersCount = i) }
+    val groups =
+        (1..1000).map { i ->
+          Group(
+              id = "$i", name = "Group $i", ownerId = "owner$i", memberIds = List(i) { "user$it" })
+        }
 
     composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LIST).assertIsDisplayed()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("1")).assertIsDisplayed()
-  }
-
-  @Test
-  fun topBar_alwaysDisplaysTitle() {
-    composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = emptyList())) }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.TITLE).assertIsDisplayed()
-  }
-
-  @Test
-  fun topBar_titleHasCorrectText() {
-    composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = emptyList())) }
-
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.TITLE)
-        .assertTextContains("Your groups", substring = true)
-  }
-
-  @Test
-  fun topBar_displayedWithGroups() {
-    val groups = listOf(Group(id = "1", name = "Test", ownerId = "owner1"))
-
-    composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.TITLE).assertIsDisplayed()
   }
 
   @Test

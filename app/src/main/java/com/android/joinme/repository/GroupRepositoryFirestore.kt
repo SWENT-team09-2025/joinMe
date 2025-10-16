@@ -9,9 +9,25 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlin.String
 import kotlinx.coroutines.tasks.await
 
+/** Firestore collection path for storing group documents. */
 const val GROUPS_COLLECTION_PATH = "groups"
+
+/** Firestore collection path for storing user-group membership relationships. */
 const val MEMBERSHIPS_COLLECTION_PATH = "memberships"
 
+/**
+ * Firestore implementation of [GroupRepository].
+ *
+ * This repository uses Firebase Firestore as the backend data source for group-related operations.
+ * It manages group data retrieval, membership operations, and handles batched queries for
+ * efficiency when fetching multiple groups.
+ *
+ * The repository follows a two-collection design:
+ * - `groups`: Stores group documents with details like name, description, owner, etc.
+ * - `memberships`: Stores user-group relationships for efficient membership queries.
+ *
+ * @property db The Firestore instance used for database operations.
+ */
 class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupRepository {
 
   override suspend fun userGroups(): List<Group> {
