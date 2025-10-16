@@ -189,9 +189,14 @@ class JoinMeE2ETest {
     composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_DATE).performScrollTo()
     composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_DATE).performClick()
     composeTestRule.waitForIdle()
-    // Wait for native date picker dialog and click OK using UiAutomator
+    // Wait for native date picker dialog and click OK/Done/Set using UiAutomator
     device.wait(Until.hasObject(By.text("OK")), 2000)
-    device.findObject(By.text("OK")).click()
+    val okButton =
+        device.findObject(By.text("OK"))
+            ?: device.findObject(By.text("Done"))
+            ?: device.findObject(By.text("SET"))
+            ?: device.findObject(By.text("Set"))
+    okButton?.click()
     Thread.sleep(300)
     composeTestRule.waitForIdle()
 
@@ -205,9 +210,14 @@ class JoinMeE2ETest {
         .onAllNodesWithText("Time", substring = true, ignoreCase = true)[0]
         .performClick()
     composeTestRule.waitForIdle()
-    // Wait for native time picker dialog and click OK using UiAutomator
+    // Wait for native time picker dialog and click OK/Done/Set using UiAutomator
     device.wait(Until.hasObject(By.text("OK")), 2000)
-    device.findObject(By.text("OK")).click()
+    val timeOkButton =
+        device.findObject(By.text("OK"))
+            ?: device.findObject(By.text("Done"))
+            ?: device.findObject(By.text("SET"))
+            ?: device.findObject(By.text("Set"))
+    timeOkButton?.click()
     Thread.sleep(300)
     composeTestRule.waitForIdle()
 
