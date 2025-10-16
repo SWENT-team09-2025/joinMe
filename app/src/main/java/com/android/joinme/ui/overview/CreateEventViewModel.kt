@@ -2,7 +2,6 @@ package com.android.joinme.ui.overview
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
@@ -17,7 +16,6 @@ import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 /** UI state for the CreateEvent screen. */
 data class CreateEventUIState(
@@ -28,6 +26,7 @@ data class CreateEventUIState(
     val maxParticipants: String = "",
     val duration: String = "",
     val date: String = "",
+    val time: String = "",
     val visibility: String = "",
     val errorMsg: String? = null,
 
@@ -39,6 +38,7 @@ data class CreateEventUIState(
     val invalidMaxParticipantsMsg: String? = null,
     val invalidDurationMsg: String? = null,
     val invalidDateMsg: String? = null,
+    val invalidTimeMsg: String? = null,
     val invalidVisibilityMsg: String? = null,
 ) {
   val isValid: Boolean
@@ -50,6 +50,7 @@ data class CreateEventUIState(
             invalidMaxParticipantsMsg == null &&
             invalidDurationMsg == null &&
             invalidDateMsg == null &&
+            invalidTimeMsg == null &&
             invalidVisibilityMsg == null &&
             type.isNotBlank() &&
             title.isNotBlank() &&
@@ -58,6 +59,7 @@ data class CreateEventUIState(
             maxParticipants.isNotBlank() &&
             duration.isNotBlank() &&
             date.isNotBlank() &&
+            time.isNotBlank() &&
             visibility.isNotBlank()
 }
 
@@ -79,8 +81,8 @@ class CreateEventViewModel(
     _uiState.value = _uiState.value.copy(errorMsg = msg)
   }
 
-  /** Adds a new event to the repository. */
-  fun createEvent(): Boolean {
+  /** Adds a new event to the repository. Suspends until the save is complete. */
+  suspend fun createEvent(): Boolean {
     val state = _uiState.value
     if (!state.isValid) {
       setErrorMsg("At least one field is not valid")
@@ -88,9 +90,10 @@ class CreateEventViewModel(
     }
 
     val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+    val combinedDateTime = "${state.date} ${state.time}"
     val parsedDate =
         try {
-          Timestamp(sdf.parse(state.date)!!)
+          Timestamp(sdf.parse(combinedDateTime)!!)
         } catch (_: Exception) {
           null
         }
@@ -114,17 +117,15 @@ class CreateEventViewModel(
             visibility = EventVisibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
             ownerId = Firebase.auth.currentUser?.uid ?: "unknown")
 
-    viewModelScope.launch {
-      try {
-        repository.addEvent(event)
-        clearErrorMsg()
-      } catch (e: Exception) {
-        Log.e("CreateEventViewModel", "Error creating event", e)
-        setErrorMsg("Failed to create event: ${e.message}")
-      }
+    return try {
+      repository.addEvent(event)
+      clearErrorMsg()
+      true
+    } catch (e: Exception) {
+      Log.e("CreateEventViewModel", "Error creating event", e)
+      setErrorMsg("Failed to create event: ${e.message}")
+      false
     }
-
-    return true
   }
 
   // Update functions for all fields
@@ -186,7 +187,7 @@ class CreateEventViewModel(
   }
 
   fun setDate(date: String) {
-    val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     val valid =
         try {
           sdf.parse(date) != null
@@ -196,7 +197,12 @@ class CreateEventViewModel(
     _uiState.value =
         _uiState.value.copy(
             date = date,
-            invalidDateMsg = if (!valid) "Invalid format (must be dd/MM/yyyy HH:mm)" else null)
+            invalidDateMsg = if (!valid) "Invalid format (must be dd/MM/yyyy)" else null)
+    updateFormValidity()
+  }
+
+  fun setTime(time: String) {
+    _uiState.value = _uiState.value.copy(time = time)
     updateFormValidity()
   }
 
@@ -224,6 +230,7 @@ class CreateEventViewModel(
             state.invalidDurationMsg == null &&
             state.invalidDateMsg == null &&
             state.invalidVisibilityMsg == null &&
+            state.invalidTimeMsg == null &&
             state.type.isNotBlank() &&
             state.title.isNotBlank() &&
             state.description.isNotBlank() &&
@@ -231,11 +238,12 @@ class CreateEventViewModel(
             state.maxParticipants.isNotBlank() &&
             state.duration.isNotBlank() &&
             state.date.isNotBlank() &&
+            state.time.isNotBlank() &&
             state.visibility.isNotBlank()
 
-    _uiState.value = state.copy(errorMsg = null) // clear any old error
+    _uiState.value = state.copy(errorMsg = null)
     if (state.isValid != isValid) {
-      _uiState.value = state.copy() // trigger recomposition
+      _uiState.value = state.copy()
     }
   }
 }

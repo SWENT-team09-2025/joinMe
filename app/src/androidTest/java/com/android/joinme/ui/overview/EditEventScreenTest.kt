@@ -101,9 +101,10 @@ class EditEventScreenTest {
     composeTestRule
         .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
         .assertTextContains("90")
+    // Date and time are displayed separately now
     composeTestRule
         .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DATE)
-        .assertTextContains("25/12/2024 14:30")
+        .assertTextContains("25/12/2024")
     composeTestRule
         .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_VISIBILITY)
         .assertTextContains("PUBLIC")
@@ -189,8 +190,9 @@ class EditEventScreenTest {
         .assertTextContains("Lausanne Sports Center")
   }
 
+  // Note: Max participants and duration now use number pickers and cannot be edited via text input
   @Test
-  fun editingMaxParticipants_updatesUIState() {
+  fun maxParticipantsFieldDisplaysLoadedValue() {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
@@ -204,20 +206,14 @@ class EditEventScreenTest {
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
+    // Verify field displays the loaded value
     composeTestRule
         .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
-        .performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
-        .performTextInput("20")
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
-        .assertTextContains("20")
+        .assertTextContains("10")
   }
 
   @Test
-  fun editingDuration_updatesUIState() {
+  fun durationFieldDisplaysLoadedValue() {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
@@ -231,42 +227,13 @@ class EditEventScreenTest {
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
+    // Verify field displays the loaded value
     composeTestRule
         .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
-        .performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
-        .performTextInput("120")
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
-        .assertTextContains("120")
+        .assertTextContains("90")
   }
 
-  @Test
-  fun editingDate_updatesUIState() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DATE).performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DATE)
-        .performTextInput("31/12/2024 20:00")
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DATE)
-        .assertTextContains("31/12/2024 20:00")
-  }
+  // Note: Date field now uses date picker dialog and cannot be edited via text input
 
   /** --- VALIDATION --- */
   @Test
@@ -295,7 +262,7 @@ class EditEventScreenTest {
   }
 
   @Test
-  fun invalidMaxParticipants_showsErrorAndDisablesSaveButton() {
+  fun clearingDescription_showsErrorAndDisablesSaveButton() {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
@@ -310,11 +277,8 @@ class EditEventScreenTest {
     composeTestRule.waitForIdle()
 
     composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
         .performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
-        .performTextInput("0")
 
     composeTestRule.waitForIdle()
 
@@ -325,7 +289,7 @@ class EditEventScreenTest {
   }
 
   @Test
-  fun invalidDuration_showsErrorAndDisablesSaveButton() {
+  fun clearingLocation_showsErrorAndDisablesSaveButton() {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
@@ -340,39 +304,8 @@ class EditEventScreenTest {
     composeTestRule.waitForIdle()
 
     composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
         .performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
-        .performTextInput("0")
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE, useUnmergedTree = true)
-        .assertExists()
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsNotEnabled()
-  }
-
-  @Test
-  fun invalidDate_showsErrorAndDisablesSaveButton() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DATE).performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DATE)
-        .performTextInput("2024-12-25")
 
     composeTestRule.waitForIdle()
 
@@ -398,12 +331,7 @@ class EditEventScreenTest {
     composeTestRule.waitForIdle()
 
     // Make field invalid
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
-        .performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
-        .performTextInput("0")
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
 
     composeTestRule.waitForIdle()
 
@@ -414,11 +342,8 @@ class EditEventScreenTest {
 
     // Fix the field
     composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
-        .performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
-        .performTextInput("60")
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
+        .performTextInput("Valid Title")
 
     composeTestRule.waitUntil(timeoutMillis = 5_000) {
       composeTestRule
@@ -463,6 +388,9 @@ class EditEventScreenTest {
 
     // Click save
     composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).performClick()
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
 
     // Assert callback called
     assert(saveCalled)
@@ -667,7 +595,7 @@ class EditEventScreenTest {
   }
 
   @Test
-  fun multipleFieldEdits_allPersist() {
+  fun multipleTextFieldEdits_allPersist() {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
@@ -681,35 +609,95 @@ class EditEventScreenTest {
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
-    // Edit multiple fields
+    // Edit multiple text fields
     composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
     composeTestRule
         .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
         .performTextInput("New Title")
 
     composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
         .performTextClearance()
     composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
-        .performTextInput("15")
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextInput("New Description")
 
     composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
         .performTextClearance()
     composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
-        .performTextInput("120")
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
+        .performTextInput("New Location")
 
     // Verify all persist in UI state
     composeTestRule
         .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
         .assertTextContains("New Title")
     composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
-        .assertTextContains("15")
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .assertTextContains("New Description")
     composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
-        .assertTextContains("120")
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
+        .assertTextContains("New Location")
+  }
+
+  @Test
+  fun typeDropdownCanBeChanged() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify initial value
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TYPE)
+        .assertTextContains("SPORTS")
+
+    // Change type
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TYPE).performClick()
+    composeTestRule.onNodeWithText("SOCIAL").performClick()
+
+    // Verify changed value
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TYPE)
+        .assertTextContains("SOCIAL")
+  }
+
+  @Test
+  fun visibilityDropdownCanBeChanged() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify initial value
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_VISIBILITY)
+        .assertTextContains("PUBLIC")
+
+    // Change visibility
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_VISIBILITY).performClick()
+    composeTestRule.onNodeWithText("PRIVATE").performClick()
+
+    // Verify changed value
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_VISIBILITY)
+        .assertTextContains("PRIVATE")
   }
 }

@@ -26,6 +26,7 @@ data class EditEventUIState(
     val maxParticipants: String = "",
     val duration: String = "",
     val date: String = "",
+    val time: String = "",
     val visibility: String = "",
     val ownerId: String = "",
     val participants: List<String> = emptyList(),
@@ -58,6 +59,7 @@ data class EditEventUIState(
             maxParticipants.isNotBlank() &&
             duration.isNotBlank() &&
             date.isNotBlank() &&
+            time.isNotBlank() &&
             visibility.isNotBlank()
 }
 
@@ -89,7 +91,8 @@ class EditEventViewModel(
     viewModelScope.launch {
       try {
         val event = repository.getEvent(eventId)
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
         _uiState.value =
             EditEventUIState(
@@ -100,6 +103,7 @@ class EditEventViewModel(
                 maxParticipants = event.maxParticipants.toString(),
                 duration = event.duration.toString(),
                 date = dateFormat.format(event.date.toDate()),
+                time = timeFormat.format(event.date.toDate()),
                 visibility = event.visibility.name,
                 ownerId = event.ownerId,
                 participants = event.participants)
@@ -124,15 +128,16 @@ class EditEventViewModel(
     }
 
     val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+    val combinedDateTime = "${state.date} ${state.time}"
     val parsedDate =
         try {
-          Timestamp(sdf.parse(state.date)!!)
+          Timestamp(sdf.parse(combinedDateTime)!!)
         } catch (_: Exception) {
           null
         }
 
     if (parsedDate == null) {
-      setErrorMsg("Invalid date format (must be dd/MM/yyyy HH:mm)")
+      setErrorMsg("Invalid date or time format")
       return false
     }
 
@@ -230,7 +235,7 @@ class EditEventViewModel(
   }
 
   fun setDate(date: String) {
-    val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     val valid =
         try {
           sdf.parse(date) != null
@@ -240,7 +245,12 @@ class EditEventViewModel(
     _uiState.value =
         _uiState.value.copy(
             date = date,
-            invalidDateMsg = if (!valid) "Invalid format (must be dd/MM/yyyy HH:mm)" else null)
+            invalidDateMsg =
+                if (!valid && date.isNotBlank()) "Invalid format (must be dd/MM/yyyy)" else null)
+  }
+
+  fun setTime(time: String) {
+    _uiState.value = _uiState.value.copy(time = time)
   }
 
   fun setVisibility(visibility: String) {
