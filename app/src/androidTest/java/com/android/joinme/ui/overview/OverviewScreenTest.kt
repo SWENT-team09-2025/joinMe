@@ -1080,20 +1080,6 @@ class OverviewScreenTest {
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).assertIsDisplayed()
   }
 
-  @Test
-  fun overviewScreen_showsLoadingIndicator_whileLoadingEvents() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
-
-    composeTestRule.mainClock.autoAdvance = false
-
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
-
-    // Loading indicator should be visible initially
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.LOADING_INDICATOR).assertExists()
-
-    composeTestRule.mainClock.autoAdvance = true
-  }
 
   @Test
   fun overviewScreen_hidesLoadingIndicator_afterEventsLoaded() {

@@ -84,14 +84,12 @@ fun EditEventScreen(
       onTimeChange = { editEventViewModel.setTime(it) },
       onVisibilityChange = { editEventViewModel.setVisibility(it) },
       onSave = {
-        var result = false
         coroutineScope.launch {
-          result = editEventViewModel.editEvent(eventId)
-          if (result) {
+          if (editEventViewModel.editEvent(eventId)) {
             onDone()
           }
         }
-        result
+        true
       },
       onGoBack = onGoBack,
       saveButtonText = "Save")

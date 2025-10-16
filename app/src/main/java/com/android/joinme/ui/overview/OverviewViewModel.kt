@@ -43,13 +43,9 @@ class OverviewViewModel(
   private val _uiState = MutableStateFlow(OverviewUIState())
   val uiState: StateFlow<OverviewUIState> = _uiState.asStateFlow()
 
-  /*init {
-    //    Firebase.auth.addAuthStateListener {
-    //      if (it.currentUser != null) {
+  init {
     getAllEvents()
-    //      }
-    //    }
-  }*/
+  }
 
   /** Clears the error message in the UI state. */
   fun clearErrorMsg() {

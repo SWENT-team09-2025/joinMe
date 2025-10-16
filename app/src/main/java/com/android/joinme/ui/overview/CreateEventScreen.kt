@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 
 object CreateEventScreenTestTags {
   const val INPUT_EVENT_TYPE = "inputEventType"
@@ -27,6 +28,7 @@ fun CreateEventScreen(
   val uiState by createEventViewModel.uiState.collectAsState()
   val errorMsg = uiState.errorMsg
   val context = LocalContext.current
+  val coroutineScope = rememberCoroutineScope()
 
   LaunchedEffect(errorMsg) {
     if (errorMsg != null) {
@@ -78,12 +80,12 @@ fun CreateEventScreen(
       onTimeChange = { createEventViewModel.setTime(it) },
       onVisibilityChange = { createEventViewModel.setVisibility(it) },
       onSave = {
-        if (createEventViewModel.createEvent()) {
-          onDone()
-          true
-        } else {
-          false
+        coroutineScope.launch {
+          if (createEventViewModel.createEvent()) {
+            onDone()
+          }
         }
+        true
       },
       onGoBack = onGoBack,
       saveButtonText = "Save")

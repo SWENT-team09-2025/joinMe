@@ -83,8 +83,8 @@ class CreateEventViewModel(
     _uiState.value = _uiState.value.copy(errorMsg = msg)
   }
 
-  /** Adds a new event to the repository. */
-  fun createEvent(): Boolean {
+  /** Adds a new event to the repository. Suspends until the save is complete. */
+  suspend fun createEvent(): Boolean {
     val state = _uiState.value
     if (!state.isValid) {
       setErrorMsg("At least one field is not valid")
@@ -119,17 +119,15 @@ class CreateEventViewModel(
             visibility = EventVisibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
             ownerId = Firebase.auth.currentUser?.uid ?: "unknown")
 
-    viewModelScope.launch {
-      try {
-        repository.addEvent(event)
-        clearErrorMsg()
-      } catch (e: Exception) {
-        Log.e("CreateEventViewModel", "Error creating event", e)
-        setErrorMsg("Failed to create event: ${e.message}")
-      }
+    return try {
+      repository.addEvent(event)
+      clearErrorMsg()
+      true
+    } catch (e: Exception) {
+      Log.e("CreateEventViewModel", "Error creating event", e)
+      setErrorMsg("Failed to create event: ${e.message}")
+      false
     }
-
-    return true
   }
 
   // Update functions for all fields
