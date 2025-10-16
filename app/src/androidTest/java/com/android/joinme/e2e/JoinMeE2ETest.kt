@@ -11,13 +11,13 @@ import androidx.test.uiautomator.Until
 import com.android.joinme.JoinMe
 import com.android.joinme.model.event.EventsRepositoryLocal
 import com.android.joinme.model.event.EventsRepositoryProvider
+import com.android.joinme.ui.history.HistoryScreenTestTags
 import com.android.joinme.ui.navigation.NavigationTestTags
 import com.android.joinme.ui.navigation.Screen
 import com.android.joinme.ui.overview.CreateEventScreenTestTags
 import com.android.joinme.ui.overview.OverviewScreenTestTags
 import com.android.joinme.ui.overview.SearchScreenTestTags
 import com.android.joinme.ui.profile.ViewProfileTestTags
-import com.android.joinme.ui.history.HistoryScreenTestTags
 import com.android.joinme.utils.FakeJwtGenerator
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
@@ -32,7 +32,8 @@ import org.junit.runner.RunWith
  * Comprehensive End-to-End tests for the JoinMe application.
  *
  * These tests verify complete user workflows from start to finish, testing the entire system
- * including authentication, navigation, data persistence, and UI interactions across multiple screens.
+ * including authentication, navigation, data persistence, and UI interactions across multiple
+ * screens.
  *
  * Uses FakeCredentialManager to simulate Google Sign-In without requiring manual authentication.
  */
@@ -106,7 +107,9 @@ class JoinMeE2ETest {
 
   /** Navigate to a specific tab using bottom navigation */
   private fun navigateToTab(tabName: String) {
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag(tabName), useUnmergedTree = true).performClick()
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.tabTag(tabName), useUnmergedTree = true)
+        .performClick()
     waitForLoading()
   }
 
@@ -133,7 +136,9 @@ class JoinMeE2ETest {
     composeTestRule.waitForIdle()
 
     // Fill description
-    composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_DESCRIPTION).performScrollTo()
+    composeTestRule
+        .onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performScrollTo()
     composeTestRule
         .onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
         .performTextInput(description)
@@ -147,8 +152,12 @@ class JoinMeE2ETest {
     composeTestRule.waitForIdle()
 
     // Fill max participants (opens Compose dialog)
-    composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS).performScrollTo()
-    composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS).performClick()
+    composeTestRule
+        .onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .performScrollTo()
+    composeTestRule
+        .onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .performClick()
     composeTestRule.waitForIdle()
     Thread.sleep(300) // Wait for dialog to open
     // Click OK on the dialog (uses default value)
@@ -175,11 +184,14 @@ class JoinMeE2ETest {
     composeTestRule.waitForIdle()
 
     // Fill time (opens native Android dialog)
-    // Note: After filling date, the placeholder might change, so we find by scrolling to last scrollable element
+    // Note: After filling date, the placeholder might change, so we find by scrolling to last
+    // scrollable element
     Thread.sleep(500) // Let UI settle after date selection
     composeTestRule.waitForIdle()
     // Find time field - it should contain "time" or have a time icon
-    composeTestRule.onAllNodesWithText("Time", substring = true, ignoreCase = true)[0].performClick()
+    composeTestRule
+        .onAllNodesWithText("Time", substring = true, ignoreCase = true)[0]
+        .performClick()
     composeTestRule.waitForIdle()
     // Wait for native time picker dialog and click OK using UiAutomator
     device.wait(Until.hasObject(By.text("OK")), 2000)
@@ -188,7 +200,9 @@ class JoinMeE2ETest {
     composeTestRule.waitForIdle()
 
     // Select visibility
-    composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_VISIBILITY).performScrollTo()
+    composeTestRule
+        .onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_VISIBILITY)
+        .performScrollTo()
     composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_VISIBILITY).performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText(visibility).performClick()
@@ -211,13 +225,17 @@ class JoinMeE2ETest {
   @Test
   fun e2e_completeEventCreationFlow_createsAndDisplaysEvent() {
     // GIVEN: User is on Overview screen
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true).assertExists()
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+        .assertExists()
 
     // WHEN: User creates a new event
     val eventTitle = "E2E Basketball ${System.currentTimeMillis()}"
 
     // 1. Click create event button
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true).performClick()
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+        .performClick()
     waitForLoading()
 
     // 2. Fill out the form
@@ -225,7 +243,9 @@ class JoinMeE2ETest {
 
     // 3. Save the event
     waitForLoading()
-    composeTestRule.onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true).performClick()
+    composeTestRule
+        .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
+        .performClick()
     waitForLoading()
     // Give extra time for the async save operation to complete
     Thread.sleep(1000)
@@ -234,8 +254,10 @@ class JoinMeE2ETest {
     // THEN: Event should appear in Overview screen
     // Wait for the event list to appear (may take time for data to load)
     composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule.onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
-          .fetchSemanticsNodes().isNotEmpty()
+      composeTestRule
+          .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
 
     composeTestRule
@@ -247,24 +269,36 @@ class JoinMeE2ETest {
   @Test
   fun e2e_navigationBetweenAllTabs_worksCorrectly() {
     // GIVEN: User is on Overview screen
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true).assertExists()
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+        .assertExists()
 
     // WHEN & THEN: User navigates to each tab
     navigateToTab("Search")
-    composeTestRule.onNodeWithTag(SearchScreenTestTags.SEARCH_TEXT_FIELD, useUnmergedTree = true).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(SearchScreenTestTags.SEARCH_TEXT_FIELD, useUnmergedTree = true)
+        .assertIsDisplayed()
 
     navigateToTab("Map")
-    composeTestRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU, useUnmergedTree = true).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU, useUnmergedTree = true)
+        .assertIsDisplayed()
 
     navigateToTab("Profile")
     composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule.onAllNodesWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
-          .fetchSemanticsNodes().isNotEmpty()
+      composeTestRule
+          .onAllNodesWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
-    composeTestRule.onNodeWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
+        .assertIsDisplayed()
 
     navigateToTab("Overview")
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+        .assertIsDisplayed()
   }
 
   @Test
@@ -311,17 +345,23 @@ class JoinMeE2ETest {
   @Test
   fun e2e_profileFlow_displaysProfileScreen() {
     // GIVEN: User is on Overview
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true).assertExists()
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+        .assertExists()
 
     // WHEN: User navigates to Profile
     navigateToTab("Profile")
 
     // THEN: Profile screen should be displayed
     composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule.onAllNodesWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
-          .fetchSemanticsNodes().isNotEmpty()
+      composeTestRule
+          .onAllNodesWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
-    composeTestRule.onNodeWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
+        .assertIsDisplayed()
   }
 
   @Test
@@ -335,11 +375,15 @@ class JoinMeE2ETest {
 
     // WHEN: User creates multiple events
     eventTitles.forEach { title ->
-      composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true).performClick()
+      composeTestRule
+          .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+          .performClick()
       waitForLoading()
       fillEventForm(title = title)
       waitForLoading()
-      composeTestRule.onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true).performClick()
+      composeTestRule
+          .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
+          .performClick()
       waitForLoading()
       // Give extra time for the async save operation to complete
       Thread.sleep(1000)
@@ -349,8 +393,10 @@ class JoinMeE2ETest {
     // THEN: All events should be visible
     // Wait for the event list to appear
     composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule.onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
-          .fetchSemanticsNodes().isNotEmpty()
+      composeTestRule
+          .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
 
     eventTitles.forEach { title ->
@@ -367,11 +413,15 @@ class JoinMeE2ETest {
     val eventTitle = "E2E Journey ${System.currentTimeMillis()}"
 
     // Create event
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true).performClick()
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+        .performClick()
     waitForLoading()
     fillEventForm(title = eventTitle)
     waitForLoading()
-    composeTestRule.onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true).performClick()
+    composeTestRule
+        .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
+        .performClick()
     waitForLoading()
     // Give extra time for the async save operation to complete
     Thread.sleep(1000)
@@ -380,18 +430,24 @@ class JoinMeE2ETest {
     // Navigate to Profile
     navigateToTab("Profile")
     composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule.onAllNodesWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
-          .fetchSemanticsNodes().isNotEmpty()
+      composeTestRule
+          .onAllNodesWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
-    composeTestRule.onNodeWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
+        .assertIsDisplayed()
 
     // Return to Overview
     navigateToTab("Overview")
 
     // Event should still be visible
     composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule.onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
-          .fetchSemanticsNodes().isNotEmpty()
+      composeTestRule
+          .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
     composeTestRule
         .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)

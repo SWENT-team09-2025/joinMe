@@ -1080,7 +1080,6 @@ class OverviewScreenTest {
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).assertIsDisplayed()
   }
 
-
   @Test
   fun overviewScreen_hidesLoadingIndicator_afterEventsLoaded() {
     val repo = EventsRepositoryLocal()
