@@ -11,6 +11,8 @@ import androidx.test.uiautomator.Until
 import com.android.joinme.JoinMe
 import com.android.joinme.model.event.EventsRepositoryLocal
 import com.android.joinme.model.event.EventsRepositoryProvider
+import com.android.joinme.repository.GroupRepositoryLocal
+import com.android.joinme.repository.GroupRepositoryProvider
 import com.android.joinme.ui.history.HistoryScreenTestTags
 import com.android.joinme.ui.navigation.NavigationTestTags
 import com.android.joinme.ui.navigation.Screen
@@ -23,6 +25,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -85,6 +89,14 @@ class JoinMeE2ETest {
         val events = repo.getAllEvents().toList()
         events.forEach { repo.deleteEvent(it.eventId) }
       }
+    }
+
+    // Setup group repository with clean state
+    val groupRepo = GroupRepositoryLocal()
+    GroupRepositoryProvider.repository = groupRepo
+    runBlocking {
+      // Clear existing groups
+      groupRepo.clearAllGroups()
     }
 
     // Start app at Overview screen since we've already authenticated
@@ -453,5 +465,158 @@ class JoinMeE2ETest {
         .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
         .performScrollToNode(hasText(eventTitle))
     composeTestRule.onNodeWithText(eventTitle, useUnmergedTree = true).assertIsDisplayed()
+  }
+
+  // ==================== GROUP E2E TESTS ====================
+
+  @Test
+  fun e2e_groupsRepository_storesAndRetrievesData() {
+    // GIVEN: Groups are added to the repository
+    val groupRepo = GroupRepositoryProvider.repository as GroupRepositoryLocal
+    groupRepo.addTestGroup(
+        id = "test-group-1",
+        name = "E2E Basketball Team",
+        ownerId = "test-user-123",
+        description = "Weekly basketball practice",
+        memberCount = 12)
+    groupRepo.addTestGroup(
+        id = "test-group-2",
+        name = "E2E Chess Club",
+        ownerId = "test-user-123",
+        description = "Strategic minds unite",
+        memberCount = 8)
+
+    val groups = runBlocking { groupRepo.userGroups() }
+
+    assert(groups.size == 2)
+    assert(groups.any { it.name == "E2E Basketball Team" && it.membersCount == 12 })
+    assert(groups.any { it.name == "E2E Chess Club" && it.membersCount == 8 })
+  }
+
+  @Test
+  fun e2e_groupsRepository_handlesSpecialCharacters() {
+    val groupRepo = GroupRepositoryProvider.repository as GroupRepositoryLocal
+    groupRepo.addTestGroup(
+        id = "special-char-group-1",
+        name = "Café & Restaurant Club",
+        ownerId = "test-user-123",
+        description = "Food lovers unite! €$£¥",
+        memberCount = 15)
+    groupRepo.addTestGroup(
+        id = "special-char-group-2",
+        name = "Chess ♟️ Masters",
+        ownerId = "test-user-123",
+        description = "日本語 description",
+        memberCount = 7)
+
+    val groups = runBlocking { groupRepo.userGroups() }
+
+    assert(groups.size == 2)
+    val cafeGroup = groups.find { it.id == "special-char-group-1" }
+    val chessGroup = groups.find { it.id == "special-char-group-2" }
+    assert(cafeGroup?.name == "Café & Restaurant Club")
+    assert(cafeGroup?.description == "Food lovers unite! €$£¥")
+    assert(chessGroup?.name == "Chess ♟️ Masters")
+    assert(chessGroup?.description == "日本語 description")
+  }
+
+  @Test
+  fun e2e_groupsRepository_leavingGroupRemovesIt() {
+    val groupRepo = GroupRepositoryProvider.repository as GroupRepositoryLocal
+    groupRepo.addTestGroup(
+        id = "leave-test-group",
+        name = "Leaving Test Group",
+        ownerId = "test-user-123",
+        description = "Testing leave functionality",
+        memberCount = 5)
+
+    runBlocking {
+      val groupsBefore = groupRepo.userGroups()
+      assert(groupsBefore.size == 1)
+
+      groupRepo.leaveGroup("leave-test-group")
+
+      val groupsAfter = groupRepo.userGroups()
+
+      assert(groupsAfter.isEmpty())
+    }
+  }
+
+  @Test
+  fun e2e_groupsRepository_getGroupById() {
+    val groupRepo = GroupRepositoryProvider.repository as GroupRepositoryLocal
+    groupRepo.addTestGroup(
+        id = "get-test-group-1",
+        name = "Group 1",
+        ownerId = "owner1",
+        description = "First group",
+        memberCount = 3)
+    groupRepo.addTestGroup(
+        id = "get-test-group-2",
+        name = "Group 2",
+        ownerId = "owner2",
+        description = "Second group",
+        memberCount = 7)
+
+    val group = runBlocking { groupRepo.getGroup("get-test-group-2") }
+
+    assertNotNull(group)
+    assertEquals("Group 2", group?.name)
+    assertEquals("owner2", group?.ownerId)
+    assertEquals(7, group?.membersCount)
+  }
+
+  @Test
+  fun e2e_completeUserJourneyWithGroupsData_works() {
+    val eventTitle = "E2E Full Journey ${System.currentTimeMillis()}"
+    val groupRepo = GroupRepositoryProvider.repository as GroupRepositoryLocal
+    groupRepo.addTestGroup(
+        id = "journey-group",
+        name = "Journey Test Group",
+        ownerId = "test-user-123",
+        description = "Complete journey test",
+        memberCount = 10)
+
+    val groups = runBlocking { groupRepo.userGroups() }
+    assert(groups.size == 1)
+    assert(groups[0].name == "Journey Test Group")
+
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+        .performClick()
+    waitForLoading()
+    fillEventForm(title = eventTitle)
+    waitForLoading()
+    composeTestRule
+        .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
+        .performClick()
+    waitForLoading()
+    Thread.sleep(1000)
+    composeTestRule.waitForIdle()
+
+    navigateToTab("Profile")
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    navigateToTab("Overview")
+
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
+        .performScrollToNode(hasText(eventTitle))
+    composeTestRule.onNodeWithText(eventTitle, useUnmergedTree = true).assertIsDisplayed()
+
+    val groupsAfterNavigation = runBlocking { groupRepo.userGroups() }
+    assert(groupsAfterNavigation.size == 1)
+    assert(groupsAfterNavigation[0].name == "Journey Test Group")
   }
 }
