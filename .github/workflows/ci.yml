@@ -58,11 +58,15 @@ jobs:
             ~/.gradle/wrapper
           key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
 
-      # Load google-services.json from the secrets
+      # Load google-services.json and release keystore from the secrets
       - name: Decode secrets
         env:
           GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
           LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
+          RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           if [ -n "$GOOGLE_SERVICES" ]; then
             echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
@@ -73,6 +77,12 @@ jobs:
             echo "$LOCAL_PROPERTIES" | base64 --decode > ./local.properties
           else
             echo "::warning::LOCAL_PROPERTIES secret is not set. local.properties will not be created."
+          fi
+          if [ -n "$RELEASE_KEYSTORE" ]; then
+            echo "$RELEASE_KEYSTORE" | base64 --decode > ./release.keystore
+            echo "Release keystore decoded successfully"
+          else
+            echo "::warning::RELEASE_KEYSTORE secret is not set. Release signing will not be available."
           fi
 
       - name: Grant execute permission for gradlew
@@ -123,21 +133,33 @@ jobs:
 
       # This step runs gradle commands to build the application
       - name: Assemble
+        env:
+          RELEASE_KEYSTORE_PATH: ./release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           # To run the CI with debug information, add --info
-          ./gradlew assembleDebug lint --parallel --build-cache
+          ./gradlew assembleDebug assembleRelease lint --parallel --build-cache
 
       - name: Run tests
         run: |
           # To run the CI with debug information, add --info
           ./gradlew check --parallel --build-cache
 
-      # Upload the APK as an artifact so it can be downloaded
-      - name: Upload APK
+      # Upload the debug APK as an artifact
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
+
+      # Upload the release APK as an artifact (signed with release keystore)
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: app/build/outputs/apk/release/app-release.apk
 
       # Start Firebase emulators for instrumentation tests
       - name: Start Firebase emulators
