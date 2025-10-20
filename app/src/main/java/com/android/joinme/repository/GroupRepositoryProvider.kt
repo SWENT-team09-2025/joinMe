@@ -1,5 +1,7 @@
 package com.android.joinme.repository
 
+import com.android.joinme.model.group.GroupRepository
+import com.android.joinme.model.group.GroupRepositoryFirestore
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
 

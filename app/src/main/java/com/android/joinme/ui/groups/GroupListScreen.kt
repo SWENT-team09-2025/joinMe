@@ -27,15 +27,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.group.Group
 import com.android.joinme.ui.profile.ProfileScreen
 import com.android.joinme.ui.profile.ProfileTopBar
-import com.android.joinme.viewmodel.GroupListUIState
 
 /**
  * Contains test tags for UI elements in the GroupListScreen.
@@ -80,7 +82,10 @@ object GroupListScreenTestTags {
  * exist, an empty state message is displayed. Users can tap on a group card to view details, access
  * a menu via the more options button, or join a new group via the floating action button.
  *
- * @param uiState The current UI state containing the list of groups and other state information.
+ * This screen follows the MVVM pattern by observing the ViewModel's state via StateFlow.
+ *
+ * @param viewModel The ViewModel managing the group list state and business logic. Defaults to a
+ *   new instance provided by viewModel().
  * @param onJoinANewGroup Callback invoked when the user taps the "Join a new group" button.
  * @param onGroup Callback invoked when the user taps on a group card, receiving the selected
  *   [Group].
@@ -92,7 +97,7 @@ object GroupListScreenTestTags {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupListScreen(
-    uiState: GroupListUIState,
+    viewModel: GroupListViewModel = viewModel(),
     onJoinANewGroup: () -> Unit = {},
     onGroup: (Group) -> Unit = {},
     onMoreOptionMenu: (Group) -> Unit = {},
@@ -100,6 +105,7 @@ fun GroupListScreen(
     onProfileClick: () -> Unit = {},
     onEditClick: () -> Unit = {}
 ) {
+  val uiState by viewModel.uiState.collectAsState()
   val groups = uiState.groups
   Scaffold(
       topBar = {

@@ -1,5 +1,8 @@
 package com.android.joinme.repository
 
+import com.android.joinme.model.group.GROUPS_COLLECTION_PATH
+import com.android.joinme.model.group.GroupRepositoryFirestore
+import com.android.joinme.model.group.MEMBERSHIPS_COLLECTION_PATH
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth

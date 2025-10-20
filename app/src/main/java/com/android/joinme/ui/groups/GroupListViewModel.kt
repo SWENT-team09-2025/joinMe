@@ -1,9 +1,9 @@
-package com.android.joinme.viewmodel
+package com.android.joinme.ui.groups
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.group.Group
-import com.android.joinme.repository.GroupRepository
+import com.android.joinme.model.group.GroupRepository
 import com.android.joinme.repository.GroupRepositoryProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

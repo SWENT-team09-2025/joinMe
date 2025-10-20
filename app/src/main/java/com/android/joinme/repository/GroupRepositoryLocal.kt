@@ -1,9 +1,10 @@
 package com.android.joinme.repository
 
 import com.android.joinme.model.group.Group
+import com.android.joinme.model.group.GroupRepository
 
 /**
- * Local in-memory implementation of [GroupRepository].
+ * Local in-memory implementation of [com.android.joinme.model.group.GroupRepository].
  *
  * This repository stores groups in a mutable list, providing a lightweight, non-persistent storage
  * solution. It's primarily used for:
@@ -46,10 +47,6 @@ class GroupRepositoryLocal : GroupRepository {
       throw Exception("GroupRepositoryLocal: Group not found")
     }
   }
-
-  //    override suspend fun shareLink(id: String): String {
-  //        TODO("Not yet implemented")
-  //    }
 
   override suspend fun getGroup(id: String): Group? = groups.find { it.id == id }
 

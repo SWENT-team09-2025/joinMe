@@ -8,21 +8,50 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import com.android.joinme.model.group.Group
+import com.android.joinme.model.group.GroupRepository
 import com.android.joinme.ui.groups.GroupListScreen
 import com.android.joinme.ui.groups.GroupListScreenTestTags
-import com.android.joinme.viewmodel.GroupListUIState
+import com.android.joinme.ui.groups.GroupListViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
+/**
+ * Fake implementation of GroupRepository for testing purposes.
+ *
+ * This implementation stores groups in memory and allows tests to inject specific test data.
+ */
+class FakeGroupRepository : GroupRepository {
+  private val groups = mutableListOf<Group>()
+
+  fun setGroups(newGroups: List<Group>) {
+    groups.clear()
+    groups.addAll(newGroups)
+  }
+
+  override suspend fun userGroups(): List<Group> = groups
+
+  override suspend fun leaveGroup(id: String) {
+    groups.removeIf { it.id == id }
+  }
+
+  override suspend fun getGroup(id: String): Group? = groups.find { it.id == id }
+}
+
 class GroupListScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
 
+  private fun createViewModel(groups: List<Group> = emptyList()): GroupListViewModel {
+    val fakeRepo = FakeGroupRepository()
+    fakeRepo.setGroups(groups)
+    return GroupListViewModel(fakeRepo)
+  }
+
   @Test
   fun emptyState_isDisplayed() {
-    composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = emptyList())) }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel()) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.EMPTY).assertIsDisplayed()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).assertIsDisplayed()
@@ -30,7 +59,7 @@ class GroupListScreenTest {
 
   @Test
   fun emptyState_showsCorrectMessage() {
-    composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = emptyList())) }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel()) }
 
     composeTestRule.onNodeWithText("You are currently not").assertIsDisplayed()
     composeTestRule.onNodeWithText("assigned to a group…").assertIsDisplayed()
@@ -38,14 +67,14 @@ class GroupListScreenTest {
 
   @Test
   fun emptyState_listDoesNotExist() {
-    composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = emptyList())) }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel()) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LIST).assertDoesNotExist()
   }
 
   @Test
   fun emptyState_fabIsDisplayed() {
-    composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = emptyList())) }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel()) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).assertIsDisplayed()
   }
@@ -57,7 +86,7 @@ class GroupListScreenTest {
             Group(id = "1", name = "Football", ownerId = "owner1"),
             Group(id = "2", name = "Hiking", ownerId = "owner2"))
 
-    composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.EMPTY).assertDoesNotExist()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LIST).assertIsDisplayed()
@@ -75,9 +104,7 @@ class GroupListScreenTest {
             ownerId = "owner",
             memberIds = List(15) { "user$it" })
 
-    composeTestRule.setContent {
-      GroupListScreen(uiState = GroupListUIState(groups = listOf(group)))
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LIST).assertIsDisplayed()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("1")).assertIsDisplayed()
@@ -95,7 +122,7 @@ class GroupListScreenTest {
             Group(id = "2", name = "Hiking", ownerId = "owner", memberIds = List(10) { "user$it" }),
             Group(id = "3", name = "Chess", ownerId = "owner", memberIds = List(5) { "user$it" }))
 
-    composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("1")).assertIsDisplayed()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("2")).assertIsDisplayed()
@@ -112,9 +139,7 @@ class GroupListScreenTest {
             ownerId = "owner",
             memberIds = List(25) { "user$it" })
 
-    composeTestRule.setContent {
-      GroupListScreen(uiState = GroupListUIState(groups = listOf(group)))
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
 
     composeTestRule.onNodeWithText("Rock Climbing").assertIsDisplayed()
     composeTestRule.onNodeWithText("Indoor and outdoor climbing sessions").assertIsDisplayed()
@@ -131,9 +156,7 @@ class GroupListScreenTest {
             ownerId = "owner",
             memberIds = List(12) { "user$it" })
 
-    composeTestRule.setContent {
-      GroupListScreen(uiState = GroupListUIState(groups = listOf(group)))
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
 
     composeTestRule.onNodeWithText("Yoga Group").assertIsDisplayed()
     composeTestRule.onNodeWithText("members: 12").assertIsDisplayed()
@@ -149,9 +172,7 @@ class GroupListScreenTest {
             ownerId = "owner",
             memberIds = List(8) { "user$it" })
 
-    composeTestRule.setContent {
-      GroupListScreen(uiState = GroupListUIState(groups = listOf(group)))
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
 
     composeTestRule.onNodeWithText("Running Club").assertIsDisplayed()
     composeTestRule.onNodeWithText("members: 8").assertIsDisplayed()
@@ -167,9 +188,7 @@ class GroupListScreenTest {
             ownerId = "owner",
             memberIds = List(0) { "user$it" })
 
-    composeTestRule.setContent {
-      GroupListScreen(uiState = GroupListUIState(groups = listOf(group)))
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
 
     composeTestRule.onNodeWithText("members: 0").assertIsDisplayed()
   }
@@ -184,9 +203,7 @@ class GroupListScreenTest {
             ownerId = "owner",
             memberIds = List(999) { "user$it" })
 
-    composeTestRule.setContent {
-      GroupListScreen(uiState = GroupListUIState(groups = listOf(group)))
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
 
     composeTestRule.onNodeWithText("members: 999").assertIsDisplayed()
   }
@@ -200,8 +217,7 @@ class GroupListScreenTest {
     var clickedName: String? = null
 
     composeTestRule.setContent {
-      GroupListScreen(
-          uiState = GroupListUIState(groups = groups), onGroup = { g -> clickedName = g.name })
+      GroupListScreen(viewModel = createViewModel(groups), onGroup = { g -> clickedName = g.name })
     }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("1")).performClick()
@@ -223,8 +239,7 @@ class GroupListScreenTest {
 
     composeTestRule.setContent {
       GroupListScreen(
-          uiState = GroupListUIState(groups = listOf(testGroup)),
-          onGroup = { g -> clickedGroup = g })
+          viewModel = createViewModel(listOf(testGroup)), onGroup = { g -> clickedGroup = g })
     }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("abc123")).performClick()
@@ -243,7 +258,7 @@ class GroupListScreenTest {
 
     composeTestRule.setContent {
       GroupListScreen(
-          uiState = GroupListUIState(groups = groups), onGroup = { g -> clickedGroups.add(g.id) })
+          viewModel = createViewModel(groups), onGroup = { g -> clickedGroups.add(g.id) })
     }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("1")).performClick()
@@ -263,8 +278,7 @@ class GroupListScreenTest {
 
     composeTestRule.setContent {
       GroupListScreen(
-          uiState = GroupListUIState(groups = groups),
-          onMoreOptionMenu = { g -> moreClickedId = g.id })
+          viewModel = createViewModel(groups), onMoreOptionMenu = { g -> moreClickedId = g.id })
     }
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("2")).performClick()
     assertEquals("2", moreClickedId)
@@ -283,7 +297,7 @@ class GroupListScreenTest {
 
     composeTestRule.setContent {
       GroupListScreen(
-          uiState = GroupListUIState(groups = listOf(testGroup)),
+          viewModel = createViewModel(listOf(testGroup)),
           onMoreOptionMenu = { g -> clickedGroup = g })
     }
 
@@ -300,7 +314,7 @@ class GroupListScreenTest {
 
     composeTestRule.setContent {
       GroupListScreen(
-          uiState = GroupListUIState(groups = listOf(group)),
+          viewModel = createViewModel(listOf(group)),
           onGroup = { cardClicked = true },
           onMoreOptionMenu = { moreClicked = true })
     }
@@ -317,8 +331,7 @@ class GroupListScreenTest {
 
     composeTestRule.setContent {
       GroupListScreen(
-          uiState = GroupListUIState(groups = emptyList()),
-          onJoinANewGroup = { buttonClicked = true })
+          viewModel = createViewModel(emptyList()), onJoinANewGroup = { buttonClicked = true })
     }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
@@ -333,7 +346,7 @@ class GroupListScreenTest {
 
     composeTestRule.setContent {
       GroupListScreen(
-          uiState = GroupListUIState(groups = groups), onJoinANewGroup = { buttonClicked = true })
+          viewModel = createViewModel(groups), onJoinANewGroup = { buttonClicked = true })
     }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).assertIsDisplayed()
@@ -347,8 +360,7 @@ class GroupListScreenTest {
     var clickCount = 0
 
     composeTestRule.setContent {
-      GroupListScreen(
-          uiState = GroupListUIState(groups = emptyList()), onJoinANewGroup = { clickCount++ })
+      GroupListScreen(viewModel = createViewModel(emptyList()), onJoinANewGroup = { clickCount++ })
     }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
@@ -363,7 +375,7 @@ class GroupListScreenTest {
     val groups = (1..50).map { i -> Group(id = "$i", name = "Group $i", ownerId = "owner$i") }
     val lastId = "50"
 
-    composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
 
     composeTestRule
         .onNodeWithTag(GroupListScreenTestTags.LIST)
@@ -376,7 +388,7 @@ class GroupListScreenTest {
   fun list_scrollToMiddleItem() {
     val groups = (1..50).map { i -> Group(id = "$i", name = "Group $i", ownerId = "owner$i") }
 
-    composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
 
     composeTestRule
         .onNodeWithTag(GroupListScreenTestTags.LIST)
@@ -389,7 +401,7 @@ class GroupListScreenTest {
   fun list_firstItemInitiallyVisible() {
     val groups = (1..50).map { i -> Group(id = "$i", name = "Group $i", ownerId = "owner$i") }
 
-    composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("1")).assertIsDisplayed()
   }
@@ -404,8 +416,7 @@ class GroupListScreenTest {
     var clickedGroup: Group? = null
 
     composeTestRule.setContent {
-      GroupListScreen(
-          uiState = GroupListUIState(groups = groups), onGroup = { g -> clickedGroup = g })
+      GroupListScreen(viewModel = createViewModel(groups), onGroup = { g -> clickedGroup = g })
     }
 
     composeTestRule
@@ -425,8 +436,7 @@ class GroupListScreenTest {
 
     composeTestRule.setContent {
       GroupListScreen(
-          uiState = GroupListUIState(groups = groups),
-          onMoreOptionMenu = { g -> clickedGroupId = g.id })
+          viewModel = createViewModel(groups), onMoreOptionMenu = { g -> clickedGroupId = g.id })
     }
 
     composeTestRule
@@ -448,9 +458,7 @@ class GroupListScreenTest {
             ownerId = "owner",
             memberIds = List(10) { "user$it" })
 
-    composeTestRule.setContent {
-      GroupListScreen(uiState = GroupListUIState(groups = listOf(group)))
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("1")).assertIsDisplayed()
   }
@@ -466,9 +474,7 @@ class GroupListScreenTest {
             ownerId = "owner",
             memberIds = List(10) { "user$it" })
 
-    composeTestRule.setContent {
-      GroupListScreen(uiState = GroupListUIState(groups = listOf(group)))
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("1")).assertIsDisplayed()
   }
@@ -490,7 +496,7 @@ class GroupListScreenTest {
             Group(
                 id = "3", name = "日本語 Group", ownerId = "owner", memberIds = List(7) { "user$it" }))
 
-    composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
 
     composeTestRule.onNodeWithText("Café & Chill").assertIsDisplayed()
     composeTestRule.onNodeWithText("€$ Money Talk").assertIsDisplayed()
@@ -514,7 +520,7 @@ class GroupListScreenTest {
                 ownerId = "owner",
                 memberIds = List(20) { "user$it" }))
 
-    composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
 
     composeTestRule.onNodeWithText("Let's do a 5v5 match!").assertIsDisplayed()
     composeTestRule.onNodeWithText("Let's play Minecraft SkyWars!").assertIsDisplayed()
@@ -528,7 +534,7 @@ class GroupListScreenTest {
               id = "$i", name = "Group $i", ownerId = "owner$i", memberIds = List(5) { "user$it" })
         }
 
-    composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LIST).assertIsDisplayed()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("1")).assertIsDisplayed()
@@ -541,7 +547,7 @@ class GroupListScreenTest {
             Group(
                 id = "1", name = "New Group", ownerId = "owner", memberIds = List(5) { "user$it" }))
 
-    composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LIST).assertIsDisplayed()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("1")).assertIsDisplayed()
@@ -556,7 +562,7 @@ class GroupListScreenTest {
             Group(id = "2", name = "Group B", ownerId = "owner2"),
             Group(id = "3", name = "Group C", ownerId = "owner3"))
 
-    composeTestRule.setContent { GroupListScreen(uiState = GroupListUIState(groups = groups)) }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("1")).assertIsDisplayed()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("2")).assertIsDisplayed()
@@ -574,8 +580,7 @@ class GroupListScreenTest {
 
     composeTestRule.setContent {
       GroupListScreen(
-          uiState = GroupListUIState(groups = groups),
-          onMoreOptionMenu = { g -> clickedIds.add(g.id) })
+          viewModel = createViewModel(groups), onMoreOptionMenu = { g -> clickedIds.add(g.id) })
     }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("a")).performClick()

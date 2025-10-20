@@ -1,6 +1,4 @@
-package com.android.joinme.repository
-
-import com.android.joinme.model.group.Group
+package com.android.joinme.model.group
 
 /**
  * Repository interface for managing group-related data operations.
@@ -19,8 +17,6 @@ interface GroupRepository {
    */
   suspend fun userGroups(): List<Group>
 
-  // suspend fun refreshUserGroups()
-
   /**
    * Removes the current user from the specified group.
    *
@@ -28,8 +24,6 @@ interface GroupRepository {
    * @throws Exception if the group cannot be found or if the operation fails.
    */
   suspend fun leaveGroup(id: String)
-
-  //    suspend fun shareLink(id: String): String
 
   /**
    * Retrieves detailed information about a specific group.

@@ -1,12 +1,10 @@
-package com.android.joinme.repository
+package com.android.joinme.model.group
 
-import com.android.joinme.model.group.Group
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlin.String
 import kotlinx.coroutines.tasks.await
 
 /** Firestore collection path for storing group documents. */
