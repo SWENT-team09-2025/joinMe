@@ -1,10 +1,9 @@
-package com.android.joinme.repository
+package com.android.joinme.model.group
 
-import com.android.joinme.model.group.Group
-import com.android.joinme.model.group.GroupRepository
+import com.android.joinme.model.group.GroupRepositoryProvider
 
 /**
- * Local in-memory implementation of [com.android.joinme.model.group.GroupRepository].
+ * Local in-memory implementation of [GroupRepository].
  *
  * This repository stores groups in a mutable list, providing a lightweight, non-persistent storage
  * solution. It's primarily used for:

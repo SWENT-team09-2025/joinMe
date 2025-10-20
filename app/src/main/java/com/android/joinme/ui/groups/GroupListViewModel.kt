@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.group.Group
 import com.android.joinme.model.group.GroupRepository
-import com.android.joinme.repository.GroupRepositoryProvider
+import com.android.joinme.model.group.GroupRepositoryProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

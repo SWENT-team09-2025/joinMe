@@ -1,6 +1,7 @@
 package com.android.joinme.repository
 
 import com.android.joinme.model.group.Group
+import com.android.joinme.model.group.GroupRepositoryLocal
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
