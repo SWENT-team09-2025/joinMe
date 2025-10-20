@@ -14,7 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -25,7 +24,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.Tab
+import com.android.joinme.ui.theme.BorderColor
 import com.android.joinme.ui.theme.JoinMeColor
+import com.android.joinme.ui.theme.ScreenBackgroundColor
 import com.google.firebase.Timestamp
 
 /**
@@ -69,7 +70,7 @@ fun ViewProfileScreen(
 
   Scaffold(
       modifier = Modifier.testTag(ViewProfileTestTags.SCREEN),
-      containerColor = Color.White,
+      containerColor = ScreenBackgroundColor,
       topBar = {
         ProfileTopBar(
             currentScreen = ProfileScreen.VIEW_PROFILE,
@@ -225,7 +226,7 @@ private fun ProfileField(
             Modifier.fillMaxWidth()
                 .heightIn(min = minHeight)
                 .clip(RoundedCornerShape(12.dp))
-                .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp))
+                .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
                 .padding(20.dp)) {
           Text(text = value, fontSize = 16.sp, color = JoinMeColor)
         }
@@ -248,7 +249,7 @@ fun ViewProfileScreenPreview() {
           updatedAt = Timestamp.now())
 
   Scaffold(
-      containerColor = Color.White,
+      containerColor = ScreenBackgroundColor,
       topBar = {
         ProfileTopBar(
             currentScreen = ProfileScreen.VIEW_PROFILE,

@@ -27,7 +27,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.Tab
+import com.android.joinme.ui.theme.BorderColor
+import com.android.joinme.ui.theme.DisabledBorderColor
+import com.android.joinme.ui.theme.DisabledTextColor
+import com.android.joinme.ui.theme.ErrorBorderColor
+import com.android.joinme.ui.theme.FocusedBorderColor
 import com.android.joinme.ui.theme.JoinMeColor
+import com.android.joinme.ui.theme.LabelTextColor
+import com.android.joinme.ui.theme.SaveButtonTextColor
+import com.android.joinme.ui.theme.ScreenBackgroundColor
 import com.google.firebase.Timestamp
 
 object EditProfileTestTags {
@@ -98,7 +106,7 @@ fun EditProfileScreen(
 
   Scaffold(
       modifier = Modifier.testTag(EditProfileTestTags.SCREEN),
-      containerColor = Color.White,
+      containerColor = ScreenBackgroundColor,
       topBar = {
         ProfileTopBar(
             currentScreen = ProfileScreen.EDIT_PROFILE,
@@ -276,10 +284,14 @@ private fun EditProfileContent(
             enabled = isFormValid,
             colors =
                 ButtonDefaults.buttonColors(
-                    containerColor = if (isFormValid) JoinMeColor else Color.LightGray,
-                    disabledContainerColor = Color.LightGray),
+                    containerColor = if (isFormValid) JoinMeColor else BorderColor,
+                    disabledContainerColor = BorderColor),
             shape = RoundedCornerShape(12.dp)) {
-              Text("SAVE", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+              Text(
+                  "SAVE",
+                  fontSize = 16.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = SaveButtonTextColor)
             }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -311,7 +323,7 @@ private fun ProfilePictureSection(onPictureEditClick: () -> Unit = {}) {
                       Icon(
                           imageVector = Icons.Outlined.Edit,
                           contentDescription = "Edit Photo",
-                          tint = Color.White,
+                          tint = SaveButtonTextColor,
                           modifier = Modifier.size(56.dp))
                     }
               }
@@ -330,14 +342,14 @@ private fun PasswordSection(onChangePasswordClick: () -> Unit) {
     Box(
         modifier =
             Modifier.fillMaxWidth()
-                .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp))
+                .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
                 .padding(16.dp)) {
           Row(
               modifier = Modifier.fillMaxWidth(),
               horizontalArrangement = Arrangement.SpaceBetween,
               verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                  Text(text = "************", fontSize = 16.sp, color = Color.Gray)
+                  Text(text = "************", fontSize = 16.sp, color = LabelTextColor)
                 }
 
                 Button(
@@ -376,11 +388,11 @@ private fun BioSection(bio: String, onBioChange: (String) -> Unit) {
           Text(
               "Tell others a bit about yourself — your passions, what you enjoy doing, or what you're looking for on JoinMe.",
               fontSize = 12.sp,
-              color = Color.Gray)
+              color = LabelTextColor)
         },
         colors =
             OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = Color.LightGray, focusedBorderColor = JoinMeColor),
+                unfocusedBorderColor = BorderColor, focusedBorderColor = JoinMeColor),
         shape = RoundedCornerShape(12.dp))
   }
 }
@@ -413,13 +425,13 @@ private fun EditTextField(
             else modifier.fillMaxWidth(),
         enabled = enabled,
         isError = isError,
-        placeholder = placeholder?.let { { Text(it, color = Color.LightGray) } },
+        placeholder = placeholder?.let { { Text(it, color = BorderColor) } },
         colors =
             OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = if (isError) Color.Red else Color.LightGray,
-                focusedBorderColor = if (isError) Color.Red else JoinMeColor,
-                disabledBorderColor = Color.LightGray,
-                disabledTextColor = Color.Gray),
+                unfocusedBorderColor = if (isError) ErrorBorderColor else BorderColor,
+                focusedBorderColor = if (isError) ErrorBorderColor else FocusedBorderColor,
+                disabledBorderColor = DisabledBorderColor,
+                disabledTextColor = DisabledTextColor),
         shape = RoundedCornerShape(12.dp),
         singleLine = true)
 
@@ -429,7 +441,7 @@ private fun EditTextField(
       Text(
           text = textToShow,
           fontSize = 11.sp,
-          color = if (isError) Color.Red else Color.Gray,
+          color = if (isError) ErrorBorderColor else LabelTextColor,
           modifier =
               if (isError) Modifier.padding(start = 12.dp, top = 4.dp).testTag(errorTestTag)
               else Modifier.padding(start = 12.dp, top = 4.dp))
@@ -453,7 +465,7 @@ fun EditProfileScreenPreview() {
           updatedAt = Timestamp.now())
 
   Scaffold(
-      containerColor = Color.White,
+      containerColor = ScreenBackgroundColor,
       topBar = {
         ProfileTopBar(
             currentScreen = ProfileScreen.EDIT_PROFILE,

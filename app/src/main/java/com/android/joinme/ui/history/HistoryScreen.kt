@@ -28,7 +28,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
@@ -36,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.Event
 import com.android.joinme.ui.components.EventCard
+import com.android.joinme.ui.theme.DividerColor
 
 object HistoryScreenTestTags {
   const val SCREEN = "historyScreen"
@@ -109,7 +109,7 @@ fun HistoryScreen(
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
-          HorizontalDivider(color = Color.Black, thickness = 1.dp)
+          HorizontalDivider(color = DividerColor, thickness = 1.dp)
         }
       }) { innerPadding ->
         when {

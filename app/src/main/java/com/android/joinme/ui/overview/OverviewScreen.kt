@@ -30,7 +30,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -44,6 +43,8 @@ import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.NavigationTestTags
 import com.android.joinme.ui.navigation.Tab
+import com.android.joinme.ui.theme.DividerColor
+import com.android.joinme.ui.theme.IconColor
 import com.android.joinme.ui.theme.OverviewScreenButtonColor
 
 object OverviewScreenTestTags {
@@ -99,7 +100,7 @@ fun OverviewScreen(
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
-          HorizontalDivider(color = Color.Black, thickness = 1.dp)
+          HorizontalDivider(color = DividerColor, thickness = 1.dp)
         }
       },
       bottomBar = {
@@ -113,7 +114,7 @@ fun OverviewScreen(
             onClick = onAddEvent,
             containerColor = OverviewScreenButtonColor,
             modifier = Modifier.testTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON)) {
-              Icon(Icons.Default.Add, contentDescription = "Add Event", tint = Color.Black)
+              Icon(Icons.Default.Add, contentDescription = "Add Event", tint = IconColor)
             }
       }) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
@@ -203,7 +204,7 @@ fun OverviewScreen(
                   Modifier.align(Alignment.BottomStart)
                       .padding(start = 16.dp, bottom = 16.dp)
                       .testTag(OverviewScreenTestTags.HISTORY_BUTTON)) {
-                Icon(Icons.Default.History, contentDescription = "View History", tint = Color.Black)
+                Icon(Icons.Default.History, contentDescription = "View History", tint = IconColor)
               }
         }
       }
