@@ -1,7 +1,5 @@
 package com.android.joinme.model.group
 
-import com.android.joinme.model.group.GroupRepositoryProvider
-
 /**
  * Local in-memory implementation of [GroupRepository].
  *
