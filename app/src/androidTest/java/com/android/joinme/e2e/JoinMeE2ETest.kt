@@ -178,8 +178,15 @@ class JoinMeE2ETest {
     composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_DATE).performClick()
     composeTestRule.waitForIdle()
     // Wait for native date picker dialog and click OK using UiAutomator
-    device.wait(Until.hasObject(By.text("OK")), 2000)
-    device.findObject(By.text("OK")).click()
+    device.wait(Until.hasObject(By.text("OK")), 5000)
+    val okButton = device.findObject(By.text("OK"))
+    if (okButton != null) {
+      okButton.click()
+    } else {
+      // Try alternative button texts (for different Android versions/locales)
+      val confirmButton = device.findObject(By.res("android:id/button1"))
+      confirmButton?.click()
+    }
     Thread.sleep(300)
     composeTestRule.waitForIdle()
 
@@ -194,8 +201,15 @@ class JoinMeE2ETest {
         .performClick()
     composeTestRule.waitForIdle()
     // Wait for native time picker dialog and click OK using UiAutomator
-    device.wait(Until.hasObject(By.text("OK")), 2000)
-    device.findObject(By.text("OK")).click()
+    device.wait(Until.hasObject(By.text("OK")), 5000)
+    val okButtonTime = device.findObject(By.text("OK"))
+    if (okButtonTime != null) {
+      okButtonTime.click()
+    } else {
+      // Try alternative button texts (for different Android versions/locales)
+      val confirmButtonTime = device.findObject(By.res("android:id/button1"))
+      confirmButtonTime?.click()
+    }
     Thread.sleep(300)
     composeTestRule.waitForIdle()
 
