@@ -17,6 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
 import com.android.joinme.model.authentification.AuthRepository
+import com.android.joinme.ui.groups.GroupListScreen
 import com.android.joinme.ui.history.HistoryScreen
 import com.android.joinme.ui.map.MapScreen
 import com.android.joinme.ui.map.MapViewModel
@@ -170,13 +171,28 @@ fun JoinMe(
             uid = FirebaseAuth.getInstance().currentUser?.uid ?: "",
             onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
             onBackClick = { navigationActions.goBack() },
-            onGroupClick = {
-              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
-            }, // TODO navigate to groups screen
+            onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
             onSignOutComplete = { navigationActions.navigateTo(Screen.Auth) })
       }
+
+      composable(Screen.Groups.route) {
+        GroupListScreen(
+            onJoinANewGroup = {
+              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            }, // TODO navigate to join group screen
+            onGroup = {
+              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            }, // TODO navigate to group details screen
+            onMoreOptionMenu = {
+              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            }, // TODO show more options menu
+            onBackClick = { navigationActions.goBack() },
+            onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
+            onEditClick = { navigationActions.navigateTo(Screen.EditProfile) })
+      }
     }
+
     navigation(
         startDestination = Screen.EditProfile.route,
         route = Screen.EditProfile.name,
@@ -187,9 +203,7 @@ fun JoinMe(
             onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
             onBackClick = { navigationActions.goBack() },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
-            onGroupClick = {
-              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
-            }, // TODO navigate to groups screen
+            onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
             onChangePasswordClick = {}, // TODO implement change password flow in a future update
             onSaveSuccess = { navigationActions.navigateTo(Screen.Profile) })
       }

@@ -23,6 +23,8 @@ sealed class Screen(
 
   object History : Screen(route = "history", name = "History")
 
+  object Groups : Screen(route = "groups", name = "Groups")
+
   data class EditEvent(val eventId: String) :
       Screen(route = "edit_event/${eventId}", name = "Edit Event") {
     companion object {
