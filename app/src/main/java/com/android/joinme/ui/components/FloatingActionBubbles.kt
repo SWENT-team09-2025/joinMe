@@ -1,9 +1,11 @@
 package com.android.joinme.ui.components
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -65,10 +67,11 @@ object FloatingActionBubblesTestTags {
  * Overview; for adding an event or adding a series of events, etc.)
  *
  * Features:
- * - Animated appearance/disappearance
+ * - Animated appearance/disappearance with smooth fade-in
  * - Dismissible by tapping outside (scrim) or back press
  * - Configurable number of bubbles with custom text, icons, and actions
  * - Customizable positioning (bottom-right, top-left, etc.)
+ * - Dark mode support with adaptive scrim opacity
  *
  * Usage example 1 (GroupListScreen - bottom right):
  * ```
@@ -128,18 +131,30 @@ fun FloatingActionBubbles(
     containerColor: Color = MaterialTheme.colorScheme.secondary,
     contentColor: Color = MaterialTheme.colorScheme.onSecondary
 ) {
+  // Animate scrim opacity for smooth fade-in/fade-out
+  val scrimAlpha by
+      animateFloatAsState(
+          targetValue = if (visible) 1f else 0f,
+          animationSpec = tween(durationMillis = 300),
+          label = "scrimAlpha")
+
+  // Adaptive scrim opacity for dark mode visibility
+  val isDarkTheme = isSystemInDarkTheme()
+  val scrimBaseOpacity = if (isDarkTheme) 0.6f else 0.3f
+  val scrimColor = Color.Black.copy(alpha = scrimBaseOpacity * scrimAlpha)
+
   // Animated visibility for bubbles
   AnimatedVisibility(
       visible = visible,
-      enter = fadeIn() + scaleIn(initialScale = 0.8f),
-      exit = fadeOut() + scaleOut(targetScale = 0.8f),
+      enter = fadeIn(animationSpec = tween(300)) + scaleIn(initialScale = 0.8f),
+      exit = fadeOut(animationSpec = tween(300)) + scaleOut(targetScale = 0.8f),
       modifier = modifier.testTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)) {
         Box(modifier = Modifier.fillMaxSize()) {
-          // Scrim (transparent overlay) to dismiss bubbles
+          // Scrim (transparent overlay) to dismiss bubbles with animated fade
           Box(
               modifier =
                   Modifier.fillMaxSize()
-                      .background(Color.Black.copy(alpha = 0.3f))
+                      .background(scrimColor)
                       .clickable(
                           interactionSource = remember { MutableInteractionSource() },
                           indication = null,

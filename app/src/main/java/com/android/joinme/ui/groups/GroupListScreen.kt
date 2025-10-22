@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Link
@@ -31,7 +32,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,7 +43,6 @@ import com.android.joinme.ui.components.BubbleAlignment
 import com.android.joinme.ui.components.FloatingActionBubbles
 import com.android.joinme.ui.profile.ProfileScreen
 import com.android.joinme.ui.profile.ProfileTopBar
-import com.android.joinme.ui.theme.JoinMeColor
 
 /**
  * Contains test tags for UI elements in the GroupListScreen.
@@ -157,8 +156,11 @@ fun GroupListScreen(
                   contentDescription = "Join a new group",
                   tint = MaterialTheme.colorScheme.onPrimary)
             },
+            shape = RoundedCornerShape(24.dp),
             text = { Text("Join a new group", color = MaterialTheme.colorScheme.onPrimary) },
-            containerColor = (if (showJoinBubbles) Color.LightGray else JoinMeColor))
+            containerColor =
+                if (showJoinBubbles) MaterialTheme.colorScheme.surfaceVariant
+                else MaterialTheme.colorScheme.primary)
       },
       floatingActionButtonPosition = FabPosition.Center,
   ) { pd ->
@@ -199,15 +201,14 @@ fun GroupListScreen(
       }
 
       // Floating action bubbles overlay for join/create group
-      // Positioned at bottom-right to appear slightly to the right of the FAB
+      // Positioned at bottom-right, using theme colors for dark mode support
       FloatingActionBubbles(
           visible = showJoinBubbles,
           onDismiss = { showJoinBubbles = false },
           actions = groupJoinBubbleActions,
-          bubbleAlignment = BubbleAlignment.BOTTOM_END, // Position at bottom-right
-          containerColor = Color.White, // White background from Figma
-          contentColor = JoinMeColor // JoinMeColor text from Figma
-          )
+          bubbleAlignment = BubbleAlignment.BOTTOM_END,
+          containerColor = MaterialTheme.colorScheme.surface,
+          contentColor = MaterialTheme.colorScheme.onSurface)
     }
   }
 }
