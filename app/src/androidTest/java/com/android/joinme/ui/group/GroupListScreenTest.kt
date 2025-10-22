@@ -1,4 +1,4 @@
-package com.android.joinme.ui.overview
+package com.android.joinme.ui.group
 
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
