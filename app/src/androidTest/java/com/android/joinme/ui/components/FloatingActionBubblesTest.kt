@@ -24,506 +24,408 @@ import org.junit.Test
  */
 class FloatingActionBubblesTest {
 
-    @get:Rule
-    val composeTestRule = createComposeRule()
+  @get:Rule val composeTestRule = createComposeRule()
 
-    // ==================== Visibility Tests ====================
+  // ==================== Visibility Tests ====================
 
-    @Test
-    fun floatingActionBubbles_whenVisible_isDisplayed() {
-        // Given: Bubbles with visible = true
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(
-                    BubbleAction(text = "Action 1", onClick = {})
-                )
-            )
-        }
-
-        // Then: Container is displayed
-        composeTestRule
-            .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
-            .assertIsDisplayed()
+  @Test
+  fun floatingActionBubbles_whenVisible_isDisplayed() {
+    // Given: Bubbles with visible = true
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions = listOf(BubbleAction(text = "Action 1", onClick = {})))
     }
 
-    @Test
-    fun floatingActionBubbles_whenNotVisible_isNotDisplayed() {
-        // Given: Bubbles with visible = false
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = false,
-                onDismiss = {},
-                actions = listOf(
-                    BubbleAction(text = "Action 1", onClick = {})
-                )
-            )
-        }
+    // Then: Container is displayed
+    composeTestRule
+        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
+        .assertIsDisplayed()
+  }
 
-        // Then: Container does not exist
-        composeTestRule
-            .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
-            .assertDoesNotExist()
+  @Test
+  fun floatingActionBubbles_whenNotVisible_isNotDisplayed() {
+    // Given: Bubbles with visible = false
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = false,
+          onDismiss = {},
+          actions = listOf(BubbleAction(text = "Action 1", onClick = {})))
     }
 
-    // ==================== Action Display Tests ====================
+    // Then: Container does not exist
+    composeTestRule
+        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
+        .assertDoesNotExist()
+  }
 
-    @Test
-    fun floatingActionBubbles_displaysSingleAction() {
-        // Given: Bubbles with one action
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(
-                    BubbleAction(text = "Single Action", onClick = {})
-                )
-            )
-        }
+  // ==================== Action Display Tests ====================
 
-        // Then: Action is displayed
-        composeTestRule
-            .onNodeWithText("Single Action")
-            .assertIsDisplayed()
+  @Test
+  fun floatingActionBubbles_displaysSingleAction() {
+    // Given: Bubbles with one action
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions = listOf(BubbleAction(text = "Single Action", onClick = {})))
     }
 
-    @Test
-    fun floatingActionBubbles_displaysMultipleActions() {
-        // Given: Bubbles with multiple actions
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(
-                    BubbleAction(text = "Action 1", onClick = {}),
-                    BubbleAction(text = "Action 2", onClick = {}),
-                    BubbleAction(text = "Action 3", onClick = {})
-                )
-            )
-        }
+    // Then: Action is displayed
+    composeTestRule.onNodeWithText("Single Action").assertIsDisplayed()
+  }
 
-        // Then: All actions are displayed
-        composeTestRule.onNodeWithText("Action 1").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Action 2").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Action 3").assertIsDisplayed()
+  @Test
+  fun floatingActionBubbles_displaysMultipleActions() {
+    // Given: Bubbles with multiple actions
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions =
+              listOf(
+                  BubbleAction(text = "Action 1", onClick = {}),
+                  BubbleAction(text = "Action 2", onClick = {}),
+                  BubbleAction(text = "Action 3", onClick = {})))
     }
 
-    @Test
-    fun floatingActionBubbles_displaysActionsWithIcons() {
-        // Given: Bubbles with icons
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(
-                    BubbleAction(
-                        text = "Add",
-                        icon = Icons.Default.Add,
-                        onClick = {}
-                    ),
-                    BubbleAction(
-                        text = "Edit",
-                        icon = Icons.Default.Edit,
-                        onClick = {}
-                    )
-                )
-            )
-        }
+    // Then: All actions are displayed
+    composeTestRule.onNodeWithText("Action 1").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Action 2").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Action 3").assertIsDisplayed()
+  }
 
-        // Then: Actions with content descriptions are displayed
-        composeTestRule.onNodeWithContentDescription("Add").assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription("Edit").assertIsDisplayed()
+  @Test
+  fun floatingActionBubbles_displaysActionsWithIcons() {
+    // Given: Bubbles with icons
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions =
+              listOf(
+                  BubbleAction(text = "Add", icon = Icons.Default.Add, onClick = {}),
+                  BubbleAction(text = "Edit", icon = Icons.Default.Edit, onClick = {})))
     }
 
-    @Test
-    fun floatingActionBubbles_displaysActionsWithoutIcons() {
-        // Given: Bubbles without icons
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(
-                    BubbleAction(text = "No Icon Action", icon = null, onClick = {})
-                )
-            )
-        }
+    // Then: Actions with content descriptions are displayed
+    composeTestRule.onNodeWithContentDescription("Add").assertIsDisplayed()
+    composeTestRule.onNodeWithContentDescription("Edit").assertIsDisplayed()
+  }
 
-        // Then: Action text is displayed (no icon)
-        composeTestRule.onNodeWithText("No Icon Action").assertIsDisplayed()
+  @Test
+  fun floatingActionBubbles_displaysActionsWithoutIcons() {
+    // Given: Bubbles without icons
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions = listOf(BubbleAction(text = "No Icon Action", icon = null, onClick = {})))
     }
 
-    // ==================== Interaction Tests ====================
+    // Then: Action text is displayed (no icon)
+    composeTestRule.onNodeWithText("No Icon Action").assertIsDisplayed()
+  }
 
-    @Test
-    fun floatingActionBubbles_scrimClick_callsOnDismiss() {
-        // Given: Bubbles with dismiss callback
-        var dismissCalled = false
+  // ==================== Interaction Tests ====================
 
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = { dismissCalled = true },
-                actions = listOf(
-                    BubbleAction(text = "Action", onClick = {})
-                )
-            )
-        }
+  @Test
+  fun floatingActionBubbles_scrimClick_callsOnDismiss() {
+    // Given: Bubbles with dismiss callback
+    var dismissCalled = false
 
-        // When: User clicks scrim
-        composeTestRule
-            .onNodeWithTag(FloatingActionBubblesTestTags.SCRIM)
-            .performClick()
-
-        // Then: onDismiss was called
-        assert(dismissCalled) { "onDismiss should have been called" }
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = { dismissCalled = true },
+          actions = listOf(BubbleAction(text = "Action", onClick = {})))
     }
 
-    @Test
-    fun floatingActionBubbles_bubbleClick_callsOnClick() {
-        // Given: Bubbles with action callback
-        var actionClicked = false
+    // When: User clicks scrim
+    composeTestRule.onNodeWithTag(FloatingActionBubblesTestTags.SCRIM).performClick()
 
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(
-                    BubbleAction(
-                        text = "Clickable Action",
-                        onClick = { actionClicked = true }
-                    )
-                )
-            )
-        }
+    // Then: onDismiss was called
+    assert(dismissCalled) { "onDismiss should have been called" }
+  }
 
-        // When: User clicks the bubble
-        composeTestRule
-            .onNodeWithText("Clickable Action")
-            .performClick()
+  @Test
+  fun floatingActionBubbles_bubbleClick_callsOnClick() {
+    // Given: Bubbles with action callback
+    var actionClicked = false
 
-        // Then: onClick was called
-        assert(actionClicked) { "Action onClick should have been called" }
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions =
+              listOf(BubbleAction(text = "Clickable Action", onClick = { actionClicked = true })))
     }
 
-    @Test
-    fun floatingActionBubbles_bubbleClick_callsOnDismiss() {
-        // Given: Bubbles with dismiss callback
-        var dismissCalled = false
+    // When: User clicks the bubble
+    composeTestRule.onNodeWithText("Clickable Action").performClick()
 
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = { dismissCalled = true },
-                actions = listOf(
-                    BubbleAction(text = "Action", onClick = {})
-                )
-            )
-        }
+    // Then: onClick was called
+    assert(actionClicked) { "Action onClick should have been called" }
+  }
 
-        // When: User clicks a bubble
-        composeTestRule
-            .onNodeWithText("Action")
-            .performClick()
+  @Test
+  fun floatingActionBubbles_bubbleClick_callsOnDismiss() {
+    // Given: Bubbles with dismiss callback
+    var dismissCalled = false
 
-        // Then: onDismiss was called (auto-dismiss after action)
-        assert(dismissCalled) { "onDismiss should have been called after action" }
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = { dismissCalled = true },
+          actions = listOf(BubbleAction(text = "Action", onClick = {})))
     }
 
-    @Test
-    fun floatingActionBubbles_multipleActions_eachClickable() {
-        // Given: Bubbles with multiple actions
-        var action1Clicked = false
-        var action2Clicked = false
-        var action3Clicked = false
+    // When: User clicks a bubble
+    composeTestRule.onNodeWithText("Action").performClick()
 
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(
-                    BubbleAction(text = "Action 1", onClick = { action1Clicked = true }),
-                    BubbleAction(text = "Action 2", onClick = { action2Clicked = true }),
-                    BubbleAction(text = "Action 3", onClick = { action3Clicked = true })
-                )
-            )
-        }
+    // Then: onDismiss was called (auto-dismiss after action)
+    assert(dismissCalled) { "onDismiss should have been called after action" }
+  }
 
-        // When: User clicks each action
-        composeTestRule.onNodeWithText("Action 1").performClick()
-        assert(action1Clicked)
+  @Test
+  fun floatingActionBubbles_multipleActions_eachClickable() {
+    // Given: Bubbles with multiple actions
+    var action1Clicked = false
+    var action2Clicked = false
+    var action3Clicked = false
 
-        composeTestRule.onNodeWithText("Action 2").performClick()
-        assert(action2Clicked)
-
-        composeTestRule.onNodeWithText("Action 3").performClick()
-        assert(action3Clicked)
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions =
+              listOf(
+                  BubbleAction(text = "Action 1", onClick = { action1Clicked = true }),
+                  BubbleAction(text = "Action 2", onClick = { action2Clicked = true }),
+                  BubbleAction(text = "Action 3", onClick = { action3Clicked = true })))
     }
 
-    // ==================== Test Tags Tests ====================
+    // When: User clicks each action
+    composeTestRule.onNodeWithText("Action 1").performClick()
+    assert(action1Clicked)
 
-    @Test
-    fun floatingActionBubbles_usesCustomTestTags() {
-        // Given: Bubbles with custom test tags
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(
-                    BubbleAction(
-                        text = "Custom Tag Action",
-                        onClick = {},
-                        testTag = "customTestTag"
-                    )
-                )
-            )
-        }
+    composeTestRule.onNodeWithText("Action 2").performClick()
+    assert(action2Clicked)
 
-        // Then: Custom test tag is present
-        composeTestRule
-            .onNodeWithTag("customTestTag")
-            .assertIsDisplayed()
-            .assertHasClickAction()
+    composeTestRule.onNodeWithText("Action 3").performClick()
+    assert(action3Clicked)
+  }
+
+  // ==================== Test Tags Tests ====================
+
+  @Test
+  fun floatingActionBubbles_usesCustomTestTags() {
+    // Given: Bubbles with custom test tags
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions =
+              listOf(
+                  BubbleAction(
+                      text = "Custom Tag Action", onClick = {}, testTag = "customTestTag")))
     }
 
-    @Test
-    fun floatingActionBubbles_usesDefaultTestTagsWhenNotProvided() {
-        // Given: Bubbles without custom test tags
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(
-                    BubbleAction(text = "Action 1", onClick = {}),
-                    BubbleAction(text = "Action 2", onClick = {})
-                )
-            )
-        }
+    // Then: Custom test tag is present
+    composeTestRule.onNodeWithTag("customTestTag").assertIsDisplayed().assertHasClickAction()
+  }
 
-        // Then: Default test tags are present (floatingBubble_0, floatingBubble_1)
-        composeTestRule
-            .onNodeWithTag(FloatingActionBubblesTestTags.bubbleTag(0))
-            .assertIsDisplayed()
-
-        composeTestRule
-            .onNodeWithTag(FloatingActionBubblesTestTags.bubbleTag(1))
-            .assertIsDisplayed()
+  @Test
+  fun floatingActionBubbles_usesDefaultTestTagsWhenNotProvided() {
+    // Given: Bubbles without custom test tags
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions =
+              listOf(
+                  BubbleAction(text = "Action 1", onClick = {}),
+                  BubbleAction(text = "Action 2", onClick = {})))
     }
 
-    // ==================== Positioning Tests ====================
+    // Then: Default test tags are present (floatingBubble_0, floatingBubble_1)
+    composeTestRule.onNodeWithTag(FloatingActionBubblesTestTags.bubbleTag(0)).assertIsDisplayed()
 
-    @Test
-    fun floatingActionBubbles_bottomCenterAlignment_isDisplayed() {
-        // Given: Bubbles with BOTTOM_CENTER alignment
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(BubbleAction(text = "Bottom Center", onClick = {})),
-                bubbleAlignment = BubbleAlignment.BOTTOM_CENTER
-            )
-        }
+    composeTestRule.onNodeWithTag(FloatingActionBubblesTestTags.bubbleTag(1)).assertIsDisplayed()
+  }
 
-        // Then: Bubbles are displayed (positioning verified visually)
-        composeTestRule
-            .onNodeWithText("Bottom Center")
-            .assertIsDisplayed()
+  // ==================== Positioning Tests ====================
+
+  @Test
+  fun floatingActionBubbles_bottomCenterAlignment_isDisplayed() {
+    // Given: Bubbles with BOTTOM_CENTER alignment
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions = listOf(BubbleAction(text = "Bottom Center", onClick = {})),
+          bubbleAlignment = BubbleAlignment.BOTTOM_CENTER)
     }
 
-    @Test
-    fun floatingActionBubbles_bottomEndAlignment_isDisplayed() {
-        // Given: Bubbles with BOTTOM_END alignment
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(BubbleAction(text = "Bottom End", onClick = {})),
-                bubbleAlignment = BubbleAlignment.BOTTOM_END
-            )
-        }
+    // Then: Bubbles are displayed (positioning verified visually)
+    composeTestRule.onNodeWithText("Bottom Center").assertIsDisplayed()
+  }
 
-        // Then: Bubbles are displayed
-        composeTestRule
-            .onNodeWithText("Bottom End")
-            .assertIsDisplayed()
+  @Test
+  fun floatingActionBubbles_bottomEndAlignment_isDisplayed() {
+    // Given: Bubbles with BOTTOM_END alignment
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions = listOf(BubbleAction(text = "Bottom End", onClick = {})),
+          bubbleAlignment = BubbleAlignment.BOTTOM_END)
     }
 
-    @Test
-    fun floatingActionBubbles_topStartAlignment_isDisplayed() {
-        // Given: Bubbles with TOP_START alignment
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(BubbleAction(text = "Top Start", onClick = {})),
-                bubbleAlignment = BubbleAlignment.TOP_START,
-                bottomPadding = 0.dp
-            )
-        }
+    // Then: Bubbles are displayed
+    composeTestRule.onNodeWithText("Bottom End").assertIsDisplayed()
+  }
 
-        // Then: Bubbles are displayed
-        composeTestRule
-            .onNodeWithText("Top Start")
-            .assertIsDisplayed()
+  @Test
+  fun floatingActionBubbles_topStartAlignment_isDisplayed() {
+    // Given: Bubbles with TOP_START alignment
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions = listOf(BubbleAction(text = "Top Start", onClick = {})),
+          bubbleAlignment = BubbleAlignment.TOP_START,
+          bottomPadding = 0.dp)
     }
 
-    @Test
-    fun floatingActionBubbles_topEndAlignment_isDisplayed() {
-        // Given: Bubbles with TOP_END alignment
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(BubbleAction(text = "Top End", onClick = {})),
-                bubbleAlignment = BubbleAlignment.TOP_END,
-                bottomPadding = 0.dp
-            )
-        }
+    // Then: Bubbles are displayed
+    composeTestRule.onNodeWithText("Top Start").assertIsDisplayed()
+  }
 
-        // Then: Bubbles are displayed
-        composeTestRule
-            .onNodeWithText("Top End")
-            .assertIsDisplayed()
+  @Test
+  fun floatingActionBubbles_topEndAlignment_isDisplayed() {
+    // Given: Bubbles with TOP_END alignment
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions = listOf(BubbleAction(text = "Top End", onClick = {})),
+          bubbleAlignment = BubbleAlignment.TOP_END,
+          bottomPadding = 0.dp)
     }
 
-    @Test
-    fun floatingActionBubbles_centerAlignment_isDisplayed() {
-        // Given: Bubbles with CENTER alignment
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(BubbleAction(text = "Center", onClick = {})),
-                bubbleAlignment = BubbleAlignment.CENTER
-            )
-        }
+    // Then: Bubbles are displayed
+    composeTestRule.onNodeWithText("Top End").assertIsDisplayed()
+  }
 
-        // Then: Bubbles are displayed
-        composeTestRule
-            .onNodeWithText("Center")
-            .assertIsDisplayed()
+  @Test
+  fun floatingActionBubbles_centerAlignment_isDisplayed() {
+    // Given: Bubbles with CENTER alignment
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions = listOf(BubbleAction(text = "Center", onClick = {})),
+          bubbleAlignment = BubbleAlignment.CENTER)
     }
 
-    // ==================== Accessibility Tests ====================
+    // Then: Bubbles are displayed
+    composeTestRule.onNodeWithText("Center").assertIsDisplayed()
+  }
 
-    @Test
-    fun floatingActionBubbles_bubblesAreClickable() {
-        // Given: Bubbles are displayed
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(
-                    BubbleAction(text = "Clickable", onClick = {})
-                )
-            )
-        }
+  // ==================== Accessibility Tests ====================
 
-        // Then: Bubble has click action
-        composeTestRule
-            .onNodeWithText("Clickable")
-            .assertHasClickAction()
+  @Test
+  fun floatingActionBubbles_bubblesAreClickable() {
+    // Given: Bubbles are displayed
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions = listOf(BubbleAction(text = "Clickable", onClick = {})))
     }
 
-    @Test
-    fun floatingActionBubbles_scrimIsClickable() {
-        // Given: Bubbles are displayed
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(BubbleAction(text = "Action", onClick = {}))
-            )
-        }
+    // Then: Bubble has click action
+    composeTestRule.onNodeWithText("Clickable").assertHasClickAction()
+  }
 
-        // Then: Scrim has click action
-        composeTestRule
-            .onNodeWithTag(FloatingActionBubblesTestTags.SCRIM)
-            .assertHasClickAction()
+  @Test
+  fun floatingActionBubbles_scrimIsClickable() {
+    // Given: Bubbles are displayed
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions = listOf(BubbleAction(text = "Action", onClick = {})))
     }
 
-    @Test
-    fun floatingActionBubbles_iconsHaveContentDescriptions() {
-        // Given: Bubbles with icons
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(
-                    BubbleAction(
-                        text = "Delete Item",
-                        icon = Icons.Default.Delete,
-                        onClick = {}
-                    )
-                )
-            )
-        }
+    // Then: Scrim has click action
+    composeTestRule.onNodeWithTag(FloatingActionBubblesTestTags.SCRIM).assertHasClickAction()
+  }
 
-        // Then: Icon has content description matching text
-        composeTestRule
-            .onNodeWithContentDescription("Delete Item")
-            .assertIsDisplayed()
+  @Test
+  fun floatingActionBubbles_iconsHaveContentDescriptions() {
+    // Given: Bubbles with icons
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions =
+              listOf(BubbleAction(text = "Delete Item", icon = Icons.Default.Delete, onClick = {})))
     }
 
-    // ==================== Edge Cases Tests ====================
+    // Then: Icon has content description matching text
+    composeTestRule.onNodeWithContentDescription("Delete Item").assertIsDisplayed()
+  }
 
-    @Test
-    fun floatingActionBubbles_emptyActionsList_displaysNothing() {
-        // Given: Bubbles with empty actions list
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = emptyList()
-            )
-        }
+  // ==================== Edge Cases Tests ====================
 
-        // Then: Container is displayed but no actions
-        composeTestRule
-            .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
-            .assertIsDisplayed()
-
-        // Verify no bubble actions exist
-        composeTestRule
-            .onNodeWithTag(FloatingActionBubblesTestTags.bubbleTag(0))
-            .assertDoesNotExist()
+  @Test
+  fun floatingActionBubbles_emptyActionsList_displaysNothing() {
+    // Given: Bubbles with empty actions list
+    composeTestRule.setContent {
+      FloatingActionBubbles(visible = true, onDismiss = {}, actions = emptyList())
     }
 
-    @Test
-    fun floatingActionBubbles_customColors_appliesCorrectly() {
-        // Given: Bubbles with custom colors
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(BubbleAction(text = "Custom Colors", onClick = {})),
-                containerColor = Color.White,
-                contentColor = Color.Black
-            )
-        }
+    // Then: Container is displayed but no actions
+    composeTestRule
+        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
+        .assertIsDisplayed()
 
-        // Then: Bubbles are displayed with custom colors (visual verification)
-        composeTestRule
-            .onNodeWithText("Custom Colors")
-            .assertIsDisplayed()
+    // Verify no bubble actions exist
+    composeTestRule.onNodeWithTag(FloatingActionBubblesTestTags.bubbleTag(0)).assertDoesNotExist()
+  }
+
+  @Test
+  fun floatingActionBubbles_customColors_appliesCorrectly() {
+    // Given: Bubbles with custom colors
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions = listOf(BubbleAction(text = "Custom Colors", onClick = {})),
+          containerColor = Color.White,
+          contentColor = Color.Black)
     }
 
-    @Test
-    fun floatingActionBubbles_customPadding_appliesCorrectly() {
-        // Given: Bubbles with custom padding
-        composeTestRule.setContent {
-            FloatingActionBubbles(
-                visible = true,
-                onDismiss = {},
-                actions = listOf(BubbleAction(text = "Custom Padding", onClick = {})),
-                bottomPadding = 200.dp,
-                horizontalPadding = 32.dp
-            )
-        }
+    // Then: Bubbles are displayed with custom colors (visual verification)
+    composeTestRule.onNodeWithText("Custom Colors").assertIsDisplayed()
+  }
 
-        // Then: Bubbles are displayed with custom padding (visual verification)
-        composeTestRule
-            .onNodeWithText("Custom Padding")
-            .assertIsDisplayed()
+  @Test
+  fun floatingActionBubbles_customPadding_appliesCorrectly() {
+    // Given: Bubbles with custom padding
+    composeTestRule.setContent {
+      FloatingActionBubbles(
+          visible = true,
+          onDismiss = {},
+          actions = listOf(BubbleAction(text = "Custom Padding", onClick = {})),
+          bottomPadding = 200.dp,
+          horizontalPadding = 32.dp)
     }
+
+    // Then: Bubbles are displayed with custom padding (visual verification)
+    composeTestRule.onNodeWithText("Custom Padding").assertIsDisplayed()
+  }
 }
