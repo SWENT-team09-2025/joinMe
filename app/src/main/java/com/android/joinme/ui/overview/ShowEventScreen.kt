@@ -117,24 +117,27 @@ fun ShowEventScreen(
   Scaffold(
       modifier = Modifier.testTag(ShowEventScreenTestTags.SCREEN),
       topBar = {
-        TopAppBar(
-            title = {
-              Box(
-                  modifier = Modifier.fillMaxWidth().offset(x = (-24).dp),
-                  contentAlignment = Alignment.Center) {
-                    Text(
-                        text = eventUIState.title.ifBlank { "Task title" },
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_TITLE))
-                  }
-            },
-            navigationIcon = {
-              IconButton(onClick = onGoBack) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-              }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = TopAppBarBackgroundColor))
+        Column {
+          TopAppBar(
+              title = {
+                Box(
+                    modifier = Modifier.fillMaxWidth().offset(x = (-24).dp),
+                    contentAlignment = Alignment.Center) {
+                      Text(
+                          text = eventUIState.title.ifBlank { "Task title" },
+                          fontSize = 20.sp,
+                          fontWeight = FontWeight.Medium,
+                          modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_TITLE))
+                    }
+              },
+              navigationIcon = {
+                IconButton(onClick = onGoBack) {
+                  Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+              },
+              colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface))
+          HorizontalDivider(color = DividerColor, thickness = 1.dp)
+        }
       }) { paddingValues ->
         Column(
             modifier =
@@ -151,6 +154,7 @@ fun ShowEventScreen(
                   text = eventUIState.date,
                   fontSize = 16.sp,
                   fontWeight = FontWeight.Bold,
+                  color = MaterialTheme.colorScheme.onSurface,
                   modifier =
                       Modifier.fillMaxWidth()
                           .testTag(ShowEventScreenTestTags.EVENT_DATE)
@@ -168,6 +172,7 @@ fun ShowEventScreen(
                         text = eventUIState.visibility,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_VISIBILITY))
 
                     Text(
@@ -184,7 +189,7 @@ fun ShowEventScreen(
               Text(
                   text = eventUIState.description,
                   fontSize = 14.sp,
-                  color = DescriptionTextColor,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
                   modifier =
                       Modifier.fillMaxWidth()
                           .heightIn(min = 80.dp)
@@ -196,7 +201,7 @@ fun ShowEventScreen(
               Text(
                   text = eventUIState.location,
                   fontSize = 14.sp,
-                  color = DescriptionTextColor,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
                   modifier =
                       Modifier.fillMaxWidth().testTag(ShowEventScreenTestTags.EVENT_LOCATION))
 
@@ -211,12 +216,14 @@ fun ShowEventScreen(
                             "MEMBERS : ${eventUIState.participantsCount}/${eventUIState.maxParticipants}",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_MEMBERS))
 
                     Text(
                         text = "${eventUIState.duration}min",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_DURATION))
                   }
 
@@ -227,6 +234,7 @@ fun ShowEventScreen(
                   text = eventUIState.ownerName,
                   fontSize = 14.sp,
                   fontWeight = FontWeight.Medium,
+                  color = MaterialTheme.colorScheme.onSurface,
                   modifier =
                       Modifier.fillMaxWidth()
                           .testTag(ShowEventScreenTestTags.EVENT_OWNER)
@@ -261,7 +269,7 @@ fun ShowEventScreen(
                       colors =
                           ButtonDefaults.outlinedButtonColors(
                               contentColor = DeleteButtonColor,
-                              containerColor = TopAppBarBackgroundColor)) {
+                              containerColor = MaterialTheme.colorScheme.surface)) {
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "Delete",

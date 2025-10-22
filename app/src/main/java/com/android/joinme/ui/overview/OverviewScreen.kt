@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -88,18 +89,15 @@ fun OverviewScreen(
   Scaffold(
       topBar = {
         Column {
-          TopAppBar(
-              modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
-              title = {
-                Text(
-                    text = "Overview",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center)
-              },
-              colors =
-                  TopAppBarDefaults.topAppBarColors(
-                      containerColor = MaterialTheme.colorScheme.surface))
+            CenterAlignedTopAppBar(
+                modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
+                title = {
+                    Text(text = "Overview", style = MaterialTheme.typography.titleLarge)
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            )
           HorizontalDivider(color = DividerColor, thickness = 1.dp)
         }
       },

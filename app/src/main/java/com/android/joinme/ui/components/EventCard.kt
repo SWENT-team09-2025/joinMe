@@ -24,8 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.getColor
-import com.android.joinme.ui.theme.OnEventCardIconColor
 import com.android.joinme.ui.theme.OnEventCardTextColor
+import com.android.joinme.ui.theme.IconColor
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -90,7 +90,7 @@ fun EventCard(modifier: Modifier = Modifier, event: Event, onClick: () -> Unit, 
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "View event details",
-                    tint = OnEventCardIconColor)
+                    tint = IconColor)
               }
         }
       }

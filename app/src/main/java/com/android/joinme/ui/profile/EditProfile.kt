@@ -106,7 +106,7 @@ fun EditProfileScreen(
 
   Scaffold(
       modifier = Modifier.testTag(EditProfileTestTags.SCREEN),
-      containerColor = ScreenBackgroundColor,
+      containerColor = MaterialTheme.colorScheme.surface,
       topBar = {
         ProfileTopBar(
             currentScreen = ProfileScreen.EDIT_PROFILE,
@@ -311,7 +311,7 @@ private fun ProfilePictureSection(onPictureEditClick: () -> Unit = {}) {
               imageVector = Icons.Default.AccountCircle,
               contentDescription = "Profile Picture",
               modifier = Modifier.size(140.dp).blur(5.dp),
-              tint = JoinMeColor)
+              tint = MaterialTheme.colorScheme.onSurface)
           Button(
               onClick = { onPictureEditClick() },
               colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
@@ -465,7 +465,7 @@ fun EditProfileScreenPreview() {
           updatedAt = Timestamp.now())
 
   Scaffold(
-      containerColor = ScreenBackgroundColor,
+      containerColor = MaterialTheme.colorScheme.surface,
       topBar = {
         ProfileTopBar(
             currentScreen = ProfileScreen.EDIT_PROFILE,

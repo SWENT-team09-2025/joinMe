@@ -104,7 +104,6 @@ fun GoogleSignInButton(onSignInClick: () -> Unit) {
       colors =
           ButtonDefaults.buttonColors(containerColor = GoogleSignInButtonColor), // Button color
       shape = RoundedCornerShape(50), // Circular edges for the button
-      border = BorderStroke(1.dp, BorderColor),
       modifier =
           Modifier.padding(8.dp)
               .height(48.dp) // Adjust height as needed
