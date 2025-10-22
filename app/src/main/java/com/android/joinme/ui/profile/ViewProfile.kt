@@ -14,7 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -25,7 +24,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.Tab
-import com.android.joinme.ui.theme.JoinMeColor
 import com.google.firebase.Timestamp
 
 /**
@@ -69,7 +67,7 @@ fun ViewProfileScreen(
 
   Scaffold(
       modifier = Modifier.testTag(ViewProfileTestTags.SCREEN),
-      containerColor = Color.White,
+      containerColor = MaterialTheme.colorScheme.surface,
       topBar = {
         ProfileTopBar(
             currentScreen = ProfileScreen.VIEW_PROFILE,
@@ -141,15 +139,17 @@ private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically) {
               Text(
                   text = "Profile",
-                  color = JoinMeColor,
+                  color = MaterialTheme.colorScheme.onSurface,
                   fontSize = 28.sp,
                   fontWeight = FontWeight.Bold,
                   modifier = Modifier.testTag(ViewProfileTestTags.PROFILE_TITLE))
               OutlinedButton(
                   onClick = onLogoutClick,
                   shape = RoundedCornerShape(24.dp),
-                  border = BorderStroke(2.dp, JoinMeColor),
-                  colors = ButtonDefaults.outlinedButtonColors(contentColor = JoinMeColor),
+                  border = BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface),
+                  colors =
+                      ButtonDefaults.outlinedButtonColors(
+                          contentColor = MaterialTheme.colorScheme.onSurface),
                   modifier = Modifier.testTag(ViewProfileTestTags.LOGOUT_BUTTON)) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,
@@ -171,7 +171,7 @@ private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
                   imageVector = Icons.Sharp.AccountCircle,
                   contentDescription = "Profile Picture",
                   modifier = Modifier.size(210.dp),
-                  tint = JoinMeColor)
+                  tint = MaterialTheme.colorScheme.onSurface)
             }
 
         // Form Fields (Read-only)
@@ -216,7 +216,7 @@ private fun ProfileField(
   Column(modifier = if (testTag.isNotEmpty()) Modifier.testTag(testTag) else Modifier) {
     Text(
         text = label,
-        color = JoinMeColor,
+        color = MaterialTheme.colorScheme.onSurface,
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(bottom = 12.dp))
@@ -225,9 +225,9 @@ private fun ProfileField(
             Modifier.fillMaxWidth()
                 .heightIn(min = minHeight)
                 .clip(RoundedCornerShape(12.dp))
-                .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
                 .padding(20.dp)) {
-          Text(text = value, fontSize = 16.sp, color = JoinMeColor)
+          Text(text = value, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
         }
   }
 }
@@ -248,7 +248,7 @@ fun ViewProfileScreenPreview() {
           updatedAt = Timestamp.now())
 
   Scaffold(
-      containerColor = Color.White,
+      containerColor = MaterialTheme.colorScheme.surface,
       topBar = {
         ProfileTopBar(
             currentScreen = ProfileScreen.VIEW_PROFILE,

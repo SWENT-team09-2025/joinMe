@@ -2,6 +2,9 @@ package com.android.joinme.model.event
 
 import androidx.compose.ui.graphics.Color
 import com.android.joinme.model.map.Location
+import com.android.joinme.ui.theme.ActivityColor
+import com.android.joinme.ui.theme.SocialColor
+import com.android.joinme.ui.theme.SportsColor
 import com.google.firebase.Timestamp
 import java.util.Locale
 
@@ -73,9 +76,9 @@ fun Event.isUpcoming(): Boolean {
  */
 fun EventType.getColor(): Color {
   return when (this) {
-    EventType.SPORTS -> Color(0xFF7E57C2) // Violet
-    EventType.ACTIVITY -> Color(0xFF81C784) // Vert
-    EventType.SOCIAL -> Color(0xFFE57373) // Rouge
+    EventType.SPORTS -> SportsColor // Purple
+    EventType.ACTIVITY -> ActivityColor // Green
+    EventType.SOCIAL -> SocialColor // Red
   }
 }
 

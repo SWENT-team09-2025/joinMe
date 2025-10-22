@@ -1,7 +1,6 @@
 package com.android.joinme.ui.signIn
 
 import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -25,7 +24,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -35,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
+import com.android.joinme.ui.theme.GoogleSignInButtonColor
 
 object SignInScreenTestTags {
   const val APP_LOGO = "appLogo"
@@ -100,9 +99,9 @@ fun SignInScreen(
 fun GoogleSignInButton(onSignInClick: () -> Unit) {
   Button(
       onClick = onSignInClick,
-      colors = ButtonDefaults.buttonColors(containerColor = Color.White), // Button color
+      colors =
+          ButtonDefaults.buttonColors(containerColor = GoogleSignInButtonColor), // Button color
       shape = RoundedCornerShape(50), // Circular edges for the button
-      border = BorderStroke(1.dp, Color.LightGray),
       modifier =
           Modifier.padding(8.dp)
               .height(48.dp) // Adjust height as needed

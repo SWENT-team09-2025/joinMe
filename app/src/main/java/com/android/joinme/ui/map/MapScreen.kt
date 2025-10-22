@@ -18,7 +18,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -27,6 +26,8 @@ import com.android.joinme.ui.map.userLocation.LocationServiceImpl
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.Tab
+import com.android.joinme.ui.theme.IconColor
+import com.android.joinme.ui.theme.MapControlBackgroundColor
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -141,11 +142,13 @@ fun MapScreen(
                       Modifier.align(Alignment.TopStart)
                           .padding(16.dp)
                           .testTag(MapScreenTestTags.FILTER_BUTTON)
-                          .background(color = Color.White, shape = MaterialTheme.shapes.medium)) {
+                          .background(
+                              color = MapControlBackgroundColor,
+                              shape = MaterialTheme.shapes.medium)) {
                     Icon(
                         imageVector = Icons.Filled.Tune,
                         contentDescription = "Filter",
-                        tint = Color.Black)
+                        tint = IconColor)
                   }
             }
       }
