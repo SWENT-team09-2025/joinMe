@@ -47,13 +47,6 @@ class GroupListViewModelTest {
     override suspend fun getGroup(id: String): Group? {
       return groups.find { it.id == id }
     }
-
-    override suspend fun updateGroup(group: Group) {
-      val index = groups.indexOfFirst { it.id == group.id }
-      if (index != -1) {
-        groups[index] = group
-      }
-    }
   }
 
   private lateinit var fakeRepo: FakeGroupRepository
