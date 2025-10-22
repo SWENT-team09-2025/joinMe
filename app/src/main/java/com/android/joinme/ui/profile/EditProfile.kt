@@ -28,13 +28,13 @@ import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.Tab
 import com.android.joinme.ui.theme.BorderColor
+import com.android.joinme.ui.theme.ButtonSaveColor
 import com.android.joinme.ui.theme.DisabledBorderColor
 import com.android.joinme.ui.theme.DisabledTextColor
 import com.android.joinme.ui.theme.ErrorBorderColor
 import com.android.joinme.ui.theme.FocusedBorderColor
 import com.android.joinme.ui.theme.JoinMeColor
 import com.android.joinme.ui.theme.LabelTextColor
-import com.android.joinme.ui.theme.SaveButtonTextColor
 import com.google.firebase.Timestamp
 
 object EditProfileTestTags {
@@ -286,11 +286,7 @@ private fun EditProfileContent(
                     containerColor = if (isFormValid) JoinMeColor else BorderColor,
                     disabledContainerColor = BorderColor),
             shape = RoundedCornerShape(12.dp)) {
-              Text(
-                  "SAVE",
-                  fontSize = 16.sp,
-                  fontWeight = FontWeight.Bold,
-                  color = SaveButtonTextColor)
+              Text("SAVE", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ButtonSaveColor)
             }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -322,7 +318,7 @@ private fun ProfilePictureSection(onPictureEditClick: () -> Unit = {}) {
                       Icon(
                           imageVector = Icons.Outlined.Edit,
                           contentDescription = "Edit Photo",
-                          tint = SaveButtonTextColor,
+                          tint = ButtonSaveColor,
                           modifier = Modifier.size(56.dp))
                     }
               }

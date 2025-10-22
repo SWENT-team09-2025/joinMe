@@ -17,9 +17,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
+import com.android.joinme.ui.theme.ButtonSaveColor
 import com.android.joinme.ui.theme.DarkButtonColor
 import com.android.joinme.ui.theme.DividerColor
-import com.android.joinme.ui.theme.SaveButtonTextColor
 import java.util.Locale
 
 /** Data class representing the test tags for event form fields. */
@@ -476,7 +476,7 @@ fun EventFormScreen(
                   enabled = formState.isValid,
                   colors =
                       ButtonDefaults.buttonColors(
-                          containerColor = DarkButtonColor, contentColor = SaveButtonTextColor)) {
+                          containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
                     Text(saveButtonText)
                   }
             }

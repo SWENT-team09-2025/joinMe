@@ -46,7 +46,7 @@ val DisabledBorderColor = Color.LightGray
 // Button colors
 val GoogleSignInButtonColor = Color.White
 val DisabledButtonColor = Color.LightGray
-val SaveButtonTextColor = Color.White
+val ButtonSaveColor = Color.White
 
 // Background colors
 val ScreenBackgroundColor = Color.White
