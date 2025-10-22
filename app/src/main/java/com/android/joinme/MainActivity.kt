@@ -178,9 +178,12 @@ fun JoinMe(
 
       composable(Screen.Groups.route) {
         GroupListScreen(
-            onJoinANewGroup = {
+            onJoinWithLink = {
               Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
-            }, // TODO navigate to join group screen
+            }, // TODO navigate to join with link screen or popup
+            onCreateGroup = {
+              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            }, // TODO navigate to create group screen
             onGroup = {
               Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
             }, // TODO navigate to group details screen
