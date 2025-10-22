@@ -13,6 +13,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -259,7 +260,9 @@ fun ShowEventScreen(
                               .height(56.dp)
                               .testTag(ShowEventScreenTestTags.EDIT_BUTTON),
                       shape = RoundedCornerShape(8.dp),
-                      colors = ButtonDefaults.buttonColors(containerColor = DarkButtonColor)) {
+                      colors =
+                          ButtonDefaults.buttonColors(
+                              containerColor = DarkButtonColor, contentColor = Color.White)) {
                         Text(text = "EDIT EVENT", fontSize = 16.sp, fontWeight = FontWeight.Medium)
                       }
 
@@ -295,7 +298,9 @@ fun ShowEventScreen(
                               .height(56.dp)
                               .testTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON),
                       shape = RoundedCornerShape(8.dp),
-                      colors = ButtonDefaults.buttonColors(containerColor = DarkButtonColor)) {
+                      colors =
+                          ButtonDefaults.buttonColors(
+                              containerColor = DarkButtonColor, contentColor = Color.White)) {
                         Text(
                             text =
                                 if (eventUIState.isParticipant(currentUserId)) "QUIT EVENT"
