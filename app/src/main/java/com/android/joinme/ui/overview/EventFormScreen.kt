@@ -476,8 +476,7 @@ fun EventFormScreen(
                   enabled = formState.isValid,
                   colors =
                       ButtonDefaults.buttonColors(
-                          containerColor = DarkButtonColor,
-                          contentColor = SaveButtonTextColor)) {
+                          containerColor = DarkButtonColor, contentColor = SaveButtonTextColor)) {
                     Text(saveButtonText)
                   }
             }

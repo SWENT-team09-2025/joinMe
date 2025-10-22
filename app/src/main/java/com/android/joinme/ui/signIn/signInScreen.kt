@@ -1,7 +1,6 @@
 package com.android.joinme.ui.signIn
 
 import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -34,7 +33,6 @@ import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
-import com.android.joinme.ui.theme.BorderColor
 import com.android.joinme.ui.theme.GoogleSignInButtonColor
 
 object SignInScreenTestTags {

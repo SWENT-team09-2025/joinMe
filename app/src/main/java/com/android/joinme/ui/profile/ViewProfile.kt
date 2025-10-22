@@ -24,9 +24,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.Tab
-import com.android.joinme.ui.theme.BorderColor
-import com.android.joinme.ui.theme.JoinMeColor
-import com.android.joinme.ui.theme.ScreenBackgroundColor
 import com.google.firebase.Timestamp
 
 /**
@@ -150,7 +147,9 @@ private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
                   onClick = onLogoutClick,
                   shape = RoundedCornerShape(24.dp),
                   border = BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface),
-                  colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
+                  colors =
+                      ButtonDefaults.outlinedButtonColors(
+                          contentColor = MaterialTheme.colorScheme.onSurface),
                   modifier = Modifier.testTag(ViewProfileTestTags.LOGOUT_BUTTON)) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,

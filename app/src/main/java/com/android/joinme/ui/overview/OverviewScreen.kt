@@ -23,7 +23,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -89,15 +88,12 @@ fun OverviewScreen(
   Scaffold(
       topBar = {
         Column {
-            CenterAlignedTopAppBar(
-                modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
-                title = {
-                    Text(text = "Overview", style = MaterialTheme.typography.titleLarge)
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
+          CenterAlignedTopAppBar(
+              modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
+              title = { Text(text = "Overview", style = MaterialTheme.typography.titleLarge) },
+              colors =
+                  TopAppBarDefaults.topAppBarColors(
+                      containerColor = MaterialTheme.colorScheme.surface))
           HorizontalDivider(color = DividerColor, thickness = 1.dp)
         }
       },

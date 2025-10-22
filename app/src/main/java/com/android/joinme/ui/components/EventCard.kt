@@ -24,8 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.getColor
-import com.android.joinme.ui.theme.OnEventCardTextColor
 import com.android.joinme.ui.theme.IconColor
+import com.android.joinme.ui.theme.OnEventCardTextColor
 import java.text.SimpleDateFormat
 import java.util.Locale
 

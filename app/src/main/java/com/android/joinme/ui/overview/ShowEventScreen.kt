@@ -132,10 +132,14 @@ fun ShowEventScreen(
               },
               navigationIcon = {
                 IconButton(onClick = onGoBack) {
-                  Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                      contentDescription = "Back")
                 }
               },
-              colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface))
+              colors =
+                  TopAppBarDefaults.topAppBarColors(
+                      containerColor = MaterialTheme.colorScheme.surface))
           HorizontalDivider(color = DividerColor, thickness = 1.dp)
         }
       }) { paddingValues ->

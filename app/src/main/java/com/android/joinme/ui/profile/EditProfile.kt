@@ -35,7 +35,6 @@ import com.android.joinme.ui.theme.FocusedBorderColor
 import com.android.joinme.ui.theme.JoinMeColor
 import com.android.joinme.ui.theme.LabelTextColor
 import com.android.joinme.ui.theme.SaveButtonTextColor
-import com.android.joinme.ui.theme.ScreenBackgroundColor
 import com.google.firebase.Timestamp
 
 object EditProfileTestTags {
