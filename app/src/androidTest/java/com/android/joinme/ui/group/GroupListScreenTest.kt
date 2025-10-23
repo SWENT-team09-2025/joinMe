@@ -1,14 +1,17 @@
-package com.android.joinme.ui.overview
+package com.android.joinme.ui.group
 
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import com.android.joinme.model.group.Group
 import com.android.joinme.model.group.GroupRepository
+import com.android.joinme.ui.components.FloatingActionBubblesTestTags
 import com.android.joinme.ui.groups.GroupListScreen
 import com.android.joinme.ui.groups.GroupListScreenTestTags
 import com.android.joinme.ui.groups.GroupListViewModel
@@ -344,51 +347,6 @@ class GroupListScreenTest {
   }
 
   @Test
-  fun addNewGroupButton_callsOnJoinANewGroup() {
-    var buttonClicked = false
-
-    composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = createViewModel(emptyList()), onJoinANewGroup = { buttonClicked = true })
-    }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-
-    assertTrue(buttonClicked)
-  }
-
-  @Test
-  fun addNewGroupButton_withGroups_stillDisplayedAndWorks() {
-    val groups = listOf(Group(id = "1", name = "Existing Group", ownerId = "owner1"))
-    var buttonClicked = false
-
-    composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = createViewModel(groups), onJoinANewGroup = { buttonClicked = true })
-    }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-
-    assertTrue(buttonClicked)
-  }
-
-  @Test
-  fun addNewGroupButton_canBeClickedMultipleTimes() {
-    var clickCount = 0
-
-    composeTestRule.setContent {
-      GroupListScreen(viewModel = createViewModel(emptyList()), onJoinANewGroup = { clickCount++ })
-    }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-
-    assertEquals(3, clickCount)
-  }
-
-  @Test
   fun list_isScrollable_and_reaches_last_item() {
     val groups = (1..50).map { i -> Group(id = "$i", name = "Group $i", ownerId = "owner$i") }
     val lastId = "50"
@@ -591,9 +549,9 @@ class GroupListScreenTest {
   fun eachMoreButton_triggersCorrectCallback() {
     val groups =
         listOf(
-            Group(id = "a", name = "Group A", ownerId = "ownera"),
-            Group(id = "b", name = "Group B", ownerId = "ownerb"),
-            Group(id = "c", name = "Group C", ownerId = "ownerc"))
+            Group(id = "a", name = "Group A", ownerId = "owner a"),
+            Group(id = "b", name = "Group B", ownerId = "owner b"),
+            Group(id = "c", name = "Group C", ownerId = "owner c"))
     val clickedIds = mutableListOf<String>()
 
     composeTestRule.setContent {
@@ -606,5 +564,286 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("b")).performClick()
 
     assertEquals(listOf("a", "c", "b"), clickedIds)
+  }
+
+  // Floating Action Bubbles Tests
+  @Test
+  fun floatingActionButton_whenClicked_showsBubbles() {
+    // Given: Screen is displayed
+    composeTestRule.setContent {
+      GroupListScreen(
+          onJoinWithLink = {},
+          onCreateGroup = {},
+          onGroup = {},
+          onMoreOptionMenu = {},
+          onBackClick = {},
+          onProfileClick = {},
+          onEditClick = {})
+    }
+
+    // When: User clicks the FAB
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+
+    // Then: Bubbles container is visible
+    composeTestRule
+        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun floatingActionBubbles_displaysCorrectActions() {
+    // Given: Screen is displayed
+    composeTestRule.setContent {
+      GroupListScreen(
+          onJoinWithLink = {},
+          onCreateGroup = {},
+          onGroup = {},
+          onMoreOptionMenu = {},
+          onBackClick = {},
+          onProfileClick = {},
+          onEditClick = {})
+    }
+
+    // When: User clicks the FAB
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+
+    // Then: Both bubble actions are visible with correct text
+    composeTestRule.onNodeWithText("Join with link").assertIsDisplayed()
+
+    composeTestRule.onNodeWithText("Create a group").assertIsDisplayed()
+  }
+
+  @Test
+  fun floatingActionBubbles_joinWithLinkBubble_hasCorrectTestTag() {
+    // Given: Screen is displayed
+    composeTestRule.setContent {
+      GroupListScreen(
+          onJoinWithLink = {},
+          onCreateGroup = {},
+          onGroup = {},
+          onMoreOptionMenu = {},
+          onBackClick = {},
+          onProfileClick = {},
+          onEditClick = {})
+    }
+
+    // When: User clicks the FAB
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+
+    // Then: Join with link bubble has correct test tag
+    composeTestRule
+        .onNodeWithTag("groupJoinWithLinkBubble")
+        .assertIsDisplayed()
+        .assertHasClickAction()
+  }
+
+  @Test
+  fun floatingActionBubbles_createGroupBubble_hasCorrectTestTag() {
+    // Given: Screen is displayed
+    composeTestRule.setContent {
+      GroupListScreen(
+          onJoinWithLink = {},
+          onCreateGroup = {},
+          onGroup = {},
+          onMoreOptionMenu = {},
+          onBackClick = {},
+          onProfileClick = {},
+          onEditClick = {})
+    }
+
+    // When: User clicks the FAB
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+
+    // Then: Create group bubble has correct test tag
+    composeTestRule.onNodeWithTag("groupCreateBubble").assertIsDisplayed().assertHasClickAction()
+  }
+
+  @Test
+  fun floatingActionBubbles_scrim_dismissesBubbles() {
+    // Given: Screen is displayed with bubbles open
+    composeTestRule.setContent {
+      GroupListScreen(
+          onJoinWithLink = {},
+          onCreateGroup = {},
+          onGroup = {},
+          onMoreOptionMenu = {},
+          onBackClick = {},
+          onProfileClick = {},
+          onEditClick = {})
+    }
+
+    // When: User clicks the FAB to show bubbles
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+
+    // Verify bubbles are visible
+    composeTestRule
+        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
+        .assertIsDisplayed()
+
+    // When: User clicks the scrim (outside bubbles)
+    composeTestRule.onNodeWithTag(FloatingActionBubblesTestTags.SCRIM).performClick()
+
+    // Then: Bubbles are dismissed
+    composeTestRule
+        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
+        .assertDoesNotExist()
+  }
+
+  @Test
+  fun floatingActionBubbles_joinWithLinkClick_triggersCallback() {
+    // Given: Screen with callback tracker
+    var joinWithLinkClicked = false
+
+    composeTestRule.setContent {
+      GroupListScreen(
+          onJoinWithLink = { joinWithLinkClicked = true },
+          onCreateGroup = {},
+          onGroup = {},
+          onMoreOptionMenu = {},
+          onBackClick = {},
+          onProfileClick = {},
+          onEditClick = {})
+    }
+
+    // When: User opens bubbles and clicks "Join with link"
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+
+    composeTestRule.onNodeWithTag("groupJoinWithLinkBubble").performClick()
+
+    // Then: Callback was invoked
+    assert(joinWithLinkClicked) { "onJoinWithLink callback should have been called" }
+  }
+
+  @Test
+  fun floatingActionBubbles_createGroupClick_triggersCallback() {
+    // Given: Screen with callback tracker
+    var createGroupClicked = false
+
+    composeTestRule.setContent {
+      GroupListScreen(
+          onJoinWithLink = {},
+          onCreateGroup = { createGroupClicked = true },
+          onGroup = {},
+          onMoreOptionMenu = {},
+          onBackClick = {},
+          onProfileClick = {},
+          onEditClick = {})
+    }
+
+    // When: User opens bubbles and clicks "Create a group"
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+
+    composeTestRule.onNodeWithTag("groupCreateBubble").performClick()
+
+    // Then: Callback was invoked
+    assert(createGroupClicked) { "onCreateGroup callback should have been called" }
+  }
+
+  @Test
+  fun floatingActionBubbles_afterBubbleClick_dismissesBubbles() {
+    // Given: Screen is displayed
+    composeTestRule.setContent {
+      GroupListScreen(
+          onJoinWithLink = {},
+          onCreateGroup = {},
+          onGroup = {},
+          onMoreOptionMenu = {},
+          onBackClick = {},
+          onProfileClick = {},
+          onEditClick = {})
+    }
+
+    // When: User opens bubbles
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+
+    // Verify bubbles are visible
+    composeTestRule
+        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
+        .assertIsDisplayed()
+
+    // When: User clicks a bubble action
+    composeTestRule.onNodeWithTag("groupCreateBubble").performClick()
+
+    // Then: Bubbles are automatically dismissed
+    composeTestRule
+        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
+        .assertDoesNotExist()
+  }
+
+  @Test
+  fun floatingActionButton_togglesBubbleVisibility() {
+    // Given: Screen is displayed
+    composeTestRule.setContent {
+      GroupListScreen(
+          onJoinWithLink = {},
+          onCreateGroup = {},
+          onGroup = {},
+          onMoreOptionMenu = {},
+          onBackClick = {},
+          onProfileClick = {},
+          onEditClick = {})
+    }
+
+    // When: User clicks the FAB first time
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+
+    // Then: Bubbles are visible
+    composeTestRule
+        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
+        .assertIsDisplayed()
+
+    // When: User clicks the FAB again
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+
+    // Then: Bubbles are hidden
+    composeTestRule
+        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
+        .assertDoesNotExist()
+  }
+
+  @Test
+  fun floatingActionBubbles_bubblesHaveIcons() {
+    // Given: Screen is displayed
+    composeTestRule.setContent {
+      GroupListScreen(
+          onJoinWithLink = {},
+          onCreateGroup = {},
+          onGroup = {},
+          onMoreOptionMenu = {},
+          onBackClick = {},
+          onProfileClick = {},
+          onEditClick = {})
+    }
+
+    // When: User clicks the FAB
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+
+    // Then: Bubbles have content descriptions for icons
+    composeTestRule.onNodeWithContentDescription("Join with link").assertIsDisplayed()
+
+    composeTestRule.onNodeWithContentDescription("Create a group").assertIsDisplayed()
+  }
+
+  @Test
+  fun floatingActionBubbles_bubblesAreClickable() {
+    // Given: Screen is displayed
+    composeTestRule.setContent {
+      GroupListScreen(
+          onJoinWithLink = {},
+          onCreateGroup = {},
+          onGroup = {},
+          onMoreOptionMenu = {},
+          onBackClick = {},
+          onProfileClick = {},
+          onEditClick = {})
+    }
+
+    // When: User opens bubbles
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+
+    // Then: Both bubbles have click actions
+    composeTestRule.onNodeWithTag("groupJoinWithLinkBubble").assertHasClickAction()
+
+    composeTestRule.onNodeWithTag("groupCreateBubble").assertHasClickAction()
   }
 }
