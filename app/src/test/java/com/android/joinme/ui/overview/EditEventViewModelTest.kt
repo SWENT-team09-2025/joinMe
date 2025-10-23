@@ -228,6 +228,54 @@ class EditEventViewModelTest {
     assertEquals("Must be a positive number", state.invalidMaxParticipantsMsg)
   }
 
+  @Test
+  fun setMaxParticipants_belowCurrentParticipantCount_setsErrorMessage() = runTest {
+    val event = createTestEvent() // Has 2 participants: user1, user2
+    repository.addEvent(event)
+
+    viewModel.loadEvent(event.eventId)
+    advanceUntilIdle()
+
+    // Try to set max participants to 1, which is less than current 2 participants
+    viewModel.setMaxParticipants("1")
+
+    val state = viewModel.uiState.first()
+    assertEquals("1", state.maxParticipants)
+    assertEquals("Cannot be less than current participants (2)", state.invalidMaxParticipantsMsg)
+  }
+
+  @Test
+  fun setMaxParticipants_equalToCurrentParticipantCount_updatesWithoutError() = runTest {
+    val event = createTestEvent() // Has 2 participants
+    repository.addEvent(event)
+
+    viewModel.loadEvent(event.eventId)
+    advanceUntilIdle()
+
+    // Set max participants equal to current count
+    viewModel.setMaxParticipants("2")
+
+    val state = viewModel.uiState.first()
+    assertEquals("2", state.maxParticipants)
+    assertNull(state.invalidMaxParticipantsMsg)
+  }
+
+  @Test
+  fun setMaxParticipants_aboveCurrentParticipantCount_updatesWithoutError() = runTest {
+    val event = createTestEvent() // Has 2 participants
+    repository.addEvent(event)
+
+    viewModel.loadEvent(event.eventId)
+    advanceUntilIdle()
+
+    // Set max participants above current count
+    viewModel.setMaxParticipants("5")
+
+    val state = viewModel.uiState.first()
+    assertEquals("5", state.maxParticipants)
+    assertNull(state.invalidMaxParticipantsMsg)
+  }
+
   /** --- SET DURATION TESTS --- */
   @Test
   fun setDuration_validNumber_updatesStateWithoutError() = runBlocking {

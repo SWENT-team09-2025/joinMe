@@ -219,11 +219,17 @@ class EditEventViewModel(
 
   fun setMaxParticipants(value: String) {
     val num = value.toIntOrNull()
+    val currentParticipantsCount = _uiState.value.participants.size
     _uiState.value =
         _uiState.value.copy(
             maxParticipants = value,
             invalidMaxParticipantsMsg =
-                if (num == null || num <= 0) "Must be a positive number" else null)
+                when {
+                  num == null || num <= 0 -> "Must be a positive number"
+                  num < currentParticipantsCount ->
+                      "Cannot be less than current participants ($currentParticipantsCount)"
+                  else -> null
+                })
   }
 
   fun setDuration(value: String) {
