@@ -1,36 +1,48 @@
 package com.android.joinme.model.group
 
-/**
- * Repository interface for managing group-related data operations.
- *
- * This interface defines the contract for interacting with group data, supporting operations such
- * as fetching user groups, leaving groups, and retrieving individual group details. Implementations
- * can use different data sources (e.g., Firestore, local storage).
- */
+/** Represents a repository that manages Group items. */
 interface GroupRepository {
-  /**
-   * Retrieves all groups that the current user belongs to.
-   *
-   * @return A list of [Group] objects representing the user's groups. Returns an empty list if the
-   *   user is not part of any groups.
-   * @throws Exception if there is an error fetching groups from the data source.
-   */
-  suspend fun userGroups(): List<Group>
+
+  /** Generates and returns a new unique identifier for a Group item. */
+  fun getNewGroupId(): String
 
   /**
-   * Removes the current user from the specified group.
+   * Retrieves all Group items that the current user belongs to.
    *
-   * @param id The unique identifier of the group to leave.
-   * @throws Exception if the group cannot be found or if the operation fails.
+   * @return A list of all Group items the user is part of.
    */
-  suspend fun leaveGroup(id: String)
+  suspend fun getAllGroups(): List<Group>
 
   /**
-   * Retrieves detailed information about a specific group.
+   * Retrieves a specific Group item by its unique identifier.
    *
-   * @param id The unique identifier of the group to retrieve.
-   * @return The [Group] object if found, or null if no group exists with the given ID.
-   * @throws Exception if there is an error accessing the data source.
+   * @param groupId The unique identifier of the Group item to retrieve.
+   * @return The Group item with the specified identifier.
+   * @throws Exception if the group item is not found.
    */
-  suspend fun getGroup(id: String): Group?
+  suspend fun getGroup(groupId: String): Group
+
+  /**
+   * Adds a new Group item to the repository.
+   *
+   * @param group The Group item to add.
+   */
+  suspend fun addGroup(group: Group)
+
+  /**
+   * Edits an existing Group item in the repository.
+   *
+   * @param groupId The unique identifier of the Group item to edit.
+   * @param newValue The new value for the Group item.
+   * @throws Exception if the Group item is not found.
+   */
+  suspend fun editGroup(groupId: String, newValue: Group)
+
+  /**
+   * Deletes a Group item from the repository.
+   *
+   * @param groupId The unique identifier of the Group item to delete.
+   * @throws Exception if the Group item is not found.
+   */
+  suspend fun deleteGroup(groupId: String)
 }
