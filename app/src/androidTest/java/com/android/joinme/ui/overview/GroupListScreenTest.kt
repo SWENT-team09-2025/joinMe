@@ -24,19 +24,37 @@ import org.junit.Test
  */
 class FakeGroupRepository : GroupRepository {
   private val groups = mutableListOf<Group>()
+  private var counter = 0
 
   fun setGroups(newGroups: List<Group>) {
     groups.clear()
     groups.addAll(newGroups)
   }
 
-  override suspend fun userGroups(): List<Group> = groups
-
-  override suspend fun leaveGroup(id: String) {
-    groups.removeIf { it.id == id }
+  override fun getNewGroupId(): String {
+    return (counter++).toString()
   }
 
-  override suspend fun getGroup(id: String): Group? = groups.find { it.id == id }
+  override suspend fun getAllGroups(): List<Group> = groups
+
+  override suspend fun getGroup(groupId: String): Group {
+    return groups.find { it.id == groupId } ?: throw Exception("Group not found")
+  }
+
+  override suspend fun addGroup(group: Group) {
+    groups.add(group)
+  }
+
+  override suspend fun editGroup(groupId: String, newValue: Group) {
+    val index = groups.indexOfFirst { it.id == groupId }
+    if (index != -1) {
+      groups[index] = newValue
+    }
+  }
+
+  override suspend fun deleteGroup(groupId: String) {
+    groups.removeIf { it.id == groupId }
+  }
 }
 
 class GroupListScreenTest {

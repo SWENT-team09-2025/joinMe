@@ -30,8 +30,9 @@ class GroupDetailViewModelTest {
     var errorMessage = "Test error"
     var shouldReturnNull = false
     private val groups = mutableMapOf<String, Group>()
+    private var counter = 0
 
-    fun addGroup(group: Group) {
+    fun addTestGroup(group: Group) {
       groups[group.id] = group
     }
 
@@ -39,22 +40,34 @@ class GroupDetailViewModelTest {
       groups.clear()
     }
 
-    override suspend fun getGroup(id: String): Group? {
+    override fun getNewGroupId(): String {
+      return (counter++).toString()
+    }
+
+    override suspend fun getAllGroups(): List<Group> {
+      return groups.values.toList()
+    }
+
+    override suspend fun getGroup(groupId: String): Group {
       if (shouldThrowError) {
         throw Exception(errorMessage)
       }
       if (shouldReturnNull) {
-        return null
+        throw Exception("Group not found")
       }
-      return groups[id]
+      return groups[groupId] ?: throw Exception("Group not found")
     }
 
-    override suspend fun leaveGroup(id: String) {
-      // Simulate leaving the group
+    override suspend fun addGroup(group: Group) {
+      groups[group.id] = group
     }
 
-    override suspend fun userGroups(): List<Group> {
-      return groups.values.toList()
+    override suspend fun editGroup(groupId: String, newValue: Group) {
+      groups[groupId] = newValue
+    }
+
+    override suspend fun deleteGroup(groupId: String) {
+      groups.remove(groupId)
     }
   }
 
@@ -140,7 +153,7 @@ class GroupDetailViewModelTest {
             Profile(uid = "user2", username = "User Two", email = "user2@test.com"),
             Profile(uid = "user3", username = "User Three", email = "user3@test.com"))
 
-    fakeGroupRepo.addGroup(testGroup)
+    fakeGroupRepo.addTestGroup(testGroup)
     testProfiles.forEach { fakeProfileRepo.addProfile(it) }
 
     viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
@@ -163,7 +176,7 @@ class GroupDetailViewModelTest {
     val testGroup =
         Group(id = "group1", name = "Empty Group", ownerId = "owner1", memberIds = emptyList())
 
-    fakeGroupRepo.addGroup(testGroup)
+    fakeGroupRepo.addTestGroup(testGroup)
 
     viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
     viewModel.loadGroupDetails("group1")
@@ -187,7 +200,7 @@ class GroupDetailViewModelTest {
       fakeProfileRepo.addProfile(
           Profile(uid = uid, username = "User $uid", email = "$uid@test.com"))
     }
-    fakeGroupRepo.addGroup(testGroup)
+    fakeGroupRepo.addTestGroup(testGroup)
 
     viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
     viewModel.loadGroupDetails("group1")
@@ -210,7 +223,7 @@ class GroupDetailViewModelTest {
             memberIds = listOf("user1", "user2"),
             eventIds = listOf("event1", "event2", "event3"))
 
-    fakeGroupRepo.addGroup(testGroup)
+    fakeGroupRepo.addTestGroup(testGroup)
     fakeProfileRepo.addProfile(Profile(uid = "user1", username = "User1", email = "u1@test.com"))
     fakeProfileRepo.addProfile(Profile(uid = "user2", username = "User2", email = "u2@test.com"))
 
@@ -238,7 +251,7 @@ class GroupDetailViewModelTest {
             ownerId = "owner1",
             memberIds = emptyList())
 
-    fakeGroupRepo.addGroup(testGroup)
+    fakeGroupRepo.addTestGroup(testGroup)
 
     viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
     viewModel.loadGroupDetails("group1")
@@ -300,7 +313,7 @@ class GroupDetailViewModelTest {
   @Test
   fun loadGroupDetails_whenExceptionHasNullMessage_usesDefaultMessage() = runTest {
     val testGroup = Group(id = "group1", name = "Test", ownerId = "owner1")
-    fakeGroupRepo.addGroup(testGroup)
+    fakeGroupRepo.addTestGroup(testGroup)
     fakeProfileRepo.shouldThrowError = true
 
     // This won't actually trigger the catch block's null coalescing because
@@ -327,7 +340,7 @@ class GroupDetailViewModelTest {
             ownerId = "owner1",
             memberIds = listOf("user1", "user2", "user3", "user4"))
 
-    fakeGroupRepo.addGroup(testGroup)
+    fakeGroupRepo.addTestGroup(testGroup)
     fakeProfileRepo.addProfile(Profile(uid = "user1", username = "User1", email = "u1@test.com"))
     fakeProfileRepo.setProfileToFail("user2") // This will fail
     fakeProfileRepo.addProfile(Profile(uid = "user3", username = "User3", email = "u3@test.com"))
@@ -354,7 +367,7 @@ class GroupDetailViewModelTest {
             ownerId = "owner1",
             memberIds = listOf("user1", "user2", "user3"))
 
-    fakeGroupRepo.addGroup(testGroup)
+    fakeGroupRepo.addTestGroup(testGroup)
     fakeProfileRepo.setProfileToFail("user1")
     fakeProfileRepo.setProfileToFail("user2")
     fakeProfileRepo.setProfileToFail("user3")
@@ -379,7 +392,7 @@ class GroupDetailViewModelTest {
             ownerId = "owner1",
             memberIds = listOf("user1", "user2", "nonexistent"))
 
-    fakeGroupRepo.addGroup(testGroup)
+    fakeGroupRepo.addTestGroup(testGroup)
     fakeProfileRepo.addProfile(Profile(uid = "user1", username = "User1", email = "u1@test.com"))
     fakeProfileRepo.addProfile(Profile(uid = "user2", username = "User2", email = "u2@test.com"))
     // "nonexistent" is not added, so getProfile returns null
@@ -399,8 +412,8 @@ class GroupDetailViewModelTest {
     val group1 = Group(id = "group1", name = "Group 1", ownerId = "owner1")
     val group2 = Group(id = "group2", name = "Group 2", ownerId = "owner2")
 
-    fakeGroupRepo.addGroup(group1)
-    fakeGroupRepo.addGroup(group2)
+    fakeGroupRepo.addTestGroup(group1)
+    fakeGroupRepo.addTestGroup(group2)
 
     viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
 
@@ -418,7 +431,7 @@ class GroupDetailViewModelTest {
   @Test
   fun loadGroupDetails_alwaysEndsWithLoadingFalse() = runTest {
     val testGroup = Group(id = "group1", name = "Test", ownerId = "owner1")
-    fakeGroupRepo.addGroup(testGroup)
+    fakeGroupRepo.addTestGroup(testGroup)
 
     viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
     viewModel.loadGroupDetails("group1")
@@ -451,7 +464,7 @@ class GroupDetailViewModelTest {
     // Now load successfully
     fakeGroupRepo.shouldThrowError = false
     val testGroup = Group(id = "group1", name = "Success", ownerId = "owner1")
-    fakeGroupRepo.addGroup(testGroup)
+    fakeGroupRepo.addTestGroup(testGroup)
 
     viewModel.loadGroupDetails("group1")
     advanceUntilIdle()
@@ -477,7 +490,7 @@ class GroupDetailViewModelTest {
   fun loadGroupDetails_withVeryLongGroupId_handlesCorrectly() = runTest {
     val longId = "a".repeat(1000)
     val testGroup = Group(id = longId, name = "Long ID Group", ownerId = "owner1")
-    fakeGroupRepo.addGroup(testGroup)
+    fakeGroupRepo.addTestGroup(testGroup)
 
     viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
     viewModel.loadGroupDetails(longId)
@@ -493,7 +506,7 @@ class GroupDetailViewModelTest {
   fun loadGroupDetails_withEmptyDescription_handlesCorrectly() = runTest {
     val testGroup =
         Group(id = "group1", name = "No Description", description = "", ownerId = "owner1")
-    fakeGroupRepo.addGroup(testGroup)
+    fakeGroupRepo.addTestGroup(testGroup)
 
     viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
     viewModel.loadGroupDetails("group1")
@@ -507,7 +520,7 @@ class GroupDetailViewModelTest {
     val testGroup =
         Group(id = "group1", name = "Solo Group", ownerId = "owner1", memberIds = listOf("user1"))
 
-    fakeGroupRepo.addGroup(testGroup)
+    fakeGroupRepo.addTestGroup(testGroup)
     fakeProfileRepo.addProfile(Profile(uid = "user1", username = "Solo", email = "solo@test.com"))
 
     viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
@@ -525,9 +538,9 @@ class GroupDetailViewModelTest {
     val group2 = Group(id = "group2", name = "Second", ownerId = "owner2")
     val group3 = Group(id = "group3", name = "Third", ownerId = "owner3")
 
-    fakeGroupRepo.addGroup(group1)
-    fakeGroupRepo.addGroup(group2)
-    fakeGroupRepo.addGroup(group3)
+    fakeGroupRepo.addTestGroup(group1)
+    fakeGroupRepo.addTestGroup(group2)
+    fakeGroupRepo.addTestGroup(group3)
 
     viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
 
@@ -547,7 +560,7 @@ class GroupDetailViewModelTest {
   @Test
   fun uiState_consistentAfterSuccessfulLoad() = runTest {
     val testGroup = Group(id = "group1", name = "Test", ownerId = "owner1")
-    fakeGroupRepo.addGroup(testGroup)
+    fakeGroupRepo.addTestGroup(testGroup)
 
     viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
     viewModel.loadGroupDetails("group1")
