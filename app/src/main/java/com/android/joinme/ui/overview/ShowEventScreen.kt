@@ -13,7 +13,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -109,7 +108,7 @@ fun ShowEventScreen(
                   onGoBack()
                 }
               }) {
-                Text("Delete", color = Color.Red)
+                Text("Delete", color = DeleteButtonColor)
               }
         },
         dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } })
@@ -118,24 +117,31 @@ fun ShowEventScreen(
   Scaffold(
       modifier = Modifier.testTag(ShowEventScreenTestTags.SCREEN),
       topBar = {
-        TopAppBar(
-            title = {
-              Box(
-                  modifier = Modifier.fillMaxWidth().offset(x = (-24).dp),
-                  contentAlignment = Alignment.Center) {
-                    Text(
-                        text = eventUIState.title.ifBlank { "Task title" },
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_TITLE))
-                  }
-            },
-            navigationIcon = {
-              IconButton(onClick = onGoBack) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-              }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White))
+        Column {
+          TopAppBar(
+              title = {
+                Box(
+                    modifier = Modifier.fillMaxWidth().offset(x = (-24).dp),
+                    contentAlignment = Alignment.Center) {
+                      Text(
+                          text = eventUIState.title.ifBlank { "Task title" },
+                          fontSize = 20.sp,
+                          fontWeight = FontWeight.Medium,
+                          modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_TITLE))
+                    }
+              },
+              navigationIcon = {
+                IconButton(onClick = onGoBack) {
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                      contentDescription = "Back")
+                }
+              },
+              colors =
+                  TopAppBarDefaults.topAppBarColors(
+                      containerColor = MaterialTheme.colorScheme.surface))
+          HorizontalDivider(color = DividerColor, thickness = 1.dp)
+        }
       }) { paddingValues ->
         Column(
             modifier =
@@ -152,6 +158,7 @@ fun ShowEventScreen(
                   text = eventUIState.date,
                   fontSize = 16.sp,
                   fontWeight = FontWeight.Bold,
+                  color = MaterialTheme.colorScheme.onSurface,
                   modifier =
                       Modifier.fillMaxWidth()
                           .testTag(ShowEventScreenTestTags.EVENT_DATE)
@@ -169,6 +176,7 @@ fun ShowEventScreen(
                         text = eventUIState.visibility,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_VISIBILITY))
 
                     Text(
@@ -179,29 +187,29 @@ fun ShowEventScreen(
                         modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_TYPE))
                   }
 
-              HorizontalDivider(thickness = 1.dp, color = Color.Gray)
+              HorizontalDivider(thickness = 1.dp, color = DividerColor)
 
               // Description
               Text(
                   text = eventUIState.description,
                   fontSize = 14.sp,
-                  color = Color.DarkGray,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
                   modifier =
                       Modifier.fillMaxWidth()
                           .heightIn(min = 80.dp)
                           .testTag(ShowEventScreenTestTags.EVENT_DESCRIPTION))
 
-              HorizontalDivider(thickness = 1.dp, color = Color.Gray)
+              HorizontalDivider(thickness = 1.dp, color = DividerColor)
 
               // Location
               Text(
                   text = eventUIState.location,
                   fontSize = 14.sp,
-                  color = Color.DarkGray,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
                   modifier =
                       Modifier.fillMaxWidth().testTag(ShowEventScreenTestTags.EVENT_LOCATION))
 
-              HorizontalDivider(thickness = 1.dp, color = Color.Gray)
+              HorizontalDivider(thickness = 1.dp, color = DividerColor)
 
               // Members and Duration row
               Row(
@@ -212,22 +220,25 @@ fun ShowEventScreen(
                             "MEMBERS : ${eventUIState.participantsCount}/${eventUIState.maxParticipants}",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_MEMBERS))
 
                     Text(
                         text = "${eventUIState.duration}min",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_DURATION))
                   }
 
-              HorizontalDivider(thickness = 1.dp, color = Color.Gray)
+              HorizontalDivider(thickness = 1.dp, color = DividerColor)
 
               // Owner display
               Text(
                   text = eventUIState.ownerName,
                   fontSize = 14.sp,
                   fontWeight = FontWeight.Medium,
+                  color = MaterialTheme.colorScheme.onSurface,
                   modifier =
                       Modifier.fillMaxWidth()
                           .testTag(ShowEventScreenTestTags.EVENT_OWNER)
@@ -248,7 +259,9 @@ fun ShowEventScreen(
                               .height(56.dp)
                               .testTag(ShowEventScreenTestTags.EDIT_BUTTON),
                       shape = RoundedCornerShape(8.dp),
-                      colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1C1C1E))) {
+                      colors =
+                          ButtonDefaults.buttonColors(
+                              containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
                         Text(text = "EDIT EVENT", fontSize = 16.sp, fontWeight = FontWeight.Medium)
                       }
 
@@ -261,11 +274,12 @@ fun ShowEventScreen(
                       shape = RoundedCornerShape(8.dp),
                       colors =
                           ButtonDefaults.outlinedButtonColors(
-                              contentColor = Color.Red, containerColor = Color.White)) {
+                              contentColor = DeleteButtonColor,
+                              containerColor = MaterialTheme.colorScheme.surface)) {
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "Delete",
-                            tint = Color.Red)
+                            tint = DeleteButtonColor)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "DELETE EVENT", fontSize = 16.sp, fontWeight = FontWeight.Medium)
@@ -283,7 +297,9 @@ fun ShowEventScreen(
                               .height(56.dp)
                               .testTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON),
                       shape = RoundedCornerShape(8.dp),
-                      colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1C1C1E))) {
+                      colors =
+                          ButtonDefaults.buttonColors(
+                              containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
                         Text(
                             text =
                                 if (eventUIState.isParticipant(currentUserId)) "QUIT EVENT"
