@@ -97,7 +97,6 @@ class GroupDetailViewModel(
             try {
                 profileRepository.getProfile(memberId)
             } catch (e: Exception) {
-                // Log error but continue with other profiles
                 null
             }
         }
