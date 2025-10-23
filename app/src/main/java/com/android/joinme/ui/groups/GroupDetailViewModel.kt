@@ -88,34 +88,4 @@ class GroupDetailViewModel(
       }
     }
   }
-
-  /**
-   * Allows the current user to leave the group. After leaving, the screen should navigate back.
-   *
-   * @param groupId The unique identifier of the group to leave.
-   * @param onSuccess Callback to execute after successfully leaving the group.
-   */
-  fun leaveGroup(groupId: String, onSuccess: () -> Unit) {
-    viewModelScope.launch {
-      _uiState.update { it.copy(isLoading = true) }
-
-      try {
-        groupRepository.leaveGroup(groupId)
-        onSuccess()
-      } catch (e: Exception) {
-        _uiState.update {
-          it.copy(isLoading = false, error = "Failed to leave group: ${e.message}")
-        }
-      }
-    }
-  }
-
-  /**
-   * Refreshes the group details and member list.
-   *
-   * @param groupId The unique identifier of the group to refresh.
-   */
-  fun refresh(groupId: String) {
-    loadGroupDetails(groupId)
-  }
 }

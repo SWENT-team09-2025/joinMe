@@ -29,8 +29,6 @@ class GroupDetailViewModelTest {
     var shouldThrowError = false
     var errorMessage = "Test error"
     var shouldReturnNull = false
-    var leaveGroupShouldThrowError = false
-    var leaveGroupErrorMessage = "Failed to leave group"
     private val groups = mutableMapOf<String, Group>()
 
     fun addGroup(group: Group) {
@@ -52,9 +50,6 @@ class GroupDetailViewModelTest {
     }
 
     override suspend fun leaveGroup(id: String) {
-      if (leaveGroupShouldThrowError) {
-        throw Exception(leaveGroupErrorMessage)
-      }
       // Simulate leaving the group
     }
 
@@ -397,153 +392,6 @@ class GroupDetailViewModelTest {
     Assert.assertEquals(2, state.members.size) // Only existing profiles
   }
 
-  // ========== Leave Group Tests ==========
-
-  @Test
-  fun leaveGroup_successful_callsOnSuccess() = runTest {
-    var onSuccessCalled = false
-
-    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-    viewModel.leaveGroup("group1") { onSuccessCalled = true }
-    advanceUntilIdle()
-
-    Assert.assertTrue(onSuccessCalled)
-    val state = viewModel.uiState.value
-    // Note: ViewModel doesn't set isLoading to false on success, only on error
-    // This might be a bug but we test actual behavior
-    Assert.assertTrue(state.isLoading)
-    Assert.assertNull(state.error)
-  }
-
-  @Test
-  fun leaveGroup_withError_setsErrorMessage() = runTest {
-    var onSuccessCalled = false
-    fakeGroupRepo.leaveGroupShouldThrowError = true
-    fakeGroupRepo.leaveGroupErrorMessage = "Cannot leave group"
-
-    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-    viewModel.leaveGroup("group1") { onSuccessCalled = true }
-    advanceUntilIdle()
-
-    Assert.assertFalse(onSuccessCalled)
-    val state = viewModel.uiState.value
-    Assert.assertFalse(state.isLoading)
-    Assert.assertEquals("Failed to leave group: Cannot leave group", state.error)
-  }
-
-  @Test
-  fun leaveGroup_setsLoadingDuringOperation() = runTest {
-    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-
-    // Load some initial data first so we have a consistent state
-    val testGroup = Group(id = "group1", name = "Test", ownerId = "owner1")
-    fakeGroupRepo.addGroup(testGroup)
-    viewModel.loadGroupDetails("group1")
-    advanceUntilIdle()
-
-    viewModel.leaveGroup("group1") {}
-    advanceUntilIdle()
-
-    // After successful completion, loading remains true (this appears to be current behavior)
-    // The ViewModel doesn't reset isLoading on successful leave
-    Assert.assertTrue(viewModel.uiState.value.isLoading)
-  }
-
-  @Test
-  fun leaveGroup_withNullExceptionMessage_usesErrorPrefix() = runTest {
-    var onSuccessCalled = false
-    fakeGroupRepo.leaveGroupShouldThrowError = true
-    fakeGroupRepo.leaveGroupErrorMessage = ""
-
-    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-    viewModel.leaveGroup("group1") { onSuccessCalled = true }
-    advanceUntilIdle()
-
-    Assert.assertFalse(onSuccessCalled)
-    val state = viewModel.uiState.value
-    Assert.assertTrue(state.error?.startsWith("Failed to leave group:") == true)
-  }
-
-  // ========== Refresh Tests ==========
-
-  @Test
-  fun refresh_reloadsGroupDetails() = runTest {
-    val testGroup1 =
-        Group(
-            id = "group1", name = "Original Group", ownerId = "owner1", memberIds = listOf("user1"))
-
-    fakeGroupRepo.addGroup(testGroup1)
-    fakeProfileRepo.addProfile(Profile(uid = "user1", username = "User1", email = "u1@test.com"))
-
-    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-    viewModel.loadGroupDetails("group1")
-    advanceUntilIdle()
-
-    Assert.assertEquals("Original Group", viewModel.uiState.value.group?.name)
-
-    // Update the group
-    val testGroup2 =
-        Group(
-            id = "group1",
-            name = "Updated Group",
-            ownerId = "owner1",
-            memberIds = listOf("user1", "user2"))
-    fakeGroupRepo.clear()
-    fakeGroupRepo.addGroup(testGroup2)
-    fakeProfileRepo.addProfile(Profile(uid = "user2", username = "User2", email = "u2@test.com"))
-
-    viewModel.refresh("group1")
-    advanceUntilIdle()
-
-    val state = viewModel.uiState.value
-    Assert.assertEquals("Updated Group", state.group?.name)
-    Assert.assertEquals(2, state.members.size)
-  }
-
-  @Test
-  fun refresh_afterError_canRecover() = runTest {
-    fakeGroupRepo.shouldThrowError = true
-
-    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-    viewModel.loadGroupDetails("group1")
-    advanceUntilIdle()
-
-    Assert.assertNotNull(viewModel.uiState.value.error)
-
-    // Fix the error and refresh
-    fakeGroupRepo.shouldThrowError = false
-    val testGroup = Group(id = "group1", name = "Recovered", ownerId = "owner1")
-    fakeGroupRepo.addGroup(testGroup)
-
-    viewModel.refresh("group1")
-    advanceUntilIdle()
-
-    val state = viewModel.uiState.value
-    Assert.assertNull(state.error)
-    Assert.assertEquals("Recovered", state.group?.name)
-  }
-
-  @Test
-  fun refresh_clearsErrorBeforeReloading() = runTest {
-    fakeGroupRepo.shouldThrowError = true
-
-    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-    viewModel.loadGroupDetails("group1")
-    advanceUntilIdle()
-
-    Assert.assertNotNull(viewModel.uiState.value.error)
-
-    // Refresh (will fail again but should clear error first)
-    fakeGroupRepo.shouldThrowError = false
-    fakeGroupRepo.shouldReturnNull = true
-
-    viewModel.refresh("group1")
-    advanceUntilIdle()
-
-    // Error should be updated to new error
-    Assert.assertEquals("Group not found", viewModel.uiState.value.error)
-  }
-
   // ========== Multiple Operations Tests ==========
 
   @Test
@@ -562,28 +410,6 @@ class GroupDetailViewModelTest {
 
     viewModel.loadGroupDetails("group2")
     advanceUntilIdle()
-    Assert.assertEquals("Group 2", viewModel.uiState.value.group?.name)
-  }
-
-  @Test
-  fun loadAfterLeave_worksCorrectly() = runTest {
-    val testGroup = Group(id = "group1", name = "Test", ownerId = "owner1")
-    fakeGroupRepo.addGroup(testGroup)
-
-    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-
-    var leaveSuccessful = false
-    viewModel.leaveGroup("group1") { leaveSuccessful = true }
-    advanceUntilIdle()
-    Assert.assertTrue(leaveSuccessful)
-
-    // Load another group
-    val group2 = Group(id = "group2", name = "Group 2", ownerId = "owner2")
-    fakeGroupRepo.addGroup(group2)
-
-    viewModel.loadGroupDetails("group2")
-    advanceUntilIdle()
-
     Assert.assertEquals("Group 2", viewModel.uiState.value.group?.name)
   }
 
