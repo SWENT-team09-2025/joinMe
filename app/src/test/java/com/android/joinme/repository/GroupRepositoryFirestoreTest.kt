@@ -1,5 +1,6 @@
 package com.android.joinme.repository
 
+import com.android.joinme.model.event.EventType
 import com.android.joinme.model.group.GROUPS_COLLECTION_PATH
 import com.android.joinme.model.group.GroupRepositoryFirestore
 import com.android.joinme.model.group.MEMBERSHIPS_COLLECTION_PATH
@@ -93,7 +94,7 @@ class GroupRepositoryFirestoreTest {
     every { mockMembershipQuery.get() } returns Tasks.forResult(mockMembershipSnapshot)
     every { mockMembershipSnapshot.documents } returns listOf(mockMembershipDoc)
     every { mockMembershipDoc.reference } returns mockDocRef
-    every { mockDocRef.delete() } returns Tasks.forResult<Void>(null)
+    every { mockDocRef.delete() } returns Tasks.forResult(null)
 
     repository.leaveGroup(groupId)
 
@@ -118,7 +119,7 @@ class GroupRepositoryFirestoreTest {
     every { mockMembershipSnapshot.documents } returns mockMembershipDocs
     mockMembershipDocs.forEachIndexed { index, doc ->
       every { doc.reference } returns mockDocRefs[index]
-      every { mockDocRefs[index].delete() } returns Tasks.forResult<Void>(null)
+      every { mockDocRefs[index].delete() } returns Tasks.forResult(null)
     }
 
     repository.leaveGroup(groupId)
@@ -161,8 +162,10 @@ class GroupRepositoryFirestoreTest {
     every { mockDocRef.get() } returns Tasks.forResult(mockDocSnapshot)
     every { mockDocSnapshot.id } returns groupId
     every { mockDocSnapshot.getString("name") } returns "Test Group"
+    every { mockDocSnapshot.getString("category") } returns "SPORTS" // Return as String
     every { mockDocSnapshot.getString("ownerId") } returns "owner-123"
     every { mockDocSnapshot.getString("description") } returns "Test Description"
+    every { mockDocSnapshot.getString("photoUrl") } returns null
     every { mockDocSnapshot.get("memberIds") } returns listOf("user1", "user2", "user3")
     every { mockDocSnapshot.get("eventIds") } returns listOf("event1", "event2")
 
@@ -171,6 +174,7 @@ class GroupRepositoryFirestoreTest {
     assertNotNull(result)
     assertEquals(groupId, result?.id)
     assertEquals("Test Group", result?.name)
+    assertEquals(EventType.SPORTS, result?.category)
     assertEquals("owner-123", result?.ownerId)
     assertEquals("Test Description", result?.description)
     assertEquals(3, result?.membersCount)
@@ -206,8 +210,10 @@ class GroupRepositoryFirestoreTest {
     every { mockDocRef.get() } returns Tasks.forResult(mockDocSnapshot)
     every { mockDocSnapshot.id } returns groupId
     every { mockDocSnapshot.getString("name") } returns "Minimal Group"
+    every { mockDocSnapshot.getString("category") } returns null // Missing category
     every { mockDocSnapshot.getString("ownerId") } returns "owner-456"
     every { mockDocSnapshot.getString("description") } returns null
+    every { mockDocSnapshot.getString("photoUrl") } returns null
     every { mockDocSnapshot.get("memberIds") } returns null
     every { mockDocSnapshot.get("eventIds") } returns null
 
@@ -216,10 +222,12 @@ class GroupRepositoryFirestoreTest {
     assertNotNull(result)
     assertEquals("Minimal Group", result?.name)
     assertEquals("owner-456", result?.ownerId)
+    assertEquals(EventType.ACTIVITY, result?.category) // Default category
     assertEquals("", result?.description)
     assertEquals(0, result?.membersCount)
     assertEquals(emptyList<String>(), result?.memberIds)
     assertEquals(emptyList<String>(), result?.eventIds)
+    assertNull(result?.photoUrl)
   }
 
   @Test
@@ -232,8 +240,10 @@ class GroupRepositoryFirestoreTest {
     every { mockDocRef.get() } returns Tasks.forResult(mockDocSnapshot)
     every { mockDocSnapshot.id } returns groupId
     every { mockDocSnapshot.getString("name") } returns "Café & Restaurant 🍽️"
+    every { mockDocSnapshot.getString("category") } returns "SOCIAL"
     every { mockDocSnapshot.getString("ownerId") } returns "owner-James-123"
     every { mockDocSnapshot.getString("description") } returns "Special: €$£¥"
+    every { mockDocSnapshot.getString("photoUrl") } returns null
     every { mockDocSnapshot.get("memberIds") } returns listOf("user1", "user2")
     every { mockDocSnapshot.get("eventIds") } returns emptyList<String>()
 
@@ -241,9 +251,33 @@ class GroupRepositoryFirestoreTest {
 
     assertNotNull(result)
     assertEquals("Café & Restaurant 🍽️", result?.name)
+    assertEquals(EventType.SOCIAL, result?.category)
     assertEquals("owner-James-123", result?.ownerId)
     assertEquals("Special: €$£¥", result?.description)
     assertEquals(2, result?.membersCount)
+  }
+
+  @Test
+  fun getGroup_withInvalidCategory_defaultsToActivity() = runTest {
+    val groupId = "invalid-category-group"
+    val mockDocRef = mockk<DocumentReference>(relaxed = true)
+    val mockDocSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+
+    every { mockGroupsCollection.document(groupId) } returns mockDocRef
+    every { mockDocRef.get() } returns Tasks.forResult(mockDocSnapshot)
+    every { mockDocSnapshot.id } returns groupId
+    every { mockDocSnapshot.getString("name") } returns "Group with Invalid Category"
+    every { mockDocSnapshot.getString("category") } returns "INVALID_CATEGORY"
+    every { mockDocSnapshot.getString("ownerId") } returns "owner-789"
+    every { mockDocSnapshot.getString("description") } returns ""
+    every { mockDocSnapshot.getString("photoUrl") } returns null
+    every { mockDocSnapshot.get("memberIds") } returns emptyList<String>()
+    every { mockDocSnapshot.get("eventIds") } returns emptyList<String>()
+
+    val result = repository.getGroup(groupId)
+
+    assertNotNull(result)
+    assertEquals(EventType.ACTIVITY, result?.category) // Should default to ACTIVITY
   }
 
   @Test
@@ -275,5 +309,193 @@ class GroupRepositoryFirestoreTest {
     val result = repository.getGroup(groupId)
 
     assertNull(result)
+  }
+
+  // =======================================
+  // Create Group Tests
+  // =======================================
+
+  @Test
+  fun createGroup_successfullyCreatesGroupAndMembership() = runTest {
+    val mockGroupDocRef = mockk<DocumentReference>(relaxed = true)
+    val mockMembershipDocRef = mockk<DocumentReference>(relaxed = true)
+    val mockBatch = mockk<com.google.firebase.firestore.WriteBatch>(relaxed = true)
+
+    every { mockGroupsCollection.document() } returns mockGroupDocRef
+    every { mockGroupDocRef.id } returns "generated-group-id"
+    every { mockMembershipsCollection.document() } returns mockMembershipDocRef
+    every { mockFirestore.batch() } returns mockBatch
+    every { mockBatch.set(any<DocumentReference>(), any<Map<String, Any>>()) } returns mockBatch
+    every { mockBatch.commit() } returns Tasks.forResult(null)
+
+    val result =
+        repository.createGroup(
+            name = "Test Group", category = EventType.SOCIAL, description = "Test description")
+
+    assertEquals("generated-group-id", result)
+    verify(exactly = 1) {
+      mockBatch.set(
+          any<DocumentReference>(), match<Map<String, Any>> { it["name"] == "Test Group" })
+    }
+    verify(exactly = 1) {
+      mockBatch.set(
+          any<DocumentReference>(),
+          match<Map<String, Any>> { it["userId"] == testUid && it["role"] == "admin" })
+    }
+    verify(exactly = 1) { mockBatch.commit() }
+  }
+
+  @Test
+  fun createGroup_storesCorrectGroupData() = runTest {
+    val mockGroupDocRef = mockk<DocumentReference>(relaxed = true)
+    val mockMembershipDocRef = mockk<DocumentReference>(relaxed = true)
+    val mockBatch = mockk<com.google.firebase.firestore.WriteBatch>(relaxed = true)
+    val capturedData = mutableListOf<Map<String, Any>>()
+
+    every { mockGroupsCollection.document() } returns mockGroupDocRef
+    every { mockGroupDocRef.id } returns "group-123"
+    every { mockMembershipsCollection.document() } returns mockMembershipDocRef
+    every { mockFirestore.batch() } returns mockBatch
+    every { mockBatch.set(any<DocumentReference>(), capture(capturedData)) } returns mockBatch
+    every { mockBatch.commit() } returns Tasks.forResult(null)
+
+    repository.createGroup(
+        name = "Sports Team", category = EventType.SPORTS, description = "Weekly games")
+
+    // Find the group data (has "name" field)
+    val groupData = capturedData.find { it.containsKey("name") }
+    assertNotNull("Group data should be captured", groupData)
+    assertEquals("Sports Team", groupData!!["name"])
+    assertEquals("SPORTS", groupData["category"]) // Stored as string
+    assertEquals("Weekly games", groupData["description"])
+    assertEquals(testUid, groupData["ownerId"])
+    assertEquals(listOf(testUid), groupData["memberIds"])
+    assertEquals(emptyList<String>(), groupData["eventIds"])
+    assertNull(groupData["photoUrl"])
+    assertNotNull(groupData["createdAt"])
+    assertEquals(testUid, groupData["createdBy"])
+  }
+
+  @Test
+  fun createGroup_storesCorrectMembershipData() = runTest {
+    val mockGroupDocRef = mockk<DocumentReference>(relaxed = true)
+    val mockMembershipDocRef = mockk<DocumentReference>(relaxed = true)
+    val mockBatch = mockk<com.google.firebase.firestore.WriteBatch>(relaxed = true)
+    val capturedData = mutableListOf<Map<String, Any>>()
+
+    every { mockGroupsCollection.document() } returns mockGroupDocRef
+    every { mockGroupDocRef.id } returns "group-456"
+    every { mockMembershipsCollection.document() } returns mockMembershipDocRef
+    every { mockFirestore.batch() } returns mockBatch
+    every { mockBatch.set(any<DocumentReference>(), capture(capturedData)) } returns mockBatch
+    every { mockBatch.commit() } returns Tasks.forResult(null)
+
+    repository.createGroup(
+        name = "Activity Group", category = EventType.ACTIVITY, description = "Fun activities")
+
+    // Find the membership data (has "userId" field)
+    val membershipData = capturedData.find { it.containsKey("userId") }
+    assertNotNull("Membership data should be captured", membershipData)
+    assertEquals(testUid, membershipData!!["userId"])
+    assertEquals("group-456", membershipData["groupId"])
+    assertEquals("admin", membershipData["role"])
+  }
+
+  @Test
+  fun createGroup_withEmptyDescription_storesEmptyString() = runTest {
+    val mockGroupDocRef = mockk<DocumentReference>(relaxed = true)
+    val mockMembershipDocRef = mockk<DocumentReference>(relaxed = true)
+    val mockBatch = mockk<com.google.firebase.firestore.WriteBatch>(relaxed = true)
+    val capturedData = mutableListOf<Map<String, Any>>()
+
+    every { mockGroupsCollection.document() } returns mockGroupDocRef
+    every { mockGroupDocRef.id } returns "group-789"
+    every { mockMembershipsCollection.document() } returns mockMembershipDocRef
+    every { mockFirestore.batch() } returns mockBatch
+    every { mockBatch.set(any<DocumentReference>(), capture(capturedData)) } returns mockBatch
+    every { mockBatch.commit() } returns Tasks.forResult(null)
+
+    repository.createGroup(name = "Minimal Group", category = EventType.ACTIVITY, description = "")
+
+    // Find the group data (has "name" field)
+    val groupData = capturedData.find { it.containsKey("name") }
+    assertNotNull("Group data should be captured", groupData)
+    assertEquals("", groupData!!["description"])
+  }
+
+  @Test
+  fun createGroup_withAllCategories_storesCorrectly() = runTest {
+    val categories = listOf(EventType.SOCIAL, EventType.ACTIVITY, EventType.SPORTS)
+
+    categories.forEach { category ->
+      val mockGroupDocRef = mockk<DocumentReference>(relaxed = true)
+      val mockMembershipDocRef = mockk<DocumentReference>(relaxed = true)
+      val mockBatch = mockk<com.google.firebase.firestore.WriteBatch>(relaxed = true)
+      val capturedData = mutableListOf<Map<String, Any>>()
+
+      every { mockGroupsCollection.document() } returns mockGroupDocRef
+      every { mockGroupDocRef.id } returns "group-test-${category.name}"
+      every { mockMembershipsCollection.document() } returns mockMembershipDocRef
+      every { mockFirestore.batch() } returns mockBatch
+      every { mockBatch.set(any<DocumentReference>(), capture(capturedData)) } returns mockBatch
+      every { mockBatch.commit() } returns Tasks.forResult(null)
+
+      repository.createGroup(name = "Test", category = category, description = "Test")
+
+      // Find the group data (has "name" field)
+      val groupData = capturedData.find { it.containsKey("name") }
+      assertNotNull("Group data should be captured", groupData)
+      assertEquals(category.name, groupData!!["category"])
+    }
+  }
+
+  @Test(expected = IllegalStateException::class)
+  fun createGroup_whenUserNotAuthenticated_throwsIllegalStateException() = runTest {
+    every { mockAuth.currentUser } returns null
+
+    repository.createGroup(name = "Test", category = EventType.SOCIAL, description = "Test")
+  }
+
+  @Test
+  fun createGroup_whenBatchFails_propagatesException() = runTest {
+    val mockGroupDocRef = mockk<DocumentReference>(relaxed = true)
+    val mockMembershipDocRef = mockk<DocumentReference>(relaxed = true)
+    val mockBatch = mockk<com.google.firebase.firestore.WriteBatch>(relaxed = true)
+
+    every { mockGroupsCollection.document() } returns mockGroupDocRef
+    every { mockGroupDocRef.id } returns "group-fail"
+    every { mockMembershipsCollection.document() } returns mockMembershipDocRef
+    every { mockFirestore.batch() } returns mockBatch
+    every { mockBatch.set(any(), any<Map<String, Any>>()) } returns mockBatch
+    every { mockBatch.commit() } returns Tasks.forException(Exception("Firestore error"))
+
+    try {
+      repository.createGroup(name = "Test", category = EventType.ACTIVITY, description = "Test")
+      fail("Expected exception to be thrown")
+    } catch (e: Exception) {
+      assertTrue(e.message?.contains("Firestore error") ?: false)
+    }
+  }
+
+  @Test
+  fun createGroup_usesAtomicBatchWrite() = runTest {
+    val mockGroupDocRef = mockk<DocumentReference>(relaxed = true)
+    val mockMembershipDocRef = mockk<DocumentReference>(relaxed = true)
+    val mockBatch = mockk<com.google.firebase.firestore.WriteBatch>(relaxed = true)
+
+    every { mockGroupsCollection.document() } returns mockGroupDocRef
+    every { mockGroupDocRef.id } returns "atomic-group"
+    every { mockMembershipsCollection.document() } returns mockMembershipDocRef
+    every { mockFirestore.batch() } returns mockBatch
+    every { mockBatch.set(any(), any<Map<String, Any>>()) } returns mockBatch
+    every { mockBatch.commit() } returns Tasks.forResult(null)
+
+    repository.createGroup(
+        name = "Atomic Test", category = EventType.SOCIAL, description = "Testing atomicity")
+
+    // Verify batch was created and committed
+    verify(exactly = 1) { mockFirestore.batch() }
+    verify(exactly = 2) { mockBatch.set(any(), any<Map<String, Any>>()) }
+    verify(exactly = 1) { mockBatch.commit() }
   }
 }

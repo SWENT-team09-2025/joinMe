@@ -1,5 +1,6 @@
 package com.android.joinme.repository
 
+import com.android.joinme.model.event.EventType
 import com.android.joinme.model.group.Group
 import com.android.joinme.model.group.GroupRepositoryLocal
 import kotlinx.coroutines.test.runTest
@@ -268,6 +269,146 @@ class GroupRepositoryLocalTest {
     assertEquals("First", groups[0].name)
     assertEquals("Third", groups[1].name)
     assertEquals("Fourth", groups[2].name)
+  }
+
+  // =======================================
+  // Create Group Tests
+  // =======================================
+
+  @Test
+  fun createGroup_successfullyCreatesAndReturnsGroupId() = runTest {
+    val groupId =
+        repository.createGroup(
+            name = "Test Group", category = EventType.SOCIAL, description = "Test description")
+
+    assertNotNull(groupId)
+    assertTrue(groupId.isNotEmpty())
+  }
+
+  @Test
+  fun createGroup_addsGroupToRepository() = runTest {
+    val groupId =
+        repository.createGroup(
+            name = "New Group", category = EventType.ACTIVITY, description = "Description")
+
+    val groups = repository.userGroups()
+    assertEquals(1, groups.size)
+    assertEquals(groupId, groups[0].id)
+  }
+
+  @Test
+  fun createGroup_storesCorrectGroupData() = runTest {
+    val groupId =
+        repository.createGroup(
+            name = "Sports Team", category = EventType.SPORTS, description = "Weekly games")
+
+    val group = repository.getGroup(groupId)
+
+    assertNotNull(group)
+    assertEquals("Sports Team", group?.name)
+    assertEquals(EventType.SPORTS, group?.category)
+    assertEquals("Weekly games", group?.description)
+    assertNotNull(group?.ownerId)
+    assertTrue(group?.memberIds?.isNotEmpty() == true)
+  }
+
+  @Test
+  fun createGroup_withEmptyDescription_createsSuccessfully() = runTest {
+    val groupId =
+        repository.createGroup(
+            name = "Minimal Group", category = EventType.ACTIVITY, description = "")
+
+    val group = repository.getGroup(groupId)
+
+    assertNotNull(group)
+    assertEquals("", group?.description)
+  }
+
+  @Test
+  fun createGroup_withAllCategories_storesCorrectly() = runTest {
+    val socialId =
+        repository.createGroup(
+            name = "Social Group", category = EventType.SOCIAL, description = "Social activities")
+
+    val activityId =
+        repository.createGroup(
+            name = "Activity Group", category = EventType.ACTIVITY, description = "Fun activities")
+
+    val sportsId =
+        repository.createGroup(
+            name = "Sports Group", category = EventType.SPORTS, description = "Sports events")
+
+    val socialGroup = repository.getGroup(socialId)
+    val activityGroup = repository.getGroup(activityId)
+    val sportsGroup = repository.getGroup(sportsId)
+
+    assertEquals(EventType.SOCIAL, socialGroup?.category)
+    assertEquals(EventType.ACTIVITY, activityGroup?.category)
+    assertEquals(EventType.SPORTS, sportsGroup?.category)
+  }
+
+  @Test
+  fun createGroup_multipleGroups_allStoredCorrectly() = runTest {
+    repository.createGroup("Group 1", EventType.SOCIAL, "Desc 1")
+    repository.createGroup("Group 2", EventType.ACTIVITY, "Desc 2")
+    repository.createGroup("Group 3", EventType.SPORTS, "Desc 3")
+
+    val groups = repository.userGroups()
+
+    assertEquals(3, groups.size)
+    assertEquals("Group 1", groups[0].name)
+    assertEquals("Group 2", groups[1].name)
+    assertEquals("Group 3", groups[2].name)
+  }
+
+  @Test
+  fun createGroup_generatesUniqueIds() = runTest {
+    val id1 = repository.createGroup("Group 1", EventType.SOCIAL, "Desc")
+    val id2 = repository.createGroup("Group 2", EventType.ACTIVITY, "Desc")
+    val id3 = repository.createGroup("Group 3", EventType.SPORTS, "Desc")
+
+    assertNotEquals(id1, id2)
+    assertNotEquals(id2, id3)
+    assertNotEquals(id1, id3)
+  }
+
+  @Test
+  fun createGroup_afterCreating_canBeRetrievedByGetGroup() = runTest {
+    val groupId =
+        repository.createGroup(
+            name = "Retrievable Group",
+            category = EventType.ACTIVITY,
+            description = "Can be retrieved")
+
+    val retrievedGroup = repository.getGroup(groupId)
+
+    assertNotNull(retrievedGroup)
+    assertEquals(groupId, retrievedGroup?.id)
+    assertEquals("Retrievable Group", retrievedGroup?.name)
+  }
+
+  @Test
+  fun createGroup_afterCreating_appearsInUserGroups() = runTest {
+    repository.createGroup("Group A", EventType.SOCIAL, "A")
+    repository.createGroup("Group B", EventType.ACTIVITY, "B")
+
+    val groups = repository.userGroups()
+
+    assertEquals(2, groups.size)
+    assertTrue(groups.any { it.name == "Group A" })
+    assertTrue(groups.any { it.name == "Group B" })
+  }
+
+  @Test
+  fun createGroup_createdGroupCanBeLeft() = runTest {
+    val groupId =
+        repository.createGroup(
+            name = "Leavable Group", category = EventType.SPORTS, description = "Can be left")
+
+    repository.leaveGroup(groupId)
+
+    val groups = repository.userGroups()
+    assertTrue(groups.isEmpty())
   }
 
   /**
