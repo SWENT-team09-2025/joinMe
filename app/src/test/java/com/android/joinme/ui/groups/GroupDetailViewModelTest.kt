@@ -19,830 +19,748 @@ import org.junit.Test
 /**
  * Comprehensive unit tests for GroupDetailViewModel.
  *
- * These tests verify all code paths and edge cases in the GroupDetailViewModel,
- * including successful loads, error handling, member profile fetching, and group operations.
+ * These tests verify all code paths and edge cases in the GroupDetailViewModel, including
+ * successful loads, error handling, member profile fetching, and group operations.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class GroupDetailViewModelTest {
 
-    private class FakeGroupRepository : GroupRepository {
-        var shouldThrowError = false
-        var errorMessage = "Test error"
-        var shouldReturnNull = false
-        var leaveGroupShouldThrowError = false
-        var leaveGroupErrorMessage = "Failed to leave group"
-        private val groups = mutableMapOf<String, Group>()
+  private class FakeGroupRepository : GroupRepository {
+    var shouldThrowError = false
+    var errorMessage = "Test error"
+    var shouldReturnNull = false
+    var leaveGroupShouldThrowError = false
+    var leaveGroupErrorMessage = "Failed to leave group"
+    private val groups = mutableMapOf<String, Group>()
 
-        fun addGroup(group: Group) {
-            groups[group.id] = group
-        }
-
-        fun clear() {
-            groups.clear()
-        }
-
-        override suspend fun getGroup(id: String): Group? {
-            if (shouldThrowError) {
-                throw Exception(errorMessage)
-            }
-            if (shouldReturnNull) {
-                return null
-            }
-            return groups[id]
-        }
-
-        override suspend fun leaveGroup(id: String) {
-            if (leaveGroupShouldThrowError) {
-                throw Exception(leaveGroupErrorMessage)
-            }
-            // Simulate leaving the group
-        }
-
-        override suspend fun userGroups(): List<Group> {
-            return groups.values.toList()
-        }
+    fun addGroup(group: Group) {
+      groups[group.id] = group
     }
 
-    private class FakeProfileRepository : ProfileRepository {
-        var shouldThrowError = false
-        var errorMessage = "Profile fetch error"
-        private val profiles = mutableMapOf<String, Profile>()
-        private val failingProfileIds = mutableSetOf<String>()
-
-        fun addProfile(profile: Profile) {
-            profiles[profile.uid] = profile
-        }
-
-        fun setProfileToFail(uid: String) {
-            failingProfileIds.add(uid)
-        }
-
-        fun clear() {
-            profiles.clear()
-            failingProfileIds.clear()
-        }
-
-        override suspend fun getProfile(uid: String): Profile? {
-            if (shouldThrowError || failingProfileIds.contains(uid)) {
-                throw Exception(errorMessage)
-            }
-            return profiles[uid]
-        }
-
-        override suspend fun createOrUpdateProfile(profile: Profile) {
-            profiles[profile.uid] = profile
-        }
-
-        override suspend fun deleteProfile(uid: String) {
-            profiles.remove(uid)
-        }
+    fun clear() {
+      groups.clear()
     }
 
-    private lateinit var fakeGroupRepo: FakeGroupRepository
-    private lateinit var fakeProfileRepo: FakeProfileRepository
-    private lateinit var viewModel: GroupDetailViewModel
-    private val testDispatcher = StandardTestDispatcher()
-
-    @Before
-    fun setUp() {
-        Dispatchers.setMain(testDispatcher)
-        fakeGroupRepo = FakeGroupRepository()
-        fakeProfileRepo = FakeProfileRepository()
+    override suspend fun getGroup(id: String): Group? {
+      if (shouldThrowError) {
+        throw Exception(errorMessage)
+      }
+      if (shouldReturnNull) {
+        return null
+      }
+      return groups[id]
     }
 
-    @After
-    fun tearDown() {
-        Dispatchers.resetMain()
+    override suspend fun leaveGroup(id: String) {
+      if (leaveGroupShouldThrowError) {
+        throw Exception(leaveGroupErrorMessage)
+      }
+      // Simulate leaving the group
     }
 
-    // ========== Initial State Tests ==========
+    override suspend fun userGroups(): List<Group> {
+      return groups.values.toList()
+    }
+  }
 
-    @Test
-    fun initialState_isLoadingTrue() {
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+  private class FakeProfileRepository : ProfileRepository {
+    var shouldThrowError = false
+    var errorMessage = "Profile fetch error"
+    private val profiles = mutableMapOf<String, Profile>()
+    private val failingProfileIds = mutableSetOf<String>()
 
-        val state = viewModel.uiState.value
-        Assert.assertTrue(state.isLoading)
-        Assert.assertNull(state.group)
-        Assert.assertTrue(state.members.isEmpty())
-        Assert.assertNull(state.error)
+    fun addProfile(profile: Profile) {
+      profiles[profile.uid] = profile
     }
 
-    // ========== Successful Load Tests ==========
+    fun setProfileToFail(uid: String) {
+      failingProfileIds.add(uid)
+    }
 
-    @Test
-    fun loadGroupDetails_withValidGroup_loadsSuccessfully() = runTest {
-        val testGroup = Group(
+    fun clear() {
+      profiles.clear()
+      failingProfileIds.clear()
+    }
+
+    override suspend fun getProfile(uid: String): Profile? {
+      if (shouldThrowError || failingProfileIds.contains(uid)) {
+        throw Exception(errorMessage)
+      }
+      return profiles[uid]
+    }
+
+    override suspend fun createOrUpdateProfile(profile: Profile) {
+      profiles[profile.uid] = profile
+    }
+
+    override suspend fun deleteProfile(uid: String) {
+      profiles.remove(uid)
+    }
+  }
+
+  private lateinit var fakeGroupRepo: FakeGroupRepository
+  private lateinit var fakeProfileRepo: FakeProfileRepository
+  private lateinit var viewModel: GroupDetailViewModel
+  private val testDispatcher = StandardTestDispatcher()
+
+  @Before
+  fun setUp() {
+    Dispatchers.setMain(testDispatcher)
+    fakeGroupRepo = FakeGroupRepository()
+    fakeProfileRepo = FakeProfileRepository()
+  }
+
+  @After
+  fun tearDown() {
+    Dispatchers.resetMain()
+  }
+
+  // ========== Initial State Tests ==========
+
+  @Test
+  fun initialState_isLoadingTrue() {
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+
+    val state = viewModel.uiState.value
+    Assert.assertTrue(state.isLoading)
+    Assert.assertNull(state.group)
+    Assert.assertTrue(state.members.isEmpty())
+    Assert.assertNull(state.error)
+  }
+
+  // ========== Successful Load Tests ==========
+
+  @Test
+  fun loadGroupDetails_withValidGroup_loadsSuccessfully() = runTest {
+    val testGroup =
+        Group(
             id = "group1",
             name = "Test Group",
             description = "A test group",
             ownerId = "owner1",
-            memberIds = listOf("user1", "user2", "user3")
-        )
-        val testProfiles = listOf(
+            memberIds = listOf("user1", "user2", "user3"))
+    val testProfiles =
+        listOf(
             Profile(uid = "user1", username = "User One", email = "user1@test.com"),
             Profile(uid = "user2", username = "User Two", email = "user2@test.com"),
-            Profile(uid = "user3", username = "User Three", email = "user3@test.com")
-        )
+            Profile(uid = "user3", username = "User Three", email = "user3@test.com"))
 
-        fakeGroupRepo.addGroup(testGroup)
-        testProfiles.forEach { fakeProfileRepo.addProfile(it) }
+    fakeGroupRepo.addGroup(testGroup)
+    testProfiles.forEach { fakeProfileRepo.addProfile(it) }
 
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        Assert.assertFalse(state.isLoading)
-        Assert.assertNull(state.error)
-        Assert.assertNotNull(state.group)
-        Assert.assertEquals("Test Group", state.group?.name)
-        Assert.assertEquals(3, state.members.size)
-        Assert.assertEquals("User One", state.members[0].username)
-        Assert.assertEquals("User Two", state.members[1].username)
-        Assert.assertEquals("User Three", state.members[2].username)
+    val state = viewModel.uiState.value
+    Assert.assertFalse(state.isLoading)
+    Assert.assertNull(state.error)
+    Assert.assertNotNull(state.group)
+    Assert.assertEquals("Test Group", state.group?.name)
+    Assert.assertEquals(3, state.members.size)
+    Assert.assertEquals("User One", state.members[0].username)
+    Assert.assertEquals("User Two", state.members[1].username)
+    Assert.assertEquals("User Three", state.members[2].username)
+  }
+
+  @Test
+  fun loadGroupDetails_withEmptyMemberList_loadsGroupWithoutMembers() = runTest {
+    val testGroup =
+        Group(id = "group1", name = "Empty Group", ownerId = "owner1", memberIds = emptyList())
+
+    fakeGroupRepo.addGroup(testGroup)
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    Assert.assertFalse(state.isLoading)
+    Assert.assertNull(state.error)
+    Assert.assertNotNull(state.group)
+    Assert.assertEquals("Empty Group", state.group?.name)
+    Assert.assertTrue(state.members.isEmpty())
+  }
+
+  @Test
+  fun loadGroupDetails_withLargeNumberOfMembers_loadsAll() = runTest {
+    val memberIds = (1..50).map { "user$it" }
+    val testGroup =
+        Group(id = "group1", name = "Large Group", ownerId = "owner1", memberIds = memberIds)
+
+    memberIds.forEach { uid ->
+      fakeProfileRepo.addProfile(
+          Profile(uid = uid, username = "User $uid", email = "$uid@test.com"))
     }
+    fakeGroupRepo.addGroup(testGroup)
 
-    @Test
-    fun loadGroupDetails_withEmptyMemberList_loadsGroupWithoutMembers() = runTest {
-        val testGroup = Group(
-            id = "group1",
-            name = "Empty Group",
-            ownerId = "owner1",
-            memberIds = emptyList()
-        )
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
 
-        fakeGroupRepo.addGroup(testGroup)
+    val state = viewModel.uiState.value
+    Assert.assertFalse(state.isLoading)
+    Assert.assertNull(state.error)
+    Assert.assertEquals(50, state.members.size)
+  }
 
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        Assert.assertFalse(state.isLoading)
-        Assert.assertNull(state.error)
-        Assert.assertNotNull(state.group)
-        Assert.assertEquals("Empty Group", state.group?.name)
-        Assert.assertTrue(state.members.isEmpty())
-    }
-
-    @Test
-    fun loadGroupDetails_withLargeNumberOfMembers_loadsAll() = runTest {
-        val memberIds = (1..50).map { "user$it" }
-        val testGroup = Group(
-            id = "group1",
-            name = "Large Group",
-            ownerId = "owner1",
-            memberIds = memberIds
-        )
-
-        memberIds.forEach { uid ->
-            fakeProfileRepo.addProfile(
-                Profile(uid = uid, username = "User $uid", email = "$uid@test.com")
-            )
-        }
-        fakeGroupRepo.addGroup(testGroup)
-
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        Assert.assertFalse(state.isLoading)
-        Assert.assertNull(state.error)
-        Assert.assertEquals(50, state.members.size)
-    }
-
-    @Test
-    fun loadGroupDetails_preservesAllGroupProperties() = runTest {
-        val testGroup = Group(
+  @Test
+  fun loadGroupDetails_preservesAllGroupProperties() = runTest {
+    val testGroup =
+        Group(
             id = "group-123",
             name = "Complete Group",
             description = "Full description",
             ownerId = "owner-456",
             memberIds = listOf("user1", "user2"),
-            eventIds = listOf("event1", "event2", "event3")
-        )
+            eventIds = listOf("event1", "event2", "event3"))
 
-        fakeGroupRepo.addGroup(testGroup)
-        fakeProfileRepo.addProfile(
-            Profile(
-                uid = "user1",
-                username = "User1",
-                email = "u1@test.com"
-            )
-        )
-        fakeProfileRepo.addProfile(
-            Profile(
-                uid = "user2",
-                username = "User2",
-                email = "u2@test.com"
-            )
-        )
+    fakeGroupRepo.addGroup(testGroup)
+    fakeProfileRepo.addProfile(Profile(uid = "user1", username = "User1", email = "u1@test.com"))
+    fakeProfileRepo.addProfile(Profile(uid = "user2", username = "User2", email = "u2@test.com"))
 
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group-123")
-        advanceUntilIdle()
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group-123")
+    advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        val loadedGroup = state.group!!
-        Assert.assertEquals("group-123", loadedGroup.id)
-        Assert.assertEquals("Complete Group", loadedGroup.name)
-        Assert.assertEquals("Full description", loadedGroup.description)
-        Assert.assertEquals("owner-456", loadedGroup.ownerId)
-        Assert.assertEquals(2, loadedGroup.memberIds.size)
-        Assert.assertEquals(3, loadedGroup.eventIds.size)
-    }
+    val state = viewModel.uiState.value
+    val loadedGroup = state.group!!
+    Assert.assertEquals("group-123", loadedGroup.id)
+    Assert.assertEquals("Complete Group", loadedGroup.name)
+    Assert.assertEquals("Full description", loadedGroup.description)
+    Assert.assertEquals("owner-456", loadedGroup.ownerId)
+    Assert.assertEquals(2, loadedGroup.memberIds.size)
+    Assert.assertEquals(3, loadedGroup.eventIds.size)
+  }
 
-    @Test
-    fun loadGroupDetails_withSpecialCharactersInName_handlesCorrectly() = runTest {
-        val testGroup = Group(
+  @Test
+  fun loadGroupDetails_withSpecialCharactersInName_handlesCorrectly() = runTest {
+    val testGroup =
+        Group(
             id = "group1",
             name = "Café & Brunch Club ☕",
             description = "Group with special chars: @#$%",
             ownerId = "owner1",
-            memberIds = emptyList()
-        )
+            memberIds = emptyList())
 
-        fakeGroupRepo.addGroup(testGroup)
+    fakeGroupRepo.addGroup(testGroup)
 
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        Assert.assertEquals("Café & Brunch Club ☕", state.group?.name)
-        Assert.assertEquals("Group with special chars: @#$%", state.group?.description)
-    }
+    val state = viewModel.uiState.value
+    Assert.assertEquals("Café & Brunch Club ☕", state.group?.name)
+    Assert.assertEquals("Group with special chars: @#$%", state.group?.description)
+  }
 
-    // ========== Error Handling Tests ==========
+  // ========== Error Handling Tests ==========
 
-    @Test
-    fun loadGroupDetails_withNullGroup_setsGroupNotFoundError() = runTest {
-        fakeGroupRepo.shouldReturnNull = true
+  @Test
+  fun loadGroupDetails_withNullGroup_setsGroupNotFoundError() = runTest {
+    fakeGroupRepo.shouldReturnNull = true
 
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("nonexistent")
-        advanceUntilIdle()
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("nonexistent")
+    advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        Assert.assertFalse(state.isLoading)
-        Assert.assertNull(state.group)
-        Assert.assertEquals("Group not found", state.error)
-        Assert.assertTrue(state.members.isEmpty())
-    }
+    val state = viewModel.uiState.value
+    Assert.assertFalse(state.isLoading)
+    Assert.assertNull(state.group)
+    Assert.assertEquals("Group not found", state.error)
+    Assert.assertTrue(state.members.isEmpty())
+  }
 
-    @Test
-    fun loadGroupDetails_withRepositoryError_setsErrorMessage() = runTest {
-        fakeGroupRepo.shouldThrowError = true
-        fakeGroupRepo.errorMessage = "Network error occurred"
+  @Test
+  fun loadGroupDetails_withRepositoryError_setsErrorMessage() = runTest {
+    fakeGroupRepo.shouldThrowError = true
+    fakeGroupRepo.errorMessage = "Network error occurred"
 
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        Assert.assertFalse(state.isLoading)
-        Assert.assertNull(state.group)
-        Assert.assertEquals("Network error occurred", state.error)
-        Assert.assertTrue(state.members.isEmpty())
-    }
+    val state = viewModel.uiState.value
+    Assert.assertFalse(state.isLoading)
+    Assert.assertNull(state.group)
+    Assert.assertEquals("Network error occurred", state.error)
+    Assert.assertTrue(state.members.isEmpty())
+  }
 
-    @Test
-    fun loadGroupDetails_withExceptionWithoutMessage_setsDefaultError() = runTest {
-        fakeGroupRepo.shouldThrowError = true
-        fakeGroupRepo.errorMessage = ""
+  @Test
+  fun loadGroupDetails_withExceptionWithoutMessage_setsDefaultError() = runTest {
+    fakeGroupRepo.shouldThrowError = true
+    fakeGroupRepo.errorMessage = ""
 
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        Assert.assertFalse(state.isLoading)
-        // Empty exception message results in empty string, not "An unexpected error occurred"
-        Assert.assertEquals("", state.error)
-    }
+    val state = viewModel.uiState.value
+    Assert.assertFalse(state.isLoading)
+    // Empty exception message results in empty string, not "An unexpected error occurred"
+    Assert.assertEquals("", state.error)
+  }
 
-    @Test
-    fun loadGroupDetails_whenExceptionHasNullMessage_usesDefaultMessage() = runTest {
-        val testGroup = Group(id = "group1", name = "Test", ownerId = "owner1")
-        fakeGroupRepo.addGroup(testGroup)
-        fakeProfileRepo.shouldThrowError = true
+  @Test
+  fun loadGroupDetails_whenExceptionHasNullMessage_usesDefaultMessage() = runTest {
+    val testGroup = Group(id = "group1", name = "Test", ownerId = "owner1")
+    fakeGroupRepo.addGroup(testGroup)
+    fakeProfileRepo.shouldThrowError = true
 
-        // This won't actually trigger the catch block's null coalescing because
-        // we'll get an exception with a message. Let's test the actual exception path.
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        fakeGroupRepo.shouldThrowError = true
-        fakeGroupRepo.errorMessage = null.toString() // Will be "null" string
+    // This won't actually trigger the catch block's null coalescing because
+    // we'll get an exception with a message. Let's test the actual exception path.
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    fakeGroupRepo.shouldThrowError = true
+    fakeGroupRepo.errorMessage = null.toString() // Will be "null" string
 
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        Assert.assertNotNull(state.error)
-    }
+    val state = viewModel.uiState.value
+    Assert.assertNotNull(state.error)
+  }
 
-    // ========== Member Profile Fetching Tests ==========
+  // ========== Member Profile Fetching Tests ==========
 
-    @Test
-    fun loadGroupDetails_withSomeFailingProfiles_loadsOnlySuccessfulOnes() = runTest {
-        val testGroup = Group(
+  @Test
+  fun loadGroupDetails_withSomeFailingProfiles_loadsOnlySuccessfulOnes() = runTest {
+    val testGroup =
+        Group(
             id = "group1",
             name = "Test Group",
             ownerId = "owner1",
-            memberIds = listOf("user1", "user2", "user3", "user4")
-        )
+            memberIds = listOf("user1", "user2", "user3", "user4"))
 
-        fakeGroupRepo.addGroup(testGroup)
-        fakeProfileRepo.addProfile(
-            Profile(
-                uid = "user1",
-                username = "User1",
-                email = "u1@test.com"
-            )
-        )
-        fakeProfileRepo.setProfileToFail("user2") // This will fail
-        fakeProfileRepo.addProfile(
-            Profile(
-                uid = "user3",
-                username = "User3",
-                email = "u3@test.com"
-            )
-        )
-        fakeProfileRepo.setProfileToFail("user4") // This will fail
+    fakeGroupRepo.addGroup(testGroup)
+    fakeProfileRepo.addProfile(Profile(uid = "user1", username = "User1", email = "u1@test.com"))
+    fakeProfileRepo.setProfileToFail("user2") // This will fail
+    fakeProfileRepo.addProfile(Profile(uid = "user3", username = "User3", email = "u3@test.com"))
+    fakeProfileRepo.setProfileToFail("user4") // This will fail
 
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        Assert.assertFalse(state.isLoading)
-        Assert.assertNull(state.error) // Overall load succeeds
-        Assert.assertEquals(2, state.members.size) // Only 2 successful profiles
-        Assert.assertEquals("User1", state.members[0].username)
-        Assert.assertEquals("User3", state.members[1].username)
-    }
+    val state = viewModel.uiState.value
+    Assert.assertFalse(state.isLoading)
+    Assert.assertNull(state.error) // Overall load succeeds
+    Assert.assertEquals(2, state.members.size) // Only 2 successful profiles
+    Assert.assertEquals("User1", state.members[0].username)
+    Assert.assertEquals("User3", state.members[1].username)
+  }
 
-    @Test
-    fun loadGroupDetails_withAllFailingProfiles_loadsGroupWithoutMembers() = runTest {
-        val testGroup = Group(
+  @Test
+  fun loadGroupDetails_withAllFailingProfiles_loadsGroupWithoutMembers() = runTest {
+    val testGroup =
+        Group(
             id = "group1",
             name = "Test Group",
             ownerId = "owner1",
-            memberIds = listOf("user1", "user2", "user3")
-        )
+            memberIds = listOf("user1", "user2", "user3"))
 
-        fakeGroupRepo.addGroup(testGroup)
-        fakeProfileRepo.setProfileToFail("user1")
-        fakeProfileRepo.setProfileToFail("user2")
-        fakeProfileRepo.setProfileToFail("user3")
+    fakeGroupRepo.addGroup(testGroup)
+    fakeProfileRepo.setProfileToFail("user1")
+    fakeProfileRepo.setProfileToFail("user2")
+    fakeProfileRepo.setProfileToFail("user3")
 
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        Assert.assertFalse(state.isLoading)
-        Assert.assertNull(state.error)
-        Assert.assertNotNull(state.group)
-        Assert.assertTrue(state.members.isEmpty()) // All profile fetches failed
-    }
+    val state = viewModel.uiState.value
+    Assert.assertFalse(state.isLoading)
+    Assert.assertNull(state.error)
+    Assert.assertNotNull(state.group)
+    Assert.assertTrue(state.members.isEmpty()) // All profile fetches failed
+  }
 
-    @Test
-    fun loadGroupDetails_withMixOfValidAndNullProfiles_filtersNulls() = runTest {
-        val testGroup = Group(
+  @Test
+  fun loadGroupDetails_withMixOfValidAndNullProfiles_filtersNulls() = runTest {
+    val testGroup =
+        Group(
             id = "group1",
             name = "Test Group",
             ownerId = "owner1",
-            memberIds = listOf("user1", "user2", "nonexistent")
-        )
+            memberIds = listOf("user1", "user2", "nonexistent"))
 
-        fakeGroupRepo.addGroup(testGroup)
-        fakeProfileRepo.addProfile(
-            Profile(
-                uid = "user1",
-                username = "User1",
-                email = "u1@test.com"
-            )
-        )
-        fakeProfileRepo.addProfile(
-            Profile(
-                uid = "user2",
-                username = "User2",
-                email = "u2@test.com"
-            )
-        )
-        // "nonexistent" is not added, so getProfile returns null
+    fakeGroupRepo.addGroup(testGroup)
+    fakeProfileRepo.addProfile(Profile(uid = "user1", username = "User1", email = "u1@test.com"))
+    fakeProfileRepo.addProfile(Profile(uid = "user2", username = "User2", email = "u2@test.com"))
+    // "nonexistent" is not added, so getProfile returns null
 
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        Assert.assertEquals(2, state.members.size) // Only existing profiles
-    }
+    val state = viewModel.uiState.value
+    Assert.assertEquals(2, state.members.size) // Only existing profiles
+  }
 
-    // ========== Leave Group Tests ==========
+  // ========== Leave Group Tests ==========
 
-    @Test
-    fun leaveGroup_successful_callsOnSuccess() = runTest {
-        var onSuccessCalled = false
+  @Test
+  fun leaveGroup_successful_callsOnSuccess() = runTest {
+    var onSuccessCalled = false
 
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.leaveGroup("group1") {
-            onSuccessCalled = true
-        }
-        advanceUntilIdle()
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.leaveGroup("group1") { onSuccessCalled = true }
+    advanceUntilIdle()
 
-        Assert.assertTrue(onSuccessCalled)
-        val state = viewModel.uiState.value
-        // Note: ViewModel doesn't set isLoading to false on success, only on error
-        // This might be a bug but we test actual behavior
-        Assert.assertTrue(state.isLoading)
-        Assert.assertNull(state.error)
-    }
+    Assert.assertTrue(onSuccessCalled)
+    val state = viewModel.uiState.value
+    // Note: ViewModel doesn't set isLoading to false on success, only on error
+    // This might be a bug but we test actual behavior
+    Assert.assertTrue(state.isLoading)
+    Assert.assertNull(state.error)
+  }
 
-    @Test
-    fun leaveGroup_withError_setsErrorMessage() = runTest {
-        var onSuccessCalled = false
-        fakeGroupRepo.leaveGroupShouldThrowError = true
-        fakeGroupRepo.leaveGroupErrorMessage = "Cannot leave group"
+  @Test
+  fun leaveGroup_withError_setsErrorMessage() = runTest {
+    var onSuccessCalled = false
+    fakeGroupRepo.leaveGroupShouldThrowError = true
+    fakeGroupRepo.leaveGroupErrorMessage = "Cannot leave group"
 
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.leaveGroup("group1") {
-            onSuccessCalled = true
-        }
-        advanceUntilIdle()
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.leaveGroup("group1") { onSuccessCalled = true }
+    advanceUntilIdle()
 
-        Assert.assertFalse(onSuccessCalled)
-        val state = viewModel.uiState.value
-        Assert.assertFalse(state.isLoading)
-        Assert.assertEquals("Failed to leave group: Cannot leave group", state.error)
-    }
+    Assert.assertFalse(onSuccessCalled)
+    val state = viewModel.uiState.value
+    Assert.assertFalse(state.isLoading)
+    Assert.assertEquals("Failed to leave group: Cannot leave group", state.error)
+  }
 
-    @Test
-    fun leaveGroup_setsLoadingDuringOperation() = runTest {
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+  @Test
+  fun leaveGroup_setsLoadingDuringOperation() = runTest {
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
 
-        // Load some initial data first so we have a consistent state
-        val testGroup = Group(id = "group1", name = "Test", ownerId = "owner1")
-        fakeGroupRepo.addGroup(testGroup)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
+    // Load some initial data first so we have a consistent state
+    val testGroup = Group(id = "group1", name = "Test", ownerId = "owner1")
+    fakeGroupRepo.addGroup(testGroup)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
 
-        viewModel.leaveGroup("group1") {}
-        advanceUntilIdle()
+    viewModel.leaveGroup("group1") {}
+    advanceUntilIdle()
 
-        // After successful completion, loading remains true (this appears to be current behavior)
-        // The ViewModel doesn't reset isLoading on successful leave
-        Assert.assertTrue(viewModel.uiState.value.isLoading)
-    }
+    // After successful completion, loading remains true (this appears to be current behavior)
+    // The ViewModel doesn't reset isLoading on successful leave
+    Assert.assertTrue(viewModel.uiState.value.isLoading)
+  }
 
-    @Test
-    fun leaveGroup_withNullExceptionMessage_usesErrorPrefix() = runTest {
-        var onSuccessCalled = false
-        fakeGroupRepo.leaveGroupShouldThrowError = true
-        fakeGroupRepo.leaveGroupErrorMessage = ""
+  @Test
+  fun leaveGroup_withNullExceptionMessage_usesErrorPrefix() = runTest {
+    var onSuccessCalled = false
+    fakeGroupRepo.leaveGroupShouldThrowError = true
+    fakeGroupRepo.leaveGroupErrorMessage = ""
 
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.leaveGroup("group1") {
-            onSuccessCalled = true
-        }
-        advanceUntilIdle()
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.leaveGroup("group1") { onSuccessCalled = true }
+    advanceUntilIdle()
 
-        Assert.assertFalse(onSuccessCalled)
-        val state = viewModel.uiState.value
-        Assert.assertTrue(state.error?.startsWith("Failed to leave group:") == true)
-    }
+    Assert.assertFalse(onSuccessCalled)
+    val state = viewModel.uiState.value
+    Assert.assertTrue(state.error?.startsWith("Failed to leave group:") == true)
+  }
 
-    // ========== Refresh Tests ==========
+  // ========== Refresh Tests ==========
 
-    @Test
-    fun refresh_reloadsGroupDetails() = runTest {
-        val testGroup1 = Group(
-            id = "group1",
-            name = "Original Group",
-            ownerId = "owner1",
-            memberIds = listOf("user1")
-        )
+  @Test
+  fun refresh_reloadsGroupDetails() = runTest {
+    val testGroup1 =
+        Group(
+            id = "group1", name = "Original Group", ownerId = "owner1", memberIds = listOf("user1"))
 
-        fakeGroupRepo.addGroup(testGroup1)
-        fakeProfileRepo.addProfile(
-            Profile(
-                uid = "user1",
-                username = "User1",
-                email = "u1@test.com"
-            )
-        )
+    fakeGroupRepo.addGroup(testGroup1)
+    fakeProfileRepo.addProfile(Profile(uid = "user1", username = "User1", email = "u1@test.com"))
 
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
 
-        Assert.assertEquals("Original Group", viewModel.uiState.value.group?.name)
+    Assert.assertEquals("Original Group", viewModel.uiState.value.group?.name)
 
-        // Update the group
-        val testGroup2 = Group(
+    // Update the group
+    val testGroup2 =
+        Group(
             id = "group1",
             name = "Updated Group",
             ownerId = "owner1",
-            memberIds = listOf("user1", "user2")
-        )
-        fakeGroupRepo.clear()
-        fakeGroupRepo.addGroup(testGroup2)
-        fakeProfileRepo.addProfile(
-            Profile(
-                uid = "user2",
-                username = "User2",
-                email = "u2@test.com"
-            )
-        )
+            memberIds = listOf("user1", "user2"))
+    fakeGroupRepo.clear()
+    fakeGroupRepo.addGroup(testGroup2)
+    fakeProfileRepo.addProfile(Profile(uid = "user2", username = "User2", email = "u2@test.com"))
 
-        viewModel.refresh("group1")
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        Assert.assertEquals("Updated Group", state.group?.name)
-        Assert.assertEquals(2, state.members.size)
-    }
-
-    @Test
-    fun refresh_afterError_canRecover() = runTest {
-        fakeGroupRepo.shouldThrowError = true
+    viewModel.refresh("group1")
+    advanceUntilIdle()
 
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
+    val state = viewModel.uiState.value
+    Assert.assertEquals("Updated Group", state.group?.name)
+    Assert.assertEquals(2, state.members.size)
+  }
 
-        Assert.assertNotNull(viewModel.uiState.value.error)
-
-        // Fix the error and refresh
-        fakeGroupRepo.shouldThrowError = false
-        val testGroup = Group(id = "group1", name = "Recovered", ownerId = "owner1")
-        fakeGroupRepo.addGroup(testGroup)
+  @Test
+  fun refresh_afterError_canRecover() = runTest {
+    fakeGroupRepo.shouldThrowError = true
 
-        viewModel.refresh("group1")
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        Assert.assertNull(state.error)
-        Assert.assertEquals("Recovered", state.group?.name)
-    }
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
 
-    @Test
-    fun refresh_clearsErrorBeforeReloading() = runTest {
-        fakeGroupRepo.shouldThrowError = true
+    Assert.assertNotNull(viewModel.uiState.value.error)
 
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
+    // Fix the error and refresh
+    fakeGroupRepo.shouldThrowError = false
+    val testGroup = Group(id = "group1", name = "Recovered", ownerId = "owner1")
+    fakeGroupRepo.addGroup(testGroup)
 
-        Assert.assertNotNull(viewModel.uiState.value.error)
+    viewModel.refresh("group1")
+    advanceUntilIdle()
 
-        // Refresh (will fail again but should clear error first)
-        fakeGroupRepo.shouldThrowError = false
-        fakeGroupRepo.shouldReturnNull = true
+    val state = viewModel.uiState.value
+    Assert.assertNull(state.error)
+    Assert.assertEquals("Recovered", state.group?.name)
+  }
 
-        viewModel.refresh("group1")
-        advanceUntilIdle()
+  @Test
+  fun refresh_clearsErrorBeforeReloading() = runTest {
+    fakeGroupRepo.shouldThrowError = true
 
-        // Error should be updated to new error
-        Assert.assertEquals("Group not found", viewModel.uiState.value.error)
-    }
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
 
-    // ========== Multiple Operations Tests ==========
+    Assert.assertNotNull(viewModel.uiState.value.error)
 
-    @Test
-    fun multipleLoadCalls_eachUpdatesState() = runTest {
-        val group1 = Group(id = "group1", name = "Group 1", ownerId = "owner1")
-        val group2 = Group(id = "group2", name = "Group 2", ownerId = "owner2")
+    // Refresh (will fail again but should clear error first)
+    fakeGroupRepo.shouldThrowError = false
+    fakeGroupRepo.shouldReturnNull = true
 
-        fakeGroupRepo.addGroup(group1)
-        fakeGroupRepo.addGroup(group2)
-
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.refresh("group1")
+    advanceUntilIdle()
 
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
-        Assert.assertEquals("Group 1", viewModel.uiState.value.group?.name)
+    // Error should be updated to new error
+    Assert.assertEquals("Group not found", viewModel.uiState.value.error)
+  }
 
-        viewModel.loadGroupDetails("group2")
-        advanceUntilIdle()
-        Assert.assertEquals("Group 2", viewModel.uiState.value.group?.name)
-    }
-
-    @Test
-    fun loadAfterLeave_worksCorrectly() = runTest {
-        val testGroup = Group(id = "group1", name = "Test", ownerId = "owner1")
-        fakeGroupRepo.addGroup(testGroup)
-
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-
-        var leaveSuccessful = false
-        viewModel.leaveGroup("group1") {
-            leaveSuccessful = true
-        }
-        advanceUntilIdle()
-        Assert.assertTrue(leaveSuccessful)
-
-        // Load another group
-        val group2 = Group(id = "group2", name = "Group 2", ownerId = "owner2")
-        fakeGroupRepo.addGroup(group2)
-
-        viewModel.loadGroupDetails("group2")
-        advanceUntilIdle()
-
-        Assert.assertEquals("Group 2", viewModel.uiState.value.group?.name)
-    }
-
-    // ========== State Consistency Tests ==========
-
-    @Test
-    fun loadGroupDetails_alwaysEndsWithLoadingFalse() = runTest {
-        val testGroup = Group(id = "group1", name = "Test", ownerId = "owner1")
-        fakeGroupRepo.addGroup(testGroup)
-
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
-
-        Assert.assertFalse(viewModel.uiState.value.isLoading)
-    }
-
-    @Test
-    fun loadGroupDetails_onError_alwaysEndsWithLoadingFalse() = runTest {
-        fakeGroupRepo.shouldThrowError = true
-
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
-
-        Assert.assertFalse(viewModel.uiState.value.isLoading)
-    }
-
-    @Test
-    fun successfulLoad_clearsAnyPreviousError() = runTest {
-        fakeGroupRepo.shouldThrowError = true
-
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
-
-        Assert.assertNotNull(viewModel.uiState.value.error)
-
-        // Now load successfully
-        fakeGroupRepo.shouldThrowError = false
-        val testGroup = Group(id = "group1", name = "Success", ownerId = "owner1")
-        fakeGroupRepo.addGroup(testGroup)
-
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
-
-        Assert.assertNull(viewModel.uiState.value.error)
-    }
-
-    // ========== Edge Cases ==========
-
-    @Test
-    fun loadGroupDetails_withEmptyGroupId_handlesCorrectly() = runTest {
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("")
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        Assert.assertFalse(state.isLoading)
-        // Will result in "Group not found" since empty ID won't match anything
-        Assert.assertEquals("Group not found", state.error)
-    }
-
-    @Test
-    fun loadGroupDetails_withVeryLongGroupId_handlesCorrectly() = runTest {
-        val longId = "a".repeat(1000)
-        val testGroup = Group(id = longId, name = "Long ID Group", ownerId = "owner1")
-        fakeGroupRepo.addGroup(testGroup)
-
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails(longId)
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        Assert.assertFalse(state.isLoading)
-        Assert.assertNull(state.error)
-        Assert.assertEquals(longId, state.group?.id)
-    }
-
-    @Test
-    fun loadGroupDetails_withEmptyDescription_handlesCorrectly() = runTest {
-        val testGroup = Group(
-            id = "group1",
-            name = "No Description",
-            description = "",
-            ownerId = "owner1"
-        )
-        fakeGroupRepo.addGroup(testGroup)
-
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
-
-        Assert.assertEquals("", viewModel.uiState.value.group?.description)
-    }
-
-    @Test
-    fun loadGroupDetails_withSingleMember_loadsCorrectly() = runTest {
-        val testGroup = Group(
-            id = "group1",
-            name = "Solo Group",
-            ownerId = "owner1",
-            memberIds = listOf("user1")
-        )
-
-        fakeGroupRepo.addGroup(testGroup)
-        fakeProfileRepo.addProfile(
-            Profile(
-                uid = "user1",
-                username = "Solo",
-                email = "solo@test.com"
-            )
-        )
-
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        Assert.assertEquals(1, state.members.size)
-        Assert.assertEquals("Solo", state.members[0].username)
-    }
-
-    @Test
-    fun loadGroupDetails_consecutiveCalls_eachCompletesCorrectly() = runTest {
-        val group1 = Group(id = "group1", name = "First", ownerId = "owner1")
-        val group2 = Group(id = "group2", name = "Second", ownerId = "owner2")
-        val group3 = Group(id = "group3", name = "Third", ownerId = "owner3")
-
-        fakeGroupRepo.addGroup(group1)
-        fakeGroupRepo.addGroup(group2)
-        fakeGroupRepo.addGroup(group3)
-
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
-        Assert.assertEquals("First", viewModel.uiState.value.group?.name)
-
-        viewModel.loadGroupDetails("group2")
-        advanceUntilIdle()
-        Assert.assertEquals("Second", viewModel.uiState.value.group?.name)
-
-        viewModel.loadGroupDetails("group3")
-        advanceUntilIdle()
-        Assert.assertEquals("Third", viewModel.uiState.value.group?.name)
-    }
-
-    @Test
-    fun uiState_consistentAfterSuccessfulLoad() = runTest {
-        val testGroup = Group(id = "group1", name = "Test", ownerId = "owner1")
-        fakeGroupRepo.addGroup(testGroup)
-
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        Assert.assertFalse(state.isLoading)
-        Assert.assertNull(state.error)
-        Assert.assertNotNull(state.group)
-        Assert.assertNotNull(state.members)
-    }
-
-    @Test
-    fun uiState_consistentAfterError() = runTest {
-        fakeGroupRepo.shouldThrowError = true
-
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("group1")
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        Assert.assertFalse(state.isLoading)
-        Assert.assertNotNull(state.error)
-        Assert.assertNull(state.group)
-        Assert.assertTrue(state.members.isEmpty())
-    }
-
-    @Test
-    fun uiState_consistentAfterGroupNotFound() = runTest {
-        fakeGroupRepo.shouldReturnNull = true
-
-        viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
-        viewModel.loadGroupDetails("nonexistent")
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        Assert.assertFalse(state.isLoading)
-        Assert.assertEquals("Group not found", state.error)
-        Assert.assertNull(state.group)
-        Assert.assertTrue(state.members.isEmpty())
-    }
+  // ========== Multiple Operations Tests ==========
+
+  @Test
+  fun multipleLoadCalls_eachUpdatesState() = runTest {
+    val group1 = Group(id = "group1", name = "Group 1", ownerId = "owner1")
+    val group2 = Group(id = "group2", name = "Group 2", ownerId = "owner2")
+
+    fakeGroupRepo.addGroup(group1)
+    fakeGroupRepo.addGroup(group2)
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
+    Assert.assertEquals("Group 1", viewModel.uiState.value.group?.name)
+
+    viewModel.loadGroupDetails("group2")
+    advanceUntilIdle()
+    Assert.assertEquals("Group 2", viewModel.uiState.value.group?.name)
+  }
+
+  @Test
+  fun loadAfterLeave_worksCorrectly() = runTest {
+    val testGroup = Group(id = "group1", name = "Test", ownerId = "owner1")
+    fakeGroupRepo.addGroup(testGroup)
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+
+    var leaveSuccessful = false
+    viewModel.leaveGroup("group1") { leaveSuccessful = true }
+    advanceUntilIdle()
+    Assert.assertTrue(leaveSuccessful)
+
+    // Load another group
+    val group2 = Group(id = "group2", name = "Group 2", ownerId = "owner2")
+    fakeGroupRepo.addGroup(group2)
+
+    viewModel.loadGroupDetails("group2")
+    advanceUntilIdle()
+
+    Assert.assertEquals("Group 2", viewModel.uiState.value.group?.name)
+  }
+
+  // ========== State Consistency Tests ==========
+
+  @Test
+  fun loadGroupDetails_alwaysEndsWithLoadingFalse() = runTest {
+    val testGroup = Group(id = "group1", name = "Test", ownerId = "owner1")
+    fakeGroupRepo.addGroup(testGroup)
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
+
+    Assert.assertFalse(viewModel.uiState.value.isLoading)
+  }
+
+  @Test
+  fun loadGroupDetails_onError_alwaysEndsWithLoadingFalse() = runTest {
+    fakeGroupRepo.shouldThrowError = true
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
+
+    Assert.assertFalse(viewModel.uiState.value.isLoading)
+  }
+
+  @Test
+  fun successfulLoad_clearsAnyPreviousError() = runTest {
+    fakeGroupRepo.shouldThrowError = true
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
+
+    Assert.assertNotNull(viewModel.uiState.value.error)
+
+    // Now load successfully
+    fakeGroupRepo.shouldThrowError = false
+    val testGroup = Group(id = "group1", name = "Success", ownerId = "owner1")
+    fakeGroupRepo.addGroup(testGroup)
+
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
+
+    Assert.assertNull(viewModel.uiState.value.error)
+  }
+
+  // ========== Edge Cases ==========
+
+  @Test
+  fun loadGroupDetails_withEmptyGroupId_handlesCorrectly() = runTest {
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    Assert.assertFalse(state.isLoading)
+    // Will result in "Group not found" since empty ID won't match anything
+    Assert.assertEquals("Group not found", state.error)
+  }
+
+  @Test
+  fun loadGroupDetails_withVeryLongGroupId_handlesCorrectly() = runTest {
+    val longId = "a".repeat(1000)
+    val testGroup = Group(id = longId, name = "Long ID Group", ownerId = "owner1")
+    fakeGroupRepo.addGroup(testGroup)
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails(longId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    Assert.assertFalse(state.isLoading)
+    Assert.assertNull(state.error)
+    Assert.assertEquals(longId, state.group?.id)
+  }
+
+  @Test
+  fun loadGroupDetails_withEmptyDescription_handlesCorrectly() = runTest {
+    val testGroup =
+        Group(id = "group1", name = "No Description", description = "", ownerId = "owner1")
+    fakeGroupRepo.addGroup(testGroup)
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
+
+    Assert.assertEquals("", viewModel.uiState.value.group?.description)
+  }
+
+  @Test
+  fun loadGroupDetails_withSingleMember_loadsCorrectly() = runTest {
+    val testGroup =
+        Group(id = "group1", name = "Solo Group", ownerId = "owner1", memberIds = listOf("user1"))
+
+    fakeGroupRepo.addGroup(testGroup)
+    fakeProfileRepo.addProfile(Profile(uid = "user1", username = "Solo", email = "solo@test.com"))
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    Assert.assertEquals(1, state.members.size)
+    Assert.assertEquals("Solo", state.members[0].username)
+  }
+
+  @Test
+  fun loadGroupDetails_consecutiveCalls_eachCompletesCorrectly() = runTest {
+    val group1 = Group(id = "group1", name = "First", ownerId = "owner1")
+    val group2 = Group(id = "group2", name = "Second", ownerId = "owner2")
+    val group3 = Group(id = "group3", name = "Third", ownerId = "owner3")
+
+    fakeGroupRepo.addGroup(group1)
+    fakeGroupRepo.addGroup(group2)
+    fakeGroupRepo.addGroup(group3)
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
+    Assert.assertEquals("First", viewModel.uiState.value.group?.name)
+
+    viewModel.loadGroupDetails("group2")
+    advanceUntilIdle()
+    Assert.assertEquals("Second", viewModel.uiState.value.group?.name)
+
+    viewModel.loadGroupDetails("group3")
+    advanceUntilIdle()
+    Assert.assertEquals("Third", viewModel.uiState.value.group?.name)
+  }
+
+  @Test
+  fun uiState_consistentAfterSuccessfulLoad() = runTest {
+    val testGroup = Group(id = "group1", name = "Test", ownerId = "owner1")
+    fakeGroupRepo.addGroup(testGroup)
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    Assert.assertFalse(state.isLoading)
+    Assert.assertNull(state.error)
+    Assert.assertNotNull(state.group)
+    Assert.assertNotNull(state.members)
+  }
+
+  @Test
+  fun uiState_consistentAfterError() = runTest {
+    fakeGroupRepo.shouldThrowError = true
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    Assert.assertFalse(state.isLoading)
+    Assert.assertNotNull(state.error)
+    Assert.assertNull(state.group)
+    Assert.assertTrue(state.members.isEmpty())
+  }
+
+  @Test
+  fun uiState_consistentAfterGroupNotFound() = runTest {
+    fakeGroupRepo.shouldReturnNull = true
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("nonexistent")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    Assert.assertFalse(state.isLoading)
+    Assert.assertEquals("Group not found", state.error)
+    Assert.assertNull(state.group)
+    Assert.assertTrue(state.members.isEmpty())
+  }
 }

@@ -38,101 +38,84 @@ class GroupDetailViewModel(
     private val profileRepository: ProfileRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(GroupDetailUiState())
-    val uiState: StateFlow<GroupDetailUiState> = _uiState.asStateFlow()
+  private val _uiState = MutableStateFlow(GroupDetailUiState())
+  val uiState: StateFlow<GroupDetailUiState> = _uiState.asStateFlow()
 
-    /**
-     * Loads the group details and fetches all member profiles.
-     *
-     * @param groupId The unique identifier of the group to load.
-     */
-    fun loadGroupDetails(groupId: String) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+  /**
+   * Loads the group details and fetches all member profiles.
+   *
+   * @param groupId The unique identifier of the group to load.
+   */
+  fun loadGroupDetails(groupId: String) {
+    viewModelScope.launch {
+      _uiState.update { it.copy(isLoading = true, error = null) }
 
-            try {
-                // Fetch group details
-                val group = groupRepository.getGroup(groupId)
+      try {
+        // Fetch group details
+        val group = groupRepository.getGroup(groupId)
 
-                if (group == null) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = "Group not found"
-                        )
-                    }
-                    return@launch
-                }
-
-                // Fetch all member profiles
-                val members = fetchMemberProfiles(group.memberIds)
-
-                _uiState.update {
-                    it.copy(
-                        group = group,
-                        members = members,
-                        isLoading = false,
-                        error = null
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = e.message ?: "An unexpected error occurred"
-                    )
-                }
-            }
+        if (group == null) {
+          _uiState.update { it.copy(isLoading = false, error = "Group not found") }
+          return@launch
         }
-    }
 
-    /**
-     * Fetches profiles for all members in the group.
-     *
-     * @param memberIds List of member user IDs.
-     * @return List of profiles, excluding any that couldn't be fetched.
-     */
-    private suspend fun fetchMemberProfiles(memberIds: List<String>): List<Profile> {
-        return memberIds.mapNotNull { memberId ->
-            try {
-                profileRepository.getProfile(memberId)
-            } catch (e: Exception) {
-                null
-            }
+        // Fetch all member profiles
+        val members = fetchMemberProfiles(group.memberIds)
+
+        _uiState.update {
+          it.copy(group = group, members = members, isLoading = false, error = null)
         }
-    }
-
-    /**
-     * Allows the current user to leave the group.
-     * After leaving, the screen should navigate back.
-     *
-     * @param groupId The unique identifier of the group to leave.
-     * @param onSuccess Callback to execute after successfully leaving the group.
-     */
-    fun leaveGroup(groupId: String, onSuccess: () -> Unit) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-
-            try {
-                groupRepository.leaveGroup(groupId)
-                onSuccess()
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = "Failed to leave group: ${e.message}"
-                    )
-                }
-            }
+      } catch (e: Exception) {
+        _uiState.update {
+          it.copy(isLoading = false, error = e.message ?: "An unexpected error occurred")
         }
+      }
     }
+  }
 
-    /**
-     * Refreshes the group details and member list.
-     *
-     * @param groupId The unique identifier of the group to refresh.
-     */
-    fun refresh(groupId: String) {
-        loadGroupDetails(groupId)
+  /**
+   * Fetches profiles for all members in the group.
+   *
+   * @param memberIds List of member user IDs.
+   * @return List of profiles, excluding any that couldn't be fetched.
+   */
+  private suspend fun fetchMemberProfiles(memberIds: List<String>): List<Profile> {
+    return memberIds.mapNotNull { memberId ->
+      try {
+        profileRepository.getProfile(memberId)
+      } catch (e: Exception) {
+        null
+      }
     }
+  }
+
+  /**
+   * Allows the current user to leave the group. After leaving, the screen should navigate back.
+   *
+   * @param groupId The unique identifier of the group to leave.
+   * @param onSuccess Callback to execute after successfully leaving the group.
+   */
+  fun leaveGroup(groupId: String, onSuccess: () -> Unit) {
+    viewModelScope.launch {
+      _uiState.update { it.copy(isLoading = true) }
+
+      try {
+        groupRepository.leaveGroup(groupId)
+        onSuccess()
+      } catch (e: Exception) {
+        _uiState.update {
+          it.copy(isLoading = false, error = "Failed to leave group: ${e.message}")
+        }
+      }
+    }
+  }
+
+  /**
+   * Refreshes the group details and member list.
+   *
+   * @param groupId The unique identifier of the group to refresh.
+   */
+  fun refresh(groupId: String) {
+    loadGroupDetails(groupId)
+  }
 }
