@@ -17,6 +17,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.android.joinme.ui.theme.ScrimOverlayColorDarkTheme
+import com.android.joinme.ui.theme.ScrimOverlayColorLightTheme
 
 /**
  * Data class representing a single action bubble option
@@ -138,10 +140,10 @@ fun FloatingActionBubbles(
           animationSpec = tween(durationMillis = 300),
           label = "scrimAlpha")
 
-  // Adaptive scrim opacity for dark mode visibility
+  // Use semantic scrim colors from Color.kt for consistency
   val isDarkTheme = isSystemInDarkTheme()
-  val scrimBaseOpacity = if (isDarkTheme) 0.6f else 0.3f
-  val scrimColor = Color.Black.copy(alpha = scrimBaseOpacity * scrimAlpha)
+  val scrimBaseColor = if (isDarkTheme) ScrimOverlayColorDarkTheme else ScrimOverlayColorLightTheme
+  val scrimColor = scrimBaseColor.copy(alpha = scrimBaseColor.alpha * scrimAlpha)
 
   // Animated visibility for bubbles
   AnimatedVisibility(

@@ -63,6 +63,12 @@ object GroupListScreenTestTags {
   /** Test tag for the empty state view when no groups are present. */
   const val EMPTY = "groups:empty"
 
+  /** Test tag for the "Join with link" bubble action. */
+  const val JOIN_WITH_LINK_BUBBLE = "groupJoinWithLinkBubble"
+
+  /** Test tag for the "Create a group" bubble action. */
+  const val CREATE_GROUP_BUBBLE = "groupCreateBubble"
+
   /**
    * Generates a test tag for a specific group card.
    *
@@ -129,12 +135,12 @@ fun GroupListScreen(
               Toast.makeText(context, "Not implemented yet", Toast.LENGTH_SHORT).show()
               onJoinWithLink()
             },
-            testTag = "groupJoinWithLinkBubble"),
+            testTag = GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE),
         BubbleAction(
             text = "Create a group",
             icon = Icons.Default.Add,
             onClick = onCreateGroup,
-            testTag = "groupCreateBubble"))
+            testTag = GroupListScreenTestTags.CREATE_GROUP_BUBBLE))
   }
 
   Scaffold(

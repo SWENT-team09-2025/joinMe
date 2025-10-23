@@ -56,3 +56,7 @@ val CardBackgroundColor = Color.White
 // Profile tab colors
 val ActiveTabColor = JoinMeColor
 val InactiveTabColor = Color.LightGray
+
+// Scrim overlay color
+val ScrimOverlayColorLightTheme = Color(0x4D000000) // 30% opacity black
+val ScrimOverlayColorDarkTheme = Color(0xB3000000) // 70% opacity black
