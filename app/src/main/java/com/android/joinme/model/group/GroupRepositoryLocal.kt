@@ -1,5 +1,7 @@
 package com.android.joinme.model.group
 
+import com.android.joinme.model.event.EventType
+
 /**
  * Local in-memory implementation of [GroupRepository].
  *
@@ -46,6 +48,19 @@ class GroupRepositoryLocal : GroupRepository {
   }
 
   override suspend fun getGroup(id: String): Group? = groups.find { it.id == id }
+
+  override suspend fun createGroup(name: String, category: EventType, description: String): String {
+    val newGroup =
+        Group(
+            id = "group${groups.size + 1}",
+            name = name,
+            category = category,
+            description = description,
+            ownerId = "owner${groups.size + 1}",
+            memberIds = listOf("owner${groups.size + 1}"))
+    groups.add(newGroup)
+    return newGroup.id
+  }
 
   /**
    * Test helper method to add a group to the local repository.

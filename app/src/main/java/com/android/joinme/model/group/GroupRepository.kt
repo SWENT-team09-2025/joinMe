@@ -1,11 +1,13 @@
 package com.android.joinme.model.group
 
+import com.android.joinme.model.event.EventType
+
 /**
  * Repository interface for managing group-related data operations.
  *
  * This interface defines the contract for interacting with group data, supporting operations such
- * as fetching user groups, leaving groups, and retrieving individual group details. Implementations
- * can use different data sources (e.g., Firestore, local storage).
+ * as fetching user groups, leaving groups, creating new groups, and retrieving individual group
+ * details. Implementations can use different data sources (e.g., Firestore, local storage).
  */
 interface GroupRepository {
   /**
@@ -33,4 +35,21 @@ interface GroupRepository {
    * @throws Exception if there is an error accessing the data source.
    */
   suspend fun getGroup(id: String): Group?
+
+  /**
+   * Creates a new group with the current user as owner and admin member.
+   *
+   * This operation atomically:
+   * 1. Creates a new group document with the provided details
+   * 2. Adds the creator as a member with admin role
+   * 3. Initializes the group with the creator in the memberIds list
+   *
+   * @param name The name of the group (required, 3-30 characters)
+   * @param category The category of the group (Social/Activity/Sports)
+   * @param description Optional description of the group (max 300 characters)
+   * @return The ID of the newly created group
+   * @throws IllegalStateException if the user is not authenticated
+   * @throws Exception if the group creation fails
+   */
+  suspend fun createGroup(name: String, category: EventType, description: String = ""): String
 }
