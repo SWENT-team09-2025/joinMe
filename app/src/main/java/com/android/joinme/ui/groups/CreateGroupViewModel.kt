@@ -3,8 +3,11 @@ package com.android.joinme.ui.groups
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.EventType
+import com.android.joinme.model.group.Group
 import com.android.joinme.model.group.GroupRepository
 import com.android.joinme.model.group.GroupRepositoryProvider
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -116,9 +119,7 @@ class CreateGroupViewModel(
    * Creates a new group through the repository
    *
    * Validates the form, delegates creation to the repository, and updates UI state based on success
-   * or failure. The repository handles all Firestore operations including:
-   * - Creating the group document
-   * - Adding the creator as a member with admin role
+   * or failure. The repository handles all Firestore operations.
    *
    * State transitions:
    * - Before: isLoading=false, createdGroupId=null, errorMsg=null
@@ -137,12 +138,23 @@ class CreateGroupViewModel(
       _uiState.value = state.copy(isLoading = true, errorMsg = null, createdGroupId = null)
 
       try {
-        // Delegate to repository - it handles all Firestore operations
-        val groupId =
-            repository.createGroup(
+        val uid =
+            Firebase.auth.currentUser?.uid ?: throw IllegalStateException("User not authenticated")
+
+        val groupId = repository.getNewGroupId()
+
+        val group =
+            Group(
+                id = groupId,
                 name = state.name,
                 category = state.category,
-                description = state.description.ifBlank { "" })
+                description = state.description.ifBlank { "" },
+                ownerId = uid,
+                memberIds = listOf(uid),
+                eventIds = emptyList(),
+                photoUrl = null)
+
+        repository.addGroup(group)
 
         // Transition to success state
         _uiState.value = state.copy(isLoading = false, createdGroupId = groupId)

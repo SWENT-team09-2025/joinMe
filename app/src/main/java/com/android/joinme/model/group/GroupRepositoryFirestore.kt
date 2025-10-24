@@ -1,6 +1,7 @@
 package com.android.joinme.model.group
 
 import android.util.Log
+import com.android.joinme.model.event.EventType
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.DocumentSnapshot
@@ -62,18 +63,28 @@ class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupReposit
     return try {
       val id = document.id
       val name = document.getString("name") ?: return null
+      val categoryString = document.getString("category") ?: "ACTIVITY"
+      val category =
+          try {
+            EventType.valueOf(categoryString)
+          } catch (_: IllegalArgumentException) {
+            EventType.ACTIVITY // Default to ACTIVITY if invalid category
+          }
       val description = document.getString("description") ?: ""
       val ownerId = document.getString("ownerId") ?: return null
       val memberIds = document.get("memberIds") as? List<String> ?: emptyList()
       val eventIds = document.get("eventIds") as? List<String> ?: emptyList()
+      val photoUrl = document.getString("photoUrl")
 
       Group(
           id = id,
           name = name,
+          category = category,
           description = description,
           ownerId = ownerId,
           memberIds = memberIds,
-          eventIds = eventIds)
+          eventIds = eventIds,
+          photoUrl = photoUrl)
     } catch (e: Exception) {
       Log.e("GroupRepositoryFirestore", "Error converting document to Group", e)
       null
