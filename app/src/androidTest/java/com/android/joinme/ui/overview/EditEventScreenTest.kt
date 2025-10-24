@@ -700,4 +700,256 @@ class EditEventScreenTest {
         .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_VISIBILITY)
         .assertTextContains("PRIVATE")
   }
+
+  /** --- ERROR MESSAGE DISPLAY TESTS --- */
+  @Test
+  fun invalidType_showsErrorMessage() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Set invalid type via ViewModel
+    viewModel.setType("")
+
+    composeTestRule.waitForIdle()
+
+    // Verify error message is displayed
+    composeTestRule.onNodeWithText("Type cannot be empty").assertExists()
+  }
+
+  @Test
+  fun invalidMaxParticipants_belowCurrentCount_showsErrorMessage() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent() // Has 2 participants
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Try to set max participants below current count
+    viewModel.setMaxParticipants("1")
+
+    composeTestRule.waitForIdle()
+
+    // Verify error message is displayed
+    composeTestRule.onNodeWithText("Cannot be less than current participants (2)").assertExists()
+  }
+
+  @Test
+  fun invalidDuration_showsErrorMessage() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Set invalid duration
+    viewModel.setDuration("0")
+
+    composeTestRule.waitForIdle()
+
+    // Verify error message is displayed
+    composeTestRule.onNodeWithText("Must be a positive number").assertExists()
+  }
+
+  @Test
+  fun invalidDate_showsErrorMessage() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Set invalid date format
+    viewModel.setDate("2024-12-25")
+
+    composeTestRule.waitForIdle()
+
+    // Verify error message is displayed
+    composeTestRule.onNodeWithText("Invalid format (must be dd/MM/yyyy)").assertExists()
+  }
+
+  @Test
+  fun invalidVisibility_showsErrorMessage() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Set invalid visibility
+    viewModel.setVisibility("")
+
+    composeTestRule.waitForIdle()
+
+    // Verify error message is displayed
+    composeTestRule.onNodeWithText("Event visibility cannot be empty").assertExists()
+  }
+
+  /** --- DIALOG TESTS --- */
+  @Test
+  fun maxParticipantsDialog_opensAndCloses() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Click to open dialog
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify dialog is shown
+    composeTestRule.onNodeWithText("Select Max Participants").assertExists()
+    composeTestRule.onNodeWithText("OK").assertExists()
+    composeTestRule.onNodeWithText("Cancel").assertExists()
+
+    // Click Cancel to close
+    composeTestRule.onNodeWithText("Cancel").performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify dialog is closed
+    composeTestRule.onNodeWithText("Select Max Participants").assertDoesNotExist()
+  }
+
+  @Test
+  fun maxParticipantsDialog_confirmButton_updatesValue() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Click to open dialog
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Click OK to confirm (value will be whatever the NumberPicker has)
+    composeTestRule.onNodeWithText("OK").performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify dialog is closed
+    composeTestRule.onNodeWithText("Select Max Participants").assertDoesNotExist()
+  }
+
+  @Test
+  fun durationDialog_opensAndCloses() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Click to open dialog
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify dialog is shown
+    composeTestRule.onNodeWithText("Select Duration (min)").assertExists()
+    composeTestRule.onNodeWithText("OK").assertExists()
+    composeTestRule.onNodeWithText("Cancel").assertExists()
+
+    // Click Cancel to close
+    composeTestRule.onNodeWithText("Cancel").performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify dialog is closed
+    composeTestRule.onNodeWithText("Select Duration (min)").assertDoesNotExist()
+  }
+
+  @Test
+  fun durationDialog_confirmButton_updatesValue() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = EditEventViewModel(repo)
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Click to open dialog
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Click OK to confirm
+    composeTestRule.onNodeWithText("OK").performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify dialog is closed
+    composeTestRule.onNodeWithText("Select Duration (min)").assertDoesNotExist()
+  }
 }
