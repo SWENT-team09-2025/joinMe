@@ -109,6 +109,106 @@ class CreateGroupViewModelTest {
     assertEquals("Test_Group_123", state.name)
   }
 
+  @Test
+  fun `setName trims leading spaces`() = runTest {
+    viewModel.setName("   Valid Name")
+
+    val state = viewModel.uiState.value
+    assertEquals("Valid Name", state.name)
+    assertNull(state.nameError)
+    assertTrue(state.isValid)
+  }
+
+  @Test
+  fun `setName trims trailing spaces`() = runTest {
+    viewModel.setName("Valid Name   ")
+
+    val state = viewModel.uiState.value
+    assertEquals("Valid Name", state.name)
+    assertNull(state.nameError)
+    assertTrue(state.isValid)
+  }
+
+  @Test
+  fun `setName trims both leading and trailing spaces`() = runTest {
+    viewModel.setName("   Valid Name   ")
+
+    val state = viewModel.uiState.value
+    assertEquals("Valid Name", state.name)
+    assertNull(state.nameError)
+    assertTrue(state.isValid)
+  }
+
+  @Test
+  fun `setName with only spaces becomes blank after trim`() = runTest {
+    viewModel.setName("     ")
+
+    val state = viewModel.uiState.value
+    assertEquals("", state.name)
+    assertEquals("Name is required", state.nameError)
+    assertFalse(state.isValid)
+  }
+
+  @Test
+  fun `setName with leading spaces that makes name too short after trim`() = runTest {
+    viewModel.setName("   ab")
+
+    val state = viewModel.uiState.value
+    assertEquals("ab", state.name)
+    assertEquals("Name must be at least 3 characters", state.nameError)
+    assertFalse(state.isValid)
+  }
+
+  @Test
+  fun `setName with spaces preserves single spaces between words`() = runTest {
+    viewModel.setName("My Group Name")
+
+    val state = viewModel.uiState.value
+    assertEquals("My Group Name", state.name)
+    assertNull(state.nameError)
+    assertTrue(state.isValid)
+  }
+
+  @Test
+  fun `setName with multiple consecutive spaces sets error`() = runTest {
+    viewModel.setName("My  Group")
+
+    val state = viewModel.uiState.value
+    assertEquals("My  Group", state.name)
+    assertEquals("Multiple consecutive spaces not allowed", state.nameError)
+    assertFalse(state.isValid)
+  }
+
+  @Test
+  fun `setName with three consecutive spaces sets error`() = runTest {
+    viewModel.setName("My   Group")
+
+    val state = viewModel.uiState.value
+    assertEquals("My   Group", state.name)
+    assertEquals("Multiple consecutive spaces not allowed", state.nameError)
+    assertFalse(state.isValid)
+  }
+
+  @Test
+  fun `setName with multiple spaces in different positions sets error`() = runTest {
+    viewModel.setName("My  Group  Name")
+
+    val state = viewModel.uiState.value
+    assertEquals("My  Group  Name", state.name)
+    assertEquals("Multiple consecutive spaces not allowed", state.nameError)
+    assertFalse(state.isValid)
+  }
+
+  @Test
+  fun `setName validates multiple spaces before other rules`() = runTest {
+    viewModel.setName("My  Group@Name")
+
+    val state = viewModel.uiState.value
+    // Should catch multiple spaces error first
+    assertEquals("Multiple consecutive spaces not allowed", state.nameError)
+    assertFalse(state.isValid)
+  }
+
   // =======================================
   // Category Tests
   // =======================================
@@ -246,6 +346,38 @@ class CreateGroupViewModelTest {
     assertTrue(state.isValid)
   }
 
+  @Test
+  fun `form is invalid when name has multiple consecutive spaces`() = runTest {
+    viewModel.setName("My  Group")
+    viewModel.setCategory(EventType.SOCIAL)
+
+    val state = viewModel.uiState.value
+    assertFalse(state.isValid)
+    assertEquals("Multiple consecutive spaces not allowed", state.nameError)
+  }
+
+  @Test
+  fun `setName with 30 chars after trimming is valid`() = runTest {
+    val name = "  " + "a".repeat(30) + "  "
+    viewModel.setName(name)
+
+    val state = viewModel.uiState.value
+    assertEquals("a".repeat(30), state.name)
+    assertNull(state.nameError)
+    assertTrue(state.isValid)
+  }
+
+  @Test
+  fun `setName with 31 chars after trimming is invalid`() = runTest {
+    val name = "  " + "a".repeat(31) + "  "
+    viewModel.setName(name)
+
+    val state = viewModel.uiState.value
+    assertEquals("a".repeat(31), state.name)
+    assertEquals("Name must not exceed 30 characters", state.nameError)
+    assertFalse(state.isValid)
+  }
+
   // =======================================
   // Create Group Success Tests
   // =======================================
@@ -274,6 +406,21 @@ class CreateGroupViewModelTest {
                 it.memberIds == listOf(testUid)
           })
     }
+  }
+
+  @Test
+  fun `createGroup trims name before creating group`() = runTest {
+    val groupId = "test-group-id"
+    every { mockRepository.getNewGroupId() } returns groupId
+    coEvery { mockRepository.addGroup(any()) } just Runs
+
+    viewModel.setName("  Trimmed Name  ")
+    viewModel.setCategory(EventType.ACTIVITY)
+    viewModel.createGroup()
+
+    advanceUntilIdle()
+
+    coVerify { mockRepository.addGroup(match { it.name == "Trimmed Name" }) }
   }
 
   @Test
