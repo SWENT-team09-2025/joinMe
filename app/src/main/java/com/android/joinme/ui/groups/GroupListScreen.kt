@@ -1,5 +1,6 @@
 package com.android.joinme.ui.groups
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,8 +14,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -26,16 +29,18 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.group.Group
+import com.android.joinme.ui.components.BubbleAction
+import com.android.joinme.ui.components.BubbleAlignment
+import com.android.joinme.ui.components.FloatingActionBubbles
 import com.android.joinme.ui.profile.ProfileScreen
 import com.android.joinme.ui.profile.ProfileTopBar
 
@@ -57,6 +62,12 @@ object GroupListScreenTestTags {
 
   /** Test tag for the empty state view when no groups are present. */
   const val EMPTY = "groups:empty"
+
+  /** Test tag for the "Join with link" bubble action. */
+  const val JOIN_WITH_LINK_BUBBLE = "groupJoinWithLinkBubble"
+
+  /** Test tag for the "Create a group" bubble action. */
+  const val CREATE_GROUP_BUBBLE = "groupCreateBubble"
 
   /**
    * Generates a test tag for a specific group card.
@@ -86,7 +97,8 @@ object GroupListScreenTestTags {
  *
  * @param viewModel The ViewModel managing the group list state and business logic. Defaults to a
  *   new instance provided by viewModel().
- * @param onJoinANewGroup Callback invoked when the user taps the "Join a new group" button.
+ * @param onJoinWithLink Callback invoked when user taps "Join with link" option
+ * @param onCreateGroup Callback invoked when user taps "Create a group" option
  * @param onGroup Callback invoked when the user taps on a group card, receiving the selected
  *   [Group].
  * @param onMoreOptionMenu Callback invoked when the user taps the more options button for a group.
@@ -98,7 +110,8 @@ object GroupListScreenTestTags {
 @Composable
 fun GroupListScreen(
     viewModel: GroupListViewModel = viewModel(),
-    onJoinANewGroup: () -> Unit = {},
+    onJoinWithLink: () -> Unit = {},
+    onCreateGroup: () -> Unit = {},
     onGroup: (Group) -> Unit = {},
     onMoreOptionMenu: (Group) -> Unit = {},
     onBackClick: () -> Unit = {},
@@ -107,6 +120,29 @@ fun GroupListScreen(
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val groups = uiState.groups
+  val context = LocalContext.current
+
+  // State for showing/hiding floating bubbles in the join/create group FAB
+  var showJoinBubbles by remember { mutableStateOf(false) }
+
+  // Define bubble actions for join/create group FAB
+  val groupJoinBubbleActions = remember {
+    listOf(
+        BubbleAction(
+            text = "Join with link",
+            icon = Icons.Default.Link,
+            onClick = {
+              Toast.makeText(context, "Not implemented yet", Toast.LENGTH_SHORT).show()
+              onJoinWithLink()
+            },
+            testTag = GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE),
+        BubbleAction(
+            text = "Create a group",
+            icon = Icons.Default.Add,
+            onClick = onCreateGroup,
+            testTag = GroupListScreenTestTags.CREATE_GROUP_BUBBLE))
+  }
+
   Scaffold(
       topBar = {
         ProfileTopBar(
@@ -119,50 +155,66 @@ fun GroupListScreen(
       floatingActionButton = {
         ExtendedFloatingActionButton(
             modifier = Modifier.testTag(GroupListScreenTestTags.ADD_NEW_GROUP),
-            onClick = onJoinANewGroup,
+            onClick = { showJoinBubbles = !showJoinBubbles },
             icon = {
               Icon(
                   Icons.Default.Add,
                   contentDescription = "Join a new group",
                   tint = MaterialTheme.colorScheme.onPrimary)
             },
+            shape = RoundedCornerShape(24.dp),
             text = { Text("Join a new group", color = MaterialTheme.colorScheme.onPrimary) },
-            containerColor = MaterialTheme.colorScheme.primary)
+            containerColor =
+                if (showJoinBubbles) MaterialTheme.colorScheme.surfaceVariant
+                else MaterialTheme.colorScheme.primary)
       },
       floatingActionButtonPosition = FabPosition.Center,
   ) { pd ->
-    if (groups.isNotEmpty()) {
-      LazyColumn(
-          modifier =
-              Modifier.fillMaxSize()
-                  .padding(horizontal = 16.dp)
-                  .padding(bottom = pd.calculateBottomPadding() + 84.dp)
-                  .padding(top = pd.calculateTopPadding())
-                  .testTag(GroupListScreenTestTags.LIST),
-          contentPadding = PaddingValues(vertical = 12.dp)) {
-            items(groups) { group ->
-              GroupCard(
-                  group = group,
-                  onClick = { onGroup(group) },
-                  onMoreOptions = { onMoreOptionMenu(group) })
-              Spacer(Modifier.height(12.dp))
+    Box(modifier = Modifier.fillMaxSize()) {
+      // Main content
+      if (groups.isNotEmpty()) {
+        LazyColumn(
+            modifier =
+                Modifier.fillMaxSize()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = pd.calculateBottomPadding() + 84.dp)
+                    .padding(top = pd.calculateTopPadding())
+                    .testTag(GroupListScreenTestTags.LIST),
+            contentPadding = PaddingValues(vertical = 12.dp)) {
+              items(groups) { group ->
+                GroupCard(
+                    group = group,
+                    onClick = { onGroup(group) },
+                    onMoreOptions = { onMoreOptionMenu(group) })
+                Spacer(Modifier.height(12.dp))
+              }
             }
-          }
-    } else {
-      Box(
-          modifier = Modifier.fillMaxSize().padding(pd).testTag(GroupListScreenTestTags.EMPTY),
-          contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-              Text(
-                  text = "You are currently not",
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
-              Text(
-                  text = "assigned to a group…",
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+      } else {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(pd).testTag(GroupListScreenTestTags.EMPTY),
+            contentAlignment = Alignment.Center) {
+              Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "You are currently not",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                Text(
+                    text = "assigned to a group…",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+              }
             }
-          }
+      }
+
+      // Floating action bubbles overlay for join/create group
+      // Positioned at bottom-right, using theme colors for dark mode support
+      FloatingActionBubbles(
+          visible = showJoinBubbles,
+          onDismiss = { showJoinBubbles = false },
+          actions = groupJoinBubbleActions,
+          bubbleAlignment = BubbleAlignment.BOTTOM_END,
+          containerColor = MaterialTheme.colorScheme.surface,
+          contentColor = MaterialTheme.colorScheme.onSurface)
     }
   }
 }

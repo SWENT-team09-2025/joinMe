@@ -10,9 +10,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.android.joinme.ui.theme.JoinMeColor
+import com.android.joinme.ui.theme.ActiveTabColor
+import com.android.joinme.ui.theme.DividerColor
+import com.android.joinme.ui.theme.InactiveTabColor
 
 /**
  * ProfileScreen enum defines the different profile-related screens in the application. Used to
@@ -69,8 +70,8 @@ fun ProfileTopBar(
                       Modifier.size(
                           if (currentScreen == ProfileScreen.VIEW_PROFILE) 32.dp else 24.dp),
                   tint =
-                      if (currentScreen == ProfileScreen.VIEW_PROFILE) JoinMeColor
-                      else Color.LightGray)
+                      if (currentScreen == ProfileScreen.VIEW_PROFILE) ActiveTabColor
+                      else InactiveTabColor)
             }
 
             // Group Icon
@@ -81,7 +82,8 @@ fun ProfileTopBar(
                   modifier =
                       Modifier.size(if (currentScreen == ProfileScreen.GROUPS) 32.dp else 24.dp),
                   tint =
-                      if (currentScreen == ProfileScreen.GROUPS) JoinMeColor else Color.LightGray)
+                      if (currentScreen == ProfileScreen.GROUPS) ActiveTabColor
+                      else InactiveTabColor)
             }
 
             // Edit Icon
@@ -93,12 +95,12 @@ fun ProfileTopBar(
                       Modifier.size(
                           if (currentScreen == ProfileScreen.EDIT_PROFILE) 32.dp else 24.dp),
                   tint =
-                      if (currentScreen == ProfileScreen.EDIT_PROFILE) JoinMeColor
-                      else Color.LightGray)
+                      if (currentScreen == ProfileScreen.EDIT_PROFILE) ActiveTabColor
+                      else InactiveTabColor)
             }
           }
         }
 
-    HorizontalDivider(color = Color.Black, thickness = 1.dp)
+    HorizontalDivider(color = DividerColor, thickness = 1.dp)
   }
 }

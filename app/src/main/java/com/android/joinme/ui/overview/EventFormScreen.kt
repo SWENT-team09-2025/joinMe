@@ -17,6 +17,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
+import com.android.joinme.ui.theme.ButtonSaveColor
+import com.android.joinme.ui.theme.DarkButtonColor
+import com.android.joinme.ui.theme.DividerColor
 import java.util.Locale
 
 /** Data class representing the test tags for event form fields. */
@@ -97,15 +100,21 @@ fun EventFormScreen(
 
   Scaffold(
       topBar = {
-        TopAppBar(
-            title = { Text(title) },
-            navigationIcon = {
-              IconButton(onClick = onGoBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = "Back")
-              }
-            })
+        Column {
+          TopAppBar(
+              title = { Text(title) },
+              navigationIcon = {
+                IconButton(onClick = onGoBack) {
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                      contentDescription = "Back")
+                }
+              },
+              colors =
+                  TopAppBarDefaults.topAppBarColors(
+                      containerColor = MaterialTheme.colorScheme.surface))
+          HorizontalDivider(color = DividerColor, thickness = 1.dp)
+        }
       }) { paddingValues ->
         Column(
             modifier =
@@ -464,7 +473,10 @@ fun EventFormScreen(
               Button(
                   onClick = { if (onSave()) {} },
                   modifier = Modifier.fillMaxWidth().testTag(testTags.buttonSaveEvent),
-                  enabled = formState.isValid) {
+                  enabled = formState.isValid,
+                  colors =
+                      ButtonDefaults.buttonColors(
+                          containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
                     Text(saveButtonText)
                   }
             }

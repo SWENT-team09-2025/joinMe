@@ -28,25 +28,41 @@ class GroupListViewModelTest {
     var shouldThrowError = false
     var errorMessage = "Test error"
     private val groups = mutableListOf<Group>()
+    private var counter = 0
 
     fun setGroups(newGroups: List<Group>) {
       groups.clear()
       groups.addAll(newGroups)
     }
 
-    override suspend fun userGroups(): List<Group> {
+    override fun getNewGroupId(): String {
+      return (counter++).toString()
+    }
+
+    override suspend fun getAllGroups(): List<Group> {
       if (shouldThrowError) {
         throw Exception(errorMessage)
       }
       return groups.toList()
     }
 
-    override suspend fun leaveGroup(id: String) {
-      groups.removeIf { it.id == id }
+    override suspend fun getGroup(groupId: String): Group {
+      return groups.find { it.id == groupId } ?: throw Exception("Group not found")
     }
 
-    override suspend fun getGroup(id: String): Group? {
-      return groups.find { it.id == id }
+    override suspend fun addGroup(group: Group) {
+      groups.add(group)
+    }
+
+    override suspend fun editGroup(groupId: String, newValue: Group) {
+      val index = groups.indexOfFirst { it.id == groupId }
+      if (index != -1) {
+        groups[index] = newValue
+      }
+    }
+
+    override suspend fun deleteGroup(groupId: String) {
+      groups.removeIf { it.id == groupId }
     }
 
     override suspend fun createGroup(
@@ -110,14 +126,14 @@ class GroupListViewModelTest {
   @Test
   fun init_withRepositoryError_setsErrorMessage() = runTest {
     fakeRepo.shouldThrowError = true
-    fakeRepo.errorMessage = "Failed to load groups"
+    fakeRepo.errorMessage = "Network error"
 
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
 
     val state = viewModel.uiState.value
     assertTrue(state.groups.isEmpty())
-    assertEquals("Failed to load groups", state.errorMsg)
+    assertEquals("Failed to load groups: Network error", state.errorMsg)
     assertFalse(state.isLoading)
   }
 
@@ -171,8 +187,9 @@ class GroupListViewModelTest {
     advanceUntilIdle()
 
     val state = viewModel.uiState.value
-    assertTrue(state.groups.isEmpty())
-    assertEquals("Network error", state.errorMsg)
+    assertEquals("Failed to load groups: Network error", state.errorMsg)
+    // Groups are preserved on error
+    assertEquals(1, state.groups.size)
   }
 
   @Test
@@ -370,13 +387,14 @@ class GroupListViewModelTest {
   @Test
   fun errorMessage_isPreservedCorrectly() = runTest {
     fakeRepo.shouldThrowError = true
-    fakeRepo.errorMessage = "Detailed error: Connection timeout after 30 seconds"
+    fakeRepo.errorMessage = "Connection timeout after 30 seconds"
 
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
 
     assertEquals(
-        "Detailed error: Connection timeout after 30 seconds", viewModel.uiState.value.errorMsg)
+        "Failed to load groups: Connection timeout after 30 seconds",
+        viewModel.uiState.value.errorMsg)
   }
 
   @Test
@@ -425,7 +443,7 @@ class GroupListViewModelTest {
   }
 
   @Test
-  fun refreshUIState_clearsGroupsOnError() = runTest {
+  fun refreshUIState_preservesGroupsOnError() = runTest {
     fakeRepo.setGroups(listOf(Group(id = "1", name = "Test", ownerId = "owner1")))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
@@ -436,7 +454,8 @@ class GroupListViewModelTest {
     advanceUntilIdle()
 
     val state = viewModel.uiState.value
-    assertTrue(state.groups.isEmpty())
+    // Groups are preserved on error to show stale data
+    assertEquals(1, state.groups.size)
     assertNotNull(state.errorMsg)
   }
 }
