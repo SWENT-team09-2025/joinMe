@@ -62,6 +62,25 @@ class CreateGroupViewModel(
     private val repository: GroupRepository = GroupRepositoryProvider.repository
 ) : ViewModel() {
 
+  companion object {
+    // Validation limits
+    private const val NAME_MIN_LENGTH = 3
+    private const val NAME_MAX_LENGTH = 30
+    private const val DESCRIPTION_MAX_LENGTH = 300
+
+    // Error messages
+    private const val ERROR_NAME_REQUIRED = "Name is required"
+    private const val ERROR_NAME_TOO_SHORT = "Name must be at least 3 characters"
+    private const val ERROR_NAME_TOO_LONG = "Name must not exceed 30 characters"
+    private const val ERROR_NAME_INVALID_CHARS =
+        "Only letters, numbers, spaces, and underscores allowed"
+    private const val ERROR_NAME_MULTIPLE_SPACES = "Multiple consecutive spaces not allowed"
+    private const val ERROR_DESCRIPTION_TOO_LONG = "Description must not exceed 300 characters"
+    private const val ERROR_NOT_AUTHENTICATED = "You must be logged in to create a group"
+    private const val ERROR_CREATE_FAILED = "Failed to create group"
+    private const val ERROR_UNKNOWN = "Unknown error"
+  }
+
   private val _uiState = MutableStateFlow(CreateGroupUIState())
   val uiState: StateFlow<CreateGroupUIState> = _uiState.asStateFlow()
 
@@ -71,8 +90,9 @@ class CreateGroupViewModel(
    * @param name The group name to set
    */
   fun setName(name: String) {
-    val error = validateName(name)
-    _uiState.value = _uiState.value.copy(name = name, nameError = error)
+    val trimmedName = name.trim()
+    val error = validateName(trimmedName)
+    _uiState.value = _uiState.value.copy(name = trimmedName, nameError = error)
     updateFormValidity()
   }
 
@@ -160,14 +180,12 @@ class CreateGroupViewModel(
         _uiState.value = state.copy(isLoading = false, createdGroupId = groupId)
       } catch (_: IllegalStateException) {
         // User authentication error
-        _uiState.value =
-            state.copy(isLoading = false, errorMsg = "You must be logged in to create a group")
+        _uiState.value = state.copy(isLoading = false, errorMsg = ERROR_NOT_AUTHENTICATED)
       } catch (e: Exception) {
         // Generic error - propagate user-friendly message
         _uiState.value =
             state.copy(
-                isLoading = false,
-                errorMsg = "Failed to create group: ${e.message ?: "Unknown error"}")
+                isLoading = false, errorMsg = "$ERROR_CREATE_FAILED: ${e.message ?: ERROR_UNKNOWN}")
       }
     }
   }
@@ -179,17 +197,18 @@ class CreateGroupViewModel(
    * - Required (not blank)
    * - 3-30 characters
    * - Only letters, numbers, spaces, and underscores
+   * - No multiple consecutive spaces
    *
    * @param name The name to validate
    * @return Error message if invalid, null if valid
    */
   private fun validateName(name: String): String? {
     return when {
-      name.isBlank() -> "Name is required"
-      name.length < 3 -> "Name must be at least 3 characters"
-      name.length > 30 -> "Name must not exceed 30 characters"
-      !name.matches(Regex("^[a-zA-Z0-9_ ]+$")) ->
-          "Only letters, numbers, spaces, and underscores allowed"
+      name.isBlank() -> ERROR_NAME_REQUIRED
+      name.length < NAME_MIN_LENGTH -> ERROR_NAME_TOO_SHORT
+      name.length > NAME_MAX_LENGTH -> ERROR_NAME_TOO_LONG
+      name.contains(Regex("\\s{2,}")) -> ERROR_NAME_MULTIPLE_SPACES
+      !name.matches(Regex("^[a-zA-Z0-9_ ]+$")) -> ERROR_NAME_INVALID_CHARS
       else -> null
     }
   }
@@ -206,7 +225,7 @@ class CreateGroupViewModel(
    */
   private fun validateDescription(description: String): String? {
     return when {
-      description.length > 300 -> "Description must not exceed 300 characters"
+      description.length > DESCRIPTION_MAX_LENGTH -> ERROR_DESCRIPTION_TOO_LONG
       else -> null
     }
   }
