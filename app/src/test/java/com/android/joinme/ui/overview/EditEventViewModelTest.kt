@@ -684,8 +684,7 @@ class EditEventViewModelTest {
   fun loadEvent_thenSetInvalidMaxParticipants_errorMessageShowsCurrentCount() = runTest {
     // Create event with 5 participants
     val event =
-        createTestEvent()
-            .copy(participants = listOf("user1", "user2", "user3", "user4", "user5"))
+        createTestEvent().copy(participants = listOf("user1", "user2", "user3", "user4", "user5"))
     repository.addEvent(event)
 
     viewModel.loadEvent(event.eventId)
