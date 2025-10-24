@@ -14,6 +14,7 @@ import com.android.joinme.model.event.EventType
  * @property memberIds List of user IDs belonging to this group. Size determines membersCount.
  * @property eventIds List of event IDs that belong to this group.
  * @property membersCount The total number of members in the group (derived from memberIds size).
+ * @property photoUrl Optional URL of the group's photo.
  */
 data class Group(
     val id: String = "",
