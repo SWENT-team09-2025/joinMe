@@ -17,7 +17,30 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** UI state for the EditEvent screen. */
+/**
+ * UI state for the EditEvent screen.
+ *
+ * @property type The event type (e.g., SPORTS, ACTIVITY, SOCIAL).
+ * @property title The event title.
+ * @property description The event description.
+ * @property location The event location name.
+ * @property maxParticipants The maximum number of participants as a string.
+ * @property duration The event duration in minutes as a string.
+ * @property date The event date in dd/MM/yyyy format.
+ * @property time The event time in HH:mm format.
+ * @property visibility The event visibility (PUBLIC or PRIVATE).
+ * @property ownerId The ID of the event owner.
+ * @property participants List of participant user IDs.
+ * @property errorMsg Global error message for the form.
+ * @property invalidTypeMsg Validation error message for the type field.
+ * @property invalidTitleMsg Validation error message for the title field.
+ * @property invalidDescriptionMsg Validation error message for the description field.
+ * @property invalidLocationMsg Validation error message for the location field.
+ * @property invalidMaxParticipantsMsg Validation error message for the max participants field.
+ * @property invalidDurationMsg Validation error message for the duration field.
+ * @property invalidDateMsg Validation error message for the date field.
+ * @property invalidVisibilityMsg Validation error message for the visibility field.
+ */
 data class EditEventUIState(
     val type: String = "",
     val title: String = "",
@@ -42,6 +65,11 @@ data class EditEventUIState(
     val invalidDateMsg: String? = null,
     val invalidVisibilityMsg: String? = null,
 ) {
+  /**
+   * Indicates whether all form fields are valid.
+   *
+   * @return true if all validation messages are null and all required fields are non-blank.
+   */
   val isValid: Boolean
     get() =
         invalidTypeMsg == null &&
@@ -63,7 +91,15 @@ data class EditEventUIState(
             visibility.isNotBlank()
 }
 
-/** ViewModel for the EditEvent screen. */
+/**
+ * ViewModel for the EditEvent screen.
+ *
+ * Manages the state and business logic for editing existing events. Handles loading event data,
+ * validating input fields, and persisting changes to the repository.
+ *
+ * @property repository The repository for event data operations.
+ * @property initialState Optional initial state for the UI (primarily used for testing).
+ */
 class EditEventViewModel(
     private val repository: EventsRepository =
         EventsRepositoryProvider.getRepository(isOnline = true),
@@ -78,6 +114,11 @@ class EditEventViewModel(
     _uiState.value = _uiState.value.copy(errorMsg = null)
   }
 
+  /**
+   * Sets the global error message.
+   *
+   * @param msg The error message to display.
+   */
   private fun setErrorMsg(msg: String) {
     _uiState.value = _uiState.value.copy(errorMsg = msg)
   }
@@ -182,8 +223,14 @@ class EditEventViewModel(
     }
   }
 
-  // Update functions for all fields
-
+  /**
+   * Updates the event type and validates it.
+   *
+   * Validates that the type is not blank and is one of the valid EventType values (SPORTS,
+   * ACTIVITY, SOCIAL).
+   *
+   * @param type The event type to set.
+   */
   fun setType(type: String) {
     val validTypes = EventType.values().map { it.name.uppercase(Locale.ROOT) }
     _uiState.value =
@@ -196,12 +243,26 @@ class EditEventViewModel(
                 else null)
   }
 
+  /**
+   * Updates the event title and validates it.
+   *
+   * Validates that the title is not blank.
+   *
+   * @param title The event title to set.
+   */
   fun setTitle(title: String) {
     _uiState.value =
         _uiState.value.copy(
             title = title, invalidTitleMsg = if (title.isBlank()) "Title cannot be empty" else null)
   }
 
+  /**
+   * Updates the event description and validates it.
+   *
+   * Validates that the description is not blank.
+   *
+   * @param description The event description to set.
+   */
   fun setDescription(description: String) {
     _uiState.value =
         _uiState.value.copy(
@@ -210,6 +271,13 @@ class EditEventViewModel(
                 if (description.isBlank()) "Description cannot be empty" else null)
   }
 
+  /**
+   * Updates the event location and validates it.
+   *
+   * Validates that the location is not blank.
+   *
+   * @param location The event location to set.
+   */
   fun setLocation(location: String) {
     _uiState.value =
         _uiState.value.copy(
@@ -217,6 +285,15 @@ class EditEventViewModel(
             invalidLocationMsg = if (location.isBlank()) "Must be a valid Location" else null)
   }
 
+  /**
+   * Updates the maximum number of participants and validates it.
+   *
+   * Validates that:
+   * - The value is a positive number
+   * - The value is greater than or equal to the current number of participants
+   *
+   * @param value The maximum number of participants as a string.
+   */
   fun setMaxParticipants(value: String) {
     val num = value.toIntOrNull()
     val currentParticipantsCount = _uiState.value.participants.size
@@ -232,6 +309,13 @@ class EditEventViewModel(
                 })
   }
 
+  /**
+   * Updates the event duration and validates it.
+   *
+   * Validates that the duration is a positive number.
+   *
+   * @param value The event duration in minutes as a string.
+   */
   fun setDuration(value: String) {
     val num = value.toIntOrNull()
     _uiState.value =
@@ -240,6 +324,13 @@ class EditEventViewModel(
             invalidDurationMsg = if (num == null || num <= 0) "Must be a positive number" else null)
   }
 
+  /**
+   * Updates the event date and validates it.
+   *
+   * Validates that the date is in the correct format (dd/MM/yyyy).
+   *
+   * @param date The event date to set.
+   */
   fun setDate(date: String) {
     val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     val valid =
@@ -255,10 +346,22 @@ class EditEventViewModel(
                 if (!valid && date.isNotBlank()) "Invalid format (must be dd/MM/yyyy)" else null)
   }
 
+  /**
+   * Updates the event time.
+   *
+   * @param time The event time in HH:mm format.
+   */
   fun setTime(time: String) {
     _uiState.value = _uiState.value.copy(time = time)
   }
 
+  /**
+   * Updates the event visibility and validates it.
+   *
+   * Validates that the visibility is not blank and is either PUBLIC or PRIVATE.
+   *
+   * @param visibility The event visibility to set.
+   */
   fun setVisibility(visibility: String) {
     val validVisibilities = listOf("PUBLIC", "PRIVATE")
     _uiState.value =
