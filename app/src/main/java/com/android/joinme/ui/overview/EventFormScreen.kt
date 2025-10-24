@@ -48,9 +48,14 @@ data class EventFormState(
     val time: String,
     val visibility: String,
     val isValid: Boolean,
+    val invalidTypeMsg: String?,
     val invalidTitleMsg: String?,
     val invalidDescriptionMsg: String?,
-    val invalidLocationMsg: String?
+    val invalidLocationMsg: String?,
+    val invalidMaxParticipantsMsg: String?,
+    val invalidDurationMsg: String?,
+    val invalidDateMsg: String?,
+    val invalidVisibilityMsg: String?
 )
 
 /**
@@ -133,6 +138,14 @@ fun EventFormScreen(
                         readOnly = true,
                         label = { Text("Event Type") },
                         placeholder = { Text("Select event type") },
+                        isError = formState.invalidTypeMsg != null,
+                        supportingText = {
+                          if (formState.invalidTypeMsg != null) {
+                            Text(
+                                text = formState.invalidTypeMsg,
+                                color = MaterialTheme.colorScheme.error)
+                          }
+                        },
                         trailingIcon = {
                           ExposedDropdownMenuDefaults.TrailingIcon(expanded = showTypeDropdown)
                         },
@@ -224,6 +237,14 @@ fun EventFormScreen(
                               readOnly = true,
                               label = { Text("Max Participants") },
                               placeholder = { Text("Select number") },
+                              isError = formState.invalidMaxParticipantsMsg != null,
+                              supportingText = {
+                                if (formState.invalidMaxParticipantsMsg != null) {
+                                  Text(
+                                      text = formState.invalidMaxParticipantsMsg,
+                                      color = MaterialTheme.colorScheme.error)
+                                }
+                              },
                               colors =
                                   OutlinedTextFieldDefaults.colors(
                                       disabledTextColor =
@@ -292,6 +313,14 @@ fun EventFormScreen(
                           readOnly = true,
                           label = { Text("Duration (min)") },
                           placeholder = { Text("Select duration") },
+                          isError = formState.invalidDurationMsg != null,
+                          supportingText = {
+                            if (formState.invalidDurationMsg != null) {
+                              Text(
+                                  text = formState.invalidDurationMsg,
+                                  color = MaterialTheme.colorScheme.error)
+                            }
+                          },
                           colors =
                               OutlinedTextFieldDefaults.colors(
                                   disabledTextColor =
@@ -381,6 +410,14 @@ fun EventFormScreen(
                           readOnly = true,
                           label = { Text("Date") },
                           placeholder = { Text("Select date") },
+                          isError = formState.invalidDateMsg != null,
+                          supportingText = {
+                            if (formState.invalidDateMsg != null) {
+                              Text(
+                                  text = formState.invalidDateMsg,
+                                  color = MaterialTheme.colorScheme.error)
+                            }
+                          },
                           colors =
                               OutlinedTextFieldDefaults.colors(
                                   disabledTextColor =
@@ -445,6 +482,14 @@ fun EventFormScreen(
                         readOnly = true,
                         label = { Text("Event Visibility") },
                         placeholder = { Text("Select visibility") },
+                        isError = formState.invalidVisibilityMsg != null,
+                        supportingText = {
+                          if (formState.invalidVisibilityMsg != null) {
+                            Text(
+                                text = formState.invalidVisibilityMsg,
+                                color = MaterialTheme.colorScheme.error)
+                          }
+                        },
                         trailingIcon = {
                           ExposedDropdownMenuDefaults.TrailingIcon(
                               expanded = showVisibilityDropdown)
