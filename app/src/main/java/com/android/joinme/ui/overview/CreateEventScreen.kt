@@ -62,9 +62,14 @@ fun CreateEventScreen(
           time = uiState.time,
           visibility = uiState.visibility,
           isValid = uiState.isValid,
+          invalidTypeMsg = uiState.invalidTypeMsg,
           invalidTitleMsg = uiState.invalidTitleMsg,
           invalidDescriptionMsg = uiState.invalidDescriptionMsg,
-          invalidLocationMsg = uiState.invalidLocationMsg)
+          invalidLocationMsg = uiState.invalidLocationMsg,
+          invalidMaxParticipantsMsg = uiState.invalidMaxParticipantsMsg,
+          invalidDurationMsg = uiState.invalidDurationMsg,
+          invalidDateMsg = uiState.invalidDateMsg,
+          invalidVisibilityMsg = uiState.invalidVisibilityMsg)
 
   EventFormScreen(
       title = "Create Event",

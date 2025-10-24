@@ -66,9 +66,14 @@ fun EditEventScreen(
           time = eventUIState.time,
           visibility = eventUIState.visibility,
           isValid = eventUIState.isValid,
+          invalidTypeMsg = eventUIState.invalidTypeMsg,
           invalidTitleMsg = eventUIState.invalidTitleMsg,
           invalidDescriptionMsg = eventUIState.invalidDescriptionMsg,
-          invalidLocationMsg = eventUIState.invalidLocationMsg)
+          invalidLocationMsg = eventUIState.invalidLocationMsg,
+          invalidMaxParticipantsMsg = eventUIState.invalidMaxParticipantsMsg,
+          invalidDurationMsg = eventUIState.invalidDurationMsg,
+          invalidDateMsg = eventUIState.invalidDateMsg,
+          invalidVisibilityMsg = eventUIState.invalidVisibilityMsg)
 
   EventFormScreen(
       title = "Edit Event",
