@@ -1,6 +1,5 @@
 package com.android.joinme.viewmodel
 
-import com.android.joinme.model.event.EventType
 import com.android.joinme.model.group.Group
 import com.android.joinme.model.group.GroupRepository
 import com.android.joinme.ui.groups.GroupListViewModel
@@ -63,14 +62,6 @@ class GroupListViewModelTest {
 
     override suspend fun deleteGroup(groupId: String) {
       groups.removeIf { it.id == groupId }
-    }
-
-    override suspend fun createGroup(
-        name: String,
-        category: EventType,
-        description: String
-    ): String {
-      return "" // Not needed for these tests
     }
   }
 
