@@ -2,6 +2,11 @@ package com.android.joinme.ui.groups
 
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.group.GroupRepository
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.auth
+import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -13,35 +18,37 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.mockito.kotlin.*
 
-/**
- * Unit tests for [CreateGroupViewModel]
- *
- * Tests cover:
- * - Validation logic for name and description
- * - Form validity state
- * - Success flow when repository succeeds
- * - Error handling when repository fails
- * - Loading state management
- */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CreateGroupViewModelTest {
 
   private lateinit var viewModel: CreateGroupViewModel
   private lateinit var mockRepository: GroupRepository
+  private lateinit var mockAuth: FirebaseAuth
+  private lateinit var mockUser: FirebaseUser
   private val testDispatcher = StandardTestDispatcher()
+  private val testUid = "test-user-123"
 
   @Before
   fun setup() {
     Dispatchers.setMain(testDispatcher)
-    mockRepository = mock()
+
+    mockRepository = mockk(relaxed = true)
+    mockAuth = mockk(relaxed = true)
+    mockUser = mockk(relaxed = true)
+
+    mockkStatic(FirebaseAuth::class)
+    every { Firebase.auth } returns mockAuth
+    every { mockAuth.currentUser } returns mockUser
+    every { mockUser.uid } returns testUid
+
     viewModel = CreateGroupViewModel(mockRepository)
   }
 
   @After
   fun tearDown() {
     Dispatchers.resetMain()
+    unmockkAll()
   }
 
   // =======================================
@@ -207,7 +214,7 @@ class CreateGroupViewModelTest {
 
   @Test
   fun `form is invalid when name has error`() = runTest {
-    viewModel.setName("ab") // Too short
+    viewModel.setName("ab")
     viewModel.setCategory(EventType.SPORTS)
 
     val state = viewModel.uiState.value
@@ -226,17 +233,14 @@ class CreateGroupViewModelTest {
 
   @Test
   fun `form validity updates when switching between valid and invalid name`() = runTest {
-    // Start with valid name
     viewModel.setName("Valid Name")
     var state = viewModel.uiState.value
     assertTrue(state.isValid)
 
-    // Change to invalid name
     viewModel.setName("ab")
     state = viewModel.uiState.value
     assertFalse(state.isValid)
 
-    // Change back to valid name
     viewModel.setName("Another Valid Name")
     state = viewModel.uiState.value
     assertTrue(state.isValid)
@@ -247,9 +251,10 @@ class CreateGroupViewModelTest {
   // =======================================
 
   @Test
-  fun `createGroup calls repository with correct parameters`() = runTest {
+  fun `createGroup calls repository with correct group data`() = runTest {
     val groupId = "test-group-id"
-    whenever(mockRepository.createGroup(any(), any(), any())).thenReturn(groupId)
+    every { mockRepository.getNewGroupId() } returns groupId
+    coEvery { mockRepository.addGroup(any()) } just Runs
 
     viewModel.setName("Test Group")
     viewModel.setCategory(EventType.SOCIAL)
@@ -258,46 +263,54 @@ class CreateGroupViewModelTest {
 
     advanceUntilIdle()
 
-    verify(mockRepository)
-        .createGroup(
-            name = "Test Group", category = EventType.SOCIAL, description = "Test description")
+    coVerify {
+      mockRepository.addGroup(
+          match {
+            it.id == groupId &&
+                it.name == "Test Group" &&
+                it.category == EventType.SOCIAL &&
+                it.description == "Test description" &&
+                it.ownerId == testUid &&
+                it.memberIds == listOf(testUid)
+          })
+    }
   }
 
   @Test
-  fun `createGroup with blank description sends empty string to repository`() = runTest {
+  fun `createGroup with blank description sends empty string`() = runTest {
     val groupId = "test-group-id"
-    whenever(mockRepository.createGroup(any(), any(), any())).thenReturn(groupId)
+    every { mockRepository.getNewGroupId() } returns groupId
+    coEvery { mockRepository.addGroup(any()) } just Runs
 
     viewModel.setName("Test Group")
     viewModel.setCategory(EventType.SPORTS)
-    viewModel.setDescription("   ") // Blank with spaces
+    viewModel.setDescription("   ")
     viewModel.createGroup()
 
     advanceUntilIdle()
 
-    verify(mockRepository)
-        .createGroup(name = "Test Group", category = EventType.SPORTS, description = "")
+    coVerify { mockRepository.addGroup(match { it.description == "" }) }
   }
 
   @Test
   fun `createGroup with default category uses ACTIVITY`() = runTest {
     val groupId = "test-group-id"
-    whenever(mockRepository.createGroup(any(), any(), any())).thenReturn(groupId)
+    every { mockRepository.getNewGroupId() } returns groupId
+    coEvery { mockRepository.addGroup(any()) } just Runs
 
     viewModel.setName("Test Group")
-    // Don't set category - should use default ACTIVITY
     viewModel.createGroup()
 
     advanceUntilIdle()
 
-    verify(mockRepository)
-        .createGroup(name = "Test Group", category = EventType.ACTIVITY, description = "")
+    coVerify { mockRepository.addGroup(match { it.category == EventType.ACTIVITY }) }
   }
 
   @Test
   fun `createGroup sets success state with groupId on success`() = runTest {
     val groupId = "test-group-id-123"
-    whenever(mockRepository.createGroup(any(), any(), any())).thenReturn(groupId)
+    every { mockRepository.getNewGroupId() } returns groupId
+    coEvery { mockRepository.addGroup(any()) } just Runs
 
     viewModel.setName("Success Group")
     viewModel.setCategory(EventType.SOCIAL)
@@ -317,19 +330,19 @@ class CreateGroupViewModelTest {
 
   @Test
   fun `createGroup does not call repository when form is invalid`() = runTest {
-    viewModel.setName("ab") // Invalid: too short
+    viewModel.setName("ab")
     viewModel.setCategory(EventType.SOCIAL)
     viewModel.createGroup()
 
     advanceUntilIdle()
 
-    verify(mockRepository, never()).createGroup(any(), any(), any())
+    coVerify(exactly = 0) { mockRepository.getNewGroupId() }
+    coVerify(exactly = 0) { mockRepository.addGroup(any()) }
   }
 
   @Test
-  fun `createGroup handles IllegalStateException for unauthenticated user`() = runTest {
-    whenever(mockRepository.createGroup(any(), any(), any()))
-        .thenThrow(IllegalStateException("User not authenticated"))
+  fun `createGroup handles unauthenticated user`() = runTest {
+    every { mockAuth.currentUser } returns null
 
     viewModel.setName("Test Group")
     viewModel.setCategory(EventType.ACTIVITY)
@@ -344,9 +357,9 @@ class CreateGroupViewModelTest {
   }
 
   @Test
-  fun `createGroup handles generic Exception with message`() = runTest {
-    whenever(mockRepository.createGroup(any(), any(), any()))
-        .thenThrow(RuntimeException("Network timeout"))
+  fun `createGroup handles repository exception`() = runTest {
+    every { mockRepository.getNewGroupId() } returns "group-id"
+    coEvery { mockRepository.addGroup(any()) } throws RuntimeException("Network timeout")
 
     viewModel.setName("Test Group")
     viewModel.setCategory(EventType.SPORTS)
@@ -361,9 +374,9 @@ class CreateGroupViewModelTest {
   }
 
   @Test
-  fun `createGroup handles Exception without message`() = runTest {
-    whenever(mockRepository.createGroup(any(), any(), any()))
-        .thenThrow(RuntimeException(null as String?))
+  fun `createGroup handles exception without message`() = runTest {
+    every { mockRepository.getNewGroupId() } returns "group-id"
+    coEvery { mockRepository.addGroup(any()) } throws RuntimeException(null as String?)
 
     viewModel.setName("Test Group")
     viewModel.setCategory(EventType.SOCIAL)
@@ -383,17 +396,19 @@ class CreateGroupViewModelTest {
 
     categories.forEachIndexed { index, category ->
       val groupId = "group-$index"
-      whenever(mockRepository.createGroup(any(), any(), any())).thenReturn(groupId)
+      every { mockRepository.getNewGroupId() } returns groupId
+      coEvery { mockRepository.addGroup(any()) } just Runs
 
       viewModel.setName("Test Group $index")
       viewModel.setCategory(category)
       viewModel.createGroup()
       advanceUntilIdle()
 
-      verify(mockRepository)
-          .createGroup(name = "Test Group $index", category = category, description = "")
+      coVerify {
+        mockRepository.addGroup(match { it.name == "Test Group $index" && it.category == category })
+      }
 
-      viewModel.clearSuccessState() // Reset for next iteration
+      viewModel.clearSuccessState()
     }
   }
 
@@ -403,8 +418,8 @@ class CreateGroupViewModelTest {
 
   @Test
   fun `clearErrorMsg clears error message`() = runTest {
-    whenever(mockRepository.createGroup(any(), any(), any()))
-        .thenThrow(RuntimeException("Test error"))
+    every { mockRepository.getNewGroupId() } returns "group-id"
+    coEvery { mockRepository.addGroup(any()) } throws RuntimeException("Test error")
 
     viewModel.setName("Test Group")
     viewModel.setCategory(EventType.ACTIVITY)
@@ -420,7 +435,8 @@ class CreateGroupViewModelTest {
   @Test
   fun `clearSuccessState clears createdGroupId`() = runTest {
     val groupId = "test-id"
-    whenever(mockRepository.createGroup(any(), any(), any())).thenReturn(groupId)
+    every { mockRepository.getNewGroupId() } returns groupId
+    coEvery { mockRepository.addGroup(any()) } just Runs
 
     viewModel.setName("Test Group")
     viewModel.setCategory(EventType.SPORTS)
