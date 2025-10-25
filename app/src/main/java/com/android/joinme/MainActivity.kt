@@ -17,6 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
 import com.android.joinme.model.authentification.AuthRepository
+import com.android.joinme.ui.groups.CreateGroupScreen
 import com.android.joinme.ui.groups.GroupListScreen
 import com.android.joinme.ui.history.HistoryScreen
 import com.android.joinme.ui.map.MapScreen
@@ -181,9 +182,7 @@ fun JoinMe(
             onJoinWithLink = {
               Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
             }, // TODO navigate to join with link screen or popup
-            onCreateGroup = {
-              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
-            }, // TODO navigate to create group screen
+            onCreateGroup = { navigationActions.navigateTo(Screen.CreateGroup) },
             onGroup = {
               Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
             }, // TODO navigate to group details screen
@@ -193,6 +192,12 @@ fun JoinMe(
             onBackClick = { navigationActions.goBack() },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) })
+      }
+
+      composable(route = Screen.CreateGroup.route) {
+        CreateGroupScreen(
+            onNavigateBack = { navigationActions.goBack() },
+            onGroupCreated = { navigationActions.navigateTo(Screen.Groups) })
       }
     }
 

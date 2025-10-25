@@ -25,6 +25,8 @@ sealed class Screen(
 
   object Groups : Screen(route = "groups", name = "Groups")
 
+  object CreateGroup : Screen(route = "create_group", name = "Create Group")
+
   data class EditEvent(val eventId: String) :
       Screen(route = "edit_event/${eventId}", name = "Edit Event") {
     companion object {
@@ -77,12 +79,12 @@ open class NavigationActions(
       //          saveState = true
       //          inclusive = true
       //        }
-      //        // Avoid multiple copies of the same destination when reselecting same item
+      //        // Avoid multiple copies of the same destination when selecting again the same item
       //        launchSingleTop = true
       //      }
       //
       if (screen !is Screen.Auth) {
-        // Restore state when reselecting a previously selected item
+        // Restore state when navigating to a previously selected item
         restoreState = true
       }
     }
