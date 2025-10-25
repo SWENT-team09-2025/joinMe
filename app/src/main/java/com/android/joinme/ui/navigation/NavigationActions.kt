@@ -2,44 +2,95 @@ package com.android.joinme.ui.navigation
 
 import androidx.navigation.NavHostController
 
+/**
+ * Sealed class representing all navigation destinations in the JoinMe application.
+ *
+ * Each screen defines its route (used for navigation) and name (displayed in UI).
+ * Top-level destinations are marked with isTopLevelDestination=true and appear in the bottom
+ * navigation bar.
+ *
+ * @param route The navigation route used by NavController
+ * @param name The human-readable name of the screen
+ * @param isTopLevelDestination Whether this screen appears in bottom navigation (default: false)
+ */
 sealed class Screen(
-    val route: String,
-    val name: String,
-    val isTopLevelDestination: Boolean = false
+  val route: String,
+  val name: String,
+  val isTopLevelDestination: Boolean = false
 ) {
+  // ============================================================================
+  // Authentication
+  // ============================================================================
+
+  /** Authentication screen for user sign-in/sign-up */
   object Auth : Screen(route = "auth", name = "Authentication")
 
+  // ============================================================================
+  // Events & History
+  // ============================================================================
+
+  /** Main overview screen showing upcoming events (Top-level destination) */
   object Overview : Screen(route = "overview", name = "Overview", isTopLevelDestination = true)
 
-  object Search : Screen(route = "search", name = "Search", isTopLevelDestination = true)
-
-  object Map : Screen(route = "map", name = "Map", isTopLevelDestination = true)
-
-  object Profile : Screen(route = "profile", name = "Profile", isTopLevelDestination = true)
-
+  /** Screen for creating a new event */
   object CreateEvent : Screen(route = "create_event", name = "Create a new task")
 
-  object EditProfile : Screen(route = "edit_profile", name = "Edit Profile")
-
-  object History : Screen(route = "history", name = "History")
-
-  object Groups : Screen(route = "groups", name = "Groups")
-
-  object CreateGroup : Screen(route = "create_group", name = "Create Group")
-
+  /**
+   * Screen for editing an existing event
+   *
+   * @param eventId The ID of the event to edit
+   */
   data class EditEvent(val eventId: String) :
-      Screen(route = "edit_event/${eventId}", name = "Edit Event") {
+    Screen(route = "edit_event/${eventId}", name = "Edit Event") {
     companion object {
       const val route = "edit_event/{eventId}"
     }
   }
 
+  /**
+   * Screen for viewing event details
+   *
+   * @param eventId The ID of the event to display
+   */
   data class ShowEventScreen(val eventId: String) :
-      Screen(route = "show_event/${eventId}", name = "Show Event") {
+    Screen(route = "show_event/${eventId}", name = "Show Event") {
     companion object {
       const val route = "show_event/{eventId}"
     }
   }
+
+  /** History screen showing past events */
+  object History : Screen(route = "history", name = "History")
+
+  // ============================================================================
+  // Search
+  // ============================================================================
+
+  /** Search screen for finding events (Top-level destination) */
+  object Search : Screen(route = "search", name = "Search", isTopLevelDestination = true)
+
+  // ============================================================================
+  // Map
+  // ============================================================================
+
+  /** Map screen showing events geographically (Top-level destination) */
+  object Map : Screen(route = "map", name = "Map", isTopLevelDestination = true)
+
+  // ============================================================================
+  // Profile & Groups
+  // ============================================================================
+
+  /** User profile view screen (Top-level destination) */
+  object Profile : Screen(route = "profile", name = "Profile", isTopLevelDestination = true)
+
+  /** Profile editing screen */
+  object EditProfile : Screen(route = "edit_profile", name = "Edit Profile")
+
+  /** Groups list screen showing user's groups */
+  object Groups : Screen(route = "groups", name = "Groups")
+
+  /** Screen for creating a new group */
+  object CreateGroup : Screen(route = "create_group", name = "Create Group")
 }
 
 /**
@@ -53,10 +104,13 @@ sealed class Screen(
  *   navigation actions.
  */
 open class NavigationActions(
-    private val navController: NavHostController,
+  private val navController: NavHostController,
 ) {
   /**
    * Navigate to the specified screen.
+   *
+   * Handles special behavior for top-level destinations (bottom nav items) by using singleTop
+   * launch mode and restoring state. Non-auth screens restore their state when navigated to.
    *
    * @param screen The screen to navigate to
    */
@@ -70,19 +124,7 @@ open class NavigationActions(
         launchSingleTop = true
         popUpTo(screen.route) { inclusive = true }
       }
-      //      restoreState = true
-      //      restoreState = true
-      //      if (screen.isTopLevelDestination) {
-      //        // Pop up to the start destination of the graph to
-      //        // avoid building up a large stack of destinations
-      //        popUpTo(navController.graph.findStartDestination().id) {
-      //          saveState = true
-      //          inclusive = true
-      //        }
-      //        // Avoid multiple copies of the same destination when selecting again the same item
-      //        launchSingleTop = true
-      //      }
-      //
+
       if (screen !is Screen.Auth) {
         // Restore state when navigating to a previously selected item
         restoreState = true
@@ -90,7 +132,11 @@ open class NavigationActions(
     }
   }
 
-  /** Navigate back to the previous screen. */
+  /**
+   * Navigate back to the previous screen.
+   *
+   * Pops the current destination from the back stack.
+   */
   open fun goBack() {
     navController.popBackStack()
   }
@@ -98,7 +144,7 @@ open class NavigationActions(
   /**
    * Get the current route of the navigation controller.
    *
-   * @return The current route
+   * @return The current route, or empty string if no destination is active
    */
   open fun currentRoute(): String {
     return navController.currentDestination?.route ?: ""
