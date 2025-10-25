@@ -16,7 +16,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
-import com.android.joinme.model.authentification.AuthRepository
+import com.android.joinme.ui.groups.CreateGroupScreen
 import com.android.joinme.ui.groups.GroupListScreen
 import com.android.joinme.ui.history.HistoryScreen
 import com.android.joinme.ui.map.MapScreen
@@ -48,9 +48,6 @@ object HttpClientProvider {
  * with the JoinMe composable, which handles all navigation and UI logic.
  */
 class MainActivity : ComponentActivity() {
-
-  private lateinit var auth: FirebaseAuth
-  private lateinit var authRepository: AuthRepository
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -87,6 +84,9 @@ fun JoinMe(
           else Screen.Overview.route
 
   NavHost(navController = navController, startDestination = initialDestination) {
+    // ============================================================================
+    // Authentication
+    // ============================================================================
     navigation(
         startDestination = Screen.Auth.route,
         route = Screen.Auth.name,
@@ -98,6 +98,9 @@ fun JoinMe(
       }
     }
 
+    // ============================================================================
+    // Events & History
+    // ============================================================================
     navigation(
         startDestination = Screen.Overview.route,
         route = Screen.Overview.name,
@@ -142,6 +145,9 @@ fun JoinMe(
       }
     }
 
+    // ============================================================================
+    // Search
+    // ============================================================================
     navigation(
         startDestination = Screen.Search.route,
         route = Screen.Search.name,
@@ -153,6 +159,9 @@ fun JoinMe(
       }
     }
 
+    // ============================================================================
+    // Map
+    // ============================================================================
     navigation(
         startDestination = Screen.Map.route,
         route = Screen.Map.name,
@@ -162,6 +171,10 @@ fun JoinMe(
         MapScreen(viewModel = mapViewModel, navigationActions = navigationActions)
       }
     }
+
+    // ============================================================================
+    // Profile & Groups
+    // ============================================================================
     navigation(
         startDestination = Screen.Profile.route,
         route = Screen.Profile.name,
@@ -176,14 +189,24 @@ fun JoinMe(
             onSignOutComplete = { navigationActions.navigateTo(Screen.Auth) })
       }
 
+      composable(Screen.EditProfile.route) {
+        EditProfileScreen(
+            uid = FirebaseAuth.getInstance().currentUser?.uid ?: "",
+            onBackClick = { navigationActions.goBack() },
+            onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
+            onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
+            onChangePasswordClick = {
+              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            }, // TODO implement change password flow in a future update
+            onSaveSuccess = { navigationActions.navigateTo(Screen.Profile) })
+      }
+
       composable(Screen.Groups.route) {
         GroupListScreen(
             onJoinWithLink = {
               Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
             }, // TODO navigate to join with link screen or popup
-            onCreateGroup = {
-              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
-            }, // TODO navigate to create group screen
+            onCreateGroup = { navigationActions.navigateTo(Screen.CreateGroup) },
             onGroup = {
               Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
             }, // TODO navigate to group details screen
@@ -194,21 +217,11 @@ fun JoinMe(
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) })
       }
-    }
 
-    navigation(
-        startDestination = Screen.EditProfile.route,
-        route = Screen.EditProfile.name,
-    ) {
-      composable(Screen.EditProfile.route) {
-        EditProfileScreen(
-            uid = FirebaseAuth.getInstance().currentUser?.uid ?: "",
-            onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
-            onBackClick = { navigationActions.goBack() },
-            onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
-            onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
-            onChangePasswordClick = {}, // TODO implement change password flow in a future update
-            onSaveSuccess = { navigationActions.navigateTo(Screen.Profile) })
+      composable(route = Screen.CreateGroup.route) {
+        CreateGroupScreen(
+            onNavigateBack = { navigationActions.goBack() },
+            onGroupCreated = { navigationActions.navigateTo(Screen.Groups) })
       }
     }
   }

@@ -1,4 +1,4 @@
-package com.android.joinme.model.group
+package com.android.joinme.model.groups
 
 /** Represents a repository that manages Group items. */
 interface GroupRepository {

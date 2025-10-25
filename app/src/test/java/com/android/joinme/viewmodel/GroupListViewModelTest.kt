@@ -1,7 +1,7 @@
 package com.android.joinme.viewmodel
 
-import com.android.joinme.model.group.Group
-import com.android.joinme.model.group.GroupRepository
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.ui.groups.GroupListViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

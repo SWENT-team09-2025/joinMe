@@ -3,9 +3,9 @@ package com.android.joinme.ui.groups
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.EventType
-import com.android.joinme.model.group.Group
-import com.android.joinme.model.group.GroupRepository
-import com.android.joinme.model.group.GroupRepositoryProvider
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -90,9 +90,11 @@ class CreateGroupViewModel(
    * @param name The group name to set
    */
   fun setName(name: String) {
+    // Don't trim while typing, let the user type freely
+    // Only validate the trimmed version, but store the original
     val trimmedName = name.trim()
     val error = validateName(trimmedName)
-    _uiState.value = _uiState.value.copy(name = trimmedName, nameError = error)
+    _uiState.value = _uiState.value.copy(name = name, nameError = error)
     updateFormValidity()
   }
 
@@ -166,7 +168,7 @@ class CreateGroupViewModel(
         val group =
             Group(
                 id = groupId,
-                name = state.name,
+                name = state.name.trim(), // Trim the name before saving
                 category = state.category,
                 description = state.description.ifBlank { "" },
                 ownerId = uid,

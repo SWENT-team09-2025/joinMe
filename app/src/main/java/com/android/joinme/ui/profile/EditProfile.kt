@@ -20,13 +20,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.profile.Profile
-import com.android.joinme.ui.navigation.BottomNavigationMenu
-import com.android.joinme.ui.navigation.Tab
 import com.android.joinme.ui.theme.BorderColor
 import com.android.joinme.ui.theme.ButtonSaveColor
 import com.android.joinme.ui.theme.DisabledBorderColor
@@ -35,7 +32,6 @@ import com.android.joinme.ui.theme.ErrorBorderColor
 import com.android.joinme.ui.theme.FocusedBorderColor
 import com.android.joinme.ui.theme.JoinMeColor
 import com.android.joinme.ui.theme.LabelTextColor
-import com.google.firebase.Timestamp
 
 object EditProfileTestTags {
   const val NO_LOADING_PROFILE_MESSAGE = "noLoadingProfileMessage"
@@ -62,7 +58,6 @@ object EditProfileTestTags {
 fun EditProfileScreen(
     uid: String,
     profileViewModel: ProfileViewModel = viewModel(),
-    onTabSelected: (Tab) -> Unit = {},
     onBackClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
     onGroupClick: () -> Unit = {},
@@ -113,9 +108,6 @@ fun EditProfileScreen(
             onProfileClick = onProfileClick,
             onGroupClick = onGroupClick,
             onEditClick = {})
-      },
-      bottomBar = {
-        BottomNavigationMenu(selectedTab = Tab.Profile, onTabSelected = onTabSelected)
       }) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
           when {
@@ -442,54 +434,4 @@ private fun EditTextField(
               else Modifier.padding(start = 12.dp, top = 4.dp))
     }
   }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun EditProfileScreenPreview() {
-  val mockProfile =
-      Profile(
-          uid = "preview-uid",
-          username = "Mathieu Pfeffer",
-          email = "pfeffer@gmail.com",
-          dateOfBirth = "12/12/2012",
-          country = "Nigeria",
-          interests = listOf("Golf", "Nature"),
-          bio = "I am a EPFL student, 21 and I like horses and golf.",
-          createdAt = Timestamp.now(),
-          updatedAt = Timestamp.now())
-
-  Scaffold(
-      containerColor = MaterialTheme.colorScheme.surface,
-      topBar = {
-        ProfileTopBar(
-            currentScreen = ProfileScreen.EDIT_PROFILE,
-            onBackClick = {},
-            onProfileClick = {},
-            onGroupClick = {},
-            onEditClick = {})
-      },
-      bottomBar = { BottomNavigationMenu(selectedTab = Tab.Profile, onTabSelected = {}) }) { padding
-        ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-          EditProfileContent(
-              profile = mockProfile,
-              username = "Mathieu Pfeffer",
-              onPictureEditClick = {},
-              onUsernameChange = {},
-              usernameError = null,
-              dateOfBirth = "12/12/2012",
-              onDateOfBirthChange = {},
-              dateOfBirthError = null,
-              country = "Nigeria",
-              onCountryChange = {},
-              interests = "Golf, Nature",
-              onInterestsChange = {},
-              bio = "I am a EPFL student, 21 and I like horses and golf.",
-              onBioChange = {},
-              isFormValid = true,
-              onChangePasswordClick = {},
-              onSaveClick = {})
-        }
-      }
 }

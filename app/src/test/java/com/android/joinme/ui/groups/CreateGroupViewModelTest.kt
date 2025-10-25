@@ -1,7 +1,7 @@
 package com.android.joinme.ui.groups
 
 import com.android.joinme.model.event.EventType
-import com.android.joinme.model.group.GroupRepository
+import com.android.joinme.model.groups.GroupRepository
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -114,7 +114,8 @@ class CreateGroupViewModelTest {
     viewModel.setName("   Valid Name")
 
     val state = viewModel.uiState.value
-    assertEquals("Valid Name", state.name)
+    // Name is stored with spaces, but validation passes on trimmed version
+    assertEquals("   Valid Name", state.name)
     assertNull(state.nameError)
     assertTrue(state.isValid)
   }
@@ -124,7 +125,8 @@ class CreateGroupViewModelTest {
     viewModel.setName("Valid Name   ")
 
     val state = viewModel.uiState.value
-    assertEquals("Valid Name", state.name)
+    // Name is stored with spaces, but validation passes on trimmed version
+    assertEquals("Valid Name   ", state.name)
     assertNull(state.nameError)
     assertTrue(state.isValid)
   }
@@ -134,7 +136,8 @@ class CreateGroupViewModelTest {
     viewModel.setName("   Valid Name   ")
 
     val state = viewModel.uiState.value
-    assertEquals("Valid Name", state.name)
+    // Name is stored with spaces, but validation passes on trimmed version
+    assertEquals("   Valid Name   ", state.name)
     assertNull(state.nameError)
     assertTrue(state.isValid)
   }
@@ -144,7 +147,8 @@ class CreateGroupViewModelTest {
     viewModel.setName("     ")
 
     val state = viewModel.uiState.value
-    assertEquals("", state.name)
+    // Name is stored WITH spaces, but validation checks trimmed version (which is blank)
+    assertEquals("     ", state.name)
     assertEquals("Name is required", state.nameError)
     assertFalse(state.isValid)
   }
@@ -154,7 +158,8 @@ class CreateGroupViewModelTest {
     viewModel.setName("   ab")
 
     val state = viewModel.uiState.value
-    assertEquals("ab", state.name)
+    // Name is stored WITH spaces, but validation checks trimmed version
+    assertEquals("   ab", state.name)
     assertEquals("Name must be at least 3 characters", state.nameError)
     assertFalse(state.isValid)
   }
@@ -362,7 +367,8 @@ class CreateGroupViewModelTest {
     viewModel.setName(name)
 
     val state = viewModel.uiState.value
-    assertEquals("a".repeat(30), state.name)
+    // Name is stored WITH spaces, but validation checks trimmed version
+    assertEquals("  " + "a".repeat(30) + "  ", state.name)
     assertNull(state.nameError)
     assertTrue(state.isValid)
   }
@@ -373,7 +379,8 @@ class CreateGroupViewModelTest {
     viewModel.setName(name)
 
     val state = viewModel.uiState.value
-    assertEquals("a".repeat(31), state.name)
+    // Name is stored WITH spaces, but validation checks trimmed version
+    assertEquals("  " + "a".repeat(31) + "  ", state.name)
     assertEquals("Name must not exceed 30 characters", state.nameError)
     assertFalse(state.isValid)
   }
@@ -420,7 +427,12 @@ class CreateGroupViewModelTest {
 
     advanceUntilIdle()
 
-    coVerify { mockRepository.addGroup(match { it.name == "Trimmed Name" }) }
+    coVerify {
+      mockRepository.addGroup(
+          match {
+            it.name == "Trimmed Name" // Trimmed when saved
+          })
+    }
   }
 
   @Test

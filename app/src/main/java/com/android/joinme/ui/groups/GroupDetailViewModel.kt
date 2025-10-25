@@ -2,8 +2,8 @@ package com.android.joinme.ui.groups
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.android.joinme.model.group.Group
-import com.android.joinme.model.group.GroupRepository
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
