@@ -5,18 +5,17 @@ import androidx.navigation.NavHostController
 /**
  * Sealed class representing all navigation destinations in the JoinMe application.
  *
- * Each screen defines its route (used for navigation) and name (displayed in UI).
- * Top-level destinations are marked with isTopLevelDestination=true and appear in the bottom
- * navigation bar.
+ * Each screen defines its route (used for navigation) and name (displayed in UI). Top-level
+ * destinations are marked with isTopLevelDestination=true and appear in the bottom navigation bar.
  *
  * @param route The navigation route used by NavController
  * @param name The human-readable name of the screen
  * @param isTopLevelDestination Whether this screen appears in bottom navigation (default: false)
  */
 sealed class Screen(
-  val route: String,
-  val name: String,
-  val isTopLevelDestination: Boolean = false
+    val route: String,
+    val name: String,
+    val isTopLevelDestination: Boolean = false
 ) {
   // ============================================================================
   // Authentication
@@ -41,7 +40,7 @@ sealed class Screen(
    * @param eventId The ID of the event to edit
    */
   data class EditEvent(val eventId: String) :
-    Screen(route = "edit_event/${eventId}", name = "Edit Event") {
+      Screen(route = "edit_event/${eventId}", name = "Edit Event") {
     companion object {
       const val route = "edit_event/{eventId}"
     }
@@ -53,7 +52,7 @@ sealed class Screen(
    * @param eventId The ID of the event to display
    */
   data class ShowEventScreen(val eventId: String) :
-    Screen(route = "show_event/${eventId}", name = "Show Event") {
+      Screen(route = "show_event/${eventId}", name = "Show Event") {
     companion object {
       const val route = "show_event/{eventId}"
     }
@@ -104,7 +103,7 @@ sealed class Screen(
  *   navigation actions.
  */
 open class NavigationActions(
-  private val navController: NavHostController,
+    private val navController: NavHostController,
 ) {
   /**
    * Navigate to the specified screen.

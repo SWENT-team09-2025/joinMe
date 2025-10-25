@@ -37,7 +37,7 @@ import okhttp3.OkHttpClient
 
 /** Provides a singleton OkHttpClient instance for network operations. */
 object HttpClientProvider {
-    var client: OkHttpClient = OkHttpClient()
+  var client: OkHttpClient = OkHttpClient()
 }
 
 /**
@@ -49,11 +49,11 @@ object HttpClientProvider {
  */
 class MainActivity : ComponentActivity() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
 
-        setContent { SampleAppTheme { Surface(modifier = Modifier.fillMaxSize()) { JoinMe() } } }
-    }
+    setContent { SampleAppTheme { Surface(modifier = Modifier.fillMaxSize()) { JoinMe() } } }
+  }
 }
 
 /**
@@ -76,154 +76,153 @@ fun JoinMe(
     credentialManager: CredentialManager = CredentialManager.create(context),
     startDestination: String? = null,
 ) {
-    val navController = rememberNavController()
-    val navigationActions = NavigationActions(navController)
-    val initialDestination =
-        startDestination
-            ?: if (FirebaseAuth.getInstance().currentUser == null) Screen.Auth.name
-            else Screen.Overview.route
+  val navController = rememberNavController()
+  val navigationActions = NavigationActions(navController)
+  val initialDestination =
+      startDestination
+          ?: if (FirebaseAuth.getInstance().currentUser == null) Screen.Auth.name
+          else Screen.Overview.route
 
-    NavHost(navController = navController, startDestination = initialDestination) {
-        // ============================================================================
-        // Authentication
-        // ============================================================================
-        navigation(
-            startDestination = Screen.Auth.route,
-            route = Screen.Auth.name,
-        ) {
-            composable(Screen.Auth.route) {
-                SignInScreen(
-                    credentialManager = credentialManager,
-                    onSignedIn = { navigationActions.navigateTo(Screen.Overview) })
-            }
-        }
-
-        // ============================================================================
-        // Events & History
-        // ============================================================================
-        navigation(
-            startDestination = Screen.Overview.route,
-            route = Screen.Overview.name,
-        ) {
-            composable(Screen.Overview.route) {
-                OverviewScreen(
-                    onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
-                    onAddEvent = { navigationActions.navigateTo(Screen.CreateEvent) },
-                    onGoToHistory = { navigationActions.navigateTo(Screen.History) },
-                    navigationActions = navigationActions,
-                    credentialManager = credentialManager)
-            }
-            composable(Screen.CreateEvent.route) {
-                CreateEventScreen(
-                    onDone = { navigationActions.navigateTo(Screen.Overview) },
-                    onGoBack = { navigationActions.goBack() })
-            }
-            composable(Screen.EditEvent.route) { navBackStackEntry ->
-                val eventId = navBackStackEntry.arguments?.getString("eventId")
-
-                eventId?.let {
-                    EditEventScreen(
-                        onDone = { navigationActions.navigateTo(Screen.Overview) },
-                        onGoBack = { navigationActions.goBack() },
-                        eventId = eventId)
-                } ?: run { Toast.makeText(context, "Event UID is null", Toast.LENGTH_SHORT).show() }
-            }
-            composable(Screen.History.route) {
-                HistoryScreen(
-                    onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
-                    onGoBack = { navigationActions.goBack() })
-            }
-            composable(Screen.ShowEventScreen.route) { navBackStackEntry ->
-                val eventId = navBackStackEntry.arguments?.getString("eventId")
-
-                eventId?.let {
-                    ShowEventScreen(
-                        eventId = eventId,
-                        onGoBack = { navigationActions.goBack() },
-                        onEditEvent = { id -> navigationActions.navigateTo(Screen.EditEvent(id)) })
-                } ?: run { Toast.makeText(context, "Event UID is null", Toast.LENGTH_SHORT).show() }
-            }
-        }
-
-        // ============================================================================
-        // Search
-        // ============================================================================
-        navigation(
-            startDestination = Screen.Search.route,
-            route = Screen.Search.name,
-        ) {
-            composable(Screen.Search.route) {
-                SearchScreen(
-                    navigationActions = navigationActions,
-                    onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) })
-            }
-        }
-
-        // ============================================================================
-        // Map
-        // ============================================================================
-        navigation(
-            startDestination = Screen.Map.route,
-            route = Screen.Map.name,
-        ) {
-            composable(Screen.Map.route) { backStackEntry ->
-                val mapViewModel: MapViewModel = viewModel(backStackEntry)
-                MapScreen(viewModel = mapViewModel, navigationActions = navigationActions)
-            }
-        }
-
-        // ============================================================================
-        // Profile & Groups
-        // ============================================================================
-        navigation(
-            startDestination = Screen.Profile.route,
-            route = Screen.Profile.name,
-        ) {
-            composable(Screen.Profile.route) {
-                ViewProfileScreen(
-                    uid = FirebaseAuth.getInstance().currentUser?.uid ?: "",
-                    onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
-                    onBackClick = { navigationActions.goBack() },
-                    onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
-                    onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
-                    onSignOutComplete = { navigationActions.navigateTo(Screen.Auth) })
-            }
-
-            composable(Screen.EditProfile.route) {
-                EditProfileScreen(
-                    uid = FirebaseAuth.getInstance().currentUser?.uid ?: "",
-                    onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
-                    onBackClick = { navigationActions.goBack() },
-                    onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
-                    onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
-                    onChangePasswordClick = {
-                        Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
-                    }, // TODO implement change password flow in a future update
-                    onSaveSuccess = { navigationActions.navigateTo(Screen.Profile) })
-            }
-
-            composable(Screen.Groups.route) {
-                GroupListScreen(
-                    onJoinWithLink = {
-                        Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
-                    }, // TODO navigate to join with link screen or popup
-                    onCreateGroup = { navigationActions.navigateTo(Screen.CreateGroup) },
-                    onGroup = {
-                        Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
-                    }, // TODO navigate to group details screen
-                    onMoreOptionMenu = {
-                        Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
-                    }, // TODO show more options menu
-                    onBackClick = { navigationActions.goBack() },
-                    onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
-                    onEditClick = { navigationActions.navigateTo(Screen.EditProfile) })
-            }
-
-            composable(route = Screen.CreateGroup.route) {
-                CreateGroupScreen(
-                    onNavigateBack = { navigationActions.goBack() },
-                    onGroupCreated = { navigationActions.navigateTo(Screen.Groups) })
-            }
-        }
+  NavHost(navController = navController, startDestination = initialDestination) {
+    // ============================================================================
+    // Authentication
+    // ============================================================================
+    navigation(
+        startDestination = Screen.Auth.route,
+        route = Screen.Auth.name,
+    ) {
+      composable(Screen.Auth.route) {
+        SignInScreen(
+            credentialManager = credentialManager,
+            onSignedIn = { navigationActions.navigateTo(Screen.Overview) })
+      }
     }
+
+    // ============================================================================
+    // Events & History
+    // ============================================================================
+    navigation(
+        startDestination = Screen.Overview.route,
+        route = Screen.Overview.name,
+    ) {
+      composable(Screen.Overview.route) {
+        OverviewScreen(
+            onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
+            onAddEvent = { navigationActions.navigateTo(Screen.CreateEvent) },
+            onGoToHistory = { navigationActions.navigateTo(Screen.History) },
+            navigationActions = navigationActions,
+            credentialManager = credentialManager)
+      }
+      composable(Screen.CreateEvent.route) {
+        CreateEventScreen(
+            onDone = { navigationActions.navigateTo(Screen.Overview) },
+            onGoBack = { navigationActions.goBack() })
+      }
+      composable(Screen.EditEvent.route) { navBackStackEntry ->
+        val eventId = navBackStackEntry.arguments?.getString("eventId")
+
+        eventId?.let {
+          EditEventScreen(
+              onDone = { navigationActions.navigateTo(Screen.Overview) },
+              onGoBack = { navigationActions.goBack() },
+              eventId = eventId)
+        } ?: run { Toast.makeText(context, "Event UID is null", Toast.LENGTH_SHORT).show() }
+      }
+      composable(Screen.History.route) {
+        HistoryScreen(
+            onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
+            onGoBack = { navigationActions.goBack() })
+      }
+      composable(Screen.ShowEventScreen.route) { navBackStackEntry ->
+        val eventId = navBackStackEntry.arguments?.getString("eventId")
+
+        eventId?.let {
+          ShowEventScreen(
+              eventId = eventId,
+              onGoBack = { navigationActions.goBack() },
+              onEditEvent = { id -> navigationActions.navigateTo(Screen.EditEvent(id)) })
+        } ?: run { Toast.makeText(context, "Event UID is null", Toast.LENGTH_SHORT).show() }
+      }
+    }
+
+    // ============================================================================
+    // Search
+    // ============================================================================
+    navigation(
+        startDestination = Screen.Search.route,
+        route = Screen.Search.name,
+    ) {
+      composable(Screen.Search.route) {
+        SearchScreen(
+            navigationActions = navigationActions,
+            onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) })
+      }
+    }
+
+    // ============================================================================
+    // Map
+    // ============================================================================
+    navigation(
+        startDestination = Screen.Map.route,
+        route = Screen.Map.name,
+    ) {
+      composable(Screen.Map.route) { backStackEntry ->
+        val mapViewModel: MapViewModel = viewModel(backStackEntry)
+        MapScreen(viewModel = mapViewModel, navigationActions = navigationActions)
+      }
+    }
+
+    // ============================================================================
+    // Profile & Groups
+    // ============================================================================
+    navigation(
+        startDestination = Screen.Profile.route,
+        route = Screen.Profile.name,
+    ) {
+      composable(Screen.Profile.route) {
+        ViewProfileScreen(
+            uid = FirebaseAuth.getInstance().currentUser?.uid ?: "",
+            onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
+            onBackClick = { navigationActions.goBack() },
+            onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
+            onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
+            onSignOutComplete = { navigationActions.navigateTo(Screen.Auth) })
+      }
+
+      composable(Screen.EditProfile.route) {
+        EditProfileScreen(
+            uid = FirebaseAuth.getInstance().currentUser?.uid ?: "",
+            onBackClick = { navigationActions.goBack() },
+            onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
+            onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
+            onChangePasswordClick = {
+              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            }, // TODO implement change password flow in a future update
+            onSaveSuccess = { navigationActions.navigateTo(Screen.Profile) })
+      }
+
+      composable(Screen.Groups.route) {
+        GroupListScreen(
+            onJoinWithLink = {
+              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            }, // TODO navigate to join with link screen or popup
+            onCreateGroup = { navigationActions.navigateTo(Screen.CreateGroup) },
+            onGroup = {
+              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            }, // TODO navigate to group details screen
+            onMoreOptionMenu = {
+              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            }, // TODO show more options menu
+            onBackClick = { navigationActions.goBack() },
+            onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
+            onEditClick = { navigationActions.navigateTo(Screen.EditProfile) })
+      }
+
+      composable(route = Screen.CreateGroup.route) {
+        CreateGroupScreen(
+            onNavigateBack = { navigationActions.goBack() },
+            onGroupCreated = { navigationActions.navigateTo(Screen.Groups) })
+      }
+    }
+  }
 }
