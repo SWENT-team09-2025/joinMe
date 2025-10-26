@@ -1,4 +1,4 @@
-package com.android.joinme.model.group
+package com.android.joinme.model.groups
 
 import android.util.Log
 import com.android.joinme.model.event.EventType

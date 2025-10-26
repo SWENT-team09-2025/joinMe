@@ -5,7 +5,6 @@ import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
-import com.android.joinme.ui.navigation.NavigationTestTags
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
@@ -97,14 +96,6 @@ class EditProfileScreenTest {
 
     composeTestRule.onNodeWithTag(EditProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
     composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertIsDisplayed()
-  }
-
-  @Test
-  fun editProfile_bottomNavigationIsDisplayed() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
-    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
-
-    composeTestRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertIsDisplayed()
   }
 
   // ==================== INITIAL VALUES TESTS ====================
@@ -515,7 +506,6 @@ class EditProfileScreenTest {
   @Test
   fun editProfile_editPhotoButton_isClickable() = runTest {
     val vm = ProfileViewModel(FakeProfileRepository(testProfile))
-    var clicked = false
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).performClick()

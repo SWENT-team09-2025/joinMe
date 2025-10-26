@@ -1,7 +1,7 @@
 package com.android.joinme.repository
 
-import com.android.joinme.model.group.Group
-import com.android.joinme.model.group.GroupRepositoryLocal
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepositoryLocal
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Before

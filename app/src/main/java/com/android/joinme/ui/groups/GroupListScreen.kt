@@ -37,7 +37,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.android.joinme.model.group.Group
+import com.android.joinme.model.groups.Group
 import com.android.joinme.ui.components.BubbleAction
 import com.android.joinme.ui.components.BubbleAlignment
 import com.android.joinme.ui.components.FloatingActionBubbles
