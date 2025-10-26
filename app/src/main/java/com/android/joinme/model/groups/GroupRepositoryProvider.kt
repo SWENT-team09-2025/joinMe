@@ -1,4 +1,4 @@
-package com.android.joinme.model.group
+package com.android.joinme.model.groups
 
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore

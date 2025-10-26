@@ -1,7 +1,7 @@
 package com.android.joinme.repository
 
-import com.android.joinme.model.group.GROUPS_COLLECTION_PATH
-import com.android.joinme.model.group.GroupRepositoryFirestore
+import com.android.joinme.model.groups.GROUPS_COLLECTION_PATH
+import com.android.joinme.model.groups.GroupRepositoryFirestore
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -67,7 +67,7 @@ class GroupRepositoryFirestoreTest {
   fun addGroup_callsFirestoreSet() = runTest {
     // Given
     val testGroup =
-        com.android.joinme.model.group.Group(
+        com.android.joinme.model.groups.Group(
             id = testGroupId,
             name = "Test Group",
             description = "A test group",
@@ -110,7 +110,7 @@ class GroupRepositoryFirestoreTest {
   fun editGroup_callsFirestoreUpdate() = runTest {
     // Given
     val updatedGroup =
-        com.android.joinme.model.group.Group(
+        com.android.joinme.model.groups.Group(
             id = testGroupId,
             name = "Updated Name",
             description = "Updated description",

@@ -1,4 +1,4 @@
-package com.android.joinme.ui.group
+package com.android.joinme.ui.groups
 
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
@@ -9,12 +9,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
-import com.android.joinme.model.group.Group
-import com.android.joinme.model.group.GroupRepository
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.ui.components.FloatingActionBubblesTestTags
-import com.android.joinme.ui.groups.GroupListScreen
-import com.android.joinme.ui.groups.GroupListScreenTestTags
-import com.android.joinme.ui.groups.GroupListViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
