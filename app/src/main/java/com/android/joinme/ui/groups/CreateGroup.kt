@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
 import com.android.joinme.model.event.EventType
+import com.android.joinme.model.event.displayString
 import com.android.joinme.ui.navigation.NavigationTestTags
 import com.android.joinme.ui.theme.*
 
@@ -174,12 +175,7 @@ private fun GroupPictureSection(onPictureEditClick: () -> Unit = {}) {
           Image(
               painter = painterResource(id = R.drawable.group_default_picture),
               contentDescription = "Group picture placeholder",
-              modifier =
-                  Modifier.matchParentSize()
-                      .blur(5.dp) // blur the image
-                      .clip(CircleShape),
-              // contentScale = ContentScale.Crop
-          )
+              modifier = Modifier.matchParentSize().blur(5.dp).clip(CircleShape))
 
           // Edit button overlay
           Button(
@@ -249,12 +245,7 @@ private fun CategoryDropdown(selectedCategory: EventType, onCategorySelected: (E
 
     Box(modifier = Modifier.fillMaxWidth()) {
       OutlinedTextField(
-          value =
-              when (selectedCategory) {
-                EventType.SOCIAL -> "Social"
-                EventType.ACTIVITY -> "Activity"
-                EventType.SPORTS -> "Sports"
-              },
+          value = selectedCategory.displayString(),
           onValueChange = {},
           modifier = Modifier.fillMaxWidth().testTag(CreateGroupTestTags.CATEGORY_DROPDOWN),
           readOnly = true,
@@ -278,28 +269,16 @@ private fun CategoryDropdown(selectedCategory: EventType, onCategorySelected: (E
           expanded = expanded,
           onDismissRequest = { expanded = false },
           modifier = Modifier.fillMaxWidth(0.9f).testTag(CreateGroupTestTags.CATEGORY_MENU)) {
-            DropdownMenuItem(
-                text = { Text("Social") },
-                onClick = {
-                  onCategorySelected(EventType.SOCIAL)
-                  expanded = false
-                },
-                modifier = Modifier.testTag(CreateGroupTestTags.CATEGORY_OPTION_PREFIX + "SOCIAL"))
-            DropdownMenuItem(
-                text = { Text("Activity") },
-                onClick = {
-                  onCategorySelected(EventType.ACTIVITY)
-                  expanded = false
-                },
-                modifier =
-                    Modifier.testTag(CreateGroupTestTags.CATEGORY_OPTION_PREFIX + "ACTIVITY"))
-            DropdownMenuItem(
-                text = { Text("Sports") },
-                onClick = {
-                  onCategorySelected(EventType.SPORTS)
-                  expanded = false
-                },
-                modifier = Modifier.testTag(CreateGroupTestTags.CATEGORY_OPTION_PREFIX + "SPORTS"))
+            EventType.values().forEach { eventType ->
+              DropdownMenuItem(
+                  text = { Text(eventType.displayString()) },
+                  onClick = {
+                    onCategorySelected(eventType)
+                    expanded = false
+                  },
+                  modifier =
+                      Modifier.testTag(CreateGroupTestTags.CATEGORY_OPTION_PREFIX + eventType.name))
+            }
           }
     }
   }
