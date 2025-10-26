@@ -210,7 +210,7 @@ class SerieTest {
             createEvent("event2", duration = 60, hoursOffset = 3),
             createEvent("event3", duration = 60, hoursOffset = 5))
 
-    assertTrue(sampleSerie.isUpComing(events))
+    assertTrue(sampleSerie.isUpcoming(events))
   }
 
   @Test
@@ -221,7 +221,7 @@ class SerieTest {
             createEvent("event2", duration = 60, hoursOffset = 2),
             createEvent("event3", duration = 60, hoursOffset = 5))
 
-    assertFalse(sampleSerie.isUpComing(events))
+    assertFalse(sampleSerie.isUpcoming(events))
   }
 
   @Test
@@ -232,7 +232,7 @@ class SerieTest {
             createEvent("event2", duration = 60, hoursOffset = -3),
             createEvent("event3", duration = 60, hoursOffset = -2))
 
-    assertFalse(sampleSerie.isUpComing(events))
+    assertFalse(sampleSerie.isUpcoming(events))
   }
 
   @Test
@@ -240,7 +240,7 @@ class SerieTest {
     val serie = sampleSerie.copy(eventIds = emptyList())
     val events = listOf(createEvent("event1", duration = 60, hoursOffset = 2))
 
-    assertFalse(serie.isUpComing(events))
+    assertFalse(serie.isUpcoming(events))
   }
 
   @Test
@@ -338,7 +338,7 @@ class SerieTest {
             createEvent("event1", hoursOffset = 1),
             createEvent("event2", hoursOffset = 2),
             createEvent("event3", hoursOffset = 3))
-    assertTrue(sampleSerie.isUpComing(futureEvents))
+    assertTrue(sampleSerie.isUpcoming(futureEvents))
     assertFalse(sampleSerie.isActive(futureEvents))
     assertFalse(sampleSerie.isExpired(futureEvents))
   }
@@ -350,7 +350,7 @@ class SerieTest {
             createEvent("event1", duration = 60, hoursOffset = -2), // Past
             createEvent("event2", duration = 120, hoursOffset = 0), // Active
             createEvent("event3", hoursOffset = 2)) // Future
-    assertFalse(sampleSerie.isUpComing(activeEvents))
+    assertFalse(sampleSerie.isUpcoming(activeEvents))
     assertTrue(sampleSerie.isActive(activeEvents))
     assertFalse(sampleSerie.isExpired(activeEvents))
   }
@@ -362,7 +362,7 @@ class SerieTest {
             createEvent("event1", duration = 60, hoursOffset = -5),
             createEvent("event2", duration = 60, hoursOffset = -3),
             createEvent("event3", duration = 60, hoursOffset = -2))
-    assertFalse(sampleSerie.isUpComing(pastEvents))
+    assertFalse(sampleSerie.isUpcoming(pastEvents))
     assertFalse(sampleSerie.isActive(pastEvents))
     assertTrue(sampleSerie.isExpired(pastEvents))
   }
@@ -372,7 +372,7 @@ class SerieTest {
     val singleEventSerie = sampleSerie.copy(eventIds = listOf("event1"))
     val events = listOf(createEvent("event1", duration = 90, hoursOffset = 2))
 
-    assertTrue(singleEventSerie.isUpComing(events))
+    assertTrue(singleEventSerie.isUpcoming(events))
     assertFalse(singleEventSerie.isActive(events))
     assertFalse(singleEventSerie.isExpired(events))
     assertEquals(1, singleEventSerie.getTotalEventsCount())

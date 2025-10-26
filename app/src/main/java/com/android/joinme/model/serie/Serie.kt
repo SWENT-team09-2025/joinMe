@@ -4,6 +4,9 @@ import com.android.joinme.model.event.Event
 import com.android.joinme.model.utils.Visibility
 import com.google.firebase.Timestamp
 
+/** Milliseconds per minute conversion factor */
+private const val MILLIS_PER_MINUTE = 60_000L
+
 /**
  * Represents a series of recurring events within the JoinMe application.
  *
@@ -59,12 +62,16 @@ fun Serie.getTotalDuration(events: List<Event>): Int {
  * @return True if at least one event in the series is currently active, false otherwise
  */
 fun Serie.isActive(events: List<Event>): Boolean {
+  val now = System.currentTimeMillis()
   return events.any { event ->
     if (event.eventId !in eventIds) return@any false
-    val now = System.currentTimeMillis()
-    val startTime = event.date.toDate().time
-    val endTime = startTime + (event.duration * 60 * 1000)
-    now >= startTime && now < endTime
+    try {
+      val startTime = event.date.toDate().time
+      val endTime = startTime + (event.duration * MILLIS_PER_MINUTE)
+      now >= startTime && now < endTime
+    } catch (e: Exception) {
+      false
+    }
   }
 }
 
@@ -81,9 +88,14 @@ fun Serie.isExpired(events: List<Event>): Boolean {
   val serieEvents = events.filter { it.eventId in eventIds }
   if (serieEvents.isEmpty()) return false
 
+  val now = System.currentTimeMillis()
   return serieEvents.all { event ->
-    val endTimeMillis = event.date.toDate().time + (event.duration * 60 * 1000)
-    endTimeMillis < System.currentTimeMillis()
+    try {
+      val endTimeMillis = event.date.toDate().time + (event.duration * MILLIS_PER_MINUTE)
+      endTimeMillis < now
+    } catch (e: Exception) {
+      false
+    }
   }
 }
 
@@ -96,11 +108,18 @@ fun Serie.isExpired(events: List<Event>): Boolean {
  * @return True if all events in the series haven't started yet, false if any event is ongoing or
  *   past, or if the series has no events
  */
-fun Serie.isUpComing(events: List<Event>): Boolean {
+fun Serie.isUpcoming(events: List<Event>): Boolean {
   val serieEvents = events.filter { it.eventId in eventIds }
   if (serieEvents.isEmpty()) return false
 
-  return serieEvents.all { event -> event.date.toDate().time > System.currentTimeMillis() }
+  val now = System.currentTimeMillis()
+  return serieEvents.all { event ->
+    try {
+      event.date.toDate().time > now
+    } catch (e: Exception) {
+      false
+    }
+  }
 }
 
 /**
@@ -110,7 +129,15 @@ fun Serie.isUpComing(events: List<Event>): Boolean {
  * @return List of events belonging to this series, sorted chronologically by start date
  */
 fun Serie.getSerieEvents(events: List<Event>): List<Event> {
-  return events.filter { it.eventId in eventIds }.sortedBy { it.date.toDate().time }
+  return events
+      .filter { it.eventId in eventIds }
+      .sortedBy {
+        try {
+          it.date.toDate().time
+        } catch (e: Exception) {
+          0L
+        }
+      }
 }
 
 /**
