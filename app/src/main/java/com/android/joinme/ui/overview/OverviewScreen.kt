@@ -38,7 +38,11 @@ import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.Event
+import com.android.joinme.model.eventItem.EventItem
+import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.utils.Visibility
 import com.android.joinme.ui.components.EventCard
+import com.android.joinme.ui.components.SerieCard
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.NavigationTestTags
@@ -46,6 +50,8 @@ import com.android.joinme.ui.navigation.Tab
 import com.android.joinme.ui.theme.DividerColor
 import com.android.joinme.ui.theme.IconColor
 import com.android.joinme.ui.theme.OverviewScreenButtonColor
+import com.google.firebase.Timestamp
+import java.util.Date
 
 object OverviewScreenTestTags {
   const val CREATE_EVENT_BUTTON = "createEventFab"
@@ -56,7 +62,8 @@ object OverviewScreenTestTags {
   const val UPCOMING_EVENTS_TITLE = "upcomingEventsTitle"
   const val LOADING_INDICATOR = "overviewLoadingIndicator"
 
-  fun getTestTagForEventItem(event: Event): String = "eventItem${event.eventId}"
+  fun getTestTagForEvent(event: Event): String = "eventItem${event.eventId}"
+    fun getTestTagForSerie(serie: Serie): String = "eventItem${serie.serieId}"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,8 +79,8 @@ fun OverviewScreen(
 
   val context = LocalContext.current
   val uiState by overviewViewModel.uiState.collectAsState()
-  val ongoingEvents = uiState.ongoingEvents
-  val upcomingEvents = uiState.upcomingEvents
+  val ongoingItems = uiState.ongoingItems
+  val upcomingItems = uiState.upcomingItems
   val isLoading = uiState.isLoading
 
   LaunchedEffect(Unit) { overviewViewModel.refreshUIState() }
@@ -120,7 +127,7 @@ fun OverviewScreen(
                     modifier = Modifier.testTag(OverviewScreenTestTags.LOADING_INDICATOR))
               }
             }
-            ongoingEvents.isEmpty() && upcomingEvents.isEmpty() -> {
+            ongoingItems.isEmpty() && upcomingItems.isEmpty() -> {
               // Empty state
               Column(
                   modifier = Modifier.fillMaxSize(),
@@ -138,12 +145,12 @@ fun OverviewScreen(
               LazyColumn(
                   contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
                   modifier = Modifier.fillMaxWidth().testTag(OverviewScreenTestTags.EVENT_LIST)) {
-                    if (ongoingEvents.isNotEmpty()) {
+                    if (ongoingItems.isNotEmpty()) {
                       item {
                         Text(
                             text =
-                                if (ongoingEvents.size == 1) "Your ongoing event :"
-                                else "Your ongoing events :",
+                                if (ongoingItems.size == 1) "Your ongoing activity :"
+                                else "Your ongoing activities :",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             modifier =
@@ -151,24 +158,36 @@ fun OverviewScreen(
                                     .testTag(OverviewScreenTestTags.ONGOING_EVENTS_TITLE))
                       }
 
-                      items(ongoingEvents.size) { index ->
-                        EventCard(
-                            modifier = Modifier.padding(vertical = 6.dp),
-                            event = ongoingEvents[index],
-                            onClick = { onSelectEvent(ongoingEvents[index]) },
-                            testTag =
-                                OverviewScreenTestTags.getTestTagForEventItem(ongoingEvents[index]))
+                      items(ongoingItems.size) { index ->
+                          when (val item = ongoingItems[index]) {
+                              is EventItem.SingleEvent -> {
+                                  EventCard(
+                                      modifier = Modifier.padding(vertical = 6.dp),
+                                      event = item.event,
+                                      onClick = { onSelectEvent(item.event) },
+                                      testTag = OverviewScreenTestTags.getTestTagForEvent(item.event)
+                                  )
+                              }
+                              is EventItem.EventSerie -> {
+                                  SerieCard(
+                                      modifier = Modifier.padding(vertical = 6.dp),
+                                      serie = item.serie,
+                                      onClick = { Toast.makeText(context, "Not Implemented", Toast.LENGTH_SHORT).show() },
+                                      testTag = OverviewScreenTestTags.getTestTagForSerie(item.serie)
+                                  )
+                              }
+                          }
                       }
 
                       item { Spacer(modifier = Modifier.height(16.dp)) }
                     }
 
-                    if (upcomingEvents.isNotEmpty()) {
+                    if (upcomingItems.isNotEmpty()) {
                       item {
                         Text(
                             text =
-                                if (upcomingEvents.size == 1) "Your upcoming event :"
-                                else "Your upcoming events :",
+                                if (upcomingItems.size == 1) "Your upcoming activity :"
+                                else "Your upcoming activities :",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             modifier =
@@ -176,21 +195,32 @@ fun OverviewScreen(
                                     .testTag(OverviewScreenTestTags.UPCOMING_EVENTS_TITLE))
                       }
 
-                      items(upcomingEvents.size) { index ->
-                        EventCard(
-                            modifier = Modifier.padding(vertical = 6.dp),
-                            event = upcomingEvents[index],
-                            onClick = { onSelectEvent(upcomingEvents[index]) },
-                            testTag =
-                                OverviewScreenTestTags.getTestTagForEventItem(
-                                    upcomingEvents[index]))
+                      items(upcomingItems.size) { index ->
+                          when (val item = upcomingItems[index]) {
+                              is EventItem.SingleEvent -> {
+                                  EventCard(
+                                      modifier = Modifier.padding(vertical = 6.dp),
+                                      event = item.event,
+                                      onClick = { onSelectEvent(item.event) },
+                                      testTag = OverviewScreenTestTags.getTestTagForEvent(item.event)
+                                  )
+                              }
+                              is EventItem.EventSerie -> {
+                                  SerieCard(
+                                      modifier = Modifier.padding(vertical = 6.dp),
+                                      serie = item.serie,
+                                      onClick = { Toast.makeText(context, "Not Implemented", Toast.LENGTH_SHORT).show() },
+                                      testTag = OverviewScreenTestTags.getTestTagForSerie(item.serie)
+                                  )
+                              }
+                          }
                       }
                     }
                   }
             }
           }
 
-          // FAB History en bas à gauche
+          // FAB History on bottom left
           FloatingActionButton(
               onClick = onGoToHistory,
               containerColor = OverviewScreenButtonColor,
