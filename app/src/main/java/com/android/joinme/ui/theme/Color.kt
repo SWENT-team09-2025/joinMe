@@ -19,6 +19,11 @@ val SportsColor = Color(0xFF7E57C2) // Purple for SPORTS
 val ActivityColor = Color(0xFF81C784) // Green for ACTIVITY
 val SocialColor = Color(0xFFE57373) // Red for SOCIAL
 
+// Serie Card colors
+val SerieCardBackgroundColor = Color(0xFF2D2D3D)
+val SerieCardLayer2Color = Color(0xFF232333)
+val SerieCardLayer3Color = Color(0xFF1A1A24)
+
 // Common UI colors
 val DarkButtonColor = Color(0xFF1C1C1E)
 val DeleteButtonColor = Color.Red

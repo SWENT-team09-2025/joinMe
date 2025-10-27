@@ -23,22 +23,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.ui.theme.IconColor
 import com.android.joinme.ui.theme.OnEventCardTextColor
+import com.android.joinme.ui.theme.SerieCardBackgroundColor
+import com.android.joinme.ui.theme.SerieCardLayer2Color
+import com.android.joinme.ui.theme.SerieCardLayer3Color
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 /**
  * A reusable card component for displaying serie information with a stacked cards effect.
  *
- * Displays serie details including date, time, title, and a "Serie 🔥" badge. The card is
- * styled with a dark background color and shows multiple layers behind it to indicate
- * that it contains multiple events.
+ * Displays serie details including date, time, title, and a "Serie 🔥" badge. The card is styled
+ * with a dark background color and shows multiple layers behind it to indicate that it contains
+ * multiple events.
  *
  * The card is clickable and includes proper accessibility support for screen readers.
  *
@@ -49,99 +51,83 @@ import java.util.Locale
  * @param testTag Test tag identifier for UI testing purposes.
  */
 @Composable
-fun SerieCard(
-    modifier: Modifier = Modifier,
-    serie: Serie,
-    onClick: () -> Unit,
-    testTag: String
-) {
-    Box(modifier = modifier.fillMaxWidth()) {
-        // Third layer (furthest back)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
+fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, testTag: String) {
+  Box(modifier = modifier.fillMaxWidth()) {
+    // Third layer (furthest back)
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
                 .padding(horizontal = 12.dp)
                 .offset(y = 12.dp)
                 .height(100.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFF1A1A24))
-        )
+                .background(SerieCardLayer3Color))
 
-        // Second layer (middle)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
+    // Second layer (middle)
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
                 .padding(horizontal = 6.dp)
                 .offset(y = 6.dp)
                 .height(100.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFF232333))
-        )
+                .background(SerieCardLayer2Color))
 
-        // Main card (front)
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .testTag(testTag),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF2D2D3D)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-        ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-                // Top row: date, Serie badge, time
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                            .format(serie.date.toDate()),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = OnEventCardTextColor
-                    )
+    // Main card (front)
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).testTag(testTag),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = SerieCardBackgroundColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)) {
+          Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+            // Top row: date, Serie badge, time
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically) {
+                  Text(
+                      text =
+                          SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                              .format(serie.date.toDate()),
+                      style = MaterialTheme.typography.bodySmall,
+                      color = OnEventCardTextColor)
 
-                    Text(
-                        text = "Serie 🔥",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        color = OnEventCardTextColor
-                    )
+                  Text(
+                      text = "Serie 🔥",
+                      style = MaterialTheme.typography.bodySmall,
+                      fontWeight = FontWeight.Medium,
+                      color = OnEventCardTextColor)
 
-                    Text(
-                        text = SimpleDateFormat("HH'h'mm", Locale.getDefault())
-                            .format(serie.date.toDate()),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = OnEventCardTextColor
-                    )
+                  Text(
+                      text =
+                          SimpleDateFormat("HH'h'mm", Locale.getDefault())
+                              .format(serie.date.toDate()),
+                      style = MaterialTheme.typography.bodySmall,
+                      color = OnEventCardTextColor)
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-                // Title
-                Text(
-                    text = serie.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = OnEventCardTextColor
-                )
+            // Title
+            Text(
+                text = serie.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = OnEventCardTextColor)
 
-                Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-                // Bottom row: arrow
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "View serie details",
-                        tint = IconColor
-                    )
+            // Bottom row: arrow
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically) {
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                      contentDescription = "View serie details",
+                      tint = IconColor)
                 }
-            }
+          }
         }
-    }
+  }
 }

@@ -170,8 +170,7 @@ class OverviewScreenTest {
 
     composeTestRule
         .onNodeWithTag(
-            OverviewScreenTestTags.getTestTagForEvent(
-                createEvent("2", "Bar", EventType.SOCIAL)))
+            OverviewScreenTestTags.getTestTagForEvent(createEvent("2", "Bar", EventType.SOCIAL)))
         .assertExists()
   }
 
@@ -215,9 +214,7 @@ class OverviewScreenTest {
     composeTestRule.waitForIdle()
 
     // Clique sur l'événement
-    composeTestRule
-        .onNodeWithTag(OverviewScreenTestTags.getTestTagForEvent(event))
-        .performClick()
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.getTestTagForEvent(event)).performClick()
 
     // Vérifie que l'événement a été sélectionné
     assert(selected == event)
@@ -1266,9 +1263,7 @@ class OverviewScreenTest {
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
-    composeTestRule
-        .onNodeWithTag(OverviewScreenTestTags.getTestTagForSerie(serie))
-        .assertExists()
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.getTestTagForSerie(serie)).assertExists()
     composeTestRule.onNodeWithText("Weekly Basketball").assertExists()
   }
 

@@ -71,9 +71,7 @@ class SerieCardTest {
   fun serieCard_hasCorrectTestTag() {
     val serie = createSerie("1", "Test Serie")
 
-    composeTestRule.setContent {
-      SerieCard(serie = serie, onClick = {}, testTag = "customTestTag")
-    }
+    composeTestRule.setContent { SerieCard(serie = serie, onClick = {}, testTag = "customTestTag") }
 
     composeTestRule.onNodeWithTag("customTestTag").assertExists()
   }

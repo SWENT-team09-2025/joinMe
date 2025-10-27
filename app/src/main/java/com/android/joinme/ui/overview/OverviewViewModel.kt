@@ -25,26 +25,25 @@ import kotlinx.coroutines.launch
  * @property errorMsg An error message to be shown when fetching data fails
  */
 data class OverviewUIState(
-  val ongoingItems: List<EventItem> = emptyList(),
-  val upcomingItems: List<EventItem> = emptyList(),
-  val isLoading: Boolean = true,
-  val errorMsg: String? = null,
+    val ongoingItems: List<EventItem> = emptyList(),
+    val upcomingItems: List<EventItem> = emptyList(),
+    val isLoading: Boolean = true,
+    val errorMsg: String? = null,
 )
 
 /**
  * ViewModel for the Overview screen.
  *
- * Responsible for managing the UI state by fetching and providing Event and Serie items
- * via their respective repositories.
+ * Responsible for managing the UI state by fetching and providing Event and Serie items via their
+ * respective repositories.
  *
  * @property eventRepository The repository used to fetch and manage Event items
  * @property serieRepository The repository used to fetch and manage Serie items
  */
 class OverviewViewModel(
-  private val eventRepository: EventsRepository =
-    EventsRepositoryProvider.getRepository(isOnline = true),
-  private val serieRepository: SeriesRepository =
-    SeriesRepositoryProvider.repository
+    private val eventRepository: EventsRepository =
+        EventsRepositoryProvider.getRepository(isOnline = true),
+    private val serieRepository: SeriesRepository = SeriesRepositoryProvider.repository
 ) : ViewModel() {
 
   private val _uiState = MutableStateFlow(OverviewUIState())
@@ -92,30 +91,29 @@ class OverviewViewModel(
         val allItems = eventItems + serieItems
 
         // Filter ongoing items
-        val ongoing = allItems
-          .filter { item ->
-            when (item) {
-              is EventItem.SingleEvent -> item.event.isActive()
-              is EventItem.EventSerie -> item.serie.isActive(allEvents)
-            }
-          }
-          .sortedBy { it.date.toDate().time }
+        val ongoing =
+            allItems
+                .filter { item ->
+                  when (item) {
+                    is EventItem.SingleEvent -> item.event.isActive()
+                    is EventItem.EventSerie -> item.serie.isActive(allEvents)
+                  }
+                }
+                .sortedBy { it.date.toDate().time }
 
         // Filter upcoming items
-        val upcoming = allItems
-          .filter { item ->
-            when (item) {
-              is EventItem.SingleEvent -> item.event.isUpcoming()
-              is EventItem.EventSerie -> item.serie.isUpcoming(allEvents)
-            }
-          }
-          .sortedBy { it.date.toDate().time }
+        val upcoming =
+            allItems
+                .filter { item ->
+                  when (item) {
+                    is EventItem.SingleEvent -> item.event.isUpcoming()
+                    is EventItem.EventSerie -> item.serie.isUpcoming(allEvents)
+                  }
+                }
+                .sortedBy { it.date.toDate().time }
 
-        _uiState.value = OverviewUIState(
-          ongoingItems = ongoing,
-          upcomingItems = upcoming,
-          isLoading = false
-        )
+        _uiState.value =
+            OverviewUIState(ongoingItems = ongoing, upcomingItems = upcoming, isLoading = false)
       } catch (e: Exception) {
         setErrorMsg("Failed to load data: ${e.message}")
         _uiState.value = _uiState.value.copy(isLoading = false)

@@ -20,8 +20,8 @@ import org.junit.Test
 /**
  * Unit tests for [OverviewViewModel].
  *
- * Verifies UI state updates and error handling when interacting with repositories.
- * Tests the integration of both events and series in the overview screen.
+ * Verifies UI state updates and error handling when interacting with repositories. Tests the
+ * integration of both events and series in the overview screen.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class OverviewViewModelTest {
