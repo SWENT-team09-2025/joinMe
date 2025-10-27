@@ -198,7 +198,10 @@ class CreateEventViewModel(
   fun selectLocation(loc: Location) {
     _uiState.value =
         _uiState.value.copy(
-            selectedLocation = loc, locationQuery = loc.name, invalidLocationMsg = null)
+            location = loc.name,
+            selectedLocation = loc,
+            locationQuery = loc.name,
+            invalidLocationMsg = null)
     updateFormValidity()
   }
 

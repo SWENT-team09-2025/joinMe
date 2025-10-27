@@ -149,6 +149,8 @@ class EditEventViewModel(
                 title = event.title,
                 description = event.description,
                 location = event.location?.name ?: "",
+                locationQuery = event.location?.name ?: "",
+                selectedLocation = event.location,
                 maxParticipants = event.maxParticipants.toString(),
                 duration = event.duration.toString(),
                 date = dateFormat.format(event.date.toDate()),
@@ -282,7 +284,8 @@ class EditEventViewModel(
   /**
    * Updates the event location and validates it.
    *
-   * Validates that the location is not blank.
+   * Validates that the location is not blank. If the location is cleared (blank), also clears the
+   * selectedLocation.
    *
    * @param location The event location to set.
    */
@@ -290,6 +293,7 @@ class EditEventViewModel(
     _uiState.value =
         _uiState.value.copy(
             location = location,
+            selectedLocation = if (location.isBlank()) null else _uiState.value.selectedLocation,
             invalidLocationMsg = if (location.isBlank()) "Must be a valid Location" else null)
   }
 
@@ -314,7 +318,10 @@ class EditEventViewModel(
   fun selectLocation(loc: Location) {
     _uiState.value =
         _uiState.value.copy(
-            selectedLocation = loc, locationQuery = loc.name, invalidLocationMsg = null)
+            location = loc.name,
+            selectedLocation = loc,
+            locationQuery = loc.name,
+            invalidLocationMsg = null)
   }
 
   /**
