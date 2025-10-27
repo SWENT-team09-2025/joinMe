@@ -28,7 +28,7 @@ class EditEventScreenTest {
         location = Location(46.5197, 6.6323, "EPFL"),
         date = Timestamp(calendar.time),
         duration = 90,
-        participants = listOf("user1", "user2"),
+        participants = listOf("user1"),
         maxParticipants = 10,
         visibility = EventVisibility.PUBLIC,
         ownerId = "owner123")

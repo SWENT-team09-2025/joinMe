@@ -44,7 +44,11 @@ class EventsRepositoryFirestore(private val db: FirebaseFirestore) : EventsRepos
   }
 
   override suspend fun addEvent(event: Event) {
-    db.collection(EVENTS_COLLECTION_PATH).document(event.eventId).set(event).await()
+    val ownerId = event.ownerId
+
+    val updatedEvent = event.copy(participants = (event.participants + ownerId).distinct())
+
+    db.collection(EVENTS_COLLECTION_PATH).document(updatedEvent.eventId).set(updatedEvent).await()
   }
 
   override suspend fun editEvent(eventId: String, newValue: Event) {
