@@ -25,6 +25,7 @@ class SerieTest {
           title = "Weekly Football",
           description = "Weekly football series",
           date = sampleTimestamp,
+          participants = listOf("user1", "user2"),
           maxParticipants = 10,
           visibility = Visibility.PUBLIC,
           eventIds = listOf("event1", "event2", "event3"),
@@ -396,5 +397,50 @@ class SerieTest {
   fun `serie visibility can be PRIVATE`() {
     val privateSerie = sampleSerie.copy(visibility = Visibility.PRIVATE)
     assertEquals(Visibility.PRIVATE, privateSerie.visibility)
+  }
+
+  @Test
+  fun `participants list contains correct users`() {
+    assertEquals(listOf("user1", "user2"), sampleSerie.participants)
+    assertEquals(2, sampleSerie.participants.size)
+  }
+
+  @Test
+  fun `serie can have empty participants list`() {
+    val serieWithNoParticipants = sampleSerie.copy(participants = emptyList())
+    assertTrue(serieWithNoParticipants.participants.isEmpty())
+    assertEquals(0, serieWithNoParticipants.participants.size)
+  }
+
+  @Test
+  fun `serie can have single participant`() {
+    val serieWithOneParticipant = sampleSerie.copy(participants = listOf("user1"))
+    assertEquals(1, serieWithOneParticipant.participants.size)
+    assertEquals("user1", serieWithOneParticipant.participants[0])
+  }
+
+  @Test
+  fun `serie participants can be updated via copy`() {
+    val updatedParticipants = listOf("user1", "user2", "user3", "user4")
+    val updatedSerie = sampleSerie.copy(participants = updatedParticipants)
+    assertEquals(4, updatedSerie.participants.size)
+    assertEquals(updatedParticipants, updatedSerie.participants)
+  }
+
+  @Test
+  fun `serie with large number of participants handles correctly`() {
+    val manyParticipants = (1..50).map { "user$it" }
+    val serieWithManyParticipants = sampleSerie.copy(participants = manyParticipants)
+    assertEquals(50, serieWithManyParticipants.participants.size)
+    assertEquals("user1", serieWithManyParticipants.participants[0])
+    assertEquals("user50", serieWithManyParticipants.participants[49])
+  }
+
+  @Test
+  fun `participants list is independent of eventIds list`() {
+    val serieWithDifferentCounts =
+        sampleSerie.copy(participants = listOf("user1"), eventIds = listOf("event1", "event2"))
+    assertEquals(1, serieWithDifferentCounts.participants.size)
+    assertEquals(2, serieWithDifferentCounts.eventIds.size)
   }
 }

@@ -112,6 +112,7 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
       val title = document.getString("title") ?: return null
       val description = document.getString("description") ?: ""
       val date = document.getTimestamp("date") ?: return null
+      val participants = document.get("participants") as? List<String> ?: emptyList()
       val maxParticipants = (document.getLong("maxParticipants") ?: 0L).toInt()
       val visibilityString = document.getString("visibility") ?: Visibility.PUBLIC.name
       val eventIds = document.get("eventIds") as? List<String> ?: emptyList()
@@ -122,6 +123,7 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
           title = title,
           description = description,
           date = date,
+          participants = participants,
           maxParticipants = maxParticipants,
           visibility = Visibility.valueOf(visibilityString),
           eventIds = eventIds,

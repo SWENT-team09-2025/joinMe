@@ -38,6 +38,7 @@ class SeriesRepositoryFirestoreTest {
           title = "Weekly Football",
           description = "Weekly football series at the park",
           date = Timestamp(Date()),
+          participants = listOf("user1", "user2"),
           maxParticipants = 10,
           visibility = Visibility.PUBLIC,
           eventIds = listOf("event1", "event2", "event3"),
@@ -96,6 +97,7 @@ class SeriesRepositoryFirestoreTest {
     every { mockSnapshot.getString("title") } returns "Weekly Football"
     every { mockSnapshot.getString("description") } returns "Weekly football series at the park"
     every { mockSnapshot.getTimestamp("date") } returns testSerie.date
+    every { mockSnapshot.get("participants") } returns listOf("user1", "user2")
     every { mockSnapshot.getLong("maxParticipants") } returns 10L
     every { mockSnapshot.getString("visibility") } returns Visibility.PUBLIC.name
     every { mockSnapshot.get("eventIds") } returns listOf("event1", "event2", "event3")
@@ -162,6 +164,7 @@ class SeriesRepositoryFirestoreTest {
     every { mockSnapshot1.getString("title") } returns "Serie 1"
     every { mockSnapshot1.getString("description") } returns "Description 1"
     every { mockSnapshot1.getTimestamp("date") } returns Timestamp(Date())
+    every { mockSnapshot1.get("participants") } returns listOf("user1")
     every { mockSnapshot1.getLong("maxParticipants") } returns 10L
     every { mockSnapshot1.getString("visibility") } returns Visibility.PUBLIC.name
     every { mockSnapshot1.get("eventIds") } returns listOf("event1")
@@ -172,6 +175,7 @@ class SeriesRepositoryFirestoreTest {
     every { mockSnapshot2.getString("title") } returns "Serie 2"
     every { mockSnapshot2.getString("description") } returns "Description 2"
     every { mockSnapshot2.getTimestamp("date") } returns Timestamp(Date())
+    every { mockSnapshot2.get("participants") } returns listOf("user1", "user2")
     every { mockSnapshot2.getLong("maxParticipants") } returns 8L
     every { mockSnapshot2.getString("visibility") } returns Visibility.PRIVATE.name
     every { mockSnapshot2.get("eventIds") } returns listOf("event2", "event3")
@@ -221,6 +225,7 @@ class SeriesRepositoryFirestoreTest {
     every { mockSnapshot.getString("title") } returns "Test Serie"
     every { mockSnapshot.getString("description") } returns "Description"
     every { mockSnapshot.getTimestamp("date") } returns Timestamp(Date())
+    every { mockSnapshot.get("participants") } returns emptyList<String>()
     every { mockSnapshot.getLong("maxParticipants") } returns 10L
     every { mockSnapshot.getString("visibility") } returns
         "INVALID_VISIBILITY" // Invalid enum value
@@ -243,6 +248,7 @@ class SeriesRepositoryFirestoreTest {
     every { mockSnapshot.getString("title") } returns "Empty Serie"
     every { mockSnapshot.getString("description") } returns "Serie with no events"
     every { mockSnapshot.getTimestamp("date") } returns testSerie.date
+    every { mockSnapshot.get("participants") } returns emptyList<String>()
     every { mockSnapshot.getLong("maxParticipants") } returns 5L
     every { mockSnapshot.getString("visibility") } returns Visibility.PUBLIC.name
     every { mockSnapshot.get("eventIds") } returns emptyList<String>()
@@ -265,6 +271,7 @@ class SeriesRepositoryFirestoreTest {
     every { mockSnapshot.getString("title") } returns "Private Serie"
     every { mockSnapshot.getString("description") } returns "Private serie description"
     every { mockSnapshot.getTimestamp("date") } returns testSerie.date
+    every { mockSnapshot.get("participants") } returns listOf("user1")
     every { mockSnapshot.getLong("maxParticipants") } returns 5L
     every { mockSnapshot.getString("visibility") } returns Visibility.PRIVATE.name
     every { mockSnapshot.get("eventIds") } returns listOf("event1")
@@ -287,6 +294,7 @@ class SeriesRepositoryFirestoreTest {
     every { mockSnapshot.getString("title") } returns "Serie with default visibility"
     every { mockSnapshot.getString("description") } returns "Description"
     every { mockSnapshot.getTimestamp("date") } returns testSerie.date
+    every { mockSnapshot.get("participants") } returns emptyList<String>()
     every { mockSnapshot.getLong("maxParticipants") } returns 10L
     every { mockSnapshot.getString("visibility") } returns null // Null visibility
     every { mockSnapshot.get("eventIds") } returns listOf("event1")
@@ -309,6 +317,7 @@ class SeriesRepositoryFirestoreTest {
     every { mockSnapshot.getString("title") } returns "Serie Title"
     every { mockSnapshot.getString("description") } returns null // Null description
     every { mockSnapshot.getTimestamp("date") } returns testSerie.date
+    every { mockSnapshot.get("participants") } returns emptyList<String>()
     every { mockSnapshot.getLong("maxParticipants") } returns 10L
     every { mockSnapshot.getString("visibility") } returns Visibility.PUBLIC.name
     every { mockSnapshot.get("eventIds") } returns listOf("event1")
