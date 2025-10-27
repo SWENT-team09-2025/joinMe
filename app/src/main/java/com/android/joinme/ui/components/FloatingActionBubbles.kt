@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.android.joinme.ui.theme.ScrimOverlayColorDarkTheme
 import com.android.joinme.ui.theme.ScrimOverlayColorLightTheme
 
@@ -37,16 +38,16 @@ data class BubbleAction(
 
 /** Enum class defining where bubbles should be positioned relative to the trigger */
 enum class BubbleAlignment {
-  /** Bubbles appear at bottom center (above FAB) */
-  BOTTOM_CENTER,
-  /** Bubbles appear at bottom right (above and slightly right of FAB) */
-  BOTTOM_END,
-  /** Bubbles appear at top left (below and left of trigger) */
-  TOP_START,
-  /** Bubbles appear at top right (below and right of trigger) */
-  TOP_END,
-  /** Bubbles appear at center */
-  CENTER
+    /** Bubbles appear at bottom center (above FAB) */
+    BOTTOM_CENTER,
+    /** Bubbles appear at bottom right (above and slightly right of FAB) */
+    BOTTOM_END,
+    /** Bubbles appear at top left (below and left of trigger) */
+    TOP_START,
+    /** Bubbles appear at top right (below and right of trigger) */
+    TOP_END,
+    /** Bubbles appear at center */
+    CENTER
 }
 
 /**
@@ -55,10 +56,10 @@ enum class BubbleAlignment {
  * Used for UI testing to identify components
  */
 object FloatingActionBubblesTestTags {
-  const val BUBBLE_CONTAINER = "floatingBubblesContainer"
-  const val SCRIM = "floatingBubblesScrim"
+    const val BUBBLE_CONTAINER = "floatingBubblesContainer"
+    const val SCRIM = "floatingBubblesScrim"
 
-  fun bubbleTag(index: Int) = "floatingBubble_$index"
+    fun bubbleTag(index: Int) = "floatingBubble_$index"
 }
 
 /**
@@ -120,6 +121,7 @@ object FloatingActionBubblesTestTags {
  * @param horizontalPadding Horizontal padding from edges. Default: 16.dp
  * @param containerColor Background color of the bubbles. Default: secondary color
  * @param contentColor Text and icon color. Default: onSecondary color
+ * @param useZIndex Whether to use zIndex to float over content without pushing it. Use true for card menus. Default: false
  */
 @Composable
 fun FloatingActionBubbles(
@@ -131,88 +133,89 @@ fun FloatingActionBubbles(
     bottomPadding: Dp = 80.dp,
     horizontalPadding: Dp = 16.dp,
     containerColor: Color = MaterialTheme.colorScheme.secondary,
-    contentColor: Color = MaterialTheme.colorScheme.onSecondary
+    contentColor: Color = MaterialTheme.colorScheme.onSecondary,
+    useZIndex: Boolean = false
 ) {
-  // Animate scrim opacity for smooth fade-in/fade-out
-  val scrimAlpha by
-      animateFloatAsState(
-          targetValue = if (visible) 1f else 0f,
-          animationSpec = tween(durationMillis = 300),
-          label = "scrimAlpha")
+    // Animate scrim opacity for smooth fade-in/fade-out
+    val scrimAlpha by
+    animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "scrimAlpha")
 
-  // Use semantic scrim colors from Color.kt for consistency
-  val isDarkTheme = isSystemInDarkTheme()
-  val scrimBaseColor = if (isDarkTheme) ScrimOverlayColorDarkTheme else ScrimOverlayColorLightTheme
-  val scrimColor = scrimBaseColor.copy(alpha = scrimBaseColor.alpha * scrimAlpha)
+    // Use semantic scrim colors from Color.kt for consistency
+    val isDarkTheme = isSystemInDarkTheme()
+    val scrimBaseColor = if (isDarkTheme) ScrimOverlayColorDarkTheme else ScrimOverlayColorLightTheme
+    val scrimColor = scrimBaseColor.copy(alpha = scrimBaseColor.alpha * scrimAlpha)
 
-  // Animated visibility for bubbles
-  AnimatedVisibility(
-      visible = visible,
-      enter = fadeIn(animationSpec = tween(300)) + scaleIn(initialScale = 0.8f),
-      exit = fadeOut(animationSpec = tween(300)) + scaleOut(targetScale = 0.8f),
-      modifier = modifier.testTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)) {
-        Box(modifier = Modifier.fillMaxSize()) {
-          // Scrim (transparent overlay) to dismiss bubbles with animated fade
-          Box(
-              modifier =
-                  Modifier.fillMaxSize()
-                      .background(scrimColor)
-                      .clickable(
-                          interactionSource = remember { MutableInteractionSource() },
-                          indication = null,
-                          onClick = onDismiss)
-                      .testTag(FloatingActionBubblesTestTags.SCRIM))
+    // Animated visibility for bubbles
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(300)) + scaleIn(initialScale = 0.8f),
+        exit = fadeOut(animationSpec = tween(300)) + scaleOut(targetScale = 0.8f),
+        modifier = modifier.testTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)) {
+        Box(modifier = Modifier.fillMaxSize().then(if (useZIndex) Modifier.zIndex(10f) else Modifier)) {
+            // Scrim (transparent overlay) to dismiss bubbles with animated fade
+            Box(
+                modifier =
+                    Modifier.fillMaxSize()
+                        .background(scrimColor)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onDismiss)
+                        .testTag(FloatingActionBubblesTestTags.SCRIM))
 
-          // Bubbles positioned based on alignment parameter
-          val alignment =
-              when (bubbleAlignment) {
-                BubbleAlignment.BOTTOM_CENTER -> Alignment.BottomCenter
-                BubbleAlignment.BOTTOM_END -> Alignment.BottomEnd
-                BubbleAlignment.TOP_START -> Alignment.TopStart
-                BubbleAlignment.TOP_END -> Alignment.TopEnd
-                BubbleAlignment.CENTER -> Alignment.Center
-              }
+            // Bubbles positioned based on alignment parameter
+            val alignment =
+                when (bubbleAlignment) {
+                    BubbleAlignment.BOTTOM_CENTER -> Alignment.BottomCenter
+                    BubbleAlignment.BOTTOM_END -> Alignment.BottomEnd
+                    BubbleAlignment.TOP_START -> Alignment.TopStart
+                    BubbleAlignment.TOP_END -> Alignment.TopEnd
+                    BubbleAlignment.CENTER -> Alignment.Center
+                }
 
-          Column(
-              modifier =
-                  Modifier.align(alignment)
-                      .then(
-                          when (bubbleAlignment) {
-                            BubbleAlignment.BOTTOM_CENTER ->
-                                Modifier.padding(bottom = bottomPadding)
-                            BubbleAlignment.BOTTOM_END ->
-                                Modifier.padding(bottom = bottomPadding, end = horizontalPadding)
-                            BubbleAlignment.TOP_START ->
-                                Modifier.padding(top = horizontalPadding, start = horizontalPadding)
-                            BubbleAlignment.TOP_END ->
-                                Modifier.padding(top = horizontalPadding, end = horizontalPadding)
-                            BubbleAlignment.CENTER -> Modifier.padding(horizontalPadding)
-                          }),
-              horizontalAlignment =
-                  when (bubbleAlignment) {
-                    BubbleAlignment.BOTTOM_CENTER,
-                    BubbleAlignment.CENTER -> Alignment.CenterHorizontally
-                    BubbleAlignment.BOTTOM_END,
-                    BubbleAlignment.TOP_END -> Alignment.End
-                    BubbleAlignment.TOP_START -> Alignment.Start
-                  },
-              verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier =
+                    Modifier.align(alignment)
+                        .then(
+                            when (bubbleAlignment) {
+                                BubbleAlignment.BOTTOM_CENTER ->
+                                    Modifier.padding(bottom = bottomPadding)
+                                BubbleAlignment.BOTTOM_END ->
+                                    Modifier.padding(bottom = bottomPadding, end = horizontalPadding)
+                                BubbleAlignment.TOP_START ->
+                                    Modifier.padding(top = horizontalPadding, start = horizontalPadding)
+                                BubbleAlignment.TOP_END ->
+                                    Modifier.padding(top = horizontalPadding, end = horizontalPadding)
+                                BubbleAlignment.CENTER -> Modifier.padding(horizontalPadding)
+                            }),
+                horizontalAlignment =
+                    when (bubbleAlignment) {
+                        BubbleAlignment.BOTTOM_CENTER,
+                        BubbleAlignment.CENTER -> Alignment.CenterHorizontally
+                        BubbleAlignment.BOTTOM_END,
+                        BubbleAlignment.TOP_END -> Alignment.End
+                        BubbleAlignment.TOP_START -> Alignment.Start
+                    },
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 // Display all action bubbles
                 actions.forEachIndexed { index, action ->
-                  FloatingActionBubble(
-                      text = action.text,
-                      icon = action.icon,
-                      onClick = {
-                        action.onClick()
-                        onDismiss()
-                      },
-                      testTag = action.testTag ?: FloatingActionBubblesTestTags.bubbleTag(index),
-                      containerColor = containerColor,
-                      contentColor = contentColor)
+                    FloatingActionBubble(
+                        text = action.text,
+                        icon = action.icon,
+                        onClick = {
+                            action.onClick()
+                            onDismiss()
+                        },
+                        testTag = action.testTag ?: FloatingActionBubblesTestTags.bubbleTag(index),
+                        containerColor = containerColor,
+                        contentColor = contentColor)
                 }
-              }
+            }
         }
-      }
+    }
 }
 
 /**
@@ -237,31 +240,31 @@ private fun FloatingActionBubble(
     contentColor: Color,
     modifier: Modifier = Modifier
 ) {
-  // Use smaller FAB with more rounded corners to match Figma
-  FloatingActionButton(
-      onClick = onClick,
-      containerColor = containerColor,
-      shape = RoundedCornerShape(24.dp), // More rounded corners
-      modifier = modifier.testTag(testTag).height(48.dp) // Smaller height
-      ) {
+    // Use smaller FAB with more rounded corners to match Figma
+    FloatingActionButton(
+        onClick = onClick,
+        containerColor = containerColor,
+        shape = RoundedCornerShape(24.dp), // More rounded corners
+        modifier = modifier.testTag(testTag).height(48.dp) // Smaller height
+    ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), // Reduced padding
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)) { // Reduced spacing
-              // Show icon only if provided
-              icon?.let {
+            // Show icon only if provided
+            icon?.let {
                 Icon(
                     imageVector = it,
                     contentDescription = text,
                     tint = contentColor,
                     modifier = Modifier.size(20.dp) // Smaller icon
-                    )
-              }
-              Text(
-                  text = text,
-                  color = contentColor,
-                  style = MaterialTheme.typography.bodyMedium // Slightly smaller text
-                  )
+                )
             }
-      }
+            Text(
+                text = text,
+                color = contentColor,
+                style = MaterialTheme.typography.bodyMedium // Slightly smaller text
+            )
+        }
+    }
 }
