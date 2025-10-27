@@ -41,7 +41,7 @@ class EventsRepositoryFirestoreTest {
           location = Location(46.52, 6.63, "EPFL Café"),
           date = Timestamp(Date()),
           duration = 60,
-          participants = listOf("user1", "user2"),
+          participants = listOf("user1", "user2", testUserId),
           maxParticipants = 5,
           visibility = EventVisibility.PUBLIC,
           ownerId = testUserId)

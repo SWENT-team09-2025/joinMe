@@ -77,13 +77,13 @@ class ShowEventViewModelTest {
     assertEquals("Friendly 3v3 basketball match", state.description)
     assertEquals("EPFL", state.location)
     assertEquals("10", state.maxParticipants)
-    assertEquals("2", state.participantsCount)
+    assertEquals("3", state.participantsCount)
     assertEquals("90", state.duration)
     assertTrue(state.date.contains("SPORTS:"))
     assertEquals("PUBLIC", state.visibility)
     assertEquals("owner123", state.ownerId)
     assertTrue(state.ownerName.contains("OWNER123"))
-    assertEquals(listOf("user1", "user2"), state.participants)
+    assertEquals(listOf("user1", "user2", "owner123"), state.participants)
     assertFalse(state.isPastEvent)
     assertNull(state.errorMsg)
   }
@@ -186,7 +186,7 @@ class ShowEventViewModelTest {
 
     val state = viewModel.uiState.first()
     assertTrue(state.participants.contains("user2"))
-    assertEquals("2", state.participantsCount)
+    assertEquals("3", state.participantsCount)
     assertNull(state.errorMsg)
   }
 
@@ -204,7 +204,7 @@ class ShowEventViewModelTest {
 
     val state = viewModel.uiState.first()
     assertFalse(state.participants.contains("user2"))
-    assertEquals("1", state.participantsCount)
+    assertEquals("2", state.participantsCount)
   }
 
   @Test
