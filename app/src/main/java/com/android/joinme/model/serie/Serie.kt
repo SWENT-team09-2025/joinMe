@@ -18,6 +18,7 @@ private const val MILLIS_PER_MINUTE = 60_000L
  * @property title The title of the series
  * @property description Detailed description of what the series is about
  * @property date The starting date/time of the series
+ * @property participants List of user IDs of participants who have joined the series
  * @property maxParticipants Maximum number of participants allowed per event in the series
  * @property visibility Visibility setting for events in this series (public or private)
  * @property eventIds List of event IDs belonging to this series
@@ -28,6 +29,7 @@ data class Serie(
     val title: String,
     val description: String,
     val date: Timestamp,
+    val participants: List<String>,
     val maxParticipants: Int,
     val visibility: Visibility,
     val eventIds: List<String>,

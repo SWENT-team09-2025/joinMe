@@ -21,6 +21,7 @@ class SeriesRepositoryLocalTest {
             title = "Weekly Football",
             description = "Weekly football series at the park",
             date = Timestamp.now(),
+            participants = listOf("user1", "user2"),
             maxParticipants = 10,
             visibility = Visibility.PUBLIC,
             eventIds = listOf("event1", "event2", "event3"),
@@ -211,6 +212,69 @@ class SeriesRepositoryLocalTest {
       repo.addSerie(privateSerie)
       val serie = repo.getSerie("2")
       Assert.assertEquals(Visibility.PRIVATE, serie.visibility)
+    }
+  }
+
+  @Test
+  fun addSerie_withParticipants() {
+    runBlocking {
+      repo.addSerie(sampleSerie)
+      val serie = repo.getSerie("1")
+      Assert.assertEquals(2, serie.participants.size)
+      Assert.assertTrue(serie.participants.contains("user1"))
+      Assert.assertTrue(serie.participants.contains("user2"))
+    }
+  }
+
+  @Test
+  fun addSerie_withEmptyParticipants() {
+    runBlocking {
+      val emptyParticipantsSerie = sampleSerie.copy(serieId = "2", participants = emptyList())
+      repo.addSerie(emptyParticipantsSerie)
+      val serie = repo.getSerie("2")
+      Assert.assertTrue(serie.participants.isEmpty())
+    }
+  }
+
+  @Test
+  fun editSerie_withDifferentParticipants() {
+    runBlocking {
+      repo.addSerie(sampleSerie)
+      val updated = sampleSerie.copy(participants = listOf("user3", "user4", "user5"))
+      repo.editSerie("1", updated)
+      val serie = repo.getSerie("1")
+      Assert.assertEquals(3, serie.participants.size)
+      Assert.assertTrue(serie.participants.contains("user3"))
+      Assert.assertTrue(serie.participants.contains("user4"))
+      Assert.assertTrue(serie.participants.contains("user5"))
+      Assert.assertFalse(serie.participants.contains("user1"))
+    }
+  }
+
+  @Test
+  fun editSerie_addingParticipant() {
+    runBlocking {
+      repo.addSerie(sampleSerie)
+      val updatedParticipants = sampleSerie.participants + "user3"
+      val updated = sampleSerie.copy(participants = updatedParticipants)
+      repo.editSerie("1", updated)
+      val serie = repo.getSerie("1")
+      Assert.assertEquals(3, serie.participants.size)
+      Assert.assertTrue(serie.participants.contains("user3"))
+    }
+  }
+
+  @Test
+  fun editSerie_removingParticipant() {
+    runBlocking {
+      repo.addSerie(sampleSerie)
+      val updatedParticipants = listOf("user1")
+      val updated = sampleSerie.copy(participants = updatedParticipants)
+      repo.editSerie("1", updated)
+      val serie = repo.getSerie("1")
+      Assert.assertEquals(1, serie.participants.size)
+      Assert.assertTrue(serie.participants.contains("user1"))
+      Assert.assertFalse(serie.participants.contains("user2"))
     }
   }
 }
