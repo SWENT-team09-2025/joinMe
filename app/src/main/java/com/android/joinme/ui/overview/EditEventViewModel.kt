@@ -3,12 +3,15 @@ package com.android.joinme.ui.overview
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.android.joinme.HttpClientProvider
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.map.Location
+import com.android.joinme.model.map.LocationRepository
+import com.android.joinme.model.map.NominatimLocationRepository
 import com.google.firebase.Timestamp
 import java.text.SimpleDateFormat
 import java.util.*
@@ -54,6 +57,9 @@ data class EditEventUIState(
     val ownerId: String = "",
     val participants: List<String> = emptyList(),
     val errorMsg: String? = null,
+    val locationQuery: String = "",
+    val locationSuggestions: List<Location> = emptyList(),
+    val selectedLocation: Location? = null,
 
     // validation messages
     val invalidTypeMsg: String? = null,
@@ -83,7 +89,7 @@ data class EditEventUIState(
             type.isNotBlank() &&
             title.isNotBlank() &&
             description.isNotBlank() &&
-            location.isNotBlank() &&
+            selectedLocation != null &&
             maxParticipants.isNotBlank() &&
             duration.isNotBlank() &&
             date.isNotBlank() &&
@@ -103,6 +109,8 @@ data class EditEventUIState(
 class EditEventViewModel(
     private val repository: EventsRepository =
         EventsRepositoryProvider.getRepository(isOnline = true),
+    private val locationRepository: LocationRepository =
+        NominatimLocationRepository(HttpClientProvider.client),
     initialState: EditEventUIState = EditEventUIState()
 ) : ViewModel() {
 
@@ -188,7 +196,7 @@ class EditEventViewModel(
             type = EventType.valueOf(state.type.uppercase(Locale.ROOT)),
             title = state.title,
             description = state.description,
-            location = Location(0.0, 0.0, state.location),
+            location = state.selectedLocation!!,
             date = parsedDate,
             duration = state.duration.toInt(),
             participants = state.participants,
@@ -283,6 +291,30 @@ class EditEventViewModel(
         _uiState.value.copy(
             location = location,
             invalidLocationMsg = if (location.isBlank()) "Must be a valid Location" else null)
+  }
+
+  fun setLocationQuery(query: String) {
+    _uiState.value = _uiState.value.copy(locationQuery = query)
+
+    if (query.isNotEmpty()) {
+      viewModelScope.launch {
+        try {
+          val results = locationRepository.search(query)
+          _uiState.value = _uiState.value.copy(locationSuggestions = results)
+        } catch (e: Exception) {
+          Log.e("CreateEventVM", "Error fetching location suggestions", e)
+          _uiState.value = _uiState.value.copy(locationSuggestions = emptyList())
+        }
+      }
+    } else {
+      _uiState.value = _uiState.value.copy(locationSuggestions = emptyList())
+    }
+  }
+
+  fun selectLocation(loc: Location) {
+    _uiState.value =
+        _uiState.value.copy(
+            selectedLocation = loc, locationQuery = loc.name, invalidLocationMsg = null)
   }
 
   /**

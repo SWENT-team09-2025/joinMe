@@ -384,7 +384,7 @@ class EditEventViewModelTest {
     viewModel.setType("SPORTS")
     viewModel.setTitle("Test Event")
     viewModel.setDescription("Test Description")
-    viewModel.setLocation("EPFL")
+    viewModel.selectLocation(Location(46.52, 6.63, "EPFL Field"))
     viewModel.setMaxParticipants("10")
     viewModel.setDuration("60")
     viewModel.setDate("25/12/2024")
@@ -437,6 +437,8 @@ class EditEventViewModelTest {
 
     // Modify some fields
     viewModel.setTitle("Updated Title")
+
+    viewModel.selectLocation(Location(46.52, 6.57, "EPFL Field"))
 
     // Edit the event
     val result = viewModel.editEvent(event.eventId)
@@ -729,7 +731,7 @@ class EditEventViewModelTest {
             date = "01/01/2024 10:00",
             visibility = "PRIVATE")
 
-    val customViewModel = EditEventViewModel(repository, customState)
+    val customViewModel = EditEventViewModel(repository, initialState = customState)
 
     val state = customViewModel.uiState.value
     assertEquals("SPORTS", state.type)
