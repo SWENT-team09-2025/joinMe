@@ -575,7 +575,7 @@ class GroupListScreenTest {
           onMoreOptionMenu = {},
           onBackClick = {},
           onProfileClick = {},
-          onEditClick = {})
+          onProfileEditClick = {})
     }
 
     // When: User clicks the FAB
@@ -598,7 +598,7 @@ class GroupListScreenTest {
           onMoreOptionMenu = {},
           onBackClick = {},
           onProfileClick = {},
-          onEditClick = {})
+          onProfileEditClick = {})
     }
 
     // When: User clicks the FAB
@@ -621,7 +621,7 @@ class GroupListScreenTest {
           onMoreOptionMenu = {},
           onBackClick = {},
           onProfileClick = {},
-          onEditClick = {})
+          onProfileEditClick = {})
     }
 
     // When: User clicks the FAB
@@ -645,7 +645,7 @@ class GroupListScreenTest {
           onMoreOptionMenu = {},
           onBackClick = {},
           onProfileClick = {},
-          onEditClick = {})
+          onProfileEditClick = {})
     }
 
     // When: User clicks the FAB
@@ -666,7 +666,7 @@ class GroupListScreenTest {
           onMoreOptionMenu = {},
           onBackClick = {},
           onProfileClick = {},
-          onEditClick = {})
+          onProfileEditClick = {})
     }
 
     // When: User clicks the FAB to show bubbles
@@ -699,7 +699,7 @@ class GroupListScreenTest {
           onMoreOptionMenu = {},
           onBackClick = {},
           onProfileClick = {},
-          onEditClick = {})
+          onProfileEditClick = {})
     }
 
     // When: User opens bubbles and clicks "Join with link"
@@ -724,7 +724,7 @@ class GroupListScreenTest {
           onMoreOptionMenu = {},
           onBackClick = {},
           onProfileClick = {},
-          onEditClick = {})
+          onProfileEditClick = {})
     }
 
     // When: User opens bubbles and clicks "Create a group"
@@ -747,7 +747,7 @@ class GroupListScreenTest {
           onMoreOptionMenu = {},
           onBackClick = {},
           onProfileClick = {},
-          onEditClick = {})
+          onProfileEditClick = {})
     }
 
     // When: User opens bubbles
@@ -778,7 +778,7 @@ class GroupListScreenTest {
           onMoreOptionMenu = {},
           onBackClick = {},
           onProfileClick = {},
-          onEditClick = {})
+          onProfileEditClick = {})
     }
 
     // When: User clicks the FAB first time
@@ -809,7 +809,7 @@ class GroupListScreenTest {
           onMoreOptionMenu = {},
           onBackClick = {},
           onProfileClick = {},
-          onEditClick = {})
+          onProfileEditClick = {})
     }
 
     // When: User clicks the FAB
@@ -832,7 +832,7 @@ class GroupListScreenTest {
           onMoreOptionMenu = {},
           onBackClick = {},
           onProfileClick = {},
-          onEditClick = {})
+          onProfileEditClick = {})
     }
 
     // When: User opens bubbles

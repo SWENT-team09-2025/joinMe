@@ -17,6 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
 import com.android.joinme.ui.groups.CreateGroupScreen
+import com.android.joinme.ui.groups.GroupDetailScreen
 import com.android.joinme.ui.groups.GroupListScreen
 import com.android.joinme.ui.history.HistoryScreen
 import com.android.joinme.ui.map.MapScreen
@@ -223,6 +224,19 @@ fun JoinMe(
             onNavigateBack = { navigationActions.goBack() },
             onGroupCreated = { navigationActions.navigateTo(Screen.Groups) })
       }
+
+        composable(route = Screen.GroupDetail.route){ navBackStackEntry ->
+            val groupId = navBackStackEntry.arguments?.getString("groupId")
+
+            groupId?.let {
+                GroupDetailScreen(
+                    groupId = groupId,
+                    onBackClick = { navigationActions.goBack()},
+                    onGroupEventsClick = {Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()},
+                    onMemberClick = {Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()}
+                )
+            }
+        }
     }
   }
 }
