@@ -117,7 +117,7 @@ class OverviewScreenTest {
         location = null,
         date = Timestamp(Date()),
         duration = 60,
-        participants = emptyList(),
+        participants = listOf("owner"),
         maxParticipants = 5,
         visibility = EventVisibility.PUBLIC,
         ownerId = "owner")

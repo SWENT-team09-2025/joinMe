@@ -36,7 +36,7 @@ class EditEventViewModelTest {
         location = Location(46.5197, 6.6323, "EPFL"),
         date = Timestamp(calendar.time),
         duration = 90,
-        participants = listOf("user1", "user2"),
+        participants = listOf("user1", "owner123"),
         maxParticipants = 10,
         visibility = EventVisibility.PUBLIC,
         ownerId = "owner123")
@@ -74,7 +74,7 @@ class EditEventViewModelTest {
     assertEquals("14:30", state.time)
     assertEquals("PUBLIC", state.visibility)
     assertEquals("owner123", state.ownerId)
-    assertEquals(listOf("user1", "user2"), state.participants)
+    assertEquals(listOf("user1", "owner123"), state.participants)
     assertNull(state.errorMsg)
   }
 
@@ -683,8 +683,7 @@ class EditEventViewModelTest {
   @Test
   fun loadEvent_thenSetInvalidMaxParticipants_errorMessageShowsCurrentCount() = runTest {
     // Create event with 5 participants
-    val event =
-        createTestEvent().copy(participants = listOf("user1", "user2", "user3", "user4", "user5"))
+    val event = createTestEvent().copy(participants = listOf("user1", "user2", "user3", "user4"))
     repository.addEvent(event)
 
     viewModel.loadEvent(event.eventId)
