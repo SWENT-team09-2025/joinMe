@@ -1,7 +1,6 @@
 package com.android.joinme.ui.overview
 
 import android.util.Log
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.HttpClientProvider
 import com.android.joinme.model.event.Event
@@ -45,32 +44,33 @@ import kotlinx.coroutines.launch
  * @property invalidVisibilityMsg Validation error message for the visibility field.
  */
 data class EditEventUIState(
-    val type: String = "",
-    val title: String = "",
-    val description: String = "",
-    val location: String = "",
-    val maxParticipants: String = "",
-    val duration: String = "",
-    val date: String = "",
-    val time: String = "",
-    val visibility: String = "",
+    override val type: String = "",
+    override val title: String = "",
+    override val description: String = "",
+    override val location: String = "",
+    override val maxParticipants: String = "",
+    override val duration: String = "",
+    override val date: String = "",
+    override val time: String = "",
+    override val visibility: String = "",
     val ownerId: String = "",
     val participants: List<String> = emptyList(),
-    val errorMsg: String? = null,
-    val locationQuery: String = "",
-    val locationSuggestions: List<Location> = emptyList(),
-    val selectedLocation: Location? = null,
+    override val errorMsg: String? = null,
+    override val locationQuery: String = "",
+    override val locationSuggestions: List<Location> = emptyList(),
+    override val selectedLocation: Location? = null,
 
     // validation messages
-    val invalidTypeMsg: String? = null,
-    val invalidTitleMsg: String? = null,
-    val invalidDescriptionMsg: String? = null,
-    val invalidLocationMsg: String? = null,
-    val invalidMaxParticipantsMsg: String? = null,
-    val invalidDurationMsg: String? = null,
-    val invalidDateMsg: String? = null,
-    val invalidVisibilityMsg: String? = null,
-) {
+    override val invalidTypeMsg: String? = null,
+    override val invalidTitleMsg: String? = null,
+    override val invalidDescriptionMsg: String? = null,
+    override val invalidLocationMsg: String? = null,
+    override val invalidMaxParticipantsMsg: String? = null,
+    override val invalidDurationMsg: String? = null,
+    override val invalidDateMsg: String? = null,
+    override val invalidVisibilityMsg: String? = null,
+    override val invalidTimeMsg: String? = null,
+) : EventFormUIState {
   /**
    * Indicates whether all form fields are valid.
    *
@@ -109,26 +109,17 @@ data class EditEventUIState(
 class EditEventViewModel(
     private val repository: EventsRepository =
         EventsRepositoryProvider.getRepository(isOnline = true),
-    private val locationRepository: LocationRepository =
-        NominatimLocationRepository(HttpClientProvider.client),
+    locationRepository: LocationRepository = NominatimLocationRepository(HttpClientProvider.client),
     initialState: EditEventUIState = EditEventUIState()
-) : ViewModel() {
+) : BaseEventFormViewModel(locationRepository) {
 
-  private val _uiState = MutableStateFlow(initialState)
+  override val _uiState = MutableStateFlow(initialState)
   val uiState: StateFlow<EditEventUIState> = _uiState.asStateFlow()
 
-  /** Clears the global error message. */
-  fun clearErrorMsg() {
-    _uiState.value = _uiState.value.copy(errorMsg = null)
-  }
+  override fun getState(): EventFormUIState = _uiState.value
 
-  /**
-   * Sets the global error message.
-   *
-   * @param msg The error message to display.
-   */
-  private fun setErrorMsg(msg: String) {
-    _uiState.value = _uiState.value.copy(errorMsg = msg)
+  override fun updateState(transform: (EventFormUIState) -> EventFormUIState) {
+    _uiState.value = transform(_uiState.value) as EditEventUIState
   }
 
   /**
@@ -234,54 +225,6 @@ class EditEventViewModel(
   }
 
   /**
-   * Updates the event type and validates it.
-   *
-   * Validates that the type is not blank and is one of the valid EventType values (SPORTS,
-   * ACTIVITY, SOCIAL).
-   *
-   * @param type The event type to set.
-   */
-  fun setType(type: String) {
-    val validTypes = EventType.values().map { it.name.uppercase(Locale.ROOT) }
-    _uiState.value =
-        _uiState.value.copy(
-            type = type,
-            invalidTypeMsg =
-                if (type.isBlank()) "Type cannot be empty"
-                else if (type.uppercase(Locale.ROOT) !in validTypes)
-                    "Type must be one of: SPORTS, ACTIVITY, SOCIAL"
-                else null)
-  }
-
-  /**
-   * Updates the event title and validates it.
-   *
-   * Validates that the title is not blank.
-   *
-   * @param title The event title to set.
-   */
-  fun setTitle(title: String) {
-    _uiState.value =
-        _uiState.value.copy(
-            title = title, invalidTitleMsg = if (title.isBlank()) "Title cannot be empty" else null)
-  }
-
-  /**
-   * Updates the event description and validates it.
-   *
-   * Validates that the description is not blank.
-   *
-   * @param description The event description to set.
-   */
-  fun setDescription(description: String) {
-    _uiState.value =
-        _uiState.value.copy(
-            description = description,
-            invalidDescriptionMsg =
-                if (description.isBlank()) "Description cannot be empty" else null)
-  }
-
-  /**
    * Updates the event location and validates it.
    *
    * Validates that the location is not blank. If the location is cleared (blank), also clears the
@@ -295,33 +238,6 @@ class EditEventViewModel(
             location = location,
             selectedLocation = if (location.isBlank()) null else _uiState.value.selectedLocation,
             invalidLocationMsg = if (location.isBlank()) "Must be a valid Location" else null)
-  }
-
-  fun setLocationQuery(query: String) {
-    _uiState.value = _uiState.value.copy(locationQuery = query)
-
-    if (query.isNotEmpty()) {
-      viewModelScope.launch {
-        try {
-          val results = locationRepository.search(query)
-          _uiState.value = _uiState.value.copy(locationSuggestions = results)
-        } catch (e: Exception) {
-          Log.e("CreateEventVM", "Error fetching location suggestions", e)
-          _uiState.value = _uiState.value.copy(locationSuggestions = emptyList())
-        }
-      }
-    } else {
-      _uiState.value = _uiState.value.copy(locationSuggestions = emptyList())
-    }
-  }
-
-  fun selectLocation(loc: Location) {
-    _uiState.value =
-        _uiState.value.copy(
-            location = loc.name,
-            selectedLocation = loc,
-            locationQuery = loc.name,
-            invalidLocationMsg = null)
   }
 
   /**
@@ -346,70 +262,5 @@ class EditEventViewModel(
                       "Cannot be less than current participants ($currentParticipantsCount)"
                   else -> null
                 })
-  }
-
-  /**
-   * Updates the event duration and validates it.
-   *
-   * Validates that the duration is a positive number.
-   *
-   * @param value The event duration in minutes as a string.
-   */
-  fun setDuration(value: String) {
-    val num = value.toIntOrNull()
-    _uiState.value =
-        _uiState.value.copy(
-            duration = value,
-            invalidDurationMsg = if (num == null || num <= 0) "Must be a positive number" else null)
-  }
-
-  /**
-   * Updates the event date and validates it.
-   *
-   * Validates that the date is in the correct format (dd/MM/yyyy).
-   *
-   * @param date The event date to set.
-   */
-  fun setDate(date: String) {
-    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-    val valid =
-        try {
-          sdf.parse(date) != null
-        } catch (_: Exception) {
-          false
-        }
-    _uiState.value =
-        _uiState.value.copy(
-            date = date,
-            invalidDateMsg =
-                if (!valid && date.isNotBlank()) "Invalid format (must be dd/MM/yyyy)" else null)
-  }
-
-  /**
-   * Updates the event time.
-   *
-   * @param time The event time in HH:mm format.
-   */
-  fun setTime(time: String) {
-    _uiState.value = _uiState.value.copy(time = time)
-  }
-
-  /**
-   * Updates the event visibility and validates it.
-   *
-   * Validates that the visibility is not blank and is either PUBLIC or PRIVATE.
-   *
-   * @param visibility The event visibility to set.
-   */
-  fun setVisibility(visibility: String) {
-    val validVisibilities = listOf("PUBLIC", "PRIVATE")
-    _uiState.value =
-        _uiState.value.copy(
-            visibility = visibility,
-            invalidVisibilityMsg =
-                if (visibility.isBlank()) "Event visibility cannot be empty"
-                else if (visibility.uppercase(Locale.ROOT) !in validVisibilities)
-                    "Visibility must be PUBLIC or PRIVATE"
-                else null)
   }
 }
