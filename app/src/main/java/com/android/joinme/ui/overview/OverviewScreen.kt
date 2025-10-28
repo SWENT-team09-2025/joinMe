@@ -28,6 +28,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -40,7 +43,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.eventItem.EventItem
 import com.android.joinme.model.serie.Serie
+import com.android.joinme.ui.components.BubbleAction
+import com.android.joinme.ui.components.BubbleAlignment
 import com.android.joinme.ui.components.EventCard
+import com.android.joinme.ui.components.FloatingActionBubbles
 import com.android.joinme.ui.components.SerieCard
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
@@ -117,6 +123,7 @@ fun OverviewScreen(
     credentialManager: CredentialManager = CredentialManager.create(LocalContext.current),
     onSelectEvent: (Event) -> Unit = {},
     onAddEvent: () -> Unit = {},
+    onAddSerie: () -> Unit = {},
     onGoToHistory: () -> Unit = {},
     navigationActions: NavigationActions? = null,
 ) {
@@ -126,6 +133,8 @@ fun OverviewScreen(
   val ongoingItems = uiState.ongoingItems
   val upcomingItems = uiState.upcomingItems
   val isLoading = uiState.isLoading
+
+  var showFloatingBubbles by remember { mutableStateOf(false) }
 
   // Trigger data refresh when screen is first displayed
   LaunchedEffect(Unit) { overviewViewModel.refreshUIState() }
@@ -158,7 +167,7 @@ fun OverviewScreen(
       },
       floatingActionButton = {
         FloatingActionButton(
-            onClick = onAddEvent,
+            onClick = { showFloatingBubbles = true },
             containerColor = OverviewScreenButtonColor,
             modifier = Modifier.testTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON)) {
               Icon(Icons.Default.Add, contentDescription = "Add Event", tint = IconColor)
@@ -283,5 +292,24 @@ fun OverviewScreen(
                 Icon(Icons.Default.History, contentDescription = "View History", tint = IconColor)
               }
         }
+
+        FloatingActionBubbles(
+            visible = showFloatingBubbles,
+            onDismiss = { showFloatingBubbles = false },
+            actions =
+                listOf(
+                    BubbleAction(
+                        text = "Add an event",
+                        icon = Icons.Default.Add,
+                        onClick = { onAddEvent() },
+                        testTag = "addEventBubble"),
+                    BubbleAction(
+                        text = "Add a serie",
+                        icon = Icons.Default.Add,
+                        onClick = { onAddSerie() },
+                        testTag = "addSerieBubble")),
+            bubbleAlignment = BubbleAlignment.BOTTOM_END,
+            bottomPadding = 80.dp,
+            horizontalPadding = 80.dp)
       }
 }
