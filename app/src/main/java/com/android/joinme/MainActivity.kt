@@ -219,7 +219,7 @@ fun JoinMe(
             onLeaveGroup = {Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()},
             onShareGroup = {Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()},
             onEditGroup = {Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()},
-            onDeleteGroup = {})
+            onDeleteGroup = {Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()})
       }
 
       composable(route = Screen.CreateGroup.route) {

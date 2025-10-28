@@ -91,9 +91,9 @@ sealed class Screen(
     /** Screen for creating a new group */
     object CreateGroup : Screen(route = "create_group", name = "Create Group")
     data class GroupDetail(val groupId: String) :
-        Screen(route = "group_Id/${groupId}", name = "Group Detail") {
+        Screen(route = "groupId/${groupId}", name = "Group Detail") {
         companion object {
-            const val route = "group_Id/{group_Id}"
+            const val route = "groupId/{groupId}"
         }
     }
 }

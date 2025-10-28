@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
+import com.android.joinme.model.profile.ProfileRepositoryProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,10 +24,10 @@ import kotlinx.coroutines.launch
  * @property error Error message if something went wrong.
  */
 data class GroupDetailUiState(
-    val group: Group? = null,
-    val members: List<Profile> = emptyList(),
-    val isLoading: Boolean = true,
-    val error: String? = null
+  val group: Group? = null,
+  val members: List<Profile> = emptyList(),
+  val isLoading: Boolean = true,
+  val error: String? = null
 )
 
 /**
@@ -35,8 +37,8 @@ data class GroupDetailUiState(
  * @property profileRepository Repository for profile data operations.
  */
 class GroupDetailViewModel(
-    private val groupRepository: GroupRepository,
-    private val profileRepository: ProfileRepository
+  private val groupRepository: GroupRepository = GroupRepositoryProvider.repository,
+  private val profileRepository: ProfileRepository = ProfileRepositoryProvider.repository
 ) : ViewModel() {
 
   private val _uiState = MutableStateFlow(GroupDetailUiState())

@@ -36,7 +36,7 @@ import com.android.joinme.ui.theme.SocialColor
  * Main screen for displaying group details including members and events.
  *
  * @param groupId The unique identifier of the group to display.
- * @param groupDetailViewModel The ViewModel managing the screen state and data.
+ * @param viewModel The ViewModel managing the screen state and data.
  * @param onBackClick Callback when the back button is clicked.
  * @param onGroupEventsClick Callback when the "Group Events" button is clicked.
  * @param onMemberClick Callback when a member profile is clicked, receives the member's UID.
@@ -45,16 +45,18 @@ import com.android.joinme.ui.theme.SocialColor
 @Composable
 fun GroupDetailScreen(
     groupId: String,
-    groupDetailViewModel: GroupDetailViewModel = viewModel(),
+    viewModel: GroupDetailViewModel = viewModel(
+        factory = GroupDetailViewModelFactory()
+    ),
     onBackClick: () -> Unit = {},
     onGroupEventsClick: () -> Unit = {},
     onMemberClick: (String) -> Unit = {}
 ) {
     LaunchedEffect(groupId) {
-        groupDetailViewModel.loadGroupDetails(groupId)
+        viewModel.loadGroupDetails(groupId)
     }
 
-    val uiState by groupDetailViewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
@@ -69,10 +71,20 @@ fun GroupDetailScreen(
                     }
                 },
                 actions = {
-                    Text(groupDetailViewModel.getCategory().displayString(), fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(end = 16.dp))
+                    // Only show category when group is loaded
+                    if (uiState.group != null) {
+                        Text(
+                            text = uiState.group!!.category.displayString(),
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(end = 16.dp)
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = groupDetailViewModel.getCategory().getColor()
+                    // Use group category color if loaded, otherwise default
+                    containerColor = uiState.group?.category?.getColor()
+                        ?: MaterialTheme.colorScheme.surface
                 )
             )
         }
@@ -91,7 +103,7 @@ fun GroupDetailScreen(
                 uiState.error != null -> {
                     ErrorContent(
                         message = uiState.error ?: "Unknown error",
-                        onRetry = { groupDetailViewModel.loadGroupDetails(groupId) },
+                        onRetry = { viewModel.loadGroupDetails(groupId) },
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
@@ -127,15 +139,13 @@ private fun GroupContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFE57373))
+            .background(groupCategory.getColor())
     ) {
-        // Inner content with padding
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(24.dp)
         ) {
-            // Group Logo
             Box(
                 modifier = Modifier
                     .size(120.dp)
@@ -153,7 +163,6 @@ private fun GroupContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Group Name
             Text(
                 text = groupName,
                 fontSize = 28.sp,
@@ -163,7 +172,6 @@ private fun GroupContent(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Group Description
             Text(
                 text = groupDescription,
                 fontSize = 16.sp,
@@ -173,19 +181,18 @@ private fun GroupContent(
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // Members List with black border box
         Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp) // Padding only on sides
+                .padding(horizontal = 24.dp)
                 .background(Color.Transparent)
                 .border(
                     width = 2.dp,
                     color = Color.Black,
                     shape = RoundedCornerShape(12.dp)
                 )
-                .padding(16.dp) // Internal padding
+                .padding(16.dp)
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -202,7 +209,6 @@ private fun GroupContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Group Events Button - with horizontal padding
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -227,7 +233,6 @@ private fun GroupContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Members Count
             Text(
                 text = "members : $membersCount",
                 fontSize = 14.sp,
@@ -240,9 +245,6 @@ private fun GroupContent(
     }
 }
 
-/**
- * Individual member item displaying profile photo and username.
- */
 @Composable
 private fun MemberItem(
     profile: Profile,
@@ -256,7 +258,6 @@ private fun MemberItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Start
     ) {
-        // Profile Photo - Using Material Icon like in EditProfile
         Icon(
             imageVector = Icons.Default.AccountCircle,
             contentDescription = "Profile photo of ${profile.username}",
@@ -266,7 +267,6 @@ private fun MemberItem(
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // Username
         Text(
             text = profile.username,
             fontSize = 18.sp,
@@ -276,9 +276,6 @@ private fun MemberItem(
     }
 }
 
-/**
- * Error content with retry button.
- */
 @Composable
 private fun ErrorContent(
     message: String,
@@ -302,50 +299,18 @@ private fun ErrorContent(
     }
 }
 
-/**
- * Preview of the GroupDetailScreen with mock data.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
 fun GroupDetailScreenPreview() {
-    // Mock profiles for preview
     val mockProfiles = listOf(
-        Profile(
-            uid = "user1",
-            username = "BryanDMP",
-            email = "bryan@example.com"
-        ),
-        Profile(
-            uid = "user2",
-            username = "jeremyzumstein",
-            email = "jeremy@example.com"
-        ),
-        Profile(
-            uid = "user3",
-            username = "Saifur_1870",
-            email = "saifur@example.com"
-        ),
-        Profile(
-            uid = "user4",
-            username = "paindepice791",
-            email = "pain@example.com"
-        ),
-        Profile(
-            uid = "user5",
-            username = "atillaulkumen",
-            email = "atilla@example.com"
-        ),
-        Profile(
-            uid = "user6",
-            username = "vincentlonfat",
-            email = "vincent@example.com"
-        ),
-        Profile(
-            uid = "user7",
-            username = "mathieu_pfeffer52",
-            email = "mathieu@example.com"
-        )
+        Profile(uid = "user1", username = "BryanDMP", email = "bryan@example.com"),
+        Profile(uid = "user2", username = "jeremyzumstein", email = "jeremy@example.com"),
+        Profile(uid = "user3", username = "Saifur_1870", email = "saifur@example.com"),
+        Profile(uid = "user4", username = "paindepice791", email = "pain@example.com"),
+        Profile(uid = "user5", username = "atillaulkumen", email = "atilla@example.com"),
+        Profile(uid = "user6", username = "vincentlonfat", email = "vincent@example.com"),
+        Profile(uid = "user7", username = "mathieu_pfeffer52", email = "mathieu@example.com")
     )
 
     MaterialTheme {
@@ -364,9 +329,7 @@ fun GroupDetailScreenPreview() {
                     actions = {
                         Text("SOCIAL", fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(end = 16.dp))
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = SocialColor
-                    )
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = SocialColor)
                 )
             }
         ) { paddingValues ->
@@ -375,7 +338,6 @@ fun GroupDetailScreenPreview() {
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // Call the actual GroupContent composable!
                 GroupContent(
                     groupCategory = EventType.SOCIAL,
                     groupName = "SwEnt Team 09",
