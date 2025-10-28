@@ -135,8 +135,8 @@ fun OverviewScreen(
   // Request notification permission for Android 13+ (only if enabled, skip in tests)
   val notificationPermissionLauncher =
       if (enableNotificationPermissionRequest) {
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.RequestPermission()) { isGranted ->
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {
+            isGranted ->
           if (!isGranted) {
             Toast.makeText(
                     context,
