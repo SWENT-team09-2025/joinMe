@@ -2,7 +2,6 @@ package com.android.joinme.model.event
 
 import android.content.Context
 import com.google.firebase.FirebaseApp
-import com.google.firebase.firestore.FirebaseFirestore
 import io.mockk.*
 import org.junit.After
 import org.junit.Assert.*

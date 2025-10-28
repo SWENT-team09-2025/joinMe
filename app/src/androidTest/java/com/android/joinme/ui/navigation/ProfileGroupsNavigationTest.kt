@@ -44,8 +44,7 @@ class ProfileGroupsNavigationTest {
 
     // Start at Profile screen
     composeTestRule.setContent {
-      JoinMe(
-          startDestination = Screen.Profile.route, enableNotificationPermissionRequest = false)
+      JoinMe(startDestination = Screen.Profile.route, enableNotificationPermissionRequest = false)
     }
 
     composeTestRule.waitForIdle()
@@ -70,8 +69,7 @@ class ProfileGroupsNavigationTest {
     every { mockFirebaseAuth.currentUser } returns null
 
     composeTestRule.setContent {
-      JoinMe(
-          startDestination = Screen.Profile.route, enableNotificationPermissionRequest = false)
+      JoinMe(startDestination = Screen.Profile.route, enableNotificationPermissionRequest = false)
     }
 
     composeTestRule.waitForIdle()

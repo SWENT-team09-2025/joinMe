@@ -1,6 +1,5 @@
 package com.android.joinme.model.notification
 
-import android.app.NotificationManager
 import android.content.Context
 import androidx.work.Data
 import androidx.work.ListenableWorker
@@ -42,7 +41,10 @@ class NotificationWorkerTest {
   @Test
   fun `doWork returns success with valid event data`() = runBlocking {
     val inputData =
-        Data.Builder().putString("eventId", "event123").putString("eventTitle", "Test Event").build()
+        Data.Builder()
+            .putString("eventId", "event123")
+            .putString("eventTitle", "Test Event")
+            .build()
 
     val worker = createWorker(inputData)
     val result = worker.doWork()
@@ -74,7 +76,10 @@ class NotificationWorkerTest {
   @Test
   fun `doWork creates notification channel`() = runBlocking {
     val inputData =
-        Data.Builder().putString("eventId", "event123").putString("eventTitle", "Test Event").build()
+        Data.Builder()
+            .putString("eventId", "event123")
+            .putString("eventTitle", "Test Event")
+            .build()
 
     val worker = createWorker(inputData)
     val result = worker.doWork()
@@ -145,8 +150,7 @@ class NotificationWorkerTest {
 
   @Test
   fun `doWork handles empty strings gracefully`() = runBlocking {
-    val inputData =
-        Data.Builder().putString("eventId", "").putString("eventTitle", "").build()
+    val inputData = Data.Builder().putString("eventId", "").putString("eventTitle", "").build()
 
     val worker = createWorker(inputData)
     val result = worker.doWork()
@@ -164,7 +168,10 @@ class NotificationWorkerTest {
   @Test
   fun `doWork posts notification with correct channel ID`() = runBlocking {
     val inputData =
-        Data.Builder().putString("eventId", "event789").putString("eventTitle", "Team Meeting").build()
+        Data.Builder()
+            .putString("eventId", "event789")
+            .putString("eventTitle", "Team Meeting")
+            .build()
 
     val worker = createWorker(inputData)
     val result = worker.doWork()
