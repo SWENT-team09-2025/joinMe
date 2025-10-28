@@ -1,6 +1,10 @@
 package com.android.joinme.ui.overview
 
+import android.Manifest
+import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -76,7 +80,26 @@ fun OverviewScreen(
   val upcomingEvents = uiState.upcomingEvents
   val isLoading = uiState.isLoading
 
-  LaunchedEffect(Unit) { overviewViewModel.refreshUIState() }
+  // Request notification permission for Android 13+
+  val notificationPermissionLauncher =
+      rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {
+          isGranted ->
+        if (!isGranted) {
+          Toast.makeText(
+                  context,
+                  "Notification permission denied. You won't receive event reminders.",
+                  Toast.LENGTH_LONG)
+              .show()
+        }
+      }
+
+  LaunchedEffect(Unit) {
+    overviewViewModel.refreshUIState()
+    // Request notification permission on Android 13+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+  }
 
   LaunchedEffect(uiState.errorMsg) {
     uiState.errorMsg?.let { message ->

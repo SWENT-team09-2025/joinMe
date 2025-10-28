@@ -1,5 +1,7 @@
 package com.android.joinme
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
@@ -51,8 +53,31 @@ class MainActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    createNotificationChannel()
 
-    setContent { SampleAppTheme { Surface(modifier = Modifier.fillMaxSize()) { JoinMe() } } }
+    val initialEventId = intent?.data?.lastPathSegment
+
+    setContent {
+      SampleAppTheme {
+        Surface(modifier = Modifier.fillMaxSize()) { JoinMe(initialEventId = initialEventId) }
+      }
+    }
+  }
+
+  override fun onNewIntent(intent: android.content.Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+  }
+
+  private fun createNotificationChannel() {
+    val channel =
+        NotificationChannel(
+            "event_notifications", "Event Notifications", NotificationManager.IMPORTANCE_HIGH)
+    channel.description = "Notifications for upcoming events"
+    channel.enableVibration(true)
+
+    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    notificationManager.createNotificationChannel(channel)
   }
 }
 
@@ -75,6 +100,7 @@ fun JoinMe(
     context: Context = LocalContext.current,
     credentialManager: CredentialManager = CredentialManager.create(context),
     startDestination: String? = null,
+    initialEventId: String? = null,
 ) {
   val navController = rememberNavController()
   val navigationActions = NavigationActions(navController)
@@ -82,6 +108,11 @@ fun JoinMe(
       startDestination
           ?: if (FirebaseAuth.getInstance().currentUser == null) Screen.Auth.name
           else Screen.Overview.route
+
+  // Navigate to event if opened from notification
+  if (initialEventId != null && FirebaseAuth.getInstance().currentUser != null) {
+    navigationActions.navigateTo(Screen.ShowEventScreen(initialEventId))
+  }
 
   NavHost(navController = navController, startDestination = initialDestination) {
     // ============================================================================

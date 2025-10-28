@@ -40,7 +40,7 @@ object EventsRepositoryProvider {
       if (apps.isEmpty()) {
         FirebaseApp.initializeApp(ctx)
       }
-      firestoreRepo = EventsRepositoryFirestore(Firebase.firestore)
+      firestoreRepo = EventsRepositoryFirestore(Firebase.firestore, ctx)
     }
     return firestoreRepo!!
   }
