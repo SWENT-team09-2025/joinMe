@@ -73,12 +73,15 @@ class EventsRepositoryFirestoreNotificationTest {
             visibility = EventVisibility.PUBLIC,
             ownerId = testUserId)
 
+    // Expected event with ownerId added to participants
+    val expectedEvent = upcomingEvent.copy(participants = listOf(testUserId))
+
     // When
     repository.addEvent(upcomingEvent)
 
     // Then
-    verify { mockDocument.set(upcomingEvent) }
-    verify { NotificationScheduler.scheduleEventNotification(mockContext, upcomingEvent) }
+    verify { mockDocument.set(expectedEvent) }
+    verify { NotificationScheduler.scheduleEventNotification(mockContext, expectedEvent) }
   }
 
   @Test
@@ -99,11 +102,14 @@ class EventsRepositoryFirestoreNotificationTest {
             visibility = EventVisibility.PUBLIC,
             ownerId = testUserId)
 
+    // Expected event with ownerId added to participants
+    val expectedEvent = pastEvent.copy(participants = listOf(testUserId))
+
     // When
     repository.addEvent(pastEvent)
 
     // Then
-    verify { mockDocument.set(pastEvent) }
+    verify { mockDocument.set(expectedEvent) }
     verify(exactly = 0) { NotificationScheduler.scheduleEventNotification(any(), any()) }
   }
 
@@ -125,11 +131,14 @@ class EventsRepositoryFirestoreNotificationTest {
             visibility = EventVisibility.PUBLIC,
             ownerId = testUserId)
 
+    // Expected event with ownerId added to participants
+    val expectedEvent = activeEvent.copy(participants = listOf(testUserId))
+
     // When
     repository.addEvent(activeEvent)
 
     // Then
-    verify { mockDocument.set(activeEvent) }
+    verify { mockDocument.set(expectedEvent) }
     verify(exactly = 0) { NotificationScheduler.scheduleEventNotification(any(), any()) }
   }
 
@@ -152,11 +161,14 @@ class EventsRepositoryFirestoreNotificationTest {
             visibility = EventVisibility.PUBLIC,
             ownerId = testUserId)
 
+    // Expected event with ownerId added to participants
+    val expectedEvent = upcomingEvent.copy(participants = listOf(testUserId))
+
     // When
     repositoryWithoutContext.addEvent(upcomingEvent)
 
     // Then
-    verify { mockDocument.set(upcomingEvent) }
+    verify { mockDocument.set(expectedEvent) }
     verify(exactly = 0) { NotificationScheduler.scheduleEventNotification(any(), any()) }
   }
 
@@ -353,12 +365,20 @@ class EventsRepositoryFirestoreNotificationTest {
             visibility = EventVisibility.PUBLIC,
             ownerId = testUserId)
 
+    // Expected events with ownerId added to participants
+    val expectedEvent1 = event1.copy(participants = listOf(testUserId))
+    val expectedEvent2 = event2.copy(participants = listOf(testUserId))
+
     // When
     repository.addEvent(event1)
     repository.addEvent(event2)
 
     // Then
-    verify(exactly = 1) { NotificationScheduler.scheduleEventNotification(mockContext, event1) }
-    verify(exactly = 1) { NotificationScheduler.scheduleEventNotification(mockContext, event2) }
+    verify(exactly = 1) {
+      NotificationScheduler.scheduleEventNotification(mockContext, expectedEvent1)
+    }
+    verify(exactly = 1) {
+      NotificationScheduler.scheduleEventNotification(mockContext, expectedEvent2)
+    }
   }
 }

@@ -1,7 +1,6 @@
 package com.android.joinme.model.notification
 
 import android.content.Context
-import androidx.work.Data
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
 import com.android.joinme.model.event.Event
