@@ -79,7 +79,7 @@ object OverviewScreenTestTags {
    * @param serie The serie to generate a tag for
    * @return A string combining "eventItem" with the serie's unique ID
    */
-  fun getTestTagForSerie(serie: Serie): String = "eventItem${serie.serieId}"
+  fun getTestTagForSerie(serie: Serie): String = "serieItem${serie.serieId}"
 }
 
 /**
