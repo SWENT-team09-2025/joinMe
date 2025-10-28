@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
@@ -110,8 +111,10 @@ fun JoinMe(
           else Screen.Overview.route
 
   // Navigate to event if opened from notification
-  if (initialEventId != null && FirebaseAuth.getInstance().currentUser != null) {
-    navigationActions.navigateTo(Screen.ShowEventScreen(initialEventId))
+  LaunchedEffect(initialEventId) {
+    if (initialEventId != null && FirebaseAuth.getInstance().currentUser != null) {
+      navigationActions.navigateTo(Screen.ShowEventScreen(initialEventId))
+    }
   }
 
   NavHost(navController = navController, startDestination = initialDestination) {
