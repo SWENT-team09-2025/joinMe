@@ -46,26 +46,26 @@ data class CreateEventUIState(
     override val invalidTimeMsg: String? = null,
     override val invalidVisibilityMsg: String? = null,
 ) : EventFormUIState {
-    val isValid: Boolean
-        get() =
-            invalidTypeMsg == null &&
-                    invalidTitleMsg == null &&
-                    invalidDescriptionMsg == null &&
-                    invalidLocationMsg == null &&
-                    invalidMaxParticipantsMsg == null &&
-                    invalidDurationMsg == null &&
-                    invalidDateMsg == null &&
-                    invalidTimeMsg == null &&
-                    invalidVisibilityMsg == null &&
-                    type.isNotBlank() &&
-                    title.isNotBlank() &&
-                    description.isNotBlank() &&
-                    selectedLocation != null &&
-                    maxParticipants.isNotBlank() &&
-                    duration.isNotBlank() &&
-                    date.isNotBlank() &&
-                    time.isNotBlank() &&
-                    visibility.isNotBlank()
+  val isValid: Boolean
+    get() =
+        invalidTypeMsg == null &&
+            invalidTitleMsg == null &&
+            invalidDescriptionMsg == null &&
+            invalidLocationMsg == null &&
+            invalidMaxParticipantsMsg == null &&
+            invalidDurationMsg == null &&
+            invalidDateMsg == null &&
+            invalidTimeMsg == null &&
+            invalidVisibilityMsg == null &&
+            type.isNotBlank() &&
+            title.isNotBlank() &&
+            description.isNotBlank() &&
+            selectedLocation != null &&
+            maxParticipants.isNotBlank() &&
+            duration.isNotBlank() &&
+            date.isNotBlank() &&
+            time.isNotBlank() &&
+            visibility.isNotBlank()
 }
 
 /** ViewModel for the CreateEvent screen. */
@@ -75,75 +75,75 @@ class CreateEventViewModel(
     locationRepository: LocationRepository = NominatimLocationRepository(HttpClientProvider.client)
 ) : BaseEventFormViewModel(locationRepository) {
 
-    override val _uiState = MutableStateFlow(CreateEventUIState())
-    val uiState: StateFlow<CreateEventUIState> = _uiState.asStateFlow()
+  override val _uiState = MutableStateFlow(CreateEventUIState())
+  val uiState: StateFlow<CreateEventUIState> = _uiState.asStateFlow()
 
-    override fun getState(): EventFormUIState = _uiState.value
+  override fun getState(): EventFormUIState = _uiState.value
 
-    override fun updateState(transform: (EventFormUIState) -> EventFormUIState) {
-        _uiState.value = transform(_uiState.value) as CreateEventUIState
+  override fun updateState(transform: (EventFormUIState) -> EventFormUIState) {
+    _uiState.value = transform(_uiState.value) as CreateEventUIState
+  }
+
+  /** Adds a new event to the repository. Suspends until the save is complete. */
+  suspend fun createEvent(): Boolean {
+    val state = _uiState.value
+    if (!state.isValid) {
+      setErrorMsg("At least one field is not valid")
+      return false
     }
 
-    /** Adds a new event to the repository. Suspends until the save is complete. */
-    suspend fun createEvent(): Boolean {
-        val state = _uiState.value
-        if (!state.isValid) {
-            setErrorMsg("At least one field is not valid")
-            return false
+    val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+    val combinedDateTime = "${state.date} ${state.time}"
+    val parsedDate =
+        try {
+          Timestamp(sdf.parse(combinedDateTime)!!)
+        } catch (_: Exception) {
+          null
         }
 
-        val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-        val combinedDateTime = "${state.date} ${state.time}"
-        val parsedDate =
-            try {
-                Timestamp(sdf.parse(combinedDateTime)!!)
-            } catch (_: Exception) {
-                null
-            }
-
-        if (parsedDate == null) {
-            setErrorMsg("Invalid date format (must be dd/MM/yyyy HH:mm)")
-            return false
-        }
-
-        val event =
-            Event(
-                eventId = repository.getNewEventId(),
-                type = EventType.valueOf(state.type.uppercase(Locale.ROOT)),
-                title = state.title,
-                description = state.description,
-                location = state.selectedLocation!!,
-                date = parsedDate,
-                duration = state.duration.toInt(),
-                participants = emptyList(),
-                maxParticipants = state.maxParticipants.toInt(),
-                visibility = EventVisibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
-                ownerId = Firebase.auth.currentUser?.uid ?: "unknown")
-
-        return try {
-            repository.addEvent(event)
-            clearErrorMsg()
-            true
-        } catch (e: Exception) {
-            Log.e("CreateEventViewModel", "Error creating event", e)
-            setErrorMsg("Failed to create event: ${e.message}")
-            false
-        }
+    if (parsedDate == null) {
+      setErrorMsg("Invalid date format (must be dd/MM/yyyy HH:mm)")
+      return false
     }
 
-    fun setLocation(location: String) {
-        _uiState.value =
-            _uiState.value.copy(
-                location = location,
-                invalidLocationMsg = if (location.isBlank()) "Must be a valid Location" else null)
-    }
+    val event =
+        Event(
+            eventId = repository.getNewEventId(),
+            type = EventType.valueOf(state.type.uppercase(Locale.ROOT)),
+            title = state.title,
+            description = state.description,
+            location = state.selectedLocation!!,
+            date = parsedDate,
+            duration = state.duration.toInt(),
+            participants = emptyList(),
+            maxParticipants = state.maxParticipants.toInt(),
+            visibility = EventVisibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
+            ownerId = Firebase.auth.currentUser?.uid ?: "unknown")
 
-    fun setMaxParticipants(value: String) {
-        val num = value.toIntOrNull()
-        _uiState.value =
-            _uiState.value.copy(
-                maxParticipants = value,
-                invalidMaxParticipantsMsg =
-                    if (num == null || num <= 0) "Must be a positive number" else null)
+    return try {
+      repository.addEvent(event)
+      clearErrorMsg()
+      true
+    } catch (e: Exception) {
+      Log.e("CreateEventViewModel", "Error creating event", e)
+      setErrorMsg("Failed to create event: ${e.message}")
+      false
     }
+  }
+
+  fun setLocation(location: String) {
+    _uiState.value =
+        _uiState.value.copy(
+            location = location,
+            invalidLocationMsg = if (location.isBlank()) "Must be a valid Location" else null)
+  }
+
+  fun setMaxParticipants(value: String) {
+    val num = value.toIntOrNull()
+    _uiState.value =
+        _uiState.value.copy(
+            maxParticipants = value,
+            invalidMaxParticipantsMsg =
+                if (num == null || num <= 0) "Must be a positive number" else null)
+  }
 }
