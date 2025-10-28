@@ -25,7 +25,7 @@ sealed class Screen(
   object Auth : Screen(route = "auth", name = "Authentication")
 
   // ============================================================================
-  // Events & History
+  // Events, Series & History
   // ============================================================================
 
   /** Main overview screen showing upcoming events (Top-level destination) */
@@ -45,6 +45,9 @@ sealed class Screen(
       const val route = "edit_event/{eventId}"
     }
   }
+
+  /** Screen for creating a new serie */
+  object CreateSerie : Screen(route = "create_serie", name = "Create a new serie")
 
   /**
    * Screen for viewing event details

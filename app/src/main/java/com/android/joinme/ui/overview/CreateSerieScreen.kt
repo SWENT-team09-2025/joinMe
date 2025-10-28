@@ -1,6 +1,9 @@
 package com.android.joinme.ui.overview
 
+import android.annotation.SuppressLint
+import android.widget.NumberPicker
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -12,8 +15,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.ui.theme.ButtonSaveColor
+import com.android.joinme.ui.theme.DarkButtonColor
+import com.android.joinme.ui.theme.DividerColor
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 object CreateSerieScreenTestTags {
   const val INPUT_SERIE_TITLE = "inputSerieTitle"
@@ -26,6 +35,7 @@ object CreateSerieScreenTestTags {
   const val ERROR_MESSAGE = "errorMessage"
 }
 
+@SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateSerieScreen(
@@ -99,83 +109,211 @@ fun CreateSerieScreen(
                   },
                   maxLines = 4)
 
-              // Max Participants field
-              OutlinedTextField(
-                  value = uiState.maxParticipants,
-                  onValueChange = { createSerieViewModel.setMaxParticipants(it) },
-                  label = { Text("Max Participant") },
+              // Max Participants field with NumberPicker
+              var showMaxParticipantsPicker by remember { mutableStateOf(false) }
+              var tempParticipants by remember {
+                mutableIntStateOf(uiState.maxParticipants.toIntOrNull() ?: 10)
+              }
+
+              Box(
                   modifier =
                       Modifier.width(180.dp)
-                          .testTag(CreateSerieScreenTestTags.INPUT_SERIE_MAX_PARTICIPANTS),
-                  isError = uiState.invalidMaxParticipantsMsg != null,
-                  supportingText = {
-                    if (uiState.invalidMaxParticipantsMsg != null) {
-                      Text(
-                          text = uiState.invalidMaxParticipantsMsg!!,
-                          color = MaterialTheme.colorScheme.error)
-                    }
-                  },
-                  singleLine = true)
+                          .clickable { showMaxParticipantsPicker = true }) {
+                    OutlinedTextField(
+                        value = uiState.maxParticipants,
+                        onValueChange = {},
+                        readOnly = true,
+                        enabled = false,
+                        label = { Text("Max Participants") },
+                        placeholder = { Text("Select number") },
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .testTag(CreateSerieScreenTestTags.INPUT_SERIE_MAX_PARTICIPANTS),
+                        isError = uiState.invalidMaxParticipantsMsg != null,
+                        supportingText = {
+                          if (uiState.invalidMaxParticipantsMsg != null) {
+                            Text(
+                                text = uiState.invalidMaxParticipantsMsg!!,
+                                color = MaterialTheme.colorScheme.error)
+                          }
+                        },
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                disabledTextColor = LocalContentColor.current.copy(LocalContentColor.current.alpha),
+                                disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                        singleLine = true)
+                  }
+
+              if (showMaxParticipantsPicker) {
+                AlertDialog(
+                    onDismissRequest = { showMaxParticipantsPicker = false },
+                    title = { Text("Select Max Participants") },
+                    text = {
+                      AndroidView(
+                          factory = { context ->
+                            NumberPicker(context).apply {
+                              minValue = 1
+                              maxValue = 100
+                              value = tempParticipants
+                              wrapSelectorWheel = true
+                              setOnValueChangedListener { _, _, newVal ->
+                                tempParticipants = newVal
+                              }
+                            }
+                          },
+                          update = { picker -> picker.value = tempParticipants },
+                          modifier = Modifier.fillMaxWidth())
+                    },
+                    confirmButton = {
+                      TextButton(
+                          onClick = {
+                            createSerieViewModel.setMaxParticipants(tempParticipants.toString())
+                            showMaxParticipantsPicker = false
+                          }) {
+                            Text("OK")
+                          }
+                    },
+                    dismissButton = {
+                      TextButton(onClick = { showMaxParticipantsPicker = false }) {
+                        Text("Cancel")
+                      }
+                    })
+              }
 
               // Date and Time row
               Row(
                   modifier = Modifier.fillMaxWidth(),
                   horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    val calendar = remember { Calendar.getInstance() }
+                    val (year, month, day) =
+                        listOf(
+                            calendar.get(Calendar.YEAR),
+                            calendar.get(Calendar.MONTH),
+                            calendar.get(Calendar.DAY_OF_MONTH))
+                    val (hour, minute) =
+                        listOf(
+                            calendar.get(Calendar.HOUR_OF_DAY),
+                            calendar.get(Calendar.MINUTE))
+
+                    val datePickerDialog = remember {
+                      android.app.DatePickerDialog(
+                          context,
+                          { _, selectedYear, selectedMonth, selectedDay ->
+                            val newDate =
+                                String.format(
+                                    "%02d/%02d/%04d", selectedDay, selectedMonth + 1, selectedYear)
+                            createSerieViewModel.setDate(newDate)
+                          },
+                          year,
+                          month,
+                          day)
+                    }
+
                     // Date field
-                    OutlinedTextField(
-                        value = uiState.date,
-                        onValueChange = { createSerieViewModel.setDate(it) },
-                        label = { Text("Date") },
-                        placeholder = { Text("dd/MM/yyyy") },
-                        modifier =
-                            Modifier.weight(1f).testTag(CreateSerieScreenTestTags.INPUT_SERIE_DATE),
-                        isError = uiState.invalidDateMsg != null,
-                        supportingText = {
-                          if (uiState.invalidDateMsg != null) {
-                            Text(
-                                text = uiState.invalidDateMsg!!,
-                                color = MaterialTheme.colorScheme.error)
-                          }
-                        },
-                        singleLine = true)
+                    Box(modifier = Modifier.weight(1f).clickable { datePickerDialog.show() }) {
+                      OutlinedTextField(
+                          value = uiState.date,
+                          onValueChange = {},
+                          readOnly = true,
+                          enabled = false,
+                          label = { Text("Date") },
+                          placeholder = { Text("Select date") },
+                          modifier =
+                              Modifier.fillMaxWidth()
+                                  .testTag(CreateSerieScreenTestTags.INPUT_SERIE_DATE),
+                          isError = uiState.invalidDateMsg != null,
+                          supportingText = {
+                            if (uiState.invalidDateMsg != null) {
+                              Text(
+                                  text = uiState.invalidDateMsg!!,
+                                  color = MaterialTheme.colorScheme.error)
+                            }
+                          },
+                          colors =
+                              OutlinedTextFieldDefaults.colors(
+                                  disabledTextColor = LocalContentColor.current.copy(LocalContentColor.current.alpha),
+                                  disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                  disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                  disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                          singleLine = true)
+                    }
+
+                    val timePickerDialog = remember {
+                      android.app.TimePickerDialog(
+                          context,
+                          { _, selectedHour, selectedMinute ->
+                            val newTime = String.format("%02d:%02d", selectedHour, selectedMinute)
+                            createSerieViewModel.setTime(newTime)
+                          },
+                          hour,
+                          minute,
+                          true)
+                    }
 
                     // Time field
+                    Box(modifier = Modifier.weight(1f).clickable { timePickerDialog.show() }) {
+                      OutlinedTextField(
+                          value = uiState.time,
+                          onValueChange = {},
+                          readOnly = true,
+                          enabled = false,
+                          label = { Text("Time") },
+                          placeholder = { Text("Select time") },
+                          modifier =
+                              Modifier.fillMaxWidth()
+                                  .testTag(CreateSerieScreenTestTags.INPUT_SERIE_TIME),
+                          colors =
+                              OutlinedTextFieldDefaults.colors(
+                                  disabledTextColor = LocalContentColor.current.copy(LocalContentColor.current.alpha),
+                                  disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                  disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                  disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                          singleLine = true)
+                    }
+                  }
+
+              // Serie Visibility field with dropdown
+              val visibilityOptions = listOf("PUBLIC", "PRIVATE")
+              var expandedVisibility by remember { mutableStateOf(false) }
+
+              ExposedDropdownMenuBox(
+                  expanded = expandedVisibility,
+                  onExpandedChange = { expandedVisibility = !expandedVisibility }) {
                     OutlinedTextField(
-                        value = uiState.time,
-                        onValueChange = { createSerieViewModel.setTime(it) },
-                        label = { Text("Time") },
-                        placeholder = { Text("HH:mm") },
+                        value = uiState.visibility,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Visibility") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedVisibility) },
                         modifier =
-                            Modifier.weight(1f).testTag(CreateSerieScreenTestTags.INPUT_SERIE_TIME),
-                        isError = uiState.invalidTimeMsg != null,
+                            Modifier.fillMaxWidth()
+                                .menuAnchor()
+                                .testTag(CreateSerieScreenTestTags.INPUT_SERIE_VISIBILITY),
+                        isError = uiState.invalidVisibilityMsg != null,
                         supportingText = {
-                          if (uiState.invalidTimeMsg != null) {
+                          if (uiState.invalidVisibilityMsg != null) {
                             Text(
-                                text = uiState.invalidTimeMsg!!,
+                                text = uiState.invalidVisibilityMsg!!,
                                 color = MaterialTheme.colorScheme.error)
                           }
                         },
-                        singleLine = true)
-                  }
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors())
 
-              // Serie Visibility field
-              OutlinedTextField(
-                  value = uiState.visibility,
-                  onValueChange = { createSerieViewModel.setVisibility(it) },
-                  label = { Text("Serie Visibility") },
-                  placeholder = { Text("PUBLIC or PRIVATE") },
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .testTag(CreateSerieScreenTestTags.INPUT_SERIE_VISIBILITY),
-                  isError = uiState.invalidVisibilityMsg != null,
-                  supportingText = {
-                    if (uiState.invalidVisibilityMsg != null) {
-                      Text(
-                          text = uiState.invalidVisibilityMsg!!,
-                          color = MaterialTheme.colorScheme.error)
-                    }
-                  },
-                  singleLine = true)
+                    ExposedDropdownMenu(
+                        expanded = expandedVisibility,
+                        onDismissRequest = { expandedVisibility = false }) {
+                          visibilityOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                  createSerieViewModel.setVisibility(option)
+                                  expandedVisibility = false
+                                })
+                          }
+                        }
+                  }
 
               Spacer(modifier = Modifier.height(16.dp))
 

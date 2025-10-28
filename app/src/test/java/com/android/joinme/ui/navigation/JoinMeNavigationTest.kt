@@ -50,6 +50,13 @@ class JoinMeNavigationTest {
   }
 
   @Test
+  fun screen_CreateSerie_hasCorrectRoute() {
+    assertEquals("create_serie", Screen.CreateSerie.route)
+    assertEquals("Create a new serie", Screen.CreateSerie.name)
+    assertFalse(Screen.CreateSerie.isTopLevelDestination)
+  }
+
+  @Test
   fun screen_History_hasCorrectRoute() {
     assertEquals("history", Screen.History.route)
     assertEquals("History", Screen.History.name)
@@ -78,6 +85,27 @@ class JoinMeNavigationTest {
   }
 
   @Test
+  fun screen_ShowEventScreen_hasCorrectRoutePattern() {
+    assertEquals("show_event/{eventId}", Screen.ShowEventScreen.Companion.route)
+  }
+
+  @Test
+  fun screen_ShowEventScreen_generatesCorrectRouteWithId() {
+    val eventId = "test-event-123"
+    val showEventScreen = Screen.ShowEventScreen(eventId)
+    assertEquals("show_event/$eventId", showEventScreen.route)
+    assertEquals("Show Event", showEventScreen.name)
+    assertFalse(showEventScreen.isTopLevelDestination)
+  }
+
+  @Test
+  fun screen_ShowEventScreen_handlesSpecialCharactersInId() {
+    val eventId = "test-event-with-special-chars-!@#"
+    val showEventScreen = Screen.ShowEventScreen(eventId)
+    assertEquals("show_event/$eventId", showEventScreen.route)
+  }
+
+  @Test
   fun topLevelDestinations_areCorrectlyFlagged() {
     val topLevelScreens = listOf(Screen.Overview, Screen.Search, Screen.Map, Screen.Profile)
 
@@ -89,7 +117,13 @@ class JoinMeNavigationTest {
   @Test
   fun nonTopLevelDestinations_areCorrectlyFlagged() {
     val nonTopLevelScreens =
-        listOf(Screen.Auth, Screen.CreateEvent, Screen.EditEvent("test-id"), Screen.History)
+        listOf(
+            Screen.Auth,
+            Screen.CreateEvent,
+            Screen.CreateSerie,
+            Screen.EditEvent("test-id"),
+            Screen.ShowEventScreen("test-id"),
+            Screen.History)
 
     nonTopLevelScreens.forEach { screen ->
       assertFalse(
@@ -107,8 +141,10 @@ class JoinMeNavigationTest {
             Screen.Map.route,
             Screen.Profile.route,
             Screen.CreateEvent.route,
+            Screen.CreateSerie.route,
             Screen.History.route,
-            Screen.EditEvent.Companion.route)
+            Screen.EditEvent.Companion.route,
+            Screen.ShowEventScreen.Companion.route)
 
     val uniqueRoutes = routes.toSet()
     assertEquals("All screen routes should be unique", routes.size, uniqueRoutes.size)
@@ -124,16 +160,20 @@ class JoinMeNavigationTest {
             Screen.Map,
             Screen.Profile,
             Screen.CreateEvent,
+            Screen.CreateSerie,
             Screen.History)
 
     screens.forEach { screen ->
       assertTrue("${screen.name} route should not be empty", screen.route.isNotEmpty())
     }
 
-    // Check EditEvent companion route
+    // Check EditEvent and ShowEventScreen companion routes
     assertTrue(
         "EditEvent route pattern should not be empty",
         Screen.EditEvent.Companion.route.isNotEmpty())
+    assertTrue(
+        "ShowEventScreen route pattern should not be empty",
+        Screen.ShowEventScreen.Companion.route.isNotEmpty())
   }
 
   @Test
@@ -146,8 +186,10 @@ class JoinMeNavigationTest {
             Screen.Map,
             Screen.Profile,
             Screen.CreateEvent,
+            Screen.CreateSerie,
             Screen.History,
-            Screen.EditEvent("test-id"))
+            Screen.EditEvent("test-id"),
+            Screen.ShowEventScreen("test-id"))
 
     screens.forEach { screen ->
       assertTrue("${screen.name} name should not be empty", screen.name.isNotEmpty())
@@ -167,6 +209,21 @@ class JoinMeNavigationTest {
     assertTrue(
         "EditEvent route should match pattern 'edit_event/{eventId}'",
         pattern.matches(Screen.EditEvent.Companion.route))
+  }
+
+  @Test
+  fun showEventScreenRoute_containsEventIdPlaceholder() {
+    assertTrue(
+        "ShowEventScreen companion route should contain {eventId} placeholder",
+        Screen.ShowEventScreen.Companion.route.contains("{eventId}"))
+  }
+
+  @Test
+  fun showEventScreenRoute_followsExpectedPattern() {
+    val pattern = "show_event/\\{eventId\\}".toRegex()
+    assertTrue(
+        "ShowEventScreen route should match pattern 'show_event/{eventId}'",
+        pattern.matches(Screen.ShowEventScreen.Companion.route))
   }
 
   @Test

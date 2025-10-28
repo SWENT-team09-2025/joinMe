@@ -204,44 +204,21 @@ class SerieTest {
   }
 
   @Test
-  fun `isUpcoming returns true when all events are future`() {
-    val events =
-        listOf(
-            createEvent("event1", duration = 60, hoursOffset = 2),
-            createEvent("event2", duration = 60, hoursOffset = 3),
-            createEvent("event3", duration = 60, hoursOffset = 5))
+  fun `isUpcoming returns true when serie date is in future`() {
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 2)
+    val futureSerie = sampleSerie.copy(date = Timestamp(calendar.time))
 
-    assertTrue(sampleSerie.isUpcoming(events))
+    assertTrue(futureSerie.isUpcoming())
   }
 
   @Test
-  fun `isUpcoming returns false when at least one event is past`() {
-    val events =
-        listOf(
-            createEvent("event1", duration = 60, hoursOffset = -5),
-            createEvent("event2", duration = 60, hoursOffset = 2),
-            createEvent("event3", duration = 60, hoursOffset = 5))
+  fun `isUpcoming returns false when serie date is in past`() {
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -5)
+    val pastSerie = sampleSerie.copy(date = Timestamp(calendar.time))
 
-    assertFalse(sampleSerie.isUpcoming(events))
-  }
-
-  @Test
-  fun `isUpcoming returns false when all events are past`() {
-    val events =
-        listOf(
-            createEvent("event1", duration = 60, hoursOffset = -5),
-            createEvent("event2", duration = 60, hoursOffset = -3),
-            createEvent("event3", duration = 60, hoursOffset = -2))
-
-    assertFalse(sampleSerie.isUpcoming(events))
-  }
-
-  @Test
-  fun `isUpcoming returns false when serie has no events`() {
-    val serie = sampleSerie.copy(eventIds = emptyList())
-    val events = listOf(createEvent("event1", duration = 60, hoursOffset = 2))
-
-    assertFalse(serie.isUpcoming(events))
+    assertFalse(pastSerie.isUpcoming())
   }
 
   @Test
@@ -334,46 +311,57 @@ class SerieTest {
 
   @Test
   fun `serie lifecycle states with all future events`() {
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 1)
+    val futureSerie = sampleSerie.copy(date = Timestamp(calendar.time))
     val futureEvents =
         listOf(
             createEvent("event1", hoursOffset = 1),
             createEvent("event2", hoursOffset = 2),
             createEvent("event3", hoursOffset = 3))
-    assertTrue(sampleSerie.isUpcoming(futureEvents))
-    assertFalse(sampleSerie.isActive(futureEvents))
-    assertFalse(sampleSerie.isExpired(futureEvents))
+    assertTrue(futureSerie.isUpcoming())
+    assertFalse(futureSerie.isActive(futureEvents))
+    assertFalse(futureSerie.isExpired(futureEvents))
   }
 
   @Test
   fun `serie lifecycle states with one active event`() {
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -1)
+    val activeSerie = sampleSerie.copy(date = Timestamp(calendar.time))
     val activeEvents =
         listOf(
             createEvent("event1", duration = 60, hoursOffset = -2), // Past
             createEvent("event2", duration = 120, hoursOffset = 0), // Active
             createEvent("event3", hoursOffset = 2)) // Future
-    assertFalse(sampleSerie.isUpcoming(activeEvents))
-    assertTrue(sampleSerie.isActive(activeEvents))
-    assertFalse(sampleSerie.isExpired(activeEvents))
+    assertFalse(activeSerie.isUpcoming())
+    assertTrue(activeSerie.isActive(activeEvents))
+    assertFalse(activeSerie.isExpired(activeEvents))
   }
 
   @Test
   fun `serie lifecycle states with all past events`() {
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -5)
+    val pastSerie = sampleSerie.copy(date = Timestamp(calendar.time))
     val pastEvents =
         listOf(
             createEvent("event1", duration = 60, hoursOffset = -5),
             createEvent("event2", duration = 60, hoursOffset = -3),
             createEvent("event3", duration = 60, hoursOffset = -2))
-    assertFalse(sampleSerie.isUpcoming(pastEvents))
-    assertFalse(sampleSerie.isActive(pastEvents))
-    assertTrue(sampleSerie.isExpired(pastEvents))
+    assertFalse(pastSerie.isUpcoming())
+    assertFalse(pastSerie.isActive(pastEvents))
+    assertTrue(pastSerie.isExpired(pastEvents))
   }
 
   @Test
   fun `serie with single event works correctly`() {
-    val singleEventSerie = sampleSerie.copy(eventIds = listOf("event1"))
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 2)
+    val singleEventSerie = sampleSerie.copy(eventIds = listOf("event1"), date = Timestamp(calendar.time))
     val events = listOf(createEvent("event1", duration = 90, hoursOffset = 2))
 
-    assertTrue(singleEventSerie.isUpcoming(events))
+    assertTrue(singleEventSerie.isUpcoming())
     assertFalse(singleEventSerie.isActive(events))
     assertFalse(singleEventSerie.isExpired(events))
     assertEquals(1, singleEventSerie.getTotalEventsCount())

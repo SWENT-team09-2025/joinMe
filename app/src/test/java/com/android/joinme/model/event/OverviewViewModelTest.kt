@@ -232,6 +232,21 @@ class OverviewViewModelTest {
 
     fakeEventRepository.addTestEvent(upcomingEvent)
 
+    // Add an upcoming serie (with date in the future)
+    val upcomingSerie =
+        Serie(
+            serieId = "upcoming_serie",
+            title = "Upcoming Serie",
+            description = "Upcoming serie desc",
+            date = Timestamp(calendar.time),
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("upcoming_serie_event"),
+            ownerId = "owner1")
+
+    fakeSerieRepository.addTestSerie(upcomingSerie)
+
     viewModel.refreshUIState()
     testDispatcher.scheduler.advanceUntilIdle()
 
@@ -316,6 +331,35 @@ class OverviewViewModelTest {
     val state = viewModel.uiState.value
     // Expired events should not appear in either list
     assertEquals(0, state.ongoingItems.size)
+    assertEquals(0, state.upcomingItems.size)
+  }
+
+  @Test
+  fun `series with past dates do not appear in upcoming items`() = runTest {
+    fakeEventRepository.clearEvents()
+    fakeSerieRepository.clearSeries()
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -2) // Started 2 hours ago
+    val pastSerie =
+        Serie(
+            serieId = "past_serie",
+            title = "Past Serie",
+            description = "Past serie desc",
+            date = Timestamp(calendar.time),
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("past_serie_event"),
+            ownerId = "owner1")
+
+    fakeSerieRepository.addTestSerie(pastSerie)
+
+    viewModel.refreshUIState()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    // Past series should not appear in upcoming items
     assertEquals(0, state.upcomingItems.size)
   }
 
