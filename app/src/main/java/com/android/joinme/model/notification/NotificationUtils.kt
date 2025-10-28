@@ -33,9 +33,9 @@ object NotificationScheduler {
   /**
    * Schedules a notification to be displayed 15 minutes before the event starts.
    *
-   * The notification will only be scheduled if the event time minus 15 minutes is in the future.
-   * If the event is starting in less than 15 minutes or has already passed, no notification will
-   * be scheduled.
+   * The notification will only be scheduled if the event time minus 15 minutes is in the future. If
+   * the event is starting in less than 15 minutes or has already passed, no notification will be
+   * scheduled.
    *
    * @param context The application context used to access the WorkManager
    * @param event The event for which to schedule a notification. Must have a valid eventId, title,
@@ -83,9 +83,9 @@ object NotificationScheduler {
 /**
  * Worker class that handles the actual display of event notifications.
  *
- * This worker is scheduled by [NotificationScheduler] and executed by WorkManager when it's time
- * to display a notification. It creates a notification channel, builds the notification with the
- * event details, and displays it to the user.
+ * This worker is scheduled by [NotificationScheduler] and executed by WorkManager when it's time to
+ * display a notification. It creates a notification channel, builds the notification with the event
+ * details, and displays it to the user.
  *
  * The notification includes:
  * - Event title as the notification title
