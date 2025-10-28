@@ -102,6 +102,7 @@ fun JoinMe(
     credentialManager: CredentialManager = CredentialManager.create(context),
     startDestination: String? = null,
     initialEventId: String? = null,
+    enableNotificationPermissionRequest: Boolean = true,
 ) {
   val navController = rememberNavController()
   val navigationActions = NavigationActions(navController)
@@ -145,7 +146,8 @@ fun JoinMe(
             onAddEvent = { navigationActions.navigateTo(Screen.CreateEvent) },
             onGoToHistory = { navigationActions.navigateTo(Screen.History) },
             navigationActions = navigationActions,
-            credentialManager = credentialManager)
+            credentialManager = credentialManager,
+            enableNotificationPermissionRequest = enableNotificationPermissionRequest)
       }
       composable(Screen.CreateEvent.route) {
         CreateEventScreen(

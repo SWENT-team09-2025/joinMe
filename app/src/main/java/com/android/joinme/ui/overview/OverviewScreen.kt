@@ -123,6 +123,7 @@ fun OverviewScreen(
     onAddEvent: () -> Unit = {},
     onGoToHistory: () -> Unit = {},
     navigationActions: NavigationActions? = null,
+    enableNotificationPermissionRequest: Boolean = true,
 ) {
 
   val context = LocalContext.current
@@ -131,23 +132,28 @@ fun OverviewScreen(
   val upcomingItems = uiState.upcomingItems
   val isLoading = uiState.isLoading
 
-  // Request notification permission for Android 13+
+  // Request notification permission for Android 13+ (only if enabled, skip in tests)
   val notificationPermissionLauncher =
-      rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {
-          isGranted ->
-        if (!isGranted) {
-          Toast.makeText(
-                  context,
-                  "Notification permission denied. You won't receive event reminders.",
-                  Toast.LENGTH_LONG)
-              .show()
+      if (enableNotificationPermissionRequest) {
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission()) { isGranted ->
+          if (!isGranted) {
+            Toast.makeText(
+                    context,
+                    "Notification permission denied. You won't receive event reminders.",
+                    Toast.LENGTH_LONG)
+                .show()
+          }
         }
+      } else {
+        null
       }
 
   LaunchedEffect(Unit) {
     overviewViewModel.refreshUIState()
     // Request notification permission on Android 13+
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        notificationPermissionLauncher != null) {
       notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
   }
