@@ -16,6 +16,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
+import com.android.joinme.model.groups.Group
 import com.android.joinme.ui.groups.CreateGroupScreen
 import com.android.joinme.ui.groups.GroupDetailScreen
 import com.android.joinme.ui.groups.GroupListScreen
@@ -211,12 +212,14 @@ fun JoinMe(
             onGroup = {
               Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
             }, // TODO navigate to group details screen
-            onMoreOptionMenu = {
-              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
-            }, // TODO show more options menu
             onBackClick = { navigationActions.goBack() },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
-            onEditClick = { navigationActions.navigateTo(Screen.EditProfile) })
+            onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
+            onViewGroupDetails = {navigationActions.navigateTo(Screen.GroupDetail(it.id))},
+            onLeaveGroup = {Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()},
+            onShareGroup = {Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()},
+            onEditGroup = {Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()},
+            onDeleteGroup = {})
       }
 
       composable(route = Screen.CreateGroup.route) {

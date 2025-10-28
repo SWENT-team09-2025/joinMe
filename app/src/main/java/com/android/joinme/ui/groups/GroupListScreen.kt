@@ -63,6 +63,8 @@ import com.android.joinme.ui.profile.ProfileScreen
 import com.android.joinme.ui.profile.ProfileTopBar
 import com.android.joinme.ui.theme.ScrimOverlayColorDarkTheme
 import com.android.joinme.ui.theme.ScrimOverlayColorLightTheme
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 
 /**
  * Dimensions and styling constants for GroupListScreen and its components
@@ -169,7 +171,11 @@ object GroupListScreenTestTags {
  * @param onCreateGroup Callback invoked when user taps "Create a group" option
  * @param onGroup Callback invoked when the user taps on a group card, receiving the selected
  *   [Group].
- * @param onMoreOptionMenu Callback invoked when the user taps the more options button for a group.
+ * @param onViewGroupDetails Callback invoked when the user taps "View Group Details" for a group.
+ * @param onLeaveGroup Callback invoked when the user taps "Leave Group" for a group.
+ * @param onShareGroup Callback invoked when the user taps "Share Group" for a group.
+ * @param onEditGroup Callback invoked when the user taps "Edit Group" for a group.
+ * @param onDeleteGroup Callback invoked when the user taps "Delete Group" for a group.
  * @param onBackClick Callback invoked when the user taps the back button in the top bar.
  * @param onProfileClick Callback invoked when the user taps the profile icon in the top bar.
  * @param onEditClick Callback invoked when the user taps the edit icon in the top bar.
@@ -181,13 +187,18 @@ fun GroupListScreen(
     onJoinWithLink: () -> Unit = {},
     onCreateGroup: () -> Unit = {},
     onGroup: (Group) -> Unit = {},
-    onMoreOptionMenu: (Group) -> Unit = {},
+    onViewGroupDetails: (Group) -> Unit = {},
+    onLeaveGroup: (Group) -> Unit = {},
+    onShareGroup: (Group) -> Unit = {},
+    onEditGroup: (Group) -> Unit = {},
+    onDeleteGroup: (Group) -> Unit = {},
     onBackClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
     onEditClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val groups = uiState.groups
+    val currentUserId = Firebase.auth.currentUser?.uid  // Current user ID from Firebase Auth
     val context = LocalContext.current
 
     // State for showing/hiding floating bubbles in the join/create group FAB
@@ -305,14 +316,20 @@ fun GroupListScreen(
                 // Convert pixel position to dp
                 val buttonTopPaddingDp = with(density) { menuButtonYPosition.toDp() }
 
+                // Calculate dynamic menu height based on ownership
+                val isOwner = group.ownerId == currentUserId
+                val numberOfButtons = if (isOwner) 5 else 3  // 5 if owner, 3 if not
+                val dynamicMenuHeight = GroupListScreenDimensions.bubbleHeight.times(numberOfButtons) +
+                        GroupListScreenDimensions.menuBubbleSpacing.times(numberOfButtons - 1)
+
                 // Check if menu would go off-screen
                 val spaceBelow = screenHeightDp - buttonTopPaddingDp - GroupListScreenDimensions.menuBottomMargin
-                val shouldPositionAbove = spaceBelow < GroupListScreenDimensions.menuHeight
+                val shouldPositionAbove = spaceBelow < dynamicMenuHeight
 
                 // Calculate final top position
                 val topPaddingDp = if (shouldPositionAbove) {
                     // Position menu so bottom aligns with button (menu above button)
-                    (buttonTopPaddingDp - GroupListScreenDimensions.menuHeight).coerceAtLeast(GroupListScreenDimensions.menuTopMargin)
+                    (buttonTopPaddingDp - dynamicMenuHeight).coerceAtLeast(GroupListScreenDimensions.menuTopMargin)
                 } else {
                     // Normal position (menu below button)
                     buttonTopPaddingDp
@@ -353,7 +370,7 @@ fun GroupListScreen(
                             text = "View Group Details",
                             icon = Icons.Default.Visibility,
                             onClick = {
-                                onGroup(group)
+                                onViewGroupDetails(group)
                                 openMenuGroupId = null
                             },
                             testTag = GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE
@@ -364,7 +381,7 @@ fun GroupListScreen(
                             text = "Leave Group",
                             icon = Icons.Default.ExitToApp,
                             onClick = {
-                                Toast.makeText(context, "Leave group: ${group.name}", Toast.LENGTH_SHORT).show()
+                                onLeaveGroup(group)
                                 openMenuGroupId = null
                             },
                             testTag = GroupListScreenTestTags.LEAVE_GROUP_BUBBLE
@@ -375,33 +392,37 @@ fun GroupListScreen(
                             text = "Share Group",
                             icon = Icons.Default.Share,
                             onClick = {
-                                Toast.makeText(context, "Share group: ${group.name}", Toast.LENGTH_SHORT).show()
+                                onShareGroup(group)
                                 openMenuGroupId = null
                             },
                             testTag = GroupListScreenTestTags.SHARE_GROUP_BUBBLE
                         )
 
-                        // Edit Group
-                        MenuBubble(
-                            text = "Edit Group",
-                            icon = Icons.Default.Edit,
-                            onClick = {
-                                Toast.makeText(context, "Edit group: ${group.name}", Toast.LENGTH_SHORT).show()
-                                openMenuGroupId = null
-                            },
-                            testTag = GroupListScreenTestTags.EDIT_GROUP_BUBBLE
-                        )
+                        // Edit Group - Only shown if current user is the owner
+                        if (group.ownerId == currentUserId) {
+                            MenuBubble(
+                                text = "Edit Group",
+                                icon = Icons.Default.Edit,
+                                onClick = {
+                                    onEditGroup(group)
+                                    openMenuGroupId = null
+                                },
+                                testTag = GroupListScreenTestTags.EDIT_GROUP_BUBBLE
+                            )
+                        }
 
-                        // Delete Group
-                        MenuBubble(
-                            text = "Delete Group",
-                            icon = Icons.Default.Delete,
-                            onClick = {
-                                Toast.makeText(context, "Delete group: ${group.name}", Toast.LENGTH_SHORT).show()
-                                openMenuGroupId = null
-                            },
-                            testTag = GroupListScreenTestTags.DELETE_GROUP_BUBBLE
-                        )
+                        // Delete Group - Only shown if current user is the owner
+                        if (group.ownerId == currentUserId) {
+                            MenuBubble(
+                                text = "Delete Group",
+                                icon = Icons.Default.Delete,
+                                onClick = {
+                                    onDeleteGroup(group)
+                                    openMenuGroupId = null
+                                },
+                                testTag = GroupListScreenTestTags.DELETE_GROUP_BUBBLE
+                            )
+                        }
                     }
                 }
             }
