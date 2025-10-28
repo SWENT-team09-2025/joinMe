@@ -11,16 +11,28 @@ import com.google.firebase.firestore.firestore
  * backed implementation.
  */
 object SeriesRepositoryProvider {
+  /** Lazily initialized private instance of the local (in-memory) repository for testing. */
+  private val _localRepository: SeriesRepository by lazy { SeriesRepositoryLocal() }
+
   /**
    * Lazily initialized private instance of the repository using Firebase Firestore as the backend.
    */
-  private val _repository: SeriesRepository by lazy {
+  private val _firestoreRepository: SeriesRepository by lazy {
     SeriesRepositoryFirestore(Firebase.firestore)
   }
 
   /**
-   * The current repository instance used throughout the application. Can be reassigned for testing
-   * purposes to inject fake or mock implementations.
+   * The current repository instance used throughout the application. Automatically returns the
+   * local repository in test environments, otherwise returns the Firestore repository.
    */
-  var repository: SeriesRepository = _repository
+  val repository: SeriesRepository
+    get() {
+      // ✅ detect instrumented test environment
+      val isTestEnv =
+          android.os.Build.FINGERPRINT == "robolectric" ||
+              android.os.Debug.isDebuggerConnected() ||
+              System.getProperty("IS_TEST_ENV") == "true"
+
+      return if (isTestEnv) _localRepository else _firestoreRepository
+    }
 }

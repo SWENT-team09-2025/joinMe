@@ -17,7 +17,7 @@ class ShowEventScreenTest {
   private fun createTestEvent(
       eventId: String = "test-event-1",
       ownerId: String = "owner123",
-      participants: List<String> = listOf("user1", "user2"),
+      participants: List<String> = listOf("user1", "user2", "owner123"),
       maxParticipants: Int = 10,
       daysFromNow: Int = 7 // Future event by default
   ): Event {
@@ -108,7 +108,7 @@ class ShowEventScreenTest {
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_LOCATION).assertTextContains("EPFL")
     composeTestRule
         .onNodeWithTag(ShowEventScreenTestTags.EVENT_MEMBERS)
-        .assertTextContains("MEMBERS : 2/10")
+        .assertTextContains("MEMBERS : 3/10")
     composeTestRule
         .onNodeWithTag(ShowEventScreenTestTags.EVENT_DURATION)
         .assertTextContains("90min")
@@ -296,7 +296,7 @@ class ShowEventScreenTest {
   @Test
   fun nonOwnerSeesJoinQuitButton() {
     val repo = EventsRepositoryLocal()
-    val event = createTestEvent(ownerId = "owner123", participants = listOf("user1"))
+    val event = createTestEvent(ownerId = "owner123", participants = listOf("user1", "owner123"))
     runBlocking { repo.addEvent(event) }
     val viewModel = ShowEventViewModel(repo)
 
@@ -321,7 +321,8 @@ class ShowEventScreenTest {
   @Test
   fun nonParticipantSeesJoinButton() {
     val repo = EventsRepositoryLocal()
-    val event = createTestEvent(ownerId = "owner123", participants = listOf("user1", "user2"))
+    val event =
+        createTestEvent(ownerId = "owner123", participants = listOf("user1", "user2", "owner123"))
     runBlocking { repo.addEvent(event) }
     val viewModel = ShowEventViewModel(repo)
 
@@ -346,7 +347,8 @@ class ShowEventScreenTest {
   @Test
   fun participantSeesQuitButton() {
     val repo = EventsRepositoryLocal()
-    val event = createTestEvent(ownerId = "owner123", participants = listOf("user1", "user2"))
+    val event =
+        createTestEvent(ownerId = "owner123", participants = listOf("user1", "user2", "owner123"))
     runBlocking { repo.addEvent(event) }
     val viewModel = ShowEventViewModel(repo)
 
@@ -371,7 +373,7 @@ class ShowEventScreenTest {
   @Test
   fun clickingJoinButton_addsUserToParticipants() {
     val repo = EventsRepositoryLocal()
-    val event = createTestEvent(ownerId = "owner123", participants = listOf("user1"))
+    val event = createTestEvent(ownerId = "owner123", participants = listOf("user1", "owner123"))
     runBlocking { repo.addEvent(event) }
     val viewModel = ShowEventViewModel(repo)
 
@@ -391,7 +393,7 @@ class ShowEventScreenTest {
     // Verify initial state
     composeTestRule
         .onNodeWithTag(ShowEventScreenTestTags.EVENT_MEMBERS)
-        .assertTextContains("MEMBERS : 1/10")
+        .assertTextContains("MEMBERS : 2/10")
     composeTestRule
         .onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON)
         .assertTextContains("JOIN EVENT")
@@ -406,7 +408,7 @@ class ShowEventScreenTest {
     // Verify user was added
     composeTestRule
         .onNodeWithTag(ShowEventScreenTestTags.EVENT_MEMBERS)
-        .assertTextContains("MEMBERS : 2/10")
+        .assertTextContains("MEMBERS : 3/10")
     composeTestRule
         .onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON)
         .assertTextContains("QUIT EVENT")
@@ -415,7 +417,8 @@ class ShowEventScreenTest {
   @Test
   fun clickingQuitButton_removesUserFromParticipants() {
     val repo = EventsRepositoryLocal()
-    val event = createTestEvent(ownerId = "owner123", participants = listOf("user1", "user2"))
+    val event =
+        createTestEvent(ownerId = "owner123", participants = listOf("user1", "user2", "owner123"))
     runBlocking { repo.addEvent(event) }
     val viewModel = ShowEventViewModel(repo)
 
@@ -435,7 +438,7 @@ class ShowEventScreenTest {
     // Verify initial state
     composeTestRule
         .onNodeWithTag(ShowEventScreenTestTags.EVENT_MEMBERS)
-        .assertTextContains("MEMBERS : 2/10")
+        .assertTextContains("MEMBERS : 3/10")
     composeTestRule
         .onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON)
         .assertTextContains("QUIT EVENT")
@@ -450,7 +453,7 @@ class ShowEventScreenTest {
     // Verify user was removed
     composeTestRule
         .onNodeWithTag(ShowEventScreenTestTags.EVENT_MEMBERS)
-        .assertTextContains("MEMBERS : 1/10")
+        .assertTextContains("MEMBERS : 2/10")
     composeTestRule
         .onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON)
         .assertTextContains("JOIN EVENT")
@@ -593,7 +596,7 @@ class ShowEventScreenTest {
     // Create event with max participants already reached
     val event =
         createTestEvent(
-            ownerId = "owner123", participants = listOf("user1", "user2"), maxParticipants = 2)
+            ownerId = "owner123", participants = listOf("user1", "owner123"), maxParticipants = 2)
     runBlocking { repo.addEvent(event) }
     val viewModel = ShowEventViewModel(repo)
 

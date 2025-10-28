@@ -19,7 +19,13 @@ class EventsRepositoryLocal : EventsRepository {
   }
 
   override suspend fun addEvent(event: Event) {
-    events.add(event)
+    // ensure creator is participant
+    val fixedEvent =
+        if (!event.participants.contains(event.ownerId))
+            event.copy(participants = event.participants + event.ownerId)
+        else event
+
+    events.add(fixedEvent)
   }
 
   override suspend fun editEvent(eventId: String, newValue: Event) {
