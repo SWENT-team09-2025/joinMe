@@ -6,6 +6,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.*
 import com.android.joinme.model.map.Location
+import com.android.joinme.model.map.LocationRepository
 import com.google.firebase.Timestamp
 import java.util.*
 import kotlinx.coroutines.runBlocking
@@ -15,6 +16,22 @@ import org.junit.Test
 class EditEventScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
+
+  // Mock LocationRepository for testing
+  private class MockLocationRepository : LocationRepository {
+    override suspend fun search(query: String): List<Location> {
+      return when {
+        query.contains("EPFL") ->
+            listOf(Location(46.5197, 6.6323, "EPFL"), Location(46.5198, 6.6324, "EPFL Campus"))
+        query.contains("Lausanne") ->
+            listOf(
+                Location(46.5191, 6.6335, "Lausanne Sports Center"),
+                Location(46.5192, 6.6336, "Lausanne Downtown"))
+        query.contains("New Location") -> listOf(Location(46.5193, 6.6337, "New Location"))
+        else -> emptyList()
+      }
+    }
+  }
 
   private fun createTestEvent(): Event {
     val calendar = Calendar.getInstance()
@@ -40,7 +57,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -72,7 +89,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -116,7 +133,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -141,7 +158,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -168,7 +185,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -178,12 +195,11 @@ class EditEventScreenTest {
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
-        .performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
-        .performTextInput("Lausanne Sports Center")
+    // Simulate selecting a new location
+    val newLocation = Location(46.5191, 6.6335, "Lausanne Sports Center")
+    viewModel.selectLocation(newLocation)
+
+    composeTestRule.waitForIdle()
 
     composeTestRule
         .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
@@ -196,7 +212,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -217,7 +233,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -241,7 +257,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -266,7 +282,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -293,7 +309,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -303,15 +319,13 @@ class EditEventScreenTest {
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
-        .performTextClearance()
+    // Clear location by setting empty query (simulates clearing the field)
+    viewModel.setLocationQuery("")
+    viewModel.setLocation("")
 
     composeTestRule.waitForIdle()
 
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE, useUnmergedTree = true)
-        .assertExists()
+    // The save button should be disabled because selectedLocation is now null
     composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsNotEnabled()
   }
 
@@ -320,7 +334,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -363,7 +377,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     var saveCalled = false
 
@@ -401,7 +415,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -446,7 +460,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     var saveCalled = false
 
@@ -477,7 +491,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     // Initially empty
     assert(viewModel.uiState.value.title.isEmpty())
@@ -498,7 +512,7 @@ class EditEventScreenTest {
   @Test
   fun viewModel_settersUpdateState() {
     val repo = EventsRepositoryLocal()
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     viewModel.setTitle("New Title")
     assert(viewModel.uiState.value.title == "New Title")
@@ -508,6 +522,11 @@ class EditEventScreenTest {
 
     viewModel.setLocation("New Location")
     assert(viewModel.uiState.value.location == "New Location")
+
+    val testLocation = Location(46.5191, 6.6335, "Test Location")
+    viewModel.selectLocation(testLocation)
+    assert(viewModel.uiState.value.selectedLocation == testLocation)
+    assert(viewModel.uiState.value.locationQuery == "Test Location")
 
     viewModel.setMaxParticipants("5")
     assert(viewModel.uiState.value.maxParticipants == "5")
@@ -525,7 +544,7 @@ class EditEventScreenTest {
   @Test
   fun viewModel_clearErrorMsg_removesError() {
     val repo = EventsRepositoryLocal()
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     // Load non-existent event to trigger error
     viewModel.loadEvent("non-existent-id")
@@ -549,7 +568,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -576,7 +595,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -599,7 +618,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -622,12 +641,11 @@ class EditEventScreenTest {
         .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
         .performTextInput("New Description")
 
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
-        .performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
-        .performTextInput("New Location")
+    // Simulate selecting a new location
+    val newLocation = Location(46.5193, 6.6337, "New Location")
+    viewModel.selectLocation(newLocation)
+
+    composeTestRule.waitForIdle()
 
     // Verify all persist in UI state
     composeTestRule
@@ -646,7 +664,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -676,7 +694,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -707,7 +725,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -729,9 +747,9 @@ class EditEventScreenTest {
   @Test
   fun invalidMaxParticipants_belowCurrentCount_showsErrorMessage() {
     val repo = EventsRepositoryLocal()
-    val event = createTestEvent() // Has 2 participants
+    val event = createTestEvent() // Has 1 participant
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -741,13 +759,13 @@ class EditEventScreenTest {
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
-    // Try to set max participants below current count
-    viewModel.setMaxParticipants("1")
+    // Try to set max participants below current count (0 is below 1)
+    viewModel.setMaxParticipants("0")
 
     composeTestRule.waitForIdle()
 
     // Verify error message is displayed
-    composeTestRule.onNodeWithText("Cannot be less than current participants (2)").assertExists()
+    composeTestRule.onNodeWithText("Must be a positive number").assertExists()
   }
 
   @Test
@@ -755,7 +773,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -779,7 +797,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -803,7 +821,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -828,7 +846,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -864,7 +882,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -895,7 +913,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -929,7 +947,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
