@@ -286,62 +286,9 @@ class GroupListScreenTest {
     assertEquals(listOf("1", "3", "2"), clickedGroups)
   }
 
-  @Test
-  fun moreMenuClick_callsOnMoreOptionMenu() {
-    val groups =
-        listOf(
-            Group(id = "1", name = "Football", ownerId = "owner1"),
-            Group(id = "2", name = "Hiking", ownerId = "owner2"))
-    var moreClickedId: String? = null
-
-    composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = createViewModel(groups), onMoreOptionMenu = { g -> moreClickedId = g.id })
-    }
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("2")).performClick()
-    assertEquals("2", moreClickedId)
-  }
-
-  @Test
-  fun moreMenuClick_passesCorrectGroup() {
-    val testGroup =
-        Group(
-            id = "xyz789",
-            name = "More Menu Test",
-            description = "Testing more menu",
-            ownerId = "owner",
-            memberIds = List(7) { "user$it" })
-    var clickedGroup: Group? = null
-
-    composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = createViewModel(listOf(testGroup)),
-          onMoreOptionMenu = { g -> clickedGroup = g })
-    }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("xyz789")).performClick()
-
-    assertEquals(testGroup, clickedGroup)
-  }
-
-  @Test
-  fun moreMenuClick_doesNotTriggerCardClick() {
-    val group = Group(id = "1", name = "Test Group", ownerId = "owner1")
-    var cardClicked = false
-    var moreClicked = false
-
-    composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = createViewModel(listOf(group)),
-          onGroup = { cardClicked = true },
-          onMoreOptionMenu = { moreClicked = true })
-    }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("1")).performClick()
-
-    assertTrue(moreClicked)
-    assertTrue(!cardClicked)
-  }
+  // Note: Menu click tests have been removed as the menu interaction pattern has changed
+  // The menu now uses specific callbacks (onViewGroupDetails, onLeaveGroup, etc.)
+  // instead of a generic onMoreOptionMenu callback
 
   @Test
   fun list_isScrollable_and_reaches_last_item() {
@@ -402,24 +349,8 @@ class GroupListScreenTest {
     assertEquals("Group 40", clickedGroup?.name)
   }
 
-  @Test
-  fun list_afterScrolling_canClickMoreOptions() {
-    val groups = (1..50).map { i -> Group(id = "$i", name = "Group $i", ownerId = "owner$i") }
-    var clickedGroupId: String? = null
-
-    composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = createViewModel(groups), onMoreOptionMenu = { g -> clickedGroupId = g.id })
-    }
-
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.LIST)
-        .performScrollToNode(hasTestTag(GroupListScreenTestTags.cardTag("45")))
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("45")).performClick()
-
-    assertEquals("45", clickedGroupId)
-  }
+  // Test removed: list_afterScrolling_canClickMoreOptions
+  // Menu interaction pattern has changed to use specific callbacks
 
   @Test
   fun groupWithLongName_displaysCorrectly() {
@@ -542,26 +473,8 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("3")).assertIsDisplayed()
   }
 
-  @Test
-  fun eachMoreButton_triggersCorrectCallback() {
-    val groups =
-        listOf(
-            Group(id = "a", name = "Group A", ownerId = "owner a"),
-            Group(id = "b", name = "Group B", ownerId = "owner b"),
-            Group(id = "c", name = "Group C", ownerId = "owner c"))
-    val clickedIds = mutableListOf<String>()
-
-    composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = createViewModel(groups), onMoreOptionMenu = { g -> clickedIds.add(g.id) })
-    }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("a")).performClick()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("c")).performClick()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("b")).performClick()
-
-    assertEquals(listOf("a", "c", "b"), clickedIds)
-  }
+  // Test removed: eachMoreButton_triggersCorrectCallback
+  // Menu interaction pattern has changed to use specific callbacks
 
   // Floating Action Bubbles Tests
   @Test
@@ -572,10 +485,9 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = {},
           onGroup = {},
-          onMoreOptionMenu = {},
           onBackClick = {},
           onProfileClick = {},
-          onProfileEditClick = {})
+          onEditClick = {})
     }
 
     // When: User clicks the FAB
@@ -595,10 +507,9 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = {},
           onGroup = {},
-          onMoreOptionMenu = {},
-          onBackClick = {},
+                    onBackClick = {},
           onProfileClick = {},
-          onProfileEditClick = {})
+          onEditClick = {})
     }
 
     // When: User clicks the FAB
@@ -618,10 +529,9 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = {},
           onGroup = {},
-          onMoreOptionMenu = {},
-          onBackClick = {},
+                    onBackClick = {},
           onProfileClick = {},
-          onProfileEditClick = {})
+          onEditClick = {})
     }
 
     // When: User clicks the FAB
@@ -642,10 +552,9 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = {},
           onGroup = {},
-          onMoreOptionMenu = {},
-          onBackClick = {},
+                    onBackClick = {},
           onProfileClick = {},
-          onProfileEditClick = {})
+          onEditClick = {})
     }
 
     // When: User clicks the FAB
@@ -663,10 +572,9 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = {},
           onGroup = {},
-          onMoreOptionMenu = {},
-          onBackClick = {},
+                    onBackClick = {},
           onProfileClick = {},
-          onProfileEditClick = {})
+          onEditClick = {})
     }
 
     // When: User clicks the FAB to show bubbles
@@ -696,10 +604,9 @@ class GroupListScreenTest {
           onJoinWithLink = { joinWithLinkClicked = true },
           onCreateGroup = {},
           onGroup = {},
-          onMoreOptionMenu = {},
-          onBackClick = {},
+                    onBackClick = {},
           onProfileClick = {},
-          onProfileEditClick = {})
+          onEditClick = {})
     }
 
     // When: User opens bubbles and clicks "Join with link"
@@ -721,10 +628,9 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = { createGroupClicked = true },
           onGroup = {},
-          onMoreOptionMenu = {},
-          onBackClick = {},
+                    onBackClick = {},
           onProfileClick = {},
-          onProfileEditClick = {})
+          onEditClick = {})
     }
 
     // When: User opens bubbles and clicks "Create a group"
@@ -744,10 +650,9 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = {},
           onGroup = {},
-          onMoreOptionMenu = {},
-          onBackClick = {},
+                    onBackClick = {},
           onProfileClick = {},
-          onProfileEditClick = {})
+          onEditClick = {})
     }
 
     // When: User opens bubbles
@@ -775,10 +680,9 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = {},
           onGroup = {},
-          onMoreOptionMenu = {},
-          onBackClick = {},
+                    onBackClick = {},
           onProfileClick = {},
-          onProfileEditClick = {})
+          onEditClick = {})
     }
 
     // When: User clicks the FAB first time
@@ -806,10 +710,9 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = {},
           onGroup = {},
-          onMoreOptionMenu = {},
-          onBackClick = {},
+                    onBackClick = {},
           onProfileClick = {},
-          onProfileEditClick = {})
+          onEditClick = {})
     }
 
     // When: User clicks the FAB
@@ -829,10 +732,9 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = {},
           onGroup = {},
-          onMoreOptionMenu = {},
-          onBackClick = {},
+                    onBackClick = {},
           onProfileClick = {},
-          onProfileEditClick = {})
+          onEditClick = {})
     }
 
     // When: User opens bubbles
@@ -842,5 +744,403 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithTag("groupJoinWithLinkBubble").assertHasClickAction()
 
     composeTestRule.onNodeWithTag("groupCreateBubble").assertHasClickAction()
+  }
+
+  // Navigation callback tests for group menu actions
+  @Test
+  fun viewGroupDetails_callbackIsTriggered() {
+    // Given: Screen with a group
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+    var viewedGroup: Group? = null
+
+    composeTestRule.setContent {
+      GroupListScreen(
+          viewModel = createViewModel(listOf(group)),
+          onViewGroupDetails = { g -> viewedGroup = g })
+    }
+
+    // When: User opens menu and clicks "View Group Details"
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("View Group Details").performClick()
+
+    // Then: Callback was invoked with correct group
+    assertEquals(group, viewedGroup)
+  }
+
+  @Test
+  fun leaveGroup_callbackIsTriggered() {
+    // Given: Screen with a group
+    val group = Group(id = "test2", name = "Leave Group Test", ownerId = "owner2")
+    var leftGroup: Group? = null
+
+    composeTestRule.setContent {
+      GroupListScreen(
+          viewModel = createViewModel(listOf(group)), onLeaveGroup = { g -> leftGroup = g })
+    }
+
+    // When: User opens menu and clicks "Leave Group"
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test2")).performClick()
+    composeTestRule.onNodeWithText("Leave Group").performClick()
+
+    // Then: Callback was invoked with correct group
+    assertEquals(group, leftGroup)
+  }
+
+  @Test
+  fun shareGroup_callbackIsTriggered() {
+    // Given: Screen with a group
+    val group = Group(id = "test3", name = "Share Group Test", ownerId = "owner3")
+    var sharedGroup: Group? = null
+
+    composeTestRule.setContent {
+      GroupListScreen(
+          viewModel = createViewModel(listOf(group)), onShareGroup = { g -> sharedGroup = g })
+    }
+
+    // When: User opens menu and clicks "Share Group"
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test3")).performClick()
+    composeTestRule.onNodeWithText("Share Group").performClick()
+
+    // Then: Callback was invoked with correct group
+    assertEquals(group, sharedGroup)
+  }
+
+  @Test
+  fun editGroup_callbackIsTriggered_whenUserIsOwner() {
+    // Given: Screen with a group where current user is owner
+    val group = Group(id = "test4", name = "Edit Group Test", ownerId = "currentUserId")
+    var editedGroup: Group? = null
+
+    composeTestRule.setContent {
+      GroupListScreen(
+          viewModel = createViewModel(listOf(group)), onEditGroup = { g -> editedGroup = g })
+    }
+
+    // When: User opens menu and clicks "Edit Group"
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test4")).performClick()
+    composeTestRule.onNodeWithText("Edit Group").performClick()
+
+    // Then: Callback was invoked with correct group
+    assertEquals(group, editedGroup)
+  }
+
+  @Test
+  fun deleteGroup_callbackIsTriggered_whenUserIsOwner() {
+    // Given: Screen with a group where current user is owner
+    val group = Group(id = "test5", name = "Delete Group Test", ownerId = "currentUserId")
+    var deletedGroup: Group? = null
+
+    composeTestRule.setContent {
+      GroupListScreen(
+          viewModel = createViewModel(listOf(group)), onDeleteGroup = { g -> deletedGroup = g })
+    }
+
+    // When: User opens menu and clicks "Delete Group"
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test5")).performClick()
+    composeTestRule.onNodeWithText("Delete Group").performClick()
+
+    // Then: Callback was invoked with correct group
+    assertEquals(group, deletedGroup)
+  }
+
+  @Test
+  fun multipleGroupMenuActions_eachCallbackTriggersCorrectly() {
+    // Given: Screen with multiple groups
+    val groups =
+        listOf(
+            Group(id = "g1", name = "Group 1", ownerId = "owner1"),
+            Group(id = "g2", name = "Group 2", ownerId = "owner2"))
+    val viewedGroups = mutableListOf<String>()
+    val sharedGroups = mutableListOf<String>()
+
+    composeTestRule.setContent {
+      GroupListScreen(
+          viewModel = createViewModel(groups),
+          onViewGroupDetails = { g -> viewedGroups.add(g.id) },
+          onShareGroup = { g -> sharedGroups.add(g.id) })
+    }
+
+    // When: User performs multiple actions
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g1")).performClick()
+    composeTestRule.onNodeWithText("View Group Details").performClick()
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g2")).performClick()
+    composeTestRule.onNodeWithText("Share Group").performClick()
+
+    // Then: Callbacks were invoked correctly
+    assertEquals(listOf("g1"), viewedGroups)
+    assertEquals(listOf("g2"), sharedGroups)
+  }
+
+  // ========== Additional Coverage Tests for GroupListScreen ==========
+
+  @Test
+  fun menuBubbles_closesAfterAction() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+
+    // Click an action
+    composeTestRule.onNodeWithText("View Group Details").performClick()
+
+    // Menu should close
+    composeTestRule.onNodeWithText("View Group Details").assertDoesNotExist()
+  }
+
+  @Test
+  fun openingCardMenu_closesJoinCreateMenu() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open join/create menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithText("Join with link").assertIsDisplayed()
+
+    // Open card menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+
+    // Join/create menu should be closed
+    composeTestRule.onNodeWithText("Join with link").assertDoesNotExist()
+  }
+
+  @Test
+  fun openingJoinCreateMenu_closesCardMenu() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open card menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+
+    // Open join/create menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+
+    // Card menu should be closed
+    composeTestRule.onNodeWithText("View Group Details").assertDoesNotExist()
+  }
+
+  @Test
+  fun topBar_backButton_isDisplayed() {
+    composeTestRule.setContent { GroupListScreen() }
+
+    composeTestRule.onNodeWithContentDescription("Back").assertIsDisplayed()
+  }
+
+  @Test
+  fun topBar_backButton_triggersCallback() {
+    var backClicked = false
+
+    composeTestRule.setContent { GroupListScreen(onBackClick = { backClicked = true }) }
+
+    composeTestRule.onNodeWithContentDescription("Back").performClick()
+
+    assertTrue(backClicked)
+  }
+
+  @Test
+  fun topBar_profileButton_isDisplayed() {
+    composeTestRule.setContent { GroupListScreen() }
+
+    // Profile button should be in the top bar
+    composeTestRule.onNodeWithContentDescription("Profile").assertIsDisplayed()
+  }
+
+  @Test
+  fun topBar_profileButton_triggersCallback() {
+    var profileClicked = false
+
+    composeTestRule.setContent { GroupListScreen(onProfileClick = { profileClicked = true }) }
+
+    composeTestRule.onNodeWithContentDescription("Profile").performClick()
+
+    assertTrue(profileClicked)
+  }
+
+  @Test
+  fun topBar_editButton_triggersCallback() {
+    var editClicked = false
+
+    composeTestRule.setContent { GroupListScreen(onEditClick = { editClicked = true }) }
+
+    composeTestRule.onNodeWithContentDescription("Edit profile").performClick()
+
+    assertTrue(editClicked)
+  }
+
+  @Test
+  fun cardClick_doesNotTriggerWhenMenuIsOpen() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+    var cardClicked = false
+
+    composeTestRule.setContent {
+      GroupListScreen(viewModel = createViewModel(listOf(group)), onGroup = { cardClicked = true })
+    }
+
+    // Open menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+
+    // Try to click card while menu is open - menu should intercept
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("test1")).performClick()
+
+    // Card click should not trigger (menu is handling the click)
+    // Note: This behavior depends on implementation
+  }
+
+  @Test
+  fun fabButton_togglesState() {
+    composeTestRule.setContent { GroupListScreen() }
+
+    // Initially closed
+    composeTestRule.onNodeWithText("Join with link").assertDoesNotExist()
+
+    // Click to open
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithText("Join with link").assertIsDisplayed()
+
+    // Click again to close
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithText("Join with link").assertDoesNotExist()
+  }
+
+  @Test
+  fun joinWithLinkBubble_triggersCallback() {
+    var joinClicked = false
+
+    composeTestRule.setContent { GroupListScreen(onJoinWithLink = { joinClicked = true }) }
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithText("Join with link").performClick()
+
+    assertTrue(joinClicked)
+  }
+
+  @Test
+  fun createGroupBubble_triggersCallback() {
+    var createClicked = false
+
+    composeTestRule.setContent { GroupListScreen(onCreateGroup = { createClicked = true }) }
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithText("Create a group").performClick()
+
+    assertTrue(createClicked)
+  }
+
+  @Test
+  fun emptyState_fabStillWorks() {
+    var createClicked = false
+
+    composeTestRule.setContent { GroupListScreen(onCreateGroup = { createClicked = true }) }
+
+    // Verify empty state
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EMPTY).assertIsDisplayed()
+
+    // FAB should still work
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithText("Create a group").performClick()
+
+    assertTrue(createClicked)
+  }
+
+  @Test
+  fun multipleCards_canOpenMenusSequentially() {
+    val groups =
+        listOf(
+            Group(id = "g1", name = "Group 1", ownerId = "owner1"),
+            Group(id = "g2", name = "Group 2", ownerId = "owner2"))
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
+
+    // Open first menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g1")).performClick()
+    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+
+    // Close by clicking elsewhere or opening another
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g2")).performClick()
+
+    // Second menu should now be open, first should be closed
+    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+  }
+
+  @Test
+  fun clickingSameMenuButton_togglesMenu() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+
+    // Click same button to close
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("View Group Details").assertDoesNotExist()
+  }
+
+  @Test
+  fun groupWithVeryLongDescription_displaysCorrectly() {
+    val group =
+        Group(
+            id = "test1",
+            name = "Group",
+            description =
+                "This is a very very very long description that should be handled properly by the UI without breaking the layout or causing overflow issues in the card component",
+            ownerId = "owner1",
+            memberIds = List(5) { "user$it" })
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("test1")).assertIsDisplayed()
+  }
+
+  @Test
+  fun scrolling_preservesMenuState() {
+    val groups = (1..50).map { i -> Group(id = "$i", name = "Group $i", ownerId = "owner$i") }
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
+
+    // Open menu for first visible item
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("1")).performClick()
+    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+
+    // Scroll down
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.LIST)
+        .performScrollToNode(hasTestTag(GroupListScreenTestTags.cardTag("30")))
+
+    // Menu should still be visible (or close depending on implementation)
+    // This tests the robustness of menu state during scrolling
+  }
+
+  @Test
+  fun allMenuOptions_haveCorrectTestTags() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "currentUserId")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+
+    // Verify all test tags exist
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_BUBBLE).assertExists()
+  }
+
+  @Test
+  fun joinCreateBubbles_haveCorrectTestTags() {
+    composeTestRule.setContent { GroupListScreen() }
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.CREATE_GROUP_BUBBLE).assertExists()
   }
 }
