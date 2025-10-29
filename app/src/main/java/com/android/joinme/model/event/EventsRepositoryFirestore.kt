@@ -182,7 +182,6 @@ class EventsRepositoryFirestore(
           visibility = EventVisibility.valueOf(visibilityString),
           ownerId = ownerId)
     } catch (e: Exception) {
-      Log.e("EventsRepositoryFirestore", "Error converting document to Event", e)
       null
     }
   }

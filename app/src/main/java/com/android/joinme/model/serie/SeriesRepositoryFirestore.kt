@@ -40,7 +40,8 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
   }
 
   /**
-   * Retrieves all Serie items owned by the currently authenticated user.
+   * Retrieves all Serie items with the corresponding filter from Firestore specified by
+   * the viewModel requested items.
    *
    * @return A list of all Serie items owned by the current user
    * @throws Exception if the user is not logged in
@@ -146,7 +147,6 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
           eventIds = eventIds,
           ownerId = ownerId)
     } catch (e: Exception) {
-      Log.e("SeriesRepositoryFirestore", "Error converting document to Serie", e)
       null
     }
   }
