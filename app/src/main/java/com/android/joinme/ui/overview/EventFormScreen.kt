@@ -2,13 +2,18 @@ package com.android.joinme.ui.overview
 
 import android.annotation.SuppressLint
 import android.widget.NumberPicker
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -17,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
+import com.android.joinme.model.map.Location
 import com.android.joinme.ui.theme.ButtonSaveColor
 import com.android.joinme.ui.theme.DarkButtonColor
 import com.android.joinme.ui.theme.DividerColor
@@ -47,6 +53,9 @@ data class EventFormState(
     val date: String,
     val time: String,
     val visibility: String,
+    val locationQuery: String,
+    val locationSuggestions: List<Location>,
+    val selectedLocation: Location?,
     val isValid: Boolean,
     val invalidTypeMsg: String?,
     val invalidTitleMsg: String?,
@@ -87,7 +96,8 @@ fun EventFormScreen(
     onTypeChange: (String) -> Unit,
     onTitleChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
-    onLocationChange: (String) -> Unit,
+    onLocationQueryChange: (String) -> Unit,
+    onSelectLocationChange: (Location) -> Unit,
     onMaxParticipantsChange: (String) -> Unit,
     onDurationChange: (String) -> Unit,
     onDateChange: (String) -> Unit,
@@ -203,21 +213,14 @@ fun EventFormScreen(
                           .testTag(testTags.inputEventDescription))
 
               // Location
-              OutlinedTextField(
-                  value = formState.location,
-                  onValueChange = onLocationChange,
-                  label = { Text("Location") },
-                  placeholder = { Text("Enter location name") },
+              LocationField(
+                  query = formState.locationQuery,
+                  suggestions = formState.locationSuggestions,
                   isError = formState.invalidLocationMsg != null,
-                  supportingText = {
-                    formState.invalidLocationMsg?.let {
-                      Text(
-                          it,
-                          color = MaterialTheme.colorScheme.error,
-                          modifier = Modifier.testTag(testTags.errorMessage))
-                    }
-                  },
-                  modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventLocation))
+                  supportingText = formState.invalidLocationMsg,
+                  onQueryChange = { selection -> onLocationQueryChange(selection) },
+                  onSuggestionSelected = { name -> onSelectLocationChange(name) },
+                  testTags = testTags)
 
               // Max Participants and Duration pickers
               Row(
@@ -526,4 +529,74 @@ fun EventFormScreen(
                   }
             }
       }
+}
+
+@Composable
+fun LocationField(
+    query: String,
+    suggestions: List<Location>,
+    isError: Boolean,
+    supportingText: String?,
+    onQueryChange: (String) -> Unit,
+    onSuggestionSelected: (Location) -> Unit,
+    modifier: Modifier = Modifier,
+    testTags: EventFormTestTags
+) {
+  var showSuggestions by remember { mutableStateOf(false) }
+  var suppressNextOpen by remember { mutableStateOf(false) }
+
+  LaunchedEffect(query, suggestions) {
+    if (!suppressNextOpen) {
+      showSuggestions = query.isNotBlank() && suggestions.isNotEmpty()
+    } else {
+      suppressNextOpen = false
+    }
+  }
+
+  Box(modifier = modifier) {
+    Column {
+      OutlinedTextField(
+          value = query,
+          onValueChange = { onQueryChange(it) },
+          label = { Text("Location") },
+          isError = isError,
+          singleLine = true,
+          supportingText = {
+            if (supportingText != null) {
+              Text(text = supportingText, color = MaterialTheme.colorScheme.error)
+            }
+          },
+          modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventLocation))
+
+      if (showSuggestions) {
+        Spacer(Modifier.height(8.dp))
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 6.dp,
+            modifier =
+                Modifier.fillMaxWidth()
+                    .heightIn(max = 240.dp)
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        shape = RoundedCornerShape(12.dp))) {
+              LazyColumn {
+                items(suggestions) { loc ->
+                  ListItem(
+                      headlineContent = { Text(loc.name) },
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .clickable {
+                                showSuggestions = false
+                                suppressNextOpen = true
+                                onSuggestionSelected(loc)
+                              }
+                              .padding(horizontal = 4.dp))
+                  HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
+                }
+              }
+            }
+      }
+    }
+  }
 }
