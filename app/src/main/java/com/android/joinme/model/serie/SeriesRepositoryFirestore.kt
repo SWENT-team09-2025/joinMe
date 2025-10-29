@@ -1,6 +1,5 @@
 package com.android.joinme.model.serie
 
-import android.util.Log
 import com.android.joinme.model.utils.Visibility
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
@@ -40,8 +39,8 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
   }
 
   /**
-   * Retrieves all Serie items with the corresponding filter from Firestore specified by
-   * the viewModel requested items.
+   * Retrieves all Serie items with the corresponding filter from Firestore specified by the
+   * viewModel requested items.
    *
    * @return A list of all Serie items owned by the current user
    * @throws Exception if the user is not logged in

@@ -43,7 +43,7 @@ class EventsRepositoryFirestore(
           EventFilter.EVENTS_FOR_OVERVIEW_SCREEN -> {
             db.collection(EVENTS_COLLECTION_PATH)
                 .whereArrayContains("participants", userId)
-                .get()  
+                .get()
                 .await()
           }
           EventFilter.EVENTS_FOR_HISTORY_SCREEN -> {
