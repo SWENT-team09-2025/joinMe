@@ -77,7 +77,7 @@ class OverviewViewModel(
       try {
         // Load all events and series
         val allEvents = eventRepository.getAllEvents(EventFilter.EVENTS_FOR_OVERVIEW_SCREEN)
-        val allSeries = serieRepository.getAllSeries(SerieFilter.SERIES_TESTS)
+        val allSeries = serieRepository.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN)
 
         // Identify events that belong to series
         val serieEventIds = allSeries.flatMap { it.eventIds }.toSet()

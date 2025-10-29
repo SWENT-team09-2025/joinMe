@@ -157,12 +157,15 @@ class EventsRepositoryFirestoreTest {
     val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
     val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
     val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
 
-    every { mockCollection.get() } returns Tasks.forResult(mockQuerySnapshot)
+    // Mock whereArrayContains query
+    every { mockCollection.whereArrayContains("participants", testUserId) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
     every { mockQuerySnapshot.iterator() } returns
         mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
 
-    // Setup first event
+    // Setup first event - testUserId must be in participants
     every { mockSnapshot1.id } returns "event1"
     every { mockSnapshot1.getString("type") } returns EventType.SOCIAL.name
     every { mockSnapshot1.getString("visibility") } returns EventVisibility.PUBLIC.name
@@ -170,12 +173,12 @@ class EventsRepositoryFirestoreTest {
     every { mockSnapshot1.getString("description") } returns "Description 1"
     every { mockSnapshot1.getTimestamp("date") } returns Timestamp(Date())
     every { mockSnapshot1.getLong("duration") } returns 30L
-    every { mockSnapshot1.get("participants") } returns emptyList<String>()
+    every { mockSnapshot1.get("participants") } returns listOf(testUserId, "user1")
     every { mockSnapshot1.getLong("maxParticipants") } returns 10L
     every { mockSnapshot1.getString("ownerId") } returns testUserId
     every { mockSnapshot1.get("location") } returns null
 
-    // Setup second event
+    // Setup second event - testUserId must be in participants
     every { mockSnapshot2.id } returns "event2"
     every { mockSnapshot2.getString("type") } returns EventType.SPORTS.name
     every { mockSnapshot2.getString("visibility") } returns EventVisibility.PRIVATE.name
@@ -183,12 +186,12 @@ class EventsRepositoryFirestoreTest {
     every { mockSnapshot2.getString("description") } returns "Description 2"
     every { mockSnapshot2.getTimestamp("date") } returns Timestamp(Date())
     every { mockSnapshot2.getLong("duration") } returns 45L
-    every { mockSnapshot2.get("participants") } returns listOf("user3")
+    every { mockSnapshot2.get("participants") } returns listOf(testUserId, "user3")
     every { mockSnapshot2.getLong("maxParticipants") } returns 8L
     every { mockSnapshot2.getString("ownerId") } returns testUserId
     every { mockSnapshot2.get("location") } returns null
 
-    val result = repository.getAllEvents(EventFilter.EVENTS_TEST)
+    val result = repository.getAllEvents(EventFilter.EVENTS_FOR_OVERVIEW_SCREEN)
 
     // Then
     assertEquals(2, result.size)
@@ -217,7 +220,7 @@ class EventsRepositoryFirestoreTest {
     every { mockAuth.currentUser } returns null // User not logged in
 
     // When
-    repository.getAllEvents(EventFilter.EVENTS_TEST)
+    repository.getAllEvents(EventFilter.EVENTS_FOR_OVERVIEW_SCREEN)
 
     // Then - exception is thrown
   }

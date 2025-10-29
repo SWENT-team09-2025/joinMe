@@ -17,8 +17,7 @@ const val EVENTS_COLLECTION_PATH = "events"
 enum class EventFilter {
   EVENTS_FOR_OVERVIEW_SCREEN,
   EVENTS_FOR_HISTORY_SCREEN,
-  EVENTS_FOR_SEARCH_SCREEN,
-  EVENTS_TEST
+  EVENTS_FOR_SEARCH_SCREEN
 }
 /**
  * Firestore-backed implementation of [EventsRepository]. Manages CRUD operations for [Event]
@@ -39,31 +38,41 @@ class EventsRepositoryFirestore(
         Firebase.auth.currentUser?.uid
             ?: throw Exception("EventsRepositoryFirestore: User not logged in.")
 
-    val snapshot = db.collection(EVENTS_COLLECTION_PATH).get().await()
+    val snapshot =
+        when (eventFilter) {
+          EventFilter.EVENTS_FOR_OVERVIEW_SCREEN -> {
+            db.collection(EVENTS_COLLECTION_PATH)
+                .whereArrayContains("participants", userId)
+                .get()  
+                .await()
+          }
+          EventFilter.EVENTS_FOR_HISTORY_SCREEN -> {
+            db.collection(EVENTS_COLLECTION_PATH)
+                .whereArrayContains("participants", userId)
+                .get()
+                .await()
+          }
+          EventFilter.EVENTS_FOR_SEARCH_SCREEN -> {
+            db.collection(EVENTS_COLLECTION_PATH)
+                .whereEqualTo("visibility", EventVisibility.PUBLIC.name)
+                .get()
+                .await()
+          }
+        }
 
-    val allEvents = snapshot.mapNotNull { documentToEvent(it) }
+    val events = snapshot.mapNotNull { documentToEvent(it) }
+
     return when (eventFilter) {
       EventFilter.EVENTS_FOR_OVERVIEW_SCREEN -> {
-        allEvents.filter { event -> event.ownerId == userId || event.participants.contains(userId) }
+        events
       }
       EventFilter.EVENTS_FOR_HISTORY_SCREEN -> {
-        allEvents
-            .filter { event ->
-              event.isExpired() && (event.ownerId == userId || event.participants.contains(userId))
-            }
-            .sortedByDescending { it.date.toDate().time }
+        events.filter { event -> event.isExpired() }.sortedByDescending { it.date.toDate().time }
       }
       EventFilter.EVENTS_FOR_SEARCH_SCREEN -> {
-        allEvents.filter { event ->
-          event.isUpcoming() &&
-              event.visibility == EventVisibility.PUBLIC &&
-              !event.participants.contains(userId) &&
-              event.ownerId != userId
+        events.filter { event ->
+          event.isUpcoming() && !event.participants.contains(userId) && event.ownerId != userId
         }
-      }
-
-      EventFilter.EVENTS_TEST -> {
-        allEvents.filter { event -> event.ownerId == userId }
       }
     }
   }

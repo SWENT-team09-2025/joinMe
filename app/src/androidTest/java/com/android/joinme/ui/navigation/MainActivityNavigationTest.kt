@@ -49,7 +49,7 @@ class MainActivityNavigationTest {
       runBlocking {
         // Clear existing events - create a copy of the list to avoid
         // ConcurrentModificationException
-        val events = repo.getAllEvents(EventFilter.EVENTS_TEST).toList()
+        val events = repo.getAllEvents(EventFilter.EVENTS_FOR_OVERVIEW_SCREEN).toList()
         events.forEach { repo.deleteEvent(it.eventId) }
 
         // Add test event
