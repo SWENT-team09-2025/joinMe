@@ -1,7 +1,9 @@
 package com.android.joinme.model.event
 
+import android.content.Context
 import android.util.Log
 import com.android.joinme.model.map.Location
+import com.android.joinme.model.notification.NotificationScheduler
 import com.google.android.gms.tasks.Task
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
@@ -16,7 +18,10 @@ const val EVENTS_COLLECTION_PATH = "events"
  * Firestore-backed implementation of [EventsRepository]. Manages CRUD operations for [Event]
  * objects.
  */
-class EventsRepositoryFirestore(private val db: FirebaseFirestore) : EventsRepository {
+class EventsRepositoryFirestore(
+    private val db: FirebaseFirestore,
+    private val context: Context? = null
+) : EventsRepository {
   private val ownerAttributeName = "ownerId"
 
   override fun getNewEventId(): String {
@@ -49,14 +54,32 @@ class EventsRepositoryFirestore(private val db: FirebaseFirestore) : EventsRepos
     val updatedEvent = event.copy(participants = (event.participants + ownerId).distinct())
 
     db.collection(EVENTS_COLLECTION_PATH).document(updatedEvent.eventId).set(updatedEvent).await()
+
+    // Schedule notification for upcoming event
+    context?.let {
+      if (updatedEvent.isUpcoming()) {
+        NotificationScheduler.scheduleEventNotification(it, updatedEvent)
+      }
+    }
   }
 
   override suspend fun editEvent(eventId: String, newValue: Event) {
     db.collection(EVENTS_COLLECTION_PATH).document(eventId).set(newValue).await()
+
+    // Cancel old notification and reschedule if event is upcoming
+    context?.let {
+      NotificationScheduler.cancelEventNotification(it, eventId)
+      if (newValue.isUpcoming()) {
+        NotificationScheduler.scheduleEventNotification(it, newValue)
+      }
+    }
   }
 
   override suspend fun deleteEvent(eventId: String) {
     db.collection(EVENTS_COLLECTION_PATH).document(eventId).delete().await()
+
+    // Cancel notification when event is deleted
+    context?.let { NotificationScheduler.cancelEventNotification(it, eventId) }
   }
 
   /**

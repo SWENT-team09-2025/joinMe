@@ -236,6 +236,9 @@ dependencies {
 
     // ---------- Robolectric ------------
     testImplementation(libs.robolectric)
+
+    // ---------- WorkManager ------------
+    implementation(libs.androidx.work.runtime.ktx)
 }
 
 tasks.withType<Test>().configureEach {

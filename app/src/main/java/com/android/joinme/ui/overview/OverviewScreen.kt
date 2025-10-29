@@ -1,6 +1,10 @@
 package com.android.joinme.ui.overview
 
+import android.Manifest
+import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -119,6 +123,7 @@ fun OverviewScreen(
     onAddEvent: () -> Unit = {},
     onGoToHistory: () -> Unit = {},
     navigationActions: NavigationActions? = null,
+    enableNotificationPermissionRequest: Boolean = true,
 ) {
 
   val context = LocalContext.current
@@ -127,8 +132,31 @@ fun OverviewScreen(
   val upcomingItems = uiState.upcomingItems
   val isLoading = uiState.isLoading
 
-  // Trigger data refresh when screen is first displayed
-  LaunchedEffect(Unit) { overviewViewModel.refreshUIState() }
+  // Request notification permission for Android 13+ (only if enabled, skip in tests)
+  val notificationPermissionLauncher =
+      if (enableNotificationPermissionRequest) {
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {
+            isGranted ->
+          if (!isGranted) {
+            Toast.makeText(
+                    context,
+                    "Notification permission denied. You won't receive event reminders.",
+                    Toast.LENGTH_LONG)
+                .show()
+          }
+        }
+      } else {
+        null
+      }
+
+  LaunchedEffect(Unit) {
+    overviewViewModel.refreshUIState()
+    // Request notification permission on Android 13+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        notificationPermissionLauncher != null) {
+      notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+  }
 
   // Display error messages as toasts and clear them from state
   LaunchedEffect(uiState.errorMsg) {
