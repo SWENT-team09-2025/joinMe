@@ -154,13 +154,11 @@ class EventsRepositoryFirestoreTest {
     every { mockAuth.currentUser } returns mockUser
     every { mockUser.uid } returns testUserId
 
-    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
     val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
     val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
     val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
 
-    every { mockCollection.whereEqualTo("ownerId", testUserId) } returns mockQuery
-    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockCollection.get() } returns Tasks.forResult(mockQuerySnapshot)
     every { mockQuerySnapshot.iterator() } returns
         mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
 
@@ -190,8 +188,7 @@ class EventsRepositoryFirestoreTest {
     every { mockSnapshot2.getString("ownerId") } returns testUserId
     every { mockSnapshot2.get("location") } returns null
 
-    // When
-    val result = repository.getAllEvents()
+    val result = repository.getAllEvents(EventFilter.EVENTS_TEST)
 
     // Then
     assertEquals(2, result.size)
@@ -220,7 +217,7 @@ class EventsRepositoryFirestoreTest {
     every { mockAuth.currentUser } returns null // User not logged in
 
     // When
-    repository.getAllEvents()
+    repository.getAllEvents(EventFilter.EVENTS_TEST)
 
     // Then - exception is thrown
   }

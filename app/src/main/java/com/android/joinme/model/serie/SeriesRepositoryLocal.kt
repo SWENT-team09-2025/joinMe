@@ -29,7 +29,7 @@ class SeriesRepositoryLocal : SeriesRepository {
    *
    * @return A list of all Serie items currently stored
    */
-  override suspend fun getAllSeries(): List<Serie> {
+  override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> {
     return series
   }
 

@@ -11,6 +11,12 @@ import kotlinx.coroutines.tasks.await
 /** Firestore collection path for series documents */
 const val SERIES_COLLECTION_PATH = "series"
 
+enum class SerieFilter {
+                       SERIES_FOR_OVERVIEW_SCREEN,
+  SERIES_FOR_HISTORY_SCREEN,
+  SERIES_FOR_SEARCH_SCREEN,
+    SERIES_TESTS
+}
 /**
  * Firestore-backed implementation of [SeriesRepository].
  *
@@ -40,18 +46,35 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
    * @return A list of all Serie items owned by the current user
    * @throws Exception if the user is not logged in
    */
-  override suspend fun getAllSeries(): List<Serie> {
-    val ownerId =
+  override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> {
+    val userId =
         Firebase.auth.currentUser?.uid
             ?: throw Exception("SeriesRepositoryFirestore: User not logged in.")
 
     val snapshot =
         db.collection(SERIES_COLLECTION_PATH)
-            .whereEqualTo(ownerAttributeName, ownerId)
             .get()
             .await()
 
-    return snapshot.mapNotNull { documentToSerie(it) }
+    val allSeries =  snapshot.mapNotNull { documentToSerie(it) }
+      return when (serieFilter){
+          SerieFilter.SERIES_FOR_OVERVIEW_SCREEN -> {
+              allSeries.filter { serie ->
+                  serie.ownerId == userId || serie.participants.contains(userId)
+              }
+          }
+          SerieFilter.SERIES_FOR_SEARCH_SCREEN -> {
+              //TODO add a function to know if a serie is expired
+             allSeries
+          }
+          SerieFilter.SERIES_FOR_HISTORY_SCREEN->{
+              //TODO add a function to know if a serie is upcoming
+              allSeries
+          }
+          SerieFilter.SERIES_TESTS->{
+              allSeries.filter { serie -> serie.ownerId == userId }
+          }
+      }
   }
 
   /**

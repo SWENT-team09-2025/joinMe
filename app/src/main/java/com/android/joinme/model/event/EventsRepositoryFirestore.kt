@@ -14,6 +14,12 @@ import kotlinx.coroutines.tasks.await
 
 const val EVENTS_COLLECTION_PATH = "events"
 
+enum class EventFilter {
+  EVENTS_FOR_OVERVIEW_SCREEN,
+  EVENTS_FOR_HISTORY_SCREEN,
+  EVENTS_FOR_SEARCH_SCREEN,
+  EVENTS_TEST
+}
 /**
  * Firestore-backed implementation of [EventsRepository]. Manages CRUD operations for [Event]
  * objects.
@@ -28,18 +34,38 @@ class EventsRepositoryFirestore(
     return db.collection(EVENTS_COLLECTION_PATH).document().id
   }
 
-  override suspend fun getAllEvents(): List<Event> {
-    val ownerId =
+  override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
+    val userId =
         Firebase.auth.currentUser?.uid
             ?: throw Exception("EventsRepositoryFirestore: User not logged in.")
 
-    val snapshot =
-        db.collection(EVENTS_COLLECTION_PATH)
-            .whereEqualTo(ownerAttributeName, ownerId)
-            .get()
-            .await()
+    val snapshot = db.collection(EVENTS_COLLECTION_PATH).get().await()
 
-    return snapshot.mapNotNull { documentToEvent(it) }
+    val allEvents = snapshot.mapNotNull { documentToEvent(it) }
+    return when (eventFilter) {
+      EventFilter.EVENTS_FOR_OVERVIEW_SCREEN -> {
+        allEvents.filter { event -> event.ownerId == userId || event.participants.contains(userId) }
+      }
+      EventFilter.EVENTS_FOR_HISTORY_SCREEN -> {
+        allEvents
+            .filter { event ->
+              event.isExpired() && (event.ownerId == userId || event.participants.contains(userId))
+            }
+            .sortedByDescending { it.date.toDate().time }
+      }
+      EventFilter.EVENTS_FOR_SEARCH_SCREEN -> {
+        allEvents.filter { event ->
+          event.isUpcoming() &&
+              event.visibility == EventVisibility.PUBLIC &&
+              !event.participants.contains(userId) &&
+              event.ownerId != userId
+        }
+      }
+
+      EventFilter.EVENTS_TEST -> {
+        allEvents.filter { event -> event.ownerId == userId }
+      }
+    }
   }
 
   override suspend fun getEvent(eventId: String): Event {

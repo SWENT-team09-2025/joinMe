@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.android.joinme.model.event.*
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryLocal
 import com.android.joinme.model.utils.Visibility
@@ -24,7 +25,7 @@ class EventsRepositoryMock(private val shouldThrowError: Boolean = false) : Even
 
   override fun getNewEventId(): String = (counter++).toString()
 
-  override suspend fun getAllEvents(): List<Event> {
+  override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
     if (shouldThrowError) {
       throw Exception("Network error: Failed to fetch events")
     }
@@ -68,7 +69,7 @@ class SeriesRepositoryMock(private val shouldThrowError: Boolean = false) : Seri
 
   override fun getNewSerieId(): String = (counter++).toString()
 
-  override suspend fun getAllSeries(): List<Serie> {
+  override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> {
     if (shouldThrowError) {
       throw Exception("Network error: Failed to fetch series")
     }

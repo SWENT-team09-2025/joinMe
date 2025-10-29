@@ -149,15 +149,14 @@ class SeriesRepositoryFirestoreTest {
     every { mockAuth.currentUser } returns mockUser
     every { mockUser.uid } returns testUserId
 
-    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
     val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
     val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
     val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
 
-    every { mockCollection.whereEqualTo("ownerId", testUserId) } returns mockQuery
-    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    // CORRECTION ICI : mock directement mockCollection.get()
+    every { mockCollection.get() } returns Tasks.forResult(mockQuerySnapshot)
     every { mockQuerySnapshot.iterator() } returns
-        mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
+            mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
 
     // Setup first serie
     every { mockSnapshot1.id } returns "serie1"
@@ -182,7 +181,7 @@ class SeriesRepositoryFirestoreTest {
     every { mockSnapshot2.getString("ownerId") } returns testUserId
 
     // When
-    val result = repository.getAllSeries()
+    val result = repository.getAllSeries(SerieFilter.SERIES_TESTS)
 
     // Then
     assertEquals(2, result.size)
@@ -211,7 +210,7 @@ class SeriesRepositoryFirestoreTest {
     every { mockAuth.currentUser } returns null // User not logged in
 
     // When
-    repository.getAllSeries()
+    repository.getAllSeries(SerieFilter.SERIES_TESTS)
 
     // Then - exception is thrown
   }

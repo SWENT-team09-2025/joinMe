@@ -62,7 +62,7 @@ class EventsRepositoryLocalTest {
     runBlocking {
       repo.addEvent(sampleEvent)
       repo.deleteEvent("1")
-      val all = repo.getAllEvents()
+      val all = repo.getAllEvents(EventFilter.EVENTS_TEST)
       Assert.assertTrue(all.isEmpty())
     }
   }
@@ -79,7 +79,7 @@ class EventsRepositoryLocalTest {
       repo.addEvent(e2)
       repo.addEvent(e3)
 
-      val all = repo.getAllEvents()
+      val all = repo.getAllEvents(EventFilter.EVENTS_TEST)
       Assert.assertEquals(3, all.size)
       Assert.assertTrue(all.any { it.title == "Tennis" })
     }
@@ -122,7 +122,7 @@ class EventsRepositoryLocalTest {
       Assert.assertEquals("Football Match", fetched.title)
 
       // and both entries exist with the same ID
-      val allWithSameId = repo.getAllEvents().filter { it.eventId == "1" }
+      val allWithSameId = repo.getAllEvents(EventFilter.EVENTS_TEST).filter { it.eventId == "1" }
       Assert.assertEquals(2, allWithSameId.size)
     }
   }

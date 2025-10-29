@@ -11,7 +11,7 @@ interface EventsRepository {
    *
    * @return A list of all Event items.
    */
-  suspend fun getAllEvents(): List<Event>
+  suspend fun getAllEvents(eventFilter: EventFilter): List<Event>
 
   /**
    * Retrieves a specific Event item by its unique identifier.
