@@ -41,7 +41,17 @@ enum class EventFilter {
    * Retrieves public events that are upcoming, where the current user is neither a participant nor
    * the owner.
    */
-  EVENTS_FOR_SEARCH_SCREEN
+  EVENTS_FOR_SEARCH_SCREEN,
+
+  /**
+   * Filter for the map screen.
+   *
+   * Retrieves all upcoming events with a location:
+   * - Events owned by the current user
+   * - Events joined by the current user
+   * - Public events not joined by the current user
+   */
+  EVENTS_FOR_MAP_SCREEN
 }
 /**
  * Firestore-backed implementation of [EventsRepository]. Manages CRUD operations for [Event]
@@ -63,24 +73,37 @@ class EventsRepositoryFirestore(
 
     // Database-level filtering: Fetch events from Firestore with filters applied at the database
     // level
-    val snapshot =
-        when (eventFilter) {
-          EventFilter.EVENTS_FOR_OVERVIEW_SCREEN,
-          EventFilter.EVENTS_FOR_HISTORY_SCREEN -> {
-            db.collection(EVENTS_COLLECTION_PATH)
-                .whereArrayContains("participants", userId)
-                .get()
-                .await()
-          }
-          EventFilter.EVENTS_FOR_SEARCH_SCREEN -> {
-            db.collection(EVENTS_COLLECTION_PATH)
-                .whereEqualTo("visibility", EventVisibility.PUBLIC.name)
-                .get()
-                .await()
-          }
-        }
+    val events = when (eventFilter) {
+      EventFilter.EVENTS_FOR_OVERVIEW_SCREEN,
+      EventFilter.EVENTS_FOR_HISTORY_SCREEN -> {
+        val snapshot = db.collection(EVENTS_COLLECTION_PATH)
+            .whereArrayContains("participants", userId)
+            .get()
+            .await()
+        snapshot.mapNotNull { documentToEvent(it) }
+      }
+      EventFilter.EVENTS_FOR_SEARCH_SCREEN -> {
+        val snapshot = db.collection(EVENTS_COLLECTION_PATH)
+            .whereEqualTo("visibility", EventVisibility.PUBLIC.name)
+            .get()
+            .await()
+        snapshot.mapNotNull { documentToEvent(it) }
+      }
+      EventFilter.EVENTS_FOR_MAP_SCREEN -> {
+        val participantSnapshot = db.collection(EVENTS_COLLECTION_PATH)
+            .whereArrayContains("participants", userId)
+            .get()
+            .await()
+        val publicSnapshot = db.collection(EVENTS_COLLECTION_PATH)
+            .whereEqualTo("visibility", EventVisibility.PUBLIC.name)
+            .get()
+            .await()
 
-    val events = snapshot.mapNotNull { documentToEvent(it) }
+        val participantEvents = participantSnapshot.mapNotNull { documentToEvent(it) }
+        val publicEvents = publicSnapshot.mapNotNull { documentToEvent(it) }
+        (participantEvents + publicEvents).distinctBy { it.eventId }
+      }
+    }
 
     // Client-side filtering: Apply additional filters and sorting in memory for conditions
     return when (eventFilter) {
@@ -94,6 +117,9 @@ class EventsRepositoryFirestore(
         events.filter { event ->
           event.isUpcoming() && !event.participants.contains(userId) && event.ownerId != userId
         }
+      }
+      EventFilter.EVENTS_FOR_MAP_SCREEN -> {
+        events.filter { event -> event.isUpcoming() && event.location != null }
       }
     }
   }
