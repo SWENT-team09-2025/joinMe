@@ -96,9 +96,9 @@ class EditGroupViewModel(
         }
     _uiState.value =
         _uiState.value.copy(
-            name = name,
+            name = trimmedName,
             nameError = error,
-            isValid = computeValidity(name, error, _uiState.value.descriptionError))
+            isValid = computeValidity(trimmedName, error, _uiState.value.descriptionError))
   }
 
   /**
