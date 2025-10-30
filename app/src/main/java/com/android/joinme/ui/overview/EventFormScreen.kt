@@ -34,9 +34,11 @@ data class EventFormTestTags(
     val inputEventTitle: String,
     val inputEventDescription: String,
     val inputEventLocation: String,
+    val inputEventLocationSuggestions: String,
     val inputEventMaxParticipants: String,
     val inputEventDuration: String,
     val inputEventDate: String,
+    val inputEventTime: String,
     val inputEventVisibility: String,
     val buttonSaveEvent: String,
     val errorMessage: String
@@ -76,7 +78,7 @@ data class EventFormState(
  * @param onTypeChange Callback when event type changes
  * @param onTitleChange Callback when title changes
  * @param onDescriptionChange Callback when description changes
- * @param onLocationChange Callback when location changes
+ * @param onLocationQueryChange Callback when location changes
  * @param onMaxParticipantsChange Callback when max participants changes
  * @param onDurationChange Callback when duration changes
  * @param onDateChange Callback when date changes
@@ -471,7 +473,7 @@ fun EventFormScreen(
                                   disabledTrailingIconColor =
                                       MaterialTheme.colorScheme.onSurfaceVariant),
                           enabled = false,
-                          modifier = Modifier.fillMaxWidth())
+                          modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventTime))
                     }
                   }
 
@@ -580,7 +582,7 @@ fun LocationField(
                         width = 1.dp,
                         color = MaterialTheme.colorScheme.outlineVariant,
                         shape = RoundedCornerShape(12.dp))) {
-              LazyColumn {
+              LazyColumn(modifier = Modifier.testTag(testTags.inputEventLocationSuggestions)) {
                 items(suggestions) { loc ->
                   ListItem(
                       headlineContent = { Text(loc.name) },
@@ -591,7 +593,8 @@ fun LocationField(
                                 suppressNextOpen = true
                                 onSuggestionSelected(loc)
                               }
-                              .padding(horizontal = 4.dp))
+                              .padding(horizontal = 4.dp)
+                              .testTag(testTags.inputEventLocationSuggestions))
                   HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
                 }
               }

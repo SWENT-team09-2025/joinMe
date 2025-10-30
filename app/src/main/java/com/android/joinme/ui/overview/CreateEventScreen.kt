@@ -11,9 +11,11 @@ object CreateEventScreenTestTags {
   const val INPUT_EVENT_TITLE = "inputEventTitle"
   const val INPUT_EVENT_DESCRIPTION = "inputEventDescription"
   const val INPUT_EVENT_LOCATION = "inputEventLocation"
+  const val INPUT_EVENT_LOCATION_SUGGESTIONS = "inputEventLocationSuggestions"
   const val INPUT_EVENT_MAX_PARTICIPANTS = "inputEventMaxParticipants"
   const val INPUT_EVENT_DURATION = "inputEventDuration"
   const val INPUT_EVENT_DATE = "inputEventDate"
+  const val INPUT_EVENT_TIME = "inputEventTime"
   const val INPUT_EVENT_VISIBILITY = "inputEventVisibility"
   const val BUTTON_SAVE_EVENT = "buttonSaveEvent"
   const val ERROR_MESSAGE = "errorMessage"
@@ -43,9 +45,12 @@ fun CreateEventScreen(
           inputEventTitle = CreateEventScreenTestTags.INPUT_EVENT_TITLE,
           inputEventDescription = CreateEventScreenTestTags.INPUT_EVENT_DESCRIPTION,
           inputEventLocation = CreateEventScreenTestTags.INPUT_EVENT_LOCATION,
+          inputEventLocationSuggestions =
+              CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS,
           inputEventMaxParticipants = CreateEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS,
           inputEventDuration = CreateEventScreenTestTags.INPUT_EVENT_DURATION,
           inputEventDate = CreateEventScreenTestTags.INPUT_EVENT_DATE,
+          inputEventTime = CreateEventScreenTestTags.INPUT_EVENT_TIME,
           inputEventVisibility = CreateEventScreenTestTags.INPUT_EVENT_VISIBILITY,
           buttonSaveEvent = CreateEventScreenTestTags.BUTTON_SAVE_EVENT,
           errorMessage = CreateEventScreenTestTags.ERROR_MESSAGE)
