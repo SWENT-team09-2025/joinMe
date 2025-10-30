@@ -1,7 +1,8 @@
 package com.android.joinme.ui.navigation
 
+import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.android.joinme.JoinMe
 import com.android.joinme.model.event.*
@@ -20,7 +21,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class MainActivityNavigationTest {
 
-  @get:Rule val composeTestRule = createComposeRule()
+  @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
   private fun createTestEvent(id: String, title: String): Event {
     // Create event with future date to ensure it appears in upcoming items
@@ -56,7 +57,9 @@ class MainActivityNavigationTest {
       }
     }
 
-    composeTestRule.setContent { JoinMe(startDestination = Screen.Overview.route) }
+    composeTestRule.setContent {
+      JoinMe(startDestination = Screen.Overview.route, enableNotificationPermissionRequest = false)
+    }
   }
 
   @Test

@@ -106,17 +106,31 @@ class CreateSerieViewModel(
   /**
    * Creates a new serie and adds it to the repository.
    *
-   * Sets the loading state to true at the start and false upon completion. Validates all form
-   * fields, parses the date and time, creates a Serie object with a unique ID and the current user
-   * as owner, then saves it to the repository. If any error occurs during the process, the loading
-   * state is reset and an error message is set.
+   * This function performs the following steps:
+   * 1. Validates that all form fields are valid
+   * 2. Checks that the user is authenticated (must be signed in)
+   * 3. Parses the date and time into a single Timestamp
+   * 4. Creates a Serie object with the current user as owner
+   * 5. Saves the serie to the repository
    *
-   * @return True if the serie was created successfully, false otherwise
+   * The loading state is set to true at the start and false upon completion. If any error occurs
+   * during the process (validation failure, authentication check failure, date parsing error, or
+   * repository error), an appropriate error message is set and the function returns false.
+   *
+   * @return True if the serie was created successfully, false if validation failed, user is not
+   *   authenticated, date parsing failed, or repository save failed
    */
   suspend fun createSerie(): Boolean {
     val state = _uiState.value
     if (!state.isValid) {
       setErrorMsg("At least one field is not valid")
+      return false
+    }
+
+    // Check if user is authenticated
+    val currentUserId = Firebase.auth.currentUser?.uid
+    if (currentUserId == null) {
+      setErrorMsg("You must be signed in to create a serie")
       return false
     }
 
@@ -147,7 +161,7 @@ class CreateSerieViewModel(
             maxParticipants = state.maxParticipants.toInt(),
             visibility = Visibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
             eventIds = emptyList(),
-            ownerId = Firebase.auth.currentUser?.uid ?: "unknown")
+            ownerId = currentUserId)
 
     return try {
       repository.addSerie(serie)
@@ -208,8 +222,8 @@ class CreateSerieViewModel(
   /**
    * Updates the serie date and validates the format and ensures it's not in the past.
    *
-   * Checks that the date is in dd/MM/yyyy format and is either today or a future date. Dates more
-   * than 24 hours in the past are rejected.
+   * Checks that the date is in dd/MM/yyyy format and is not before the current moment. Dates that
+   * have already passed are rejected with an error message.
    *
    * @param date The new date value in dd/MM/yyyy format
    */
@@ -225,8 +239,7 @@ class CreateSerieViewModel(
     val errorMsg =
         when {
           parsedDate == null -> "Invalid format (must be dd/MM/yyyy)"
-          parsedDate.time < System.currentTimeMillis() - (24 * 60 * 60 * 1000) ->
-              "Date cannot be in the past"
+          parsedDate.time < System.currentTimeMillis() -> "Date cannot be in the past"
           else -> null
         }
 
@@ -236,6 +249,9 @@ class CreateSerieViewModel(
 
   /**
    * Updates the serie time and validates the format.
+   *
+   * Uses SimpleDateFormat to parse the time. Note that SimpleDateFormat is lenient by default, so
+   * some invalid times (like 25:30 or 14:99) may be accepted and adjusted to valid times.
    *
    * @param time The new time value in HH:mm format
    */
@@ -256,7 +272,9 @@ class CreateSerieViewModel(
   /**
    * Updates the serie visibility and validates it.
    *
-   * @param visibility The new visibility value (PUBLIC or PRIVATE)
+   * Accepts "PUBLIC" or "PRIVATE" (case-insensitive). Any other value will be marked as invalid.
+   *
+   * @param visibility The new visibility value (PUBLIC or PRIVATE, case-insensitive)
    */
   fun setVisibility(visibility: String) {
     val validVisibilities = listOf("PUBLIC", "PRIVATE")
@@ -274,27 +292,13 @@ class CreateSerieViewModel(
   /**
    * Updates the overall form validity by checking all field validations.
    *
-   * Clears the global error message if all fields are valid.
+   * This is called after each field update to maintain form state consistency. If the form becomes
+   * valid (all fields pass validation and are not blank), the global error message is cleared. The
+   * actual validation logic is delegated to the [CreateSerieUIState.isValid] computed property.
    */
   private fun updateFormValidity() {
-    val state = _uiState.value
-    val isValid =
-        state.invalidTitleMsg == null &&
-            state.invalidDescriptionMsg == null &&
-            state.invalidMaxParticipantsMsg == null &&
-            state.invalidDateMsg == null &&
-            state.invalidVisibilityMsg == null &&
-            state.invalidTimeMsg == null &&
-            state.title.isNotBlank() &&
-            state.description.isNotBlank() &&
-            state.maxParticipants.isNotBlank() &&
-            state.date.isNotBlank() &&
-            state.time.isNotBlank() &&
-            state.visibility.isNotBlank()
-
-    _uiState.value = state.copy(errorMsg = null)
-    if (state.isValid != isValid) {
-      _uiState.value = state.copy()
+    if (_uiState.value.isValid) {
+      _uiState.value = _uiState.value.copy(errorMsg = null)
     }
   }
 }

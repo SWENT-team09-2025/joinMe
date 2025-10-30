@@ -242,6 +242,22 @@ class CreateSerieViewModelTest {
     assertEquals("PRIVATE", s.visibility)
   }
 
+  @Test
+  fun setVisibility_lowercasePublic_marksValid() {
+    vm.setVisibility("public")
+    val s = vm.uiState.value
+    assertNull(s.invalidVisibilityMsg)
+    assertEquals("public", s.visibility)
+  }
+
+  @Test
+  fun setVisibility_lowercasePrivate_marksValid() {
+    vm.setVisibility("private")
+    val s = vm.uiState.value
+    assertNull(s.invalidVisibilityMsg)
+    assertEquals("private", s.visibility)
+  }
+
   // ---------- createSerie() behavior ----------
 
   @Test
@@ -271,6 +287,27 @@ class CreateSerieViewModelTest {
     assertFalse(ok)
     assertTrue(repo.added.isEmpty())
     assertNotNull(vm.uiState.value.errorMsg)
+    assertFalse(vm.uiState.value.isLoading)
+  }
+
+  @Test
+  fun createSerie_withUnparseableDateTime_returnsFalse_andSetsError() = runTest {
+    // This tests the date parsing logic in createSerie when the date passes
+    // field validation but can't be parsed when combined with time
+    vm.setTitle("Test Serie")
+    vm.setDescription("Test description")
+    vm.setMaxParticipants("10")
+    vm.setVisibility("PUBLIC")
+    // Set a date that passes basic format but might fail when parsing
+    vm.setDate("31/02/2025") // Invalid date (Feb doesn't have 31 days)
+    vm.setTime("14:00")
+
+    // This might pass field validation but should fail in createSerie
+    val ok = vm.createSerie()
+    advanceUntilIdle()
+
+    assertFalse(ok)
+    assertTrue(repo.added.isEmpty())
     assertFalse(vm.uiState.value.isLoading)
   }
 
@@ -327,6 +364,100 @@ class CreateSerieViewModelTest {
 
     vm.clearErrorMsg()
     assertNull(vm.uiState.value.errorMsg)
+  }
+
+  @Test
+  fun updateFormValidity_clearsErrorMsg_whenFormBecomesValid() = runTest {
+    // Set an error first
+    vm.createSerie()
+    advanceUntilIdle()
+    assertNotNull(vm.uiState.value.errorMsg)
+
+    // Fill all fields to make form valid
+    vm.setTitle("Valid Serie")
+    vm.setDescription("Valid description")
+    vm.setDate("25/12/2025")
+    vm.setTime("14:00")
+    vm.setMaxParticipants("10")
+    vm.setVisibility("PUBLIC")
+
+    // After making form valid, error should be cleared
+    assertTrue(vm.uiState.value.isValid)
+    assertNull(vm.uiState.value.errorMsg)
+  }
+
+  // ---------- authentication tests ----------
+
+  @Test
+  fun createSerie_withoutAuthentication_returnsFalse() = runTest {
+    // Mock unauthenticated user
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    every { Firebase.auth } returns mockAuth
+    every { mockAuth.currentUser } returns null
+
+    val unauthRepo = FakeSeriesRepository()
+    val unauthVm = CreateSerieViewModel(unauthRepo)
+
+    // Fill all fields
+    unauthVm.setTitle("Test Serie")
+    unauthVm.setDescription("Test description")
+    unauthVm.setDate("25/12/2025")
+    unauthVm.setTime("14:00")
+    unauthVm.setMaxParticipants("10")
+    unauthVm.setVisibility("PUBLIC")
+
+    assertTrue(unauthVm.uiState.value.isValid)
+
+    val ok = unauthVm.createSerie()
+    advanceUntilIdle()
+
+    assertFalse(ok)
+    assertTrue(unauthRepo.added.isEmpty())
+    assertNotNull(unauthVm.uiState.value.errorMsg)
+  }
+
+  // ---------- repository error handling ----------
+
+  @Test
+  fun createSerie_withRepositoryError_returnsFalse_andSetsError() = runTest {
+    // Create a repo that throws an exception
+    val errorRepo =
+        object : SeriesRepository {
+          override suspend fun addSerie(serie: Serie) {
+            throw RuntimeException("Network error")
+          }
+
+          override suspend fun editSerie(serieId: String, newValue: Serie) {}
+
+          override suspend fun deleteSerie(serieId: String) {}
+
+          override suspend fun getSerie(serieId: String): Serie {
+            throw NoSuchElementException()
+          }
+
+          override suspend fun getAllSeries(): List<Serie> = emptyList()
+
+          override fun getNewSerieId(): String = "fake-id"
+        }
+
+    val errorVm = CreateSerieViewModel(errorRepo)
+
+    // Fill all fields
+    errorVm.setTitle("Error Serie")
+    errorVm.setDescription("This will fail")
+    errorVm.setDate("25/12/2025")
+    errorVm.setTime("14:00")
+    errorVm.setMaxParticipants("10")
+    errorVm.setVisibility("PUBLIC")
+
+    assertTrue(errorVm.uiState.value.isValid)
+
+    val ok = errorVm.createSerie()
+    advanceUntilIdle()
+
+    assertFalse(ok)
+    assertNotNull(errorVm.uiState.value.errorMsg)
+    assertFalse(errorVm.uiState.value.isLoading)
   }
 
   // ---------- Integration-like test ----------

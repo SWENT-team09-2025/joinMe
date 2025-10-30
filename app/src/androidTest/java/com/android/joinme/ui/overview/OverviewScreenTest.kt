@@ -1,7 +1,8 @@
 package com.android.joinme.ui.overview
 
+import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.android.joinme.model.event.*
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.serie.Serie
@@ -106,7 +107,7 @@ class SeriesRepositoryMock(private val shouldThrowError: Boolean = false) : Seri
 
 class OverviewScreenTest {
 
-  @get:Rule val composeTestRule = createComposeRule()
+  @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
   private fun createEvent(id: String, title: String, type: EventType): Event {
     return Event(
@@ -129,7 +130,9 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     // Attends que le LaunchedEffect se termine
     composeTestRule.waitForIdle()
@@ -151,7 +154,9 @@ class OverviewScreenTest {
       eventRepo.addEvent(createEvent("2", "Bar", EventType.SOCIAL))
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     // Attends que le LaunchedEffect charge les données
     composeTestRule.waitForIdle()
@@ -182,7 +187,10 @@ class OverviewScreenTest {
     var clicked = false
 
     composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, onAddEvent = { clicked = true })
+      OverviewScreen(
+          overviewViewModel = viewModel,
+          onAddEvent = { clicked = true },
+          enableNotificationPermissionRequest = false)
     }
 
     composeTestRule.waitForIdle()
@@ -205,7 +213,10 @@ class OverviewScreenTest {
     var selected: Event? = null
 
     composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, onSelectEvent = { selected = it })
+      OverviewScreen(
+          overviewViewModel = viewModel,
+          onSelectEvent = { selected = it },
+          enableNotificationPermissionRequest = false)
     }
 
     // Attends que le LaunchedEffect charge les données
@@ -344,7 +355,9 @@ class OverviewScreenTest {
       }
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -366,7 +379,9 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -379,7 +394,9 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryMock()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     // Wait for error to be processed
     composeTestRule.waitForIdle()
@@ -399,7 +416,9 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -487,7 +506,9 @@ class OverviewScreenTest {
       eventRepo.addEvent(createEvent("3", "Coffee", EventType.SOCIAL))
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -505,7 +526,9 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -518,7 +541,9 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -531,7 +556,9 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -544,7 +571,9 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(1000)
@@ -561,7 +590,9 @@ class OverviewScreenTest {
 
     runBlocking { eventRepo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -578,7 +609,10 @@ class OverviewScreenTest {
     var fabClicked = false
 
     composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, onAddEvent = { fabClicked = true })
+      OverviewScreen(
+          overviewViewModel = viewModel,
+          onAddEvent = { fabClicked = true },
+          enableNotificationPermissionRequest = false)
     }
 
     composeTestRule.waitForIdle()
@@ -598,7 +632,10 @@ class OverviewScreenTest {
     runBlocking { eventRepo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
 
     composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, onSelectEvent = { clickedEvent = it })
+      OverviewScreen(
+          overviewViewModel = viewModel,
+          onSelectEvent = { clickedEvent = it },
+          enableNotificationPermissionRequest = false)
     }
 
     composeTestRule.waitForIdle()
@@ -617,7 +654,9 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -630,7 +669,9 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -668,7 +709,9 @@ class OverviewScreenTest {
       }
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(3000)
@@ -701,7 +744,9 @@ class OverviewScreenTest {
 
     runBlocking { eventRepo.addEvent(createEvent("1", "Pre-added Event", EventType.SPORTS)) }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -736,7 +781,9 @@ class OverviewScreenTest {
 
     runBlocking { eventRepo.addEvent(ongoingEvent) }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -770,7 +817,9 @@ class OverviewScreenTest {
 
     runBlocking { eventRepo.addEvent(upcomingEvent) }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -824,7 +873,9 @@ class OverviewScreenTest {
       eventRepo.addEvent(upcomingEvent)
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -864,7 +915,9 @@ class OverviewScreenTest {
 
     runBlocking { eventRepo.addEvent(ongoingEvent) }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -918,7 +971,9 @@ class OverviewScreenTest {
       eventRepo.addEvent(ongoingEvent2)
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -953,7 +1008,9 @@ class OverviewScreenTest {
 
     runBlocking { eventRepo.addEvent(upcomingEvent) }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -1007,7 +1064,9 @@ class OverviewScreenTest {
       eventRepo.addEvent(upcomingEvent2)
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -1079,7 +1138,9 @@ class OverviewScreenTest {
       eventRepo.addEvent(upcomingEvent2)
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -1096,7 +1157,9 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -1109,7 +1172,9 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -1122,7 +1187,9 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -1137,7 +1204,10 @@ class OverviewScreenTest {
     var historyClicked = false
 
     composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, onGoToHistory = { historyClicked = true })
+      OverviewScreen(
+          overviewViewModel = viewModel,
+          onGoToHistory = { historyClicked = true },
+          enableNotificationPermissionRequest = false)
     }
 
     composeTestRule.waitForIdle()
@@ -1152,7 +1222,9 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -1169,7 +1241,9 @@ class OverviewScreenTest {
 
     runBlocking { eventRepo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     // Wait for loading to complete
     composeTestRule.waitForIdle()
@@ -1188,7 +1262,9 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     // Wait for loading to complete
     composeTestRule.waitForIdle()
@@ -1257,7 +1333,9 @@ class OverviewScreenTest {
       serieRepo.addSerie(serie)
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -1324,7 +1402,9 @@ class OverviewScreenTest {
       serieRepo.addSerie(serie)
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -1367,7 +1447,9 @@ class OverviewScreenTest {
       serieRepo.addSerie(serie)
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -1422,7 +1504,9 @@ class OverviewScreenTest {
       }
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -1475,7 +1559,9 @@ class OverviewScreenTest {
       serieRepo.addSerie(ongoingSerie)
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -1492,7 +1578,9 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryMock(shouldThrowError = true)
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     // Wait for error to be processed
     composeTestRule.waitForIdle()
@@ -1547,7 +1635,9 @@ class OverviewScreenTest {
       serieRepo.addSerie(serie)
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -1614,7 +1704,9 @@ class OverviewScreenTest {
       serieRepo.addSerie(serie)
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)

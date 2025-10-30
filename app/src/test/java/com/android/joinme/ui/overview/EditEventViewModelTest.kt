@@ -5,6 +5,7 @@ import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepositoryLocal
 import com.android.joinme.model.map.Location
+import com.android.joinme.model.map.LocationRepository
 import com.google.firebase.Timestamp
 import java.util.*
 import kotlinx.coroutines.Dispatchers
@@ -23,6 +24,17 @@ class EditEventViewModelTest {
   private lateinit var repository: EventsRepositoryLocal
   private lateinit var viewModel: EditEventViewModel
   private val testDispatcher = StandardTestDispatcher()
+
+  // Mock LocationRepository for testing
+  private class MockLocationRepository : LocationRepository {
+    override suspend fun search(query: String): List<Location> {
+      return when {
+        query.contains("EPFL") -> listOf(Location(46.5197, 6.6323, "EPFL"))
+        query.contains("Lausanne") -> listOf(Location(46.5191, 6.6335, "Lausanne Sports Center"))
+        else -> emptyList()
+      }
+    }
+  }
 
   private fun createTestEvent(): Event {
     val calendar = Calendar.getInstance()
@@ -46,7 +58,7 @@ class EditEventViewModelTest {
   fun setup() {
     Dispatchers.setMain(testDispatcher)
     repository = EventsRepositoryLocal()
-    viewModel = EditEventViewModel(repository)
+    viewModel = EditEventViewModel(repository, MockLocationRepository())
   }
 
   @After
@@ -68,6 +80,8 @@ class EditEventViewModelTest {
     assertEquals("Basketball Game", state.title)
     assertEquals("Friendly 3v3 basketball match", state.description)
     assertEquals("EPFL", state.location)
+    assertEquals("EPFL", state.locationQuery)
+    assertEquals(Location(46.5197, 6.6323, "EPFL"), state.selectedLocation)
     assertEquals("10", state.maxParticipants)
     assertEquals("90", state.duration)
     assertEquals("25/12/2024", state.date)
@@ -384,7 +398,7 @@ class EditEventViewModelTest {
     viewModel.setType("SPORTS")
     viewModel.setTitle("Test Event")
     viewModel.setDescription("Test Description")
-    viewModel.setLocation("EPFL")
+    viewModel.selectLocation(Location(46.52, 6.63, "EPFL Field"))
     viewModel.setMaxParticipants("10")
     viewModel.setDuration("60")
     viewModel.setDate("25/12/2024")
@@ -437,6 +451,8 @@ class EditEventViewModelTest {
 
     // Modify some fields
     viewModel.setTitle("Updated Title")
+
+    viewModel.selectLocation(Location(46.52, 6.57, "EPFL Field"))
 
     // Edit the event
     val result = viewModel.editEvent(event.eventId)
@@ -729,7 +745,8 @@ class EditEventViewModelTest {
             date = "01/01/2024 10:00",
             visibility = "PRIVATE")
 
-    val customViewModel = EditEventViewModel(repository, customState)
+    val customViewModel =
+        EditEventViewModel(repository, MockLocationRepository(), initialState = customState)
 
     val state = customViewModel.uiState.value
     assertEquals("SPORTS", state.type)
