@@ -1,5 +1,6 @@
 package com.android.joinme.ui.groups
 
+import com.android.joinme.model.event.EventType
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.profile.Profile
@@ -601,5 +602,154 @@ class GroupDetailViewModelTest {
     Assert.assertEquals("Group not found", state.error)
     Assert.assertNull(state.group)
     Assert.assertTrue(state.members.isEmpty())
+  }
+
+  // ========== getCategory() Tests ==========
+
+  @Test
+  fun getCategory_withLoadedGroup_returnsCategoryCorrectly() = runTest {
+    val testGroup =
+        Group(id = "group1", name = "Sports Group", ownerId = "owner1", category = EventType.SPORTS)
+
+    fakeGroupRepo.addTestGroup(testGroup)
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
+
+    val category = viewModel.getCategory()
+    Assert.assertEquals(EventType.SPORTS, category)
+  }
+
+  @Test
+  fun getCategory_withActivityCategory_returnsActivity() = runTest {
+    val testGroup =
+        Group(
+            id = "group1",
+            name = "Activity Group",
+            ownerId = "owner1",
+            category = EventType.ACTIVITY)
+
+    fakeGroupRepo.addTestGroup(testGroup)
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
+
+    val category = viewModel.getCategory()
+    Assert.assertEquals(EventType.ACTIVITY, category)
+  }
+
+  @Test
+  fun getCategory_withSocialCategory_returnsSocial() = runTest {
+    val testGroup =
+        Group(id = "group1", name = "Social Group", ownerId = "owner1", category = EventType.SOCIAL)
+
+    fakeGroupRepo.addTestGroup(testGroup)
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
+
+    val category = viewModel.getCategory()
+    Assert.assertEquals(EventType.SOCIAL, category)
+  }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun getCategory_withNoGroupLoaded_throwsIllegalArgumentException() {
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+
+    // No group loaded, should throw exception
+    viewModel.getCategory()
+  }
+
+  @Test
+  fun getCategory_withNoGroupLoaded_throwsCorrectExceptionMessage() {
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+
+    try {
+      viewModel.getCategory()
+      Assert.fail("Expected IllegalArgumentException to be thrown")
+    } catch (e: IllegalArgumentException) {
+      Assert.assertEquals("Not a Category", e.message)
+    }
+  }
+
+  @Test
+  fun getCategory_afterFailedLoad_throwsIllegalArgumentException() = runTest {
+    fakeGroupRepo.shouldThrowError = true
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
+
+    // Group is null after failed load
+    try {
+      viewModel.getCategory()
+      Assert.fail("Expected IllegalArgumentException to be thrown")
+    } catch (e: IllegalArgumentException) {
+      Assert.assertEquals("Not a Category", e.message)
+    }
+  }
+
+  @Test
+  fun getCategory_afterGroupNotFound_throwsIllegalArgumentException() = runTest {
+    fakeGroupRepo.shouldReturnNull = true
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("nonexistent")
+    advanceUntilIdle()
+
+    // Group is null after not found
+    try {
+      viewModel.getCategory()
+      Assert.fail("Expected IllegalArgumentException to be thrown")
+    } catch (e: IllegalArgumentException) {
+      Assert.assertEquals("Not a Category", e.message)
+    }
+  }
+
+  @Test
+  fun getCategory_afterSuccessfulLoad_canBeCalledMultipleTimes() = runTest {
+    val testGroup =
+        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS)
+
+    fakeGroupRepo.addTestGroup(testGroup)
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
+
+    // Call multiple times, should return same result
+    val category1 = viewModel.getCategory()
+    val category2 = viewModel.getCategory()
+    val category3 = viewModel.getCategory()
+
+    Assert.assertEquals(EventType.SPORTS, category1)
+    Assert.assertEquals(EventType.SPORTS, category2)
+    Assert.assertEquals(EventType.SPORTS, category3)
+  }
+
+  @Test
+  fun getCategory_afterSwitchingGroups_returnsNewCategory() = runTest {
+    val group1 =
+        Group(id = "group1", name = "Sports", ownerId = "owner1", category = EventType.SPORTS)
+    val group2 =
+        Group(id = "group2", name = "Activity", ownerId = "owner2", category = EventType.ACTIVITY)
+
+    fakeGroupRepo.addTestGroup(group1)
+    fakeGroupRepo.addTestGroup(group2)
+
+    viewModel = GroupDetailViewModel(fakeGroupRepo, fakeProfileRepo)
+
+    // Load first group
+    viewModel.loadGroupDetails("group1")
+    advanceUntilIdle()
+    Assert.assertEquals(EventType.SPORTS, viewModel.getCategory())
+
+    // Load second group
+    viewModel.loadGroupDetails("group2")
+    advanceUntilIdle()
+    Assert.assertEquals(EventType.ACTIVITY, viewModel.getCategory())
   }
 }
