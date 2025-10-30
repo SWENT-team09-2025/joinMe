@@ -507,7 +507,7 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = {},
           onGroup = {},
-                    onBackClick = {},
+          onBackClick = {},
           onProfileClick = {},
           onEditClick = {})
     }
@@ -529,7 +529,7 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = {},
           onGroup = {},
-                    onBackClick = {},
+          onBackClick = {},
           onProfileClick = {},
           onEditClick = {})
     }
@@ -552,7 +552,7 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = {},
           onGroup = {},
-                    onBackClick = {},
+          onBackClick = {},
           onProfileClick = {},
           onEditClick = {})
     }
@@ -572,7 +572,7 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = {},
           onGroup = {},
-                    onBackClick = {},
+          onBackClick = {},
           onProfileClick = {},
           onEditClick = {})
     }
@@ -604,7 +604,7 @@ class GroupListScreenTest {
           onJoinWithLink = { joinWithLinkClicked = true },
           onCreateGroup = {},
           onGroup = {},
-                    onBackClick = {},
+          onBackClick = {},
           onProfileClick = {},
           onEditClick = {})
     }
@@ -628,7 +628,7 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = { createGroupClicked = true },
           onGroup = {},
-                    onBackClick = {},
+          onBackClick = {},
           onProfileClick = {},
           onEditClick = {})
     }
@@ -650,7 +650,7 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = {},
           onGroup = {},
-                    onBackClick = {},
+          onBackClick = {},
           onProfileClick = {},
           onEditClick = {})
     }
@@ -680,7 +680,7 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = {},
           onGroup = {},
-                    onBackClick = {},
+          onBackClick = {},
           onProfileClick = {},
           onEditClick = {})
     }
@@ -710,7 +710,7 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = {},
           onGroup = {},
-                    onBackClick = {},
+          onBackClick = {},
           onProfileClick = {},
           onEditClick = {})
     }
@@ -732,7 +732,7 @@ class GroupListScreenTest {
           onJoinWithLink = {},
           onCreateGroup = {},
           onGroup = {},
-                    onBackClick = {},
+          onBackClick = {},
           onProfileClick = {},
           onEditClick = {})
     }
@@ -755,8 +755,7 @@ class GroupListScreenTest {
 
     composeTestRule.setContent {
       GroupListScreen(
-          viewModel = createViewModel(listOf(group)),
-          onViewGroupDetails = { g -> viewedGroup = g })
+          viewModel = createViewModel(listOf(group)), onViewGroupDetails = { g -> viewedGroup = g })
     }
 
     // When: User opens menu and clicks "View Group Details"
@@ -814,8 +813,7 @@ class GroupListScreenTest {
     val group = Group(id = "test4", name = "Edit Group Test", ownerId = "currentUserId")
 
     composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = createViewModel(listOf(group)), onEditGroup = {})
+      GroupListScreen(viewModel = createViewModel(listOf(group)), onEditGroup = {})
     }
 
     // When: User opens menu
@@ -834,8 +832,7 @@ class GroupListScreenTest {
     val group = Group(id = "test5", name = "Delete Group Test", ownerId = "currentUserId")
 
     composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = createViewModel(listOf(group)), onDeleteGroup = {})
+      GroupListScreen(viewModel = createViewModel(listOf(group)), onDeleteGroup = {})
     }
 
     // When: User opens menu
@@ -1137,7 +1134,8 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_BUBBLE).assertExists()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).assertExists()
 
-    // Note: Edit and Delete bubbles are only shown when Firebase.auth.currentUser?.uid == group.ownerId
+    // Note: Edit and Delete bubbles are only shown when Firebase.auth.currentUser?.uid ==
+    // group.ownerId
     // Since Firebase Auth is not initialized in tests, these bubbles won't appear
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE).assertDoesNotExist()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_BUBBLE).assertDoesNotExist()

@@ -609,11 +609,7 @@ class GroupDetailViewModelTest {
   @Test
   fun getCategory_withLoadedGroup_returnsCategoryCorrectly() = runTest {
     val testGroup =
-        Group(
-            id = "group1",
-            name = "Sports Group",
-            ownerId = "owner1",
-            category = EventType.SPORTS)
+        Group(id = "group1", name = "Sports Group", ownerId = "owner1", category = EventType.SPORTS)
 
     fakeGroupRepo.addTestGroup(testGroup)
 
@@ -647,11 +643,7 @@ class GroupDetailViewModelTest {
   @Test
   fun getCategory_withSocialCategory_returnsSocial() = runTest {
     val testGroup =
-        Group(
-            id = "group1",
-            name = "Social Group",
-            ownerId = "owner1",
-            category = EventType.SOCIAL)
+        Group(id = "group1", name = "Social Group", ownerId = "owner1", category = EventType.SOCIAL)
 
     fakeGroupRepo.addTestGroup(testGroup)
 
@@ -720,11 +712,7 @@ class GroupDetailViewModelTest {
   @Test
   fun getCategory_afterSuccessfulLoad_canBeCalledMultipleTimes() = runTest {
     val testGroup =
-        Group(
-            id = "group1",
-            name = "Test Group",
-            ownerId = "owner1",
-            category = EventType.SPORTS)
+        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS)
 
     fakeGroupRepo.addTestGroup(testGroup)
 
@@ -744,7 +732,8 @@ class GroupDetailViewModelTest {
 
   @Test
   fun getCategory_afterSwitchingGroups_returnsNewCategory() = runTest {
-    val group1 = Group(id = "group1", name = "Sports", ownerId = "owner1", category = EventType.SPORTS)
+    val group1 =
+        Group(id = "group1", name = "Sports", ownerId = "owner1", category = EventType.SPORTS)
     val group2 =
         Group(id = "group2", name = "Activity", ownerId = "owner2", category = EventType.ACTIVITY)
 

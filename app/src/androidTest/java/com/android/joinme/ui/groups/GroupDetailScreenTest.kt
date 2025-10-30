@@ -11,9 +11,7 @@ import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 
-/**
- * Fake GroupRepository for testing GroupDetailScreen.
- */
+/** Fake GroupRepository for testing GroupDetailScreen. */
 class FakeGroupDetailRepository : GroupRepository {
   private val groups = mutableMapOf<String, Group>()
   var shouldThrowError = false
@@ -48,9 +46,7 @@ class FakeGroupDetailRepository : GroupRepository {
   }
 }
 
-/**
- * Fake ProfileRepository for testing GroupDetailScreen.
- */
+/** Fake ProfileRepository for testing GroupDetailScreen. */
 class FakeProfileDetailRepository : ProfileRepository {
   private val profiles = mutableMapOf<String, Profile>()
 
@@ -107,7 +103,8 @@ class GroupDetailScreenTest {
     // Check immediately that we're in loading state (before success state loads)
     // The loading indicator itself doesn't have a testTag, so we verify by checking
     // that success-state content doesn't exist yet
-    val groupEventsExists = composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
+    val groupEventsExists =
+        composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
 
     if (groupEventsExists) {
       // Loading was too fast, wait and verify success state loaded instead
@@ -129,8 +126,7 @@ class GroupDetailScreenTest {
     composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
 
     composeTestRule.waitUntil(timeoutMillis = 3000) {
-      composeTestRule.onAllNodesWithText("Failed to load group").fetchSemanticsNodes()
-          .isNotEmpty()
+      composeTestRule.onAllNodesWithText("Failed to load group").fetchSemanticsNodes().isNotEmpty()
     }
 
     composeTestRule.onNodeWithText("Failed to load group").assertIsDisplayed()
@@ -265,11 +261,7 @@ class GroupDetailScreenTest {
   fun successfulLoad_displaysCategoryInTopBar() {
     setup()
     fakeGroupRepo.setGroup(
-        Group(
-            id = "group1",
-            name = "Sports Team",
-            ownerId = "owner1",
-            category = EventType.SPORTS))
+        Group(id = "group1", name = "Sports Team", ownerId = "owner1", category = EventType.SPORTS))
 
     val viewModel = createViewModel()
     composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
@@ -305,11 +297,7 @@ class GroupDetailScreenTest {
   fun successfulLoad_displaysSocialCategory() {
     setup()
     fakeGroupRepo.setGroup(
-        Group(
-            id = "group1",
-            name = "Social Club",
-            ownerId = "owner1",
-            category = EventType.SOCIAL))
+        Group(id = "group1", name = "Social Club", ownerId = "owner1", category = EventType.SOCIAL))
 
     val viewModel = createViewModel()
     composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
@@ -502,7 +490,8 @@ class GroupDetailScreenTest {
     val viewModel = createViewModel()
 
     composeTestRule.setContent {
-      GroupDetailScreen(groupId = "group1", viewModel = viewModel, onBackClick = { backClicked = true })
+      GroupDetailScreen(
+          groupId = "group1", viewModel = viewModel, onBackClick = { backClicked = true })
     }
 
     composeTestRule.onNodeWithContentDescription("Back").performClick()
@@ -596,7 +585,8 @@ class GroupDetailScreenTest {
             category = EventType.SPORTS))
 
     memberIds.forEach { uid ->
-      fakeProfileRepo.addProfile(Profile(uid = uid, username = "User $uid", email = "$uid@test.com"))
+      fakeProfileRepo.addProfile(
+          Profile(uid = uid, username = "User $uid", email = "$uid@test.com"))
     }
 
     val viewModel = createViewModel()
@@ -750,7 +740,8 @@ class GroupDetailScreenTest {
             category = EventType.SPORTS))
 
     memberIds.forEach { uid ->
-      fakeProfileRepo.addProfile(Profile(uid = uid, username = "User $uid", email = "$uid@test.com"))
+      fakeProfileRepo.addProfile(
+          Profile(uid = uid, username = "User $uid", email = "$uid@test.com"))
     }
 
     val viewModel = createViewModel()

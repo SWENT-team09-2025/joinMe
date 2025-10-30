@@ -24,10 +24,10 @@ import kotlinx.coroutines.launch
  * @property error Error message if something went wrong.
  */
 data class GroupDetailUiState(
-  val group: Group? = null,
-  val members: List<Profile> = emptyList(),
-  val isLoading: Boolean = true,
-  val error: String? = null
+    val group: Group? = null,
+    val members: List<Profile> = emptyList(),
+    val isLoading: Boolean = true,
+    val error: String? = null
 )
 
 /**
@@ -37,8 +37,8 @@ data class GroupDetailUiState(
  * @property profileRepository Repository for profile data operations.
  */
 class GroupDetailViewModel(
-  private val groupRepository: GroupRepository = GroupRepositoryProvider.repository,
-  private val profileRepository: ProfileRepository = ProfileRepositoryProvider.repository
+    private val groupRepository: GroupRepository = GroupRepositoryProvider.repository,
+    private val profileRepository: ProfileRepository = ProfileRepositoryProvider.repository
 ) : ViewModel() {
 
   private val _uiState = MutableStateFlow(GroupDetailUiState())

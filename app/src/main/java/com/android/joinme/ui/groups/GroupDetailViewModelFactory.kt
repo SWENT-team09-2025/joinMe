@@ -10,8 +10,8 @@ import com.android.joinme.model.profile.ProfileRepositoryProvider
 /**
  * Factory for creating GroupDetailViewModel with repository dependencies.
  *
- * This factory follows the same pattern as other ViewModels in the codebase,
- * using repository providers for dependency injection.
+ * This factory follows the same pattern as other ViewModels in the codebase, using repository
+ * providers for dependency injection.
  *
  * @property groupRepository Repository for group data operations.
  * @property profileRepository Repository for profile data operations.
@@ -21,11 +21,11 @@ class GroupDetailViewModelFactory(
     private val profileRepository: ProfileRepository = ProfileRepositoryProvider.repository
 ) : ViewModelProvider.Factory {
 
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(GroupDetailViewModel::class.java)) {
-            return GroupDetailViewModel(groupRepository, profileRepository) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+  @Suppress("UNCHECKED_CAST")
+  override fun <T : ViewModel> create(modelClass: Class<T>): T {
+    if (modelClass.isAssignableFrom(GroupDetailViewModel::class.java)) {
+      return GroupDetailViewModel(groupRepository, profileRepository) as T
     }
+    throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+  }
 }
