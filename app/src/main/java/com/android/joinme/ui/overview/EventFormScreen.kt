@@ -533,6 +533,31 @@ fun EventFormScreen(
       }
 }
 
+/**
+ * A composable text field with real-time location suggestions.
+ *
+ * Displays an `OutlinedTextField` where users can type a location name. As the user types, a
+ * dropdown list of matching suggestions appears below the field. Selecting a suggestion fills the
+ * field and hides the dropdown.
+ *
+ * This component is used in Create/Edit Event screens to allow users to easily search and select
+ * real-world locations from Nominatim autocomplete results.
+ *
+ * ### Behavior
+ * - The dropdown menu appears when the query is non-empty and suggestions are available.
+ * - Selecting a suggestion hides the menu and updates the field.
+ * - The menu will not immediately reopen after a selection (managed by [suppressNextOpen]).
+ *
+ * @param query The current text input value of the location field.
+ * @param suggestions A list of [Location] suggestions returned by the repository.
+ * @param isError Whether the field should display an error state.
+ * @param supportingText Optional helper or error message displayed below the field.
+ * @param onQueryChange Callback triggered when the user changes the query text.
+ * @param onSuggestionSelected Callback invoked when a suggestion is selected from the dropdown.
+ * @param modifier Optional [Modifier] for layout customization.
+ * @param testTags [EventFormTestTags] providing identifiers for UI testing (e.g., text field and
+ *   dropdown).
+ */
 @Composable
 fun LocationField(
     query: String,

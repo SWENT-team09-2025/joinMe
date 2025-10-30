@@ -24,7 +24,7 @@ class NominatimLocationRepository(private val client: OkHttpClient) : LocationRe
   /**
    * Parses the JSON returned by Nominatim into a list of [Location].
    *
-   * Expected format: Array of objects with "lat", "lon", and "display_name".
+   * Expected format: Array of objects with "latitude", "longitude", and "name".
    *
    * @throws org.json.JSONException if the body is malformed
    */
@@ -63,12 +63,7 @@ class NominatimLocationRepository(private val client: OkHttpClient) : LocationRe
                 .build()
 
         // Create the request with a custom User-Agent and optional Referer
-        val request =
-            Request.Builder()
-                .url(url)
-                .header("User-Agent", "JoinMe (mathieu.pfeffer@epfl.ch)") // Set a proper User-Agent
-                .header("Referer", "https://yourapp.com") // Optionally add a Referer
-                .build()
+        val request = Request.Builder().url(url).header("User-Agent", "JoinMe Android App").build()
 
         try {
           val response = client.newCall(request).execute()
