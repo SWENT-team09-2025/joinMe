@@ -358,7 +358,8 @@ class SerieTest {
   fun `serie with single event works correctly`() {
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.HOUR, 2)
-    val singleEventSerie = sampleSerie.copy(eventIds = listOf("event1"), date = Timestamp(calendar.time))
+    val singleEventSerie =
+        sampleSerie.copy(eventIds = listOf("event1"), date = Timestamp(calendar.time))
     val events = listOf(createEvent("event1", duration = 90, hoursOffset = 2))
 
     assertTrue(singleEventSerie.isUpcoming())

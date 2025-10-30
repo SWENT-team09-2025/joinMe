@@ -1468,7 +1468,9 @@ class OverviewScreenTest {
     composeTestRule.onNodeWithText("Standalone Event").assertExists()
     // Serie should be displayed (may appear as multiple nodes in the semantic tree but that's OK)
     // Just verify at least one serie card with the correct tag exists
-    composeTestRule.onAllNodesWithTag(OverviewScreenTestTags.getTestTagForSerie(serie))[0].assertExists()
+    composeTestRule
+        .onAllNodesWithTag(OverviewScreenTestTags.getTestTagForSerie(serie))[0]
+        .assertExists()
     // Verify the serie card contains the title
     composeTestRule
         .onAllNodesWithTag(OverviewScreenTestTags.getTestTagForSerie(serie))[0]

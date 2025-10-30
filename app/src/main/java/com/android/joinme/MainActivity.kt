@@ -8,7 +8,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -157,12 +156,11 @@ fun JoinMe(
             onDone = { navigationActions.navigateTo(Screen.Overview) },
             onGoBack = { navigationActions.goBack() })
       }
-        composable(Screen.CreateSerie.route ){
-            CreateSerieScreen(
-                onDone = { navigationActions.navigateTo(Screen.Overview) },
-                onGoBack = { navigationActions.goBack() }
-            )
-        }
+      composable(Screen.CreateSerie.route) {
+        CreateSerieScreen(
+            onDone = { navigationActions.navigateTo(Screen.Overview) },
+            onGoBack = { navigationActions.goBack() })
+      }
       composable(Screen.EditEvent.route) { navBackStackEntry ->
         val eventId = navBackStackEntry.arguments?.getString("eventId")
 

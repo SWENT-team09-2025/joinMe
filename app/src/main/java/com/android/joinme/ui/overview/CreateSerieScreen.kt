@@ -19,10 +19,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.ui.theme.ButtonSaveColor
 import com.android.joinme.ui.theme.DarkButtonColor
-import com.android.joinme.ui.theme.DividerColor
-import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
 import java.util.*
+import kotlinx.coroutines.launch
 
 /**
  * Test tags for UI testing of the Create Serie screen components.
@@ -149,8 +147,7 @@ fun CreateSerieScreen(
 
               Box(
                   modifier =
-                      Modifier.width(180.dp)
-                          .clickable { showMaxParticipantsPicker = true }) {
+                      Modifier.width(180.dp).clickable { showMaxParticipantsPicker = true }) {
                     OutlinedTextField(
                         value = uiState.maxParticipants,
                         onValueChange = {},
@@ -171,10 +168,12 @@ fun CreateSerieScreen(
                         },
                         colors =
                             OutlinedTextFieldDefaults.colors(
-                                disabledTextColor = LocalContentColor.current.copy(LocalContentColor.current.alpha),
+                                disabledTextColor =
+                                    LocalContentColor.current.copy(LocalContentColor.current.alpha),
                                 disabledBorderColor = MaterialTheme.colorScheme.outline,
                                 disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                                disabledPlaceholderColor =
+                                    MaterialTheme.colorScheme.onSurfaceVariant),
                         singleLine = true)
                   }
 
@@ -208,9 +207,7 @@ fun CreateSerieScreen(
                           }
                     },
                     dismissButton = {
-                      TextButton(onClick = { showMaxParticipantsPicker = false }) {
-                        Text("Cancel")
-                      }
+                      TextButton(onClick = { showMaxParticipantsPicker = false }) { Text("Cancel") }
                     })
               }
 
@@ -225,9 +222,7 @@ fun CreateSerieScreen(
                             calendar.get(Calendar.MONTH),
                             calendar.get(Calendar.DAY_OF_MONTH))
                     val (hour, minute) =
-                        listOf(
-                            calendar.get(Calendar.HOUR_OF_DAY),
-                            calendar.get(Calendar.MINUTE))
+                        listOf(calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE))
 
                     val datePickerDialog = remember {
                       android.app.DatePickerDialog(
@@ -265,10 +260,13 @@ fun CreateSerieScreen(
                           },
                           colors =
                               OutlinedTextFieldDefaults.colors(
-                                  disabledTextColor = LocalContentColor.current.copy(LocalContentColor.current.alpha),
+                                  disabledTextColor =
+                                      LocalContentColor.current.copy(
+                                          LocalContentColor.current.alpha),
                                   disabledBorderColor = MaterialTheme.colorScheme.outline,
                                   disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                                  disabledPlaceholderColor =
+                                      MaterialTheme.colorScheme.onSurfaceVariant),
                           singleLine = true)
                     }
 
@@ -306,10 +304,13 @@ fun CreateSerieScreen(
                           },
                           colors =
                               OutlinedTextFieldDefaults.colors(
-                                  disabledTextColor = LocalContentColor.current.copy(LocalContentColor.current.alpha),
+                                  disabledTextColor =
+                                      LocalContentColor.current.copy(
+                                          LocalContentColor.current.alpha),
                                   disabledBorderColor = MaterialTheme.colorScheme.outline,
                                   disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                                  disabledPlaceholderColor =
+                                      MaterialTheme.colorScheme.onSurfaceVariant),
                           singleLine = true)
                     }
                   }
@@ -326,7 +327,9 @@ fun CreateSerieScreen(
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Visibility") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedVisibility) },
+                        trailingIcon = {
+                          ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedVisibility)
+                        },
                         modifier =
                             Modifier.fillMaxWidth()
                                 .menuAnchor()
@@ -370,7 +373,9 @@ fun CreateSerieScreen(
                       Modifier.fillMaxWidth()
                           .height(56.dp)
                           .testTag(CreateSerieScreenTestTags.BUTTON_SAVE_SERIE),
-                  colors = ButtonDefaults.buttonColors(containerColor = DarkButtonColor, contentColor = ButtonSaveColor),
+                  colors =
+                      ButtonDefaults.buttonColors(
+                          containerColor = DarkButtonColor, contentColor = ButtonSaveColor),
                   enabled = uiState.isValid && !uiState.isLoading) {
                     if (uiState.isLoading) {
                       CircularProgressIndicator(
