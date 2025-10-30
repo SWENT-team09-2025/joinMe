@@ -50,6 +50,13 @@ class JoinMeNavigationTest {
   }
 
   @Test
+  fun screen_CreateSerie_hasCorrectRoute() {
+    assertEquals("create_serie", Screen.CreateSerie.route)
+    assertEquals("Create a new serie", Screen.CreateSerie.name)
+    assertFalse(Screen.CreateSerie.isTopLevelDestination)
+  }
+
+  @Test
   fun screen_History_hasCorrectRoute() {
     assertEquals("history", Screen.History.route)
     assertEquals("History", Screen.History.name)
@@ -172,6 +179,7 @@ class JoinMeNavigationTest {
             Screen.Map.route,
             Screen.Profile.route,
             Screen.CreateEvent.route,
+            Screen.CreateSerie.route,
             Screen.History.route,
             Screen.EditEvent.Companion.route,
             Screen.Groups.route,
@@ -197,13 +205,14 @@ class JoinMeNavigationTest {
             Screen.History,
             Screen.Groups,
             Screen.CreateGroup,
-            Screen.EditProfile)
+            Screen.EditProfile,
+            Screen.CreateSerie)
 
     screens.forEach { screen ->
       assertTrue("${screen.name} route should not be empty", screen.route.isNotEmpty())
     }
 
-    // Check companion routes for screens with parameters
+    // Check EditEvent companion route
     assertTrue(
         "EditEvent route pattern should not be empty",
         Screen.EditEvent.Companion.route.isNotEmpty())
@@ -225,6 +234,7 @@ class JoinMeNavigationTest {
             Screen.Map,
             Screen.Profile,
             Screen.CreateEvent,
+            Screen.CreateSerie,
             Screen.History,
             Screen.EditEvent("test-id"),
             Screen.Groups,

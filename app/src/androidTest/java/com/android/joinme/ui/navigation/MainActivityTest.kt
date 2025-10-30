@@ -78,10 +78,26 @@ class MainActivityTest {
   }
 
   @Test
+  fun navHost_overviewNavigationContainsCreateSerie() {
+    composeTestRule.waitForIdle()
+    // Verifies that the Overview navigation contains CreateSerie screen
+    // CreateSerie should have route "create_serie"
+    assert(Screen.CreateSerie.route == "create_serie")
+  }
+
+  @Test
   fun navHost_overviewNavigationContainsEditEvent() {
     composeTestRule.waitForIdle()
     // Verifies that the Overview navigation contains EditEvent screen
     // EditEvent should have route "edit_event/{eventId}" with eventId parameter
+  }
+
+  @Test
+  fun navHost_overviewNavigationContainsShowEventScreen() {
+    composeTestRule.waitForIdle()
+    // Verifies that the Overview navigation contains ShowEventScreen screen
+    // ShowEventScreen should have route "show_event/{eventId}" with eventId parameter
+    assert(Screen.ShowEventScreen.Companion.route == "show_event/{eventId}")
   }
 
   @Test
@@ -94,7 +110,9 @@ class MainActivityTest {
     assert(Screen.Map.route.isNotEmpty())
     assert(Screen.Profile.route.isNotEmpty())
     assert(Screen.CreateEvent.route.isNotEmpty())
+    assert(Screen.CreateSerie.route.isNotEmpty())
     assert(Screen.EditEvent.Companion.route.isNotEmpty())
+    assert(Screen.ShowEventScreen.Companion.route.isNotEmpty())
   }
 
   @Test
@@ -107,6 +125,7 @@ class MainActivityTest {
     assert(Screen.Profile.isTopLevelDestination)
     assert(!Screen.Auth.isTopLevelDestination)
     assert(!Screen.CreateEvent.isTopLevelDestination)
+    assert(!Screen.CreateSerie.isTopLevelDestination)
   }
 
   @Test
@@ -144,6 +163,36 @@ class MainActivityTest {
     composeTestRule.waitForIdle()
     // Verifies that History is not flagged as a top-level destination
     assert(!Screen.History.isTopLevelDestination)
+  }
+
+  @Test
+  fun navHost_createSerieScreenHasValidRoute() {
+    composeTestRule.waitForIdle()
+    // Verifies that CreateSerie screen has valid, non-empty route
+    assert(Screen.CreateSerie.route.isNotEmpty())
+    assert(Screen.CreateSerie.name.isNotEmpty())
+  }
+
+  @Test
+  fun navHost_createSerieIsNotTopLevelDestination() {
+    composeTestRule.waitForIdle()
+    // Verifies that CreateSerie is not flagged as a top-level destination
+    assert(!Screen.CreateSerie.isTopLevelDestination)
+  }
+
+  @Test
+  fun navHost_showEventScreenHasValidRoute() {
+    composeTestRule.waitForIdle()
+    // Verifies that ShowEventScreen has valid, non-empty route pattern
+    assert(Screen.ShowEventScreen.Companion.route.isNotEmpty())
+    assert(Screen.ShowEventScreen("test-id").name.isNotEmpty())
+  }
+
+  @Test
+  fun navHost_showEventScreenIsNotTopLevelDestination() {
+    composeTestRule.waitForIdle()
+    // Verifies that ShowEventScreen is not flagged as a top-level destination
+    assert(!Screen.ShowEventScreen("test-id").isTopLevelDestination)
   }
 
   @Test
