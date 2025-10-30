@@ -7,11 +7,12 @@ interface EventsRepository {
   fun getNewEventId(): String
 
   /**
-   * Retrieves all Event items from the repository.
+   * Retrieves all event items with the corresponding filter from Firestore specified by the
+   * viewModel requested items.
    *
    * @return A list of all Event items.
    */
-  suspend fun getAllEvents(): List<Event>
+  suspend fun getAllEvents(eventFilter: EventFilter): List<Event>
 
   /**
    * Retrieves a specific Event item by its unique identifier.
