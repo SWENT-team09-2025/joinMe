@@ -68,8 +68,11 @@ class MainActivityNavigationTest {
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
-    // Click FAB to navigate to CreateEvent
+    // Click FAB to open bubble menu
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    // Click "Add an event" bubble to navigate to CreateEvent
+    composeTestRule.onNodeWithTag("addEventBubble").performClick()
     composeTestRule.waitForIdle()
 
     // Verify we're on CreateEvent screen
@@ -100,8 +103,10 @@ class MainActivityNavigationTest {
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
-    // Navigate to CreateEvent
+    // Navigate to CreateEvent via bubble menu
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("addEventBubble").performClick()
     composeTestRule.waitForIdle()
 
     // Click back button
@@ -208,8 +213,10 @@ class MainActivityNavigationTest {
     // Start at Overview
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
 
-    // Navigate to CreateEvent
+    // Navigate to CreateEvent via bubble menu
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("addEventBubble").performClick()
     composeTestRule.waitForIdle()
 
     // Go back

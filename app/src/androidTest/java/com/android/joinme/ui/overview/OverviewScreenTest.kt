@@ -194,7 +194,11 @@ class OverviewScreenTest {
     }
 
     composeTestRule.waitForIdle()
+    // Click FAB to open bubble menu
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    // Click "Add an event" bubble
+    composeTestRule.onNodeWithTag("addEventBubble").performClick()
 
     assert(clicked)
   }
@@ -617,7 +621,11 @@ class OverviewScreenTest {
 
     composeTestRule.waitForIdle()
 
+    // Click FAB to open bubble menu
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    // Click "Add an event" bubble
+    composeTestRule.onNodeWithTag("addEventBubble").performClick()
 
     assert(fabClicked)
   }
@@ -1457,8 +1465,13 @@ class OverviewScreenTest {
 
     // Standalone event should be displayed
     composeTestRule.onNodeWithText("Standalone Event").assertExists()
-    // Serie should be displayed
-    composeTestRule.onNodeWithText("My Serie").assertExists()
+    // Serie should be displayed (may appear as multiple nodes in the semantic tree but that's OK)
+    // Just verify at least one serie card with the correct tag exists
+    composeTestRule.onAllNodesWithTag(OverviewScreenTestTags.getTestTagForSerie(serie))[0].assertExists()
+    // Verify the serie card contains the title
+    composeTestRule
+        .onAllNodesWithTag(OverviewScreenTestTags.getTestTagForSerie(serie))[0]
+        .assertTextContains("My Serie")
     // Serie event should NOT be displayed as standalone
     composeTestRule.onNodeWithText("Serie Event").assertDoesNotExist()
   }
