@@ -71,4 +71,52 @@ class GroupListViewModel(
       }
     }
   }
+
+  /**
+   * Deletes a group from the repository and refreshes the UI state.
+   *
+   * @param groupId The ID of the group to delete.
+   * @param onSuccess Callback invoked when the group is successfully deleted.
+   * @param onError Callback invoked when deletion fails, receives error message.
+   */
+  fun deleteGroup(groupId: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
+    viewModelScope.launch {
+      try {
+        groupRepository.deleteGroup(groupId)
+        refreshUIState()
+        onSuccess()
+      } catch (e: Exception) {
+        val errorMsg = "Failed to delete group: ${e.message}"
+        setErrorMsg(errorMsg)
+        onError(errorMsg)
+      }
+    }
+  }
+
+  /**
+   * Removes the current user from a group and refreshes the UI state.
+   *
+   * @param groupId The ID of the group to leave.
+   * @param userId The ID of the user who wants to leave.
+   * @param onSuccess Callback invoked when the user successfully leaves the group.
+   * @param onError Callback invoked when leaving fails, receives error message.
+   */
+  fun leaveGroup(
+      groupId: String,
+      userId: String,
+      onSuccess: () -> Unit = {},
+      onError: (String) -> Unit = {}
+  ) {
+    viewModelScope.launch {
+      try {
+        groupRepository.leaveGroup(groupId, userId)
+        refreshUIState()
+        onSuccess()
+      } catch (e: Exception) {
+        val errorMsg = "Failed to leave group: ${e.message}"
+        setErrorMsg(errorMsg)
+        onError(errorMsg)
+      }
+    }
+  }
 }

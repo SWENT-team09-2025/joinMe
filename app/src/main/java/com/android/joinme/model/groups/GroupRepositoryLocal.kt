@@ -39,4 +39,16 @@ class GroupRepositoryLocal : GroupRepository {
       throw Exception("GroupRepositoryLocal: Group not found")
     }
   }
+
+  override suspend fun leaveGroup(groupId: String, userId: String) {
+    val group = getGroup(groupId)
+    val updatedMemberIds = group.memberIds.filter { it != userId }
+
+    if (updatedMemberIds.size == group.memberIds.size) {
+      throw Exception("GroupRepositoryLocal: User is not a member of this group")
+    }
+
+    val updatedGroup = group.copy(memberIds = updatedMemberIds)
+    editGroup(groupId, updatedGroup)
+  }
 }

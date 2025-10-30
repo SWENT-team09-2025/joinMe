@@ -45,4 +45,13 @@ interface GroupRepository {
    * @throws Exception if the Group item is not found.
    */
   suspend fun deleteGroup(groupId: String)
+
+  /**
+   * Removes the current user from a Group's member list.
+   *
+   * @param groupId The unique identifier of the Group item to leave.
+   * @param userId The ID of the user who wants to leave the group.
+   * @throws Exception if the Group item is not found.
+   */
+  suspend fun leaveGroup(groupId: String, userId: String)
 }
