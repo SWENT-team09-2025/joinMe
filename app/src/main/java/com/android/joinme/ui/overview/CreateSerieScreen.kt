@@ -166,14 +166,7 @@ fun CreateSerieScreen(
                                 color = MaterialTheme.colorScheme.error)
                           }
                         },
-                        colors =
-                            OutlinedTextFieldDefaults.colors(
-                                disabledTextColor =
-                                    LocalContentColor.current.copy(LocalContentColor.current.alpha),
-                                disabledBorderColor = MaterialTheme.colorScheme.outline,
-                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                disabledPlaceholderColor =
-                                    MaterialTheme.colorScheme.onSurfaceVariant),
+                        colors = readOnlyTextFieldColors(),
                         singleLine = true)
                   }
 
@@ -258,15 +251,7 @@ fun CreateSerieScreen(
                                   color = MaterialTheme.colorScheme.error)
                             }
                           },
-                          colors =
-                              OutlinedTextFieldDefaults.colors(
-                                  disabledTextColor =
-                                      LocalContentColor.current.copy(
-                                          LocalContentColor.current.alpha),
-                                  disabledBorderColor = MaterialTheme.colorScheme.outline,
-                                  disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledPlaceholderColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant),
+                          colors = readOnlyTextFieldColors(),
                           singleLine = true)
                     }
 
@@ -302,15 +287,7 @@ fun CreateSerieScreen(
                                   color = MaterialTheme.colorScheme.error)
                             }
                           },
-                          colors =
-                              OutlinedTextFieldDefaults.colors(
-                                  disabledTextColor =
-                                      LocalContentColor.current.copy(
-                                          LocalContentColor.current.alpha),
-                                  disabledBorderColor = MaterialTheme.colorScheme.outline,
-                                  disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledPlaceholderColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant),
+                          colors = readOnlyTextFieldColors(),
                           singleLine = true)
                     }
                   }
@@ -389,4 +366,22 @@ fun CreateSerieScreen(
               Spacer(modifier = Modifier.height(16.dp))
             }
       }
+}
+
+/**
+ * Provides consistent colors for read-only (disabled) text fields.
+ *
+ * This function returns TextFieldColors configured to make disabled fields appear enabled,
+ * maintaining visual consistency across read-only input fields like date pickers and number
+ * selectors.
+ *
+ * @return TextFieldColors configured for read-only fields
+ */
+@Composable
+private fun readOnlyTextFieldColors(): TextFieldColors {
+  return OutlinedTextFieldDefaults.colors(
+      disabledTextColor = LocalContentColor.current.copy(LocalContentColor.current.alpha),
+      disabledBorderColor = MaterialTheme.colorScheme.outline,
+      disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+      disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant)
 }
