@@ -16,7 +16,7 @@ jobs:
   # Job A: Build and Lint
   build-and-lint:
     name: Build and Lint
-    runs-on: blacksmith-4vcpu-ubuntu-2404-kvm
+    runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:
       - name: Checkout
@@ -75,7 +75,7 @@ jobs:
   # Job B: Unit Tests
   unit-tests:
     name: Unit Tests
-    runs-on: blacksmith-4vcpu-ubuntu-2404-kvm
+    runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:
       - name: Checkout
@@ -166,7 +166,7 @@ jobs:
   # Job C: Instrumentation Tests with Sharding
   instrumentation-tests:
     name: Instrumentation Tests (Shard ${{ matrix.shard }})
-    runs-on: blacksmith-4vcpu-ubuntu-2404-kvm
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: build-and-lint
     strategy:
       fail-fast: false
@@ -277,7 +277,7 @@ jobs:
   # Job D: Coverage and Sonar Analysis
   coverage-and-sonar:
     name: Coverage and Sonar Analysis
-    runs-on: blacksmith-4vcpu-ubuntu-2404-kvm
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [build-and-lint, unit-tests, instrumentation-tests]
     if: always()
 
