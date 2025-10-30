@@ -109,7 +109,7 @@ class OverviewViewModel(
                 .filter { item ->
                   when (item) {
                     is EventItem.SingleEvent -> item.event.isUpcoming()
-                    is EventItem.EventSerie -> item.serie.isUpcoming(allEvents)
+                    is EventItem.EventSerie -> item.serie.isUpcoming()
                   }
                 }
                 .sortedBy { it.date.toDate().time }

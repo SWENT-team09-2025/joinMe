@@ -32,6 +32,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -44,7 +47,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.eventItem.EventItem
 import com.android.joinme.model.serie.Serie
+import com.android.joinme.ui.components.BubbleAction
+import com.android.joinme.ui.components.BubbleAlignment
 import com.android.joinme.ui.components.EventCard
+import com.android.joinme.ui.components.FloatingActionBubbles
 import com.android.joinme.ui.components.SerieCard
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
@@ -68,6 +74,8 @@ object OverviewScreenTestTags {
   const val ONGOING_EVENTS_TITLE = "ongoingEventsTitle"
   const val UPCOMING_EVENTS_TITLE = "upcomingEventsTitle"
   const val LOADING_INDICATOR = "overviewLoadingIndicator"
+  const val ADD_EVENT_BUBBLE = "addEventBubble"
+  const val ADD_SERIE_BUBBLE = "addSerieBubble"
 
   /**
    * Generates a unique test tag for a specific event item.
@@ -121,6 +129,7 @@ fun OverviewScreen(
     credentialManager: CredentialManager = CredentialManager.create(LocalContext.current),
     onSelectEvent: (Event) -> Unit = {},
     onAddEvent: () -> Unit = {},
+    onAddSerie: () -> Unit = {},
     onGoToHistory: () -> Unit = {},
     navigationActions: NavigationActions? = null,
     enableNotificationPermissionRequest: Boolean = true,
@@ -132,6 +141,10 @@ fun OverviewScreen(
   val upcomingItems = uiState.upcomingItems
   val isLoading = uiState.isLoading
 
+  var showFloatingBubbles by remember { mutableStateOf(false) }
+
+  // Trigger data refresh when screen is first displayed
+  LaunchedEffect(Unit) { overviewViewModel.refreshUIState() }
   // Request notification permission for Android 13+ (only if enabled, skip in tests)
   val notificationPermissionLauncher =
       if (enableNotificationPermissionRequest) {
@@ -186,7 +199,7 @@ fun OverviewScreen(
       },
       floatingActionButton = {
         FloatingActionButton(
-            onClick = onAddEvent,
+            onClick = { showFloatingBubbles = true },
             containerColor = OverviewScreenButtonColor,
             modifier = Modifier.testTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON)) {
               Icon(Icons.Default.Add, contentDescription = "Add Event", tint = IconColor)
@@ -311,5 +324,24 @@ fun OverviewScreen(
                 Icon(Icons.Default.History, contentDescription = "View History", tint = IconColor)
               }
         }
+
+        FloatingActionBubbles(
+            visible = showFloatingBubbles,
+            onDismiss = { showFloatingBubbles = false },
+            actions =
+                listOf(
+                    BubbleAction(
+                        text = "Add an event",
+                        icon = Icons.Default.Add,
+                        onClick = { onAddEvent() },
+                        testTag = OverviewScreenTestTags.ADD_EVENT_BUBBLE),
+                    BubbleAction(
+                        text = "Add a serie",
+                        icon = Icons.Default.Add,
+                        onClick = { onAddSerie() },
+                        testTag = OverviewScreenTestTags.ADD_SERIE_BUBBLE)),
+            bubbleAlignment = BubbleAlignment.BOTTOM_END,
+            bottomPadding = 80.dp,
+            horizontalPadding = 80.dp)
       }
 }

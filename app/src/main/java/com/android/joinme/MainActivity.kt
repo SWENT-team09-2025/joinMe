@@ -28,6 +28,7 @@ import com.android.joinme.ui.map.MapViewModel
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.Screen
 import com.android.joinme.ui.overview.CreateEventScreen
+import com.android.joinme.ui.overview.CreateSerieScreen
 import com.android.joinme.ui.overview.EditEventScreen
 import com.android.joinme.ui.overview.OverviewScreen
 import com.android.joinme.ui.overview.SearchScreen
@@ -135,7 +136,7 @@ fun JoinMe(
     }
 
     // ============================================================================
-    // Events & History
+    // Events, Series & History
     // ============================================================================
     navigation(
         startDestination = Screen.Overview.route,
@@ -145,6 +146,7 @@ fun JoinMe(
         OverviewScreen(
             onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
             onAddEvent = { navigationActions.navigateTo(Screen.CreateEvent) },
+            onAddSerie = { navigationActions.navigateTo(Screen.CreateSerie) },
             onGoToHistory = { navigationActions.navigateTo(Screen.History) },
             navigationActions = navigationActions,
             credentialManager = credentialManager,
@@ -152,6 +154,11 @@ fun JoinMe(
       }
       composable(Screen.CreateEvent.route) {
         CreateEventScreen(
+            onDone = { navigationActions.navigateTo(Screen.Overview) },
+            onGoBack = { navigationActions.goBack() })
+      }
+      composable(Screen.CreateSerie.route) {
+        CreateSerieScreen(
             onDone = { navigationActions.navigateTo(Screen.Overview) },
             onGoBack = { navigationActions.goBack() })
       }

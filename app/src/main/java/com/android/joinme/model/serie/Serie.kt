@@ -102,25 +102,18 @@ fun Serie.isExpired(events: List<Event>): Boolean {
 }
 
 /**
- * Checks if all events in the series are upcoming.
+ * Checks if the series is upcoming.
  *
- * A series is considered upcoming if all its events haven't started yet.
+ * A series is considered upcoming if its date hasn't occurred yet (date is in the future).
  *
- * @param events List of all events to check
- * @return True if all events in the series haven't started yet, false if any event is ongoing or
- *   past, or if the series has no events
+ * @return True if the series date is in the future, false otherwise
  */
-fun Serie.isUpcoming(events: List<Event>): Boolean {
-  val serieEvents = events.filter { it.eventId in eventIds }
-  if (serieEvents.isEmpty()) return false
-
+fun Serie.isUpcoming(): Boolean {
   val now = System.currentTimeMillis()
-  return serieEvents.all { event ->
-    try {
-      event.date.toDate().time > now
-    } catch (e: Exception) {
-      false
-    }
+  return try {
+    date.toDate().time > now
+  } catch (e: Exception) {
+    false
   }
 }
 
