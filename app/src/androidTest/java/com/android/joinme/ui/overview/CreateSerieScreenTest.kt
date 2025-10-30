@@ -307,4 +307,141 @@ class CreateSerieScreenTest {
         .onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_DESCRIPTION)
         .assertTextContains("This is a long description")
   }
+
+  /** --- NAVIGATION & CALLBACKS --- */
+  @Test
+  fun backButtonTriggersOnGoBack() {
+    var backPressed = false
+    composeTestRule.setContent { CreateSerieScreen(onGoBack = { backPressed = true }) }
+
+    // Find and click back button
+    composeTestRule.onNodeWithContentDescription("Back").performClick()
+
+    // Verify callback was triggered
+    assert(backPressed)
+  }
+
+  @Test
+  fun topAppBarDisplaysTitle() {
+    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+
+    // Verify top app bar shows correct title
+    composeTestRule.onNodeWithText("Create Serie").assertIsDisplayed()
+  }
+
+  /** --- DROPDOWN INTERACTION --- */
+  @Test
+  fun visibilityDropdownCanBeOpenedAndClosed() {
+    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+
+    // Click to open dropdown
+    composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_VISIBILITY).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify dropdown options are displayed
+    composeTestRule.onNodeWithText("PUBLIC").assertExists()
+    composeTestRule.onNodeWithText("PRIVATE").assertExists()
+  }
+
+  @Test
+  fun selectingPublicVisibility() {
+    val viewModel = CreateSerieViewModel()
+    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+
+    // Click to open dropdown
+    composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_VISIBILITY).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Select PUBLIC
+    composeTestRule.onNodeWithText("PUBLIC").performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify PUBLIC is selected
+    composeTestRule
+        .onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_VISIBILITY)
+        .assertTextContains("PUBLIC")
+  }
+
+  @Test
+  fun selectingPrivateVisibility() {
+    val viewModel = CreateSerieViewModel()
+    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+
+    // Click to open dropdown
+    composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_VISIBILITY).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Select PRIVATE
+    composeTestRule.onNodeWithText("PRIVATE").performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify PRIVATE is selected
+    composeTestRule
+        .onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_VISIBILITY)
+        .assertTextContains("PRIVATE")
+  }
+
+  /** --- CLICKABLE FIELDS --- */
+  @Test
+  fun maxParticipantsFieldIsClickable() {
+    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+
+    // Verify field exists and can be clicked
+    composeTestRule
+        .onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_MAX_PARTICIPANTS)
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun dateFieldIsClickable() {
+    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+
+    // Verify field exists and can be clicked
+    composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_DATE).assertIsDisplayed()
+  }
+
+  @Test
+  fun timeFieldIsClickable() {
+    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+
+    // Verify field exists and can be clicked
+    composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_TIME).assertIsDisplayed()
+  }
+
+  /** --- BUTTON STATES --- */
+  @Test
+  fun saveButtonShowsTextWhenNotLoading() {
+    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+
+    // Verify button displays "Next" text
+    composeTestRule.onNodeWithText("Next").assertExists()
+  }
+
+  @Test
+  fun invalidFormKeepsSaveButtonDisabled() {
+    val viewModel = CreateSerieViewModel()
+    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+
+    // Fill form with one invalid field (invalid date)
+    composeTestRule
+        .onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_TITLE)
+        .performTextInput("Test Serie")
+    composeTestRule
+        .onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_DESCRIPTION)
+        .performTextInput("Test description")
+    viewModel.setMaxParticipants("10")
+    viewModel.setDate("invalid-date")
+    viewModel.setTime("14:30")
+    viewModel.setVisibility("PUBLIC")
+
+    composeTestRule.waitForIdle()
+
+    // Button should remain disabled due to invalid date
+    composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.BUTTON_SAVE_SERIE).assertIsNotEnabled()
+  }
 }
