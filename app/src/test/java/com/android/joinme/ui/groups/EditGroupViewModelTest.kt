@@ -298,7 +298,7 @@ class EditGroupViewModelTest {
     viewModel.setName("   Valid Name   ")
 
     val state = viewModel.uiState.value
-    assertEquals("   Valid Name   ", state.name)
+    assertEquals("Valid Name", state.name)
     assertNull(state.nameError)
     assertTrue(state.isValid)
   }
@@ -308,7 +308,7 @@ class EditGroupViewModelTest {
     viewModel.setName("     ")
 
     val state = viewModel.uiState.value
-    assertEquals("     ", state.name)
+    assertEquals("", state.name)
     assertEquals("Name is required", state.nameError)
     assertFalse(state.isValid)
   }
