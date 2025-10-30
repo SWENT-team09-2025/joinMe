@@ -393,6 +393,55 @@ class MainActivityNavigationTest {
   }
 
   @Test
+  fun createSerie_goBackButtonNavigatesToOverview() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Navigate to CreateSerie via bubble menu
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("addSerieBubble").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're on CreateSerie screen
+    composeTestRule.onNodeWithText("Create Serie").assertExists()
+
+    // Click back button
+    composeTestRule.onNodeWithContentDescription("Back").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're back on Overview
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
+  }
+
+  @Test
+  fun canNavigateBackToOverviewFromCreateSerie() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Start at Overview
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
+
+    // Navigate to CreateSerie via bubble menu
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("addSerieBubble").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're on CreateSerie screen
+    composeTestRule.onNodeWithText("Create Serie").assertExists()
+
+    // Go back
+    composeTestRule.onNodeWithContentDescription("Back").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're back at Overview
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
+  }
+
+  @Test
   fun canNavigateToProfileScreenFromBottomNav() {
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
