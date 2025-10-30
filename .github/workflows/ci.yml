@@ -162,6 +162,8 @@ jobs:
           path: |
             app/build/reports/tests
             app/build/test-results
+            app/build/jacoco
+            app/build/outputs/unit_test_code_coverage
 
   # Job C: Instrumentation Tests with Sharding
   instrumentation-tests:
@@ -273,6 +275,7 @@ jobs:
           path: |
             app/build/reports/androidTests
             app/build/outputs/androidTest-results
+            app/build/outputs/code_coverage
 
   # Job D: Coverage and Sonar Analysis
   coverage-and-sonar:
@@ -325,21 +328,21 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: unit-test-results
-          path: app/build/test-results
+          path: app/build
         continue-on-error: true
 
       - name: Download instrumentation test results (Shard 0)
         uses: actions/download-artifact@v4
         with:
           name: instrumentation-test-results-shard-0
-          path: app/build/outputs/androidTest-results/shard-0
+          path: app/build
         continue-on-error: true
 
       - name: Download instrumentation test results (Shard 1)
         uses: actions/download-artifact@v4
         with:
           name: instrumentation-test-results-shard-1
-          path: app/build/outputs/androidTest-results/shard-1
+          path: app/build
         continue-on-error: true
 
       - name: Generate coverage report
@@ -399,11 +402,15 @@ jobs:
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: Coverage report
           path: app/build/reports/jacoco/jacocoTestReport
+          if-no-files-found: warn
 
       - name: SonarCloud Scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         with:
           args: >
