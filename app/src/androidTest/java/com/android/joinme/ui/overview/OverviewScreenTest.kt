@@ -199,7 +199,7 @@ class OverviewScreenTest {
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).performClick()
     composeTestRule.waitForIdle()
     // Click "Add an event" bubble
-    composeTestRule.onNodeWithTag("addEventBubble").performClick()
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.ADD_EVENT_BUBBLE).performClick()
 
     assert(clicked)
   }
@@ -626,7 +626,7 @@ class OverviewScreenTest {
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).performClick()
     composeTestRule.waitForIdle()
     // Click "Add an event" bubble
-    composeTestRule.onNodeWithTag("addEventBubble").performClick()
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.ADD_EVENT_BUBBLE).performClick()
 
     assert(fabClicked)
   }

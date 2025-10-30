@@ -157,7 +157,7 @@ class CreateSerieViewModel(
             title = state.title,
             description = state.description,
             date = parsedDate,
-            participants = emptyList(),
+            participants = listOf(currentUserId),
             maxParticipants = state.maxParticipants.toInt(),
             visibility = Visibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
             eventIds = emptyList(),
@@ -239,12 +239,28 @@ class CreateSerieViewModel(
     val errorMsg =
         when {
           parsedDate == null -> "Invalid format (must be dd/MM/yyyy)"
-          parsedDate.time < System.currentTimeMillis() -> "Date cannot be in the past"
-          else -> null
+          else -> {
+            // Compare dates at day level (start of day) instead of exact timestamp
+            val calendar = java.util.Calendar.getInstance()
+            calendar.timeInMillis = System.currentTimeMillis()
+            calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+            calendar.set(java.util.Calendar.MINUTE, 0)
+            calendar.set(java.util.Calendar.SECOND, 0)
+            calendar.set(java.util.Calendar.MILLISECOND, 0)
+            val todayStart = calendar.timeInMillis
+
+            if (parsedDate.time < todayStart) "Date cannot be in the past" else null
+          }
         }
 
     _uiState.value = _uiState.value.copy(date = date, invalidDateMsg = errorMsg)
-    updateFormValidity()
+
+    // Re-validate time since changing date might affect combined date-time validation
+    if (_uiState.value.time.isNotBlank()) {
+      setTime(_uiState.value.time)
+    } else {
+      updateFormValidity()
+    }
   }
 
   /**
@@ -263,9 +279,32 @@ class CreateSerieViewModel(
         } catch (_: Exception) {
           false
         }
-    _uiState.value =
-        _uiState.value.copy(
-            time = time, invalidTimeMsg = if (!valid) "Invalid format (must be HH:mm)" else null)
+
+    val errorMsg =
+        if (!valid) {
+          "Invalid format (must be HH:mm)"
+        } else {
+          // Check if combined date-time is in the past
+          val currentDate = _uiState.value.date
+          if (currentDate.isNotBlank()) {
+            val combinedSdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+            val combinedDateTime = "$currentDate $time"
+            try {
+              val parsedDateTime = combinedSdf.parse(combinedDateTime)
+              if (parsedDateTime != null && parsedDateTime.time < System.currentTimeMillis()) {
+                "Time cannot be in the past"
+              } else {
+                null
+              }
+            } catch (_: Exception) {
+              null
+            }
+          } else {
+            null
+          }
+        }
+
+    _uiState.value = _uiState.value.copy(time = time, invalidTimeMsg = errorMsg)
     updateFormValidity()
   }
 

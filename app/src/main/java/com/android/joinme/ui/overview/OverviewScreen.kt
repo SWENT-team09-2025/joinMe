@@ -74,6 +74,8 @@ object OverviewScreenTestTags {
   const val ONGOING_EVENTS_TITLE = "ongoingEventsTitle"
   const val UPCOMING_EVENTS_TITLE = "upcomingEventsTitle"
   const val LOADING_INDICATOR = "overviewLoadingIndicator"
+  const val ADD_EVENT_BUBBLE = "addEventBubble"
+  const val ADD_SERIE_BUBBLE = "addSerieBubble"
 
   /**
    * Generates a unique test tag for a specific event item.
@@ -332,12 +334,12 @@ fun OverviewScreen(
                         text = "Add an event",
                         icon = Icons.Default.Add,
                         onClick = { onAddEvent() },
-                        testTag = "addEventBubble"),
+                        testTag = OverviewScreenTestTags.ADD_EVENT_BUBBLE),
                     BubbleAction(
                         text = "Add a serie",
                         icon = Icons.Default.Add,
                         onClick = { onAddSerie() },
-                        testTag = "addSerieBubble")),
+                        testTag = OverviewScreenTestTags.ADD_SERIE_BUBBLE)),
             bubbleAlignment = BubbleAlignment.BOTTOM_END,
             bottomPadding = 80.dp,
             horizontalPadding = 80.dp)
