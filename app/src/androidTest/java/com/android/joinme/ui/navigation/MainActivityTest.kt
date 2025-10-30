@@ -113,6 +113,7 @@ class MainActivityTest {
     assert(Screen.CreateSerie.route.isNotEmpty())
     assert(Screen.EditEvent.Companion.route.isNotEmpty())
     assert(Screen.ShowEventScreen.Companion.route.isNotEmpty())
+    assert(Screen.EditGroup.Companion.route.isNotEmpty())
   }
 
   @Test
@@ -224,6 +225,13 @@ class MainActivityTest {
   }
 
   @Test
+  fun navHost_profileNavigationContainsEditGroup() {
+    composeTestRule.waitForIdle()
+    // Verifies that the Profile navigation contains EditGroup screen
+    assert(Screen.EditGroup.Companion.route == "edit_group/{groupId}")
+  }
+
+  @Test
   fun navHost_groupsScreenHasValidRoute() {
     composeTestRule.waitForIdle()
     // Verifies that Groups screen has valid, non-empty route
@@ -237,6 +245,14 @@ class MainActivityTest {
     // Verifies that CreateGroup screen has valid, non-empty route
     assert(Screen.CreateGroup.route.isNotEmpty())
     assert(Screen.CreateGroup.name.isNotEmpty())
+  }
+
+  @Test
+  fun navHost_editGroupScreenHasValidRoute() {
+    composeTestRule.waitForIdle()
+    // Verifies that EditGroup screen has valid, non-empty route pattern
+    assert(Screen.EditGroup.Companion.route.isNotEmpty())
+    assert(Screen.EditGroup("test-group-id").name.isNotEmpty())
   }
 
   @Test
@@ -259,6 +275,13 @@ class MainActivityTest {
     composeTestRule.waitForIdle()
     // Verifies that CreateGroup is not flagged as a top-level destination
     assert(!Screen.CreateGroup.isTopLevelDestination)
+  }
+
+  @Test
+  fun navHost_editGroupIsNotTopLevelDestination() {
+    composeTestRule.waitForIdle()
+    // Verifies that EditGroup is not flagged as a top-level destination
+    assert(!Screen.EditGroup("test-group-id").isTopLevelDestination)
   }
 
   @Test
