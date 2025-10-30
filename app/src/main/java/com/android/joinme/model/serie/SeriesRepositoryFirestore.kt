@@ -10,9 +10,33 @@ import kotlinx.coroutines.tasks.await
 /** Firestore collection path for series documents */
 const val SERIES_COLLECTION_PATH = "series"
 
+/**
+ * Filter criteria for retrieving series from Firestore based on the target screen.
+ *
+ * Determines which series to fetch and how to filter them according to the UI context.
+ */
 enum class SerieFilter {
+  /**
+   * Filter for the overview screen.
+   *
+   * Retrieves all series where the current user is a participant.
+   */
   SERIES_FOR_OVERVIEW_SCREEN,
+
+  /**
+   * Filter for the history screen.
+   *
+   * Retrieves all series where the current user is a participant. TODO: Should filter to show only
+   * expired series.
+   */
   SERIES_FOR_HISTORY_SCREEN,
+
+  /**
+   * Filter for the search screen.
+   *
+   * Retrieves all series. TODO: Should filter to show only public series that are upcoming, where
+   * the current user is neither a participant nor the owner.
+   */
   SERIES_FOR_SEARCH_SCREEN
 }
 /**
@@ -50,6 +74,8 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
         Firebase.auth.currentUser?.uid
             ?: throw Exception("SeriesRepositoryFirestore: User not logged in.")
 
+    // Database-level filtering: Fetch events from Firestore with filters applied at the database
+    // level
     val snapshot =
         when (serieFilter) {
           SerieFilter.SERIES_FOR_OVERVIEW_SCREEN -> {
@@ -59,11 +85,11 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
                 .await()
           }
           SerieFilter.SERIES_FOR_SEARCH_SCREEN -> {
-            // TODO add a function to know if a serie is expired
+            // TODO add a function to know if a serie is upcoming
             db.collection(SERIES_COLLECTION_PATH).get().await()
           }
           SerieFilter.SERIES_FOR_HISTORY_SCREEN -> {
-            // TODO add a function to know if a serie is upcoming
+            // TODO add a function to know if a serie is expired
             db.collection(SERIES_COLLECTION_PATH).get().await()
           }
         }

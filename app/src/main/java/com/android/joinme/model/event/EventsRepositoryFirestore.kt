@@ -14,9 +14,33 @@ import kotlinx.coroutines.tasks.await
 
 const val EVENTS_COLLECTION_PATH = "events"
 
+/**
+ * Filter criteria for retrieving events from Firestore based on the target screen.
+ *
+ * Determines which events to fetch and how to filter them according to the UI context.
+ */
 enum class EventFilter {
+  /**
+   * Filter for the overview screen.
+   *
+   * Retrieves all events where the current user is a participant.
+   */
   EVENTS_FOR_OVERVIEW_SCREEN,
+
+  /**
+   * Filter for the history screen.
+   *
+   * Retrieves all events where the current user is a participant, then filters to show only expired
+   * events, sorted by date (most recent first).
+   */
   EVENTS_FOR_HISTORY_SCREEN,
+
+  /**
+   * Filter for the search screen.
+   *
+   * Retrieves public events that are upcoming, where the current user is neither a participant nor
+   * the owner.
+   */
   EVENTS_FOR_SEARCH_SCREEN
 }
 /**
@@ -27,7 +51,6 @@ class EventsRepositoryFirestore(
     private val db: FirebaseFirestore,
     private val context: Context? = null
 ) : EventsRepository {
-  private val ownerAttributeName = "ownerId"
 
   override fun getNewEventId(): String {
     return db.collection(EVENTS_COLLECTION_PATH).document().id
@@ -38,14 +61,11 @@ class EventsRepositoryFirestore(
         Firebase.auth.currentUser?.uid
             ?: throw Exception("EventsRepositoryFirestore: User not logged in.")
 
+    // Database-level filtering: Fetch events from Firestore with filters applied at the database
+    // level
     val snapshot =
         when (eventFilter) {
-          EventFilter.EVENTS_FOR_OVERVIEW_SCREEN -> {
-            db.collection(EVENTS_COLLECTION_PATH)
-                .whereArrayContains("participants", userId)
-                .get()
-                .await()
-          }
+          EventFilter.EVENTS_FOR_OVERVIEW_SCREEN,
           EventFilter.EVENTS_FOR_HISTORY_SCREEN -> {
             db.collection(EVENTS_COLLECTION_PATH)
                 .whereArrayContains("participants", userId)
@@ -62,6 +82,7 @@ class EventsRepositoryFirestore(
 
     val events = snapshot.mapNotNull { documentToEvent(it) }
 
+    // Client-side filtering: Apply additional filters and sorting in memory for conditions
     return when (eventFilter) {
       EventFilter.EVENTS_FOR_OVERVIEW_SCREEN -> {
         events
