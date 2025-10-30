@@ -3,6 +3,7 @@ package com.android.joinme.ui.overview
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.Event
+import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.event.isUpcoming
@@ -151,7 +152,8 @@ class SearchViewModel(
   private fun getAllEvents() {
     viewModelScope.launch {
       try {
-        allEvents = repo.getAllEvents().filter { it.isUpcoming() }
+        allEvents =
+            repo.getAllEvents(EventFilter.EVENTS_FOR_SEARCH_SCREEN).filter { it.isUpcoming() }
         applyFiltersToUIState()
       } catch (e: Exception) {
         setErrorMsg("Failed to load events: ${e.message}")

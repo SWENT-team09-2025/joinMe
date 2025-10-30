@@ -3,6 +3,7 @@ package com.android.joinme.ui.history
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.Event
+import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
@@ -546,7 +547,7 @@ class HistoryScreenTest {
   private class FakeHistoryRepository(private val delayMillis: Long = 0) : EventsRepository {
     private val events: MutableList<Event> = mutableListOf()
 
-    override suspend fun getAllEvents(): List<Event> {
+    override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
       if (delayMillis > 0) {
         kotlinx.coroutines.delay(delayMillis)
       }

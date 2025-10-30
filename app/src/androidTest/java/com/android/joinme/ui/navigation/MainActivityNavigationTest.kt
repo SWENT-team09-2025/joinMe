@@ -1,7 +1,8 @@
 package com.android.joinme.ui.navigation
 
+import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.android.joinme.JoinMe
 import com.android.joinme.model.event.*
@@ -20,16 +21,18 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class MainActivityNavigationTest {
 
-  @get:Rule val composeTestRule = createComposeRule()
+  @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
   private fun createTestEvent(id: String, title: String): Event {
+    // Create event with future date to ensure it appears in upcoming items
+    val futureDate = Date(System.currentTimeMillis() + 3600000) // 1 hour from now
     return Event(
         eventId = id,
         type = EventType.SPORTS,
         title = title,
         description = "Test description",
         location = null,
-        date = Timestamp(Date()),
+        date = Timestamp(futureDate),
         duration = 60,
         participants = emptyList(),
         maxParticipants = 10,
@@ -46,7 +49,7 @@ class MainActivityNavigationTest {
       runBlocking {
         // Clear existing events - create a copy of the list to avoid
         // ConcurrentModificationException
-        val events = repo.getAllEvents().toList()
+        val events = repo.getAllEvents(EventFilter.EVENTS_FOR_OVERVIEW_SCREEN).toList()
         events.forEach { repo.deleteEvent(it.eventId) }
 
         // Add test event
@@ -54,7 +57,9 @@ class MainActivityNavigationTest {
       }
     }
 
-    composeTestRule.setContent { JoinMe(startDestination = Screen.Overview.route) }
+    composeTestRule.setContent {
+      JoinMe(startDestination = Screen.Overview.route, enableNotificationPermissionRequest = false)
+    }
   }
 
   @Test
@@ -79,7 +84,7 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
 
     // Click on event to navigate to ShowEvent
-    composeTestRule.onNodeWithText("Test Event").performClick()
+    composeTestRule.onNodeWithTag("eventItemtest-1").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
@@ -114,7 +119,7 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
 
     // Navigate to ShowEvent
-    composeTestRule.onNodeWithText("Test Event").performClick()
+    composeTestRule.onNodeWithTag("eventItemtest-1").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
@@ -171,7 +176,7 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
 
     // Navigate to ShowEvent
-    composeTestRule.onNodeWithText("Test Event").performClick()
+    composeTestRule.onNodeWithTag("eventItemtest-1").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
@@ -225,7 +230,7 @@ class MainActivityNavigationTest {
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
 
     // Navigate to ShowEvent
-    composeTestRule.onNodeWithText("Test Event").performClick()
+    composeTestRule.onNodeWithTag("eventItemtest-1").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
@@ -300,7 +305,7 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
 
     // Navigate to ShowEvent
-    composeTestRule.onNodeWithText("Test Event").performClick()
+    composeTestRule.onNodeWithTag("eventItemtest-1").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()

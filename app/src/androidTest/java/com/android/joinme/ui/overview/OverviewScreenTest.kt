@@ -1,9 +1,15 @@
 package com.android.joinme.ui.overview
 
+import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.android.joinme.model.event.*
 import com.android.joinme.model.map.Location
+import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.serie.SerieFilter
+import com.android.joinme.model.serie.SeriesRepository
+import com.android.joinme.model.serie.SeriesRepositoryLocal
+import com.android.joinme.model.utils.Visibility
 import com.android.joinme.ui.components.EventCard
 import com.android.joinme.ui.navigation.NavigationTestTags
 import com.google.firebase.Timestamp
@@ -19,7 +25,7 @@ class EventsRepositoryMock(private val shouldThrowError: Boolean = false) : Even
 
   override fun getNewEventId(): String = (counter++).toString()
 
-  override suspend fun getAllEvents(): List<Event> {
+  override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
     if (shouldThrowError) {
       throw Exception("Network error: Failed to fetch events")
     }
@@ -56,9 +62,53 @@ class EventsRepositoryMock(private val shouldThrowError: Boolean = false) : Even
   }
 }
 
+/** Mock series repository for testing */
+class SeriesRepositoryMock(private val shouldThrowError: Boolean = false) : SeriesRepository {
+  private val series: MutableList<Serie> = mutableListOf()
+  private var counter = 0
+
+  override fun getNewSerieId(): String = (counter++).toString()
+
+  override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> {
+    if (shouldThrowError) {
+      throw Exception("Network error: Failed to fetch series")
+    }
+    return series
+  }
+
+  override suspend fun getSerie(serieId: String): Serie {
+    if (shouldThrowError) {
+      throw Exception("Network error")
+    }
+    return series.find { it.serieId == serieId } ?: throw Exception("Serie not found")
+  }
+
+  override suspend fun addSerie(serie: Serie) {
+    series.add(serie)
+  }
+
+  override suspend fun editSerie(serieId: String, newValue: Serie) {
+    val index = series.indexOfFirst { it.serieId == serieId }
+    if (index != -1) {
+      series[index] = newValue
+    } else {
+      throw Exception("Serie not found")
+    }
+  }
+
+  override suspend fun deleteSerie(serieId: String) {
+    val index = series.indexOfFirst { it.serieId == serieId }
+    if (index != -1) {
+      series.removeAt(index)
+    } else {
+      throw Exception("Serie not found")
+    }
+  }
+}
+
 class OverviewScreenTest {
 
-  @get:Rule val composeTestRule = createComposeRule()
+  @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
   private fun createEvent(id: String, title: String, type: EventType): Event {
     return Event(
@@ -77,10 +127,13 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_showsEmptyMessage_whenNoEvents() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     // Attends que le LaunchedEffect se termine
     composeTestRule.waitForIdle()
@@ -92,16 +145,19 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_showsList_whenEventsExist() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
     // Ajoute les events AVANT de créer la UI
     runBlocking {
-      repo.addEvent(createEvent("1", "Basketball", EventType.SPORTS))
-      repo.addEvent(createEvent("2", "Bar", EventType.SOCIAL))
+      eventRepo.addEvent(createEvent("1", "Basketball", EventType.SPORTS))
+      eventRepo.addEvent(createEvent("2", "Bar", EventType.SOCIAL))
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     // Attends que le LaunchedEffect charge les données
     composeTestRule.waitForIdle()
@@ -114,25 +170,28 @@ class OverviewScreenTest {
     // Vérifie que les événements sont affichés
     composeTestRule
         .onNodeWithTag(
-            OverviewScreenTestTags.getTestTagForEventItem(
+            OverviewScreenTestTags.getTestTagForEvent(
                 createEvent("1", "Basketball", EventType.SPORTS)))
         .assertExists()
 
     composeTestRule
         .onNodeWithTag(
-            OverviewScreenTestTags.getTestTagForEventItem(
-                createEvent("2", "Bar", EventType.SOCIAL)))
+            OverviewScreenTestTags.getTestTagForEvent(createEvent("2", "Bar", EventType.SOCIAL)))
         .assertExists()
   }
 
   @Test
   fun clickingFab_triggersOnAddEvent() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
     var clicked = false
 
     composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, onAddEvent = { clicked = true })
+      OverviewScreen(
+          overviewViewModel = viewModel,
+          onAddEvent = { clicked = true },
+          enableNotificationPermissionRequest = false)
     }
 
     composeTestRule.waitForIdle()
@@ -143,18 +202,22 @@ class OverviewScreenTest {
 
   @Test
   fun clickingEvent_triggersOnSelectEvent() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
     val event = createEvent("1", "Basketball", EventType.SPORTS)
 
     // Ajoute l'event AVANT de créer la UI
-    runBlocking { repo.addEvent(event) }
+    runBlocking { eventRepo.addEvent(event) }
 
     var selected: Event? = null
 
     composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, onSelectEvent = { selected = it })
+      OverviewScreen(
+          overviewViewModel = viewModel,
+          onSelectEvent = { selected = it },
+          enableNotificationPermissionRequest = false)
     }
 
     // Attends que le LaunchedEffect charge les données
@@ -163,9 +226,7 @@ class OverviewScreenTest {
     composeTestRule.waitForIdle()
 
     // Clique sur l'événement
-    composeTestRule
-        .onNodeWithTag(OverviewScreenTestTags.getTestTagForEventItem(event))
-        .performClick()
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.getTestTagForEvent(event)).performClick()
 
     // Vérifie que l'événement a été sélectionné
     assert(selected == event)
@@ -284,17 +345,20 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_displaysMultipleEvents() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
     // Add 5 events
     runBlocking {
       for (i in 1..5) {
-        repo.addEvent(createEvent("$i", "Event $i", EventType.SPORTS))
+        eventRepo.addEvent(createEvent("$i", "Event $i", EventType.SPORTS))
       }
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -304,7 +368,7 @@ class OverviewScreenTest {
     for (i in 1..5) {
       composeTestRule
           .onNodeWithTag(
-              OverviewScreenTestTags.getTestTagForEventItem(
+              OverviewScreenTestTags.getTestTagForEvent(
                   createEvent("$i", "Event $i", EventType.SPORTS)))
           .assertExists()
     }
@@ -312,10 +376,13 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_displaysCreateEventButton() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -324,10 +391,13 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_handlesErrorWhenFetchingEvents() {
-    val repo = EventsRepositoryMock(shouldThrowError = true)
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryMock(shouldThrowError = true)
+    val serieRepo = SeriesRepositoryMock()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     // Wait for error to be processed
     composeTestRule.waitForIdle()
@@ -343,10 +413,13 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_bottomNavigationDisplayed() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -359,8 +432,9 @@ class OverviewScreenTest {
 
   @Test
   fun viewModel_clearErrorMsg_removesError() {
-    val repo = EventsRepositoryMock(shouldThrowError = true)
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryMock(shouldThrowError = true)
+    val serieRepo = SeriesRepositoryMock()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
     // Trigger error
     viewModel.refreshUIState()
@@ -381,15 +455,16 @@ class OverviewScreenTest {
 
   @Test
   fun viewModel_refreshUIState_updatesEvents() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
     // Initially empty
-    assert(viewModel.uiState.value.ongoingEvents.isEmpty())
-    assert(viewModel.uiState.value.upcomingEvents.isEmpty())
+    assert(viewModel.uiState.value.ongoingItems.isEmpty())
+    assert(viewModel.uiState.value.upcomingItems.isEmpty())
 
     // Add event and refresh
-    runBlocking { repo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
+    runBlocking { eventRepo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
     viewModel.refreshUIState()
 
     composeTestRule.waitForIdle()
@@ -397,15 +472,16 @@ class OverviewScreenTest {
     composeTestRule.waitForIdle()
 
     // Events should be updated
-    val totalEvents =
-        viewModel.uiState.value.ongoingEvents.size + viewModel.uiState.value.upcomingEvents.size
-    assert(totalEvents == 1)
+    val totalItems =
+        viewModel.uiState.value.ongoingItems.size + viewModel.uiState.value.upcomingItems.size
+    assert(totalItems == 1)
   }
 
   @Test
   fun viewModel_setsErrorMessage_whenRepositoryFails() {
-    val repo = EventsRepositoryMock(shouldThrowError = true)
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryMock(shouldThrowError = true)
+    val serieRepo = SeriesRepositoryMock()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
     // Trigger refresh
     viewModel.refreshUIState()
@@ -416,21 +492,24 @@ class OverviewScreenTest {
 
     // Error message should be set
     assert(viewModel.uiState.value.errorMsg != null)
-    assert(viewModel.uiState.value.errorMsg?.contains("Failed to load events") == true)
+    assert(viewModel.uiState.value.errorMsg?.contains("Failed to load data") == true)
   }
 
   @Test
   fun eventCard_displaysMixedEventTypes() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
     runBlocking {
-      repo.addEvent(createEvent("1", "Football", EventType.SPORTS))
-      repo.addEvent(createEvent("2", "Museum Visit", EventType.ACTIVITY))
-      repo.addEvent(createEvent("3", "Coffee", EventType.SOCIAL))
+      eventRepo.addEvent(createEvent("1", "Football", EventType.SPORTS))
+      eventRepo.addEvent(createEvent("2", "Museum Visit", EventType.ACTIVITY))
+      eventRepo.addEvent(createEvent("3", "Coffee", EventType.SOCIAL))
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -444,10 +523,13 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_displaysTopBar() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -456,10 +538,13 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_topBarDisplaysOverviewTitle() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -468,10 +553,13 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_topBarIsDisplayed() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -480,10 +568,13 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_fabIsDisplayedWithEmptyList() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(1000)
@@ -494,12 +585,15 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_fabIsDisplayedWithEventsList() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    runBlocking { repo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
+    runBlocking { eventRepo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -510,12 +604,16 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_fabClickTriggersCallback() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
     var fabClicked = false
 
     composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, onAddEvent = { fabClicked = true })
+      OverviewScreen(
+          overviewViewModel = viewModel,
+          onAddEvent = { fabClicked = true },
+          enableNotificationPermissionRequest = false)
     }
 
     composeTestRule.waitForIdle()
@@ -527,14 +625,18 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_eventClickTriggersCallback() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
     var clickedEvent: Event? = null
 
-    runBlocking { repo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
+    runBlocking { eventRepo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
 
     composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, onSelectEvent = { clickedEvent = it })
+      OverviewScreen(
+          overviewViewModel = viewModel,
+          onSelectEvent = { clickedEvent = it },
+          enableNotificationPermissionRequest = false)
     }
 
     composeTestRule.waitForIdle()
@@ -549,10 +651,13 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_bottomNavigationIsDisplayed() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -561,10 +666,13 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_bottomNavigationHasOverviewSelected() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -592,16 +700,19 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_displaysMultipleEventsInList() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
     runBlocking {
       for (i in 1..8) {
-        repo.addEvent(createEvent("$i", "Event Number $i", EventType.SPORTS))
+        eventRepo.addEvent(createEvent("$i", "Event Number $i", EventType.SPORTS))
       }
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(3000)
@@ -628,12 +739,15 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_refreshesUIStateOnLaunch() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    runBlocking { repo.addEvent(createEvent("1", "Pre-added Event", EventType.SPORTS)) }
+    runBlocking { eventRepo.addEvent(createEvent("1", "Pre-added Event", EventType.SPORTS)) }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -645,8 +759,9 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_displaysOngoingEventsTitle_whenOngoingEventsExist() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
     // Create an ongoing event (started but not finished)
     val calendar = Calendar.getInstance()
@@ -665,9 +780,11 @@ class OverviewScreenTest {
             visibility = EventVisibility.PUBLIC,
             ownerId = "owner")
 
-    runBlocking { repo.addEvent(ongoingEvent) }
+    runBlocking { eventRepo.addEvent(ongoingEvent) }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -678,8 +795,9 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_displaysUpcomingEventsTitle_whenUpcomingEventsExist() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
     // Create an upcoming event (not started yet)
     val calendar = Calendar.getInstance()
@@ -698,9 +816,11 @@ class OverviewScreenTest {
             visibility = EventVisibility.PUBLIC,
             ownerId = "owner")
 
-    runBlocking { repo.addEvent(upcomingEvent) }
+    runBlocking { eventRepo.addEvent(upcomingEvent) }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -711,8 +831,9 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_displaysBothSections_whenBothEventTypesExist() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
     // Create an ongoing event
     val calendarOngoing = Calendar.getInstance()
@@ -749,11 +870,13 @@ class OverviewScreenTest {
             ownerId = "owner")
 
     runBlocking {
-      repo.addEvent(ongoingEvent)
-      repo.addEvent(upcomingEvent)
+      eventRepo.addEvent(ongoingEvent)
+      eventRepo.addEvent(upcomingEvent)
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -770,8 +893,9 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_displaysSingularTitle_whenOnlyOneOngoingEvent() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
     // Create a single ongoing event
     val calendar = Calendar.getInstance()
@@ -790,22 +914,25 @@ class OverviewScreenTest {
             visibility = EventVisibility.PUBLIC,
             ownerId = "owner")
 
-    runBlocking { repo.addEvent(ongoingEvent) }
+    runBlocking { eventRepo.addEvent(ongoingEvent) }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
     // Should display singular form
-    composeTestRule.onNodeWithText("Your ongoing event :").assertExists()
+    composeTestRule.onNodeWithText("Your ongoing activity :").assertExists()
   }
 
   @Test
   fun overviewScreen_displaysPluralTitle_whenMultipleOngoingEvents() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
     // Create multiple ongoing events
     val calendar1 = Calendar.getInstance()
@@ -841,24 +968,27 @@ class OverviewScreenTest {
             ownerId = "owner")
 
     runBlocking {
-      repo.addEvent(ongoingEvent1)
-      repo.addEvent(ongoingEvent2)
+      eventRepo.addEvent(ongoingEvent1)
+      eventRepo.addEvent(ongoingEvent2)
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
     // Should display plural form
-    composeTestRule.onNodeWithText("Your ongoing events :").assertExists()
+    composeTestRule.onNodeWithText("Your ongoing activities :").assertExists()
   }
 
   @Test
   fun overviewScreen_displaysSingularTitle_whenOnlyOneUpcomingEvent() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
     // Create a single upcoming event
     val calendar = Calendar.getInstance()
@@ -877,22 +1007,25 @@ class OverviewScreenTest {
             visibility = EventVisibility.PUBLIC,
             ownerId = "owner")
 
-    runBlocking { repo.addEvent(upcomingEvent) }
+    runBlocking { eventRepo.addEvent(upcomingEvent) }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
     // Should display singular form
-    composeTestRule.onNodeWithText("Your upcoming event :").assertExists()
+    composeTestRule.onNodeWithText("Your upcoming activity :").assertExists()
   }
 
   @Test
   fun overviewScreen_displaysPluralTitle_whenMultipleUpcomingEvents() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
     // Create multiple upcoming events
     val calendar1 = Calendar.getInstance()
@@ -928,24 +1061,27 @@ class OverviewScreenTest {
             ownerId = "owner")
 
     runBlocking {
-      repo.addEvent(upcomingEvent1)
-      repo.addEvent(upcomingEvent2)
+      eventRepo.addEvent(upcomingEvent1)
+      eventRepo.addEvent(upcomingEvent2)
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
     // Should display plural form
-    composeTestRule.onNodeWithText("Your upcoming events :").assertExists()
+    composeTestRule.onNodeWithText("Your upcoming activities :").assertExists()
   }
 
   @Test
   fun overviewScreen_displaysSingularAndPluralTitles_whenOneOngoingAndMultipleUpcoming() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
     // Create one ongoing event
     val calendarOngoing = Calendar.getInstance()
@@ -998,28 +1134,33 @@ class OverviewScreenTest {
             ownerId = "owner")
 
     runBlocking {
-      repo.addEvent(ongoingEvent)
-      repo.addEvent(upcomingEvent1)
-      repo.addEvent(upcomingEvent2)
+      eventRepo.addEvent(ongoingEvent)
+      eventRepo.addEvent(upcomingEvent1)
+      eventRepo.addEvent(upcomingEvent2)
     }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
     // Should display singular for ongoing and plural for upcoming
-    composeTestRule.onNodeWithText("Your ongoing event :").assertExists()
-    composeTestRule.onNodeWithText("Your upcoming events :").assertExists()
+    composeTestRule.onNodeWithText("Your ongoing activity :").assertExists()
+    composeTestRule.onNodeWithText("Your upcoming activities :").assertExists()
   }
 
   @Test
   fun overviewScreen_displaysHistoryButton() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -1028,10 +1169,13 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_historyButtonIsDisplayed() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -1040,10 +1184,13 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_historyButtonHasCorrectDescription() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -1052,12 +1199,16 @@ class OverviewScreenTest {
 
   @Test
   fun clickingHistoryButton_triggersOnGoToHistory() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
     var historyClicked = false
 
     composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, onGoToHistory = { historyClicked = true })
+      OverviewScreen(
+          overviewViewModel = viewModel,
+          onGoToHistory = { historyClicked = true },
+          enableNotificationPermissionRequest = false)
     }
 
     composeTestRule.waitForIdle()
@@ -1068,10 +1219,13 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_bothFabsDisplayedTogether() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     composeTestRule.waitForIdle()
 
@@ -1082,12 +1236,15 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_hidesLoadingIndicator_afterEventsLoaded() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    runBlocking { repo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
+    runBlocking { eventRepo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     // Wait for loading to complete
     composeTestRule.waitForIdle()
@@ -1102,10 +1259,13 @@ class OverviewScreenTest {
 
   @Test
   fun overviewScreen_hidesLoadingIndicator_whenNoEvents() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = OverviewViewModel(repo)
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    composeTestRule.setContent { OverviewScreen(overviewViewModel = viewModel) }
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
 
     // Wait for loading to complete
     composeTestRule.waitForIdle()
@@ -1116,5 +1276,444 @@ class OverviewScreenTest {
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.LOADING_INDICATOR).assertDoesNotExist()
     // Empty message should be displayed
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG).assertExists()
+  }
+
+  @Test
+  fun overviewScreen_displaysSerie_whenSerieExists() {
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 1)
+
+    // Create events that belong to the serie
+    val event1 =
+        Event(
+            eventId = "event1",
+            type = EventType.SPORTS,
+            title = "Basketball Game 1",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendar.time),
+            duration = 60,
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    val event2 =
+        Event(
+            eventId = "event2",
+            type = EventType.SPORTS,
+            title = "Basketball Game 2",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendar.time),
+            duration = 60,
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    val serie =
+        Serie(
+            serieId = "serie1",
+            title = "Weekly Basketball",
+            description = "Weekly basketball games",
+            date = Timestamp(calendar.time),
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1", "event2"),
+            ownerId = "owner1")
+
+    runBlocking {
+      eventRepo.addEvent(event1)
+      eventRepo.addEvent(event2)
+      serieRepo.addSerie(serie)
+    }
+
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.getTestTagForSerie(serie)).assertExists()
+    composeTestRule.onNodeWithText("Weekly Basketball").assertExists()
+  }
+
+  @Test
+  fun overviewScreen_displaysBothEventsAndSeries() {
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 1)
+
+    // Create standalone event with future timestamp
+    val standaloneEvent =
+        Event(
+            eventId = "1",
+            type = EventType.SPORTS,
+            title = "Single Event",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendar.time),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    // Create event that belongs to the serie
+    val serieEvent =
+        Event(
+            eventId = "event2",
+            type = EventType.SOCIAL,
+            title = "Serie Event",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendar.time),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    val serie =
+        Serie(
+            serieId = "serie1",
+            title = "Event Serie",
+            description = "Serie description",
+            date = Timestamp(calendar.time),
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event2"),
+            ownerId = "owner1")
+
+    runBlocking {
+      eventRepo.addEvent(standaloneEvent)
+      eventRepo.addEvent(serieEvent)
+      serieRepo.addSerie(serie)
+    }
+
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Both standalone event and serie should be displayed
+    composeTestRule.onNodeWithText("Single Event").assertExists()
+    composeTestRule.onNodeWithText("Event Serie").assertExists()
+  }
+
+  @Test
+  fun overviewScreen_filtersOutEventsInSeries() {
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 1)
+
+    // Create events
+    val standaloneEvent = createEvent("standalone", "Standalone Event", EventType.SPORTS)
+    val serieEvent = createEvent("serie_event", "Serie Event", EventType.SOCIAL)
+
+    // Create serie that contains serie_event
+    val serie =
+        Serie(
+            serieId = "serie1",
+            title = "My Serie",
+            description = "Serie description",
+            date = Timestamp(calendar.time),
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("serie_event"),
+            ownerId = "owner1")
+
+    runBlocking {
+      eventRepo.addEvent(standaloneEvent)
+      eventRepo.addEvent(serieEvent)
+      serieRepo.addSerie(serie)
+    }
+
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Standalone event should be displayed
+    composeTestRule.onNodeWithText("Standalone Event").assertExists()
+    // Serie should be displayed
+    composeTestRule.onNodeWithText("My Serie").assertExists()
+    // Serie event should NOT be displayed as standalone
+    composeTestRule.onNodeWithText("Serie Event").assertDoesNotExist()
+  }
+
+  @Test
+  fun overviewScreen_displaysMultipleSeries() {
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 1)
+
+    runBlocking {
+      for (i in 1..3) {
+        // Create event for each serie
+        eventRepo.addEvent(
+            Event(
+                eventId = "event$i",
+                type = EventType.SPORTS,
+                title = "Event $i",
+                description = "desc",
+                location = null,
+                date = Timestamp(calendar.time),
+                duration = 60,
+                participants = listOf("user1"),
+                maxParticipants = 10,
+                visibility = EventVisibility.PUBLIC,
+                ownerId = "owner1"))
+
+        // Create serie
+        serieRepo.addSerie(
+            Serie(
+                serieId = "serie$i",
+                title = "Serie $i",
+                description = "Description $i",
+                date = Timestamp(calendar.time),
+                participants = listOf("user1"),
+                maxParticipants = 10,
+                visibility = Visibility.PUBLIC,
+                eventIds = listOf("event$i"),
+                ownerId = "owner1"))
+      }
+    }
+
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // All series should be displayed
+    composeTestRule.onNodeWithText("Serie 1").assertExists()
+    composeTestRule.onNodeWithText("Serie 2").assertExists()
+    composeTestRule.onNodeWithText("Serie 3").assertExists()
+  }
+
+  @Test
+  fun overviewScreen_displaysOngoingSerie() {
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.MINUTE, -30) // Started 30 minutes ago
+
+    // Create an ongoing event that belongs to the serie
+    val ongoingEvent =
+        Event(
+            eventId = "ongoing_serie_event",
+            type = EventType.SPORTS,
+            title = "Ongoing Serie Event",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendar.time),
+            duration = 120, // 2 hours, still ongoing
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    val ongoingSerie =
+        Serie(
+            serieId = "ongoing_serie",
+            title = "Ongoing Serie",
+            description = "Ongoing serie description",
+            date = Timestamp(calendar.time),
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("ongoing_serie_event"),
+            ownerId = "owner1")
+
+    runBlocking {
+      eventRepo.addEvent(ongoingEvent)
+      serieRepo.addSerie(ongoingSerie)
+    }
+
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Serie should appear in ongoing section
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.ONGOING_EVENTS_TITLE).assertExists()
+    composeTestRule.onNodeWithText("Ongoing Serie").assertExists()
+  }
+
+  @Test
+  fun overviewScreen_handlesSeriesRepositoryError() {
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryMock(shouldThrowError = true)
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
+
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
+
+    // Wait for error to be processed
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // The screen should show empty state since error occurred
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG).assertExists()
+
+    // Error should have been cleared from UI state
+    assert(viewModel.uiState.value.errorMsg == null)
+  }
+
+  @Test
+  fun overviewScreen_displaysSerieBadge() {
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 1)
+
+    // Create event that belongs to the serie
+    val event =
+        Event(
+            eventId = "event1",
+            type = EventType.SPORTS,
+            title = "Serie Event",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendar.time),
+            duration = 60,
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    val serie =
+        Serie(
+            serieId = "serie1",
+            title = "Test Serie",
+            description = "Test description",
+            date = Timestamp(calendar.time),
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner1")
+
+    runBlocking {
+      eventRepo.addEvent(event)
+      serieRepo.addSerie(serie)
+    }
+
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Serie badge should be displayed
+    composeTestRule.onNodeWithText("Serie 🔥").assertExists()
+  }
+
+  @Test
+  fun overviewScreen_titleUsesCorrectPluralityWithMixedItems() {
+    val eventRepo = EventsRepositoryLocal()
+    val serieRepo = SeriesRepositoryLocal()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 1)
+
+    // Create standalone event with future timestamp to ensure it's upcoming
+    val standaloneEvent =
+        Event(
+            eventId = "standalone1",
+            type = EventType.SPORTS,
+            title = "Single Event",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendar.time),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    // Create event that belongs to the serie
+    val serieEvent =
+        Event(
+            eventId = "serie_event1",
+            type = EventType.SOCIAL,
+            title = "Serie Event",
+            description = "desc",
+            location = null,
+            date = Timestamp(calendar.time),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 5,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner")
+
+    val serie =
+        Serie(
+            serieId = "serie1",
+            title = "Event Serie",
+            description = "Serie description",
+            date = Timestamp(calendar.time),
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("serie_event1"),
+            ownerId = "owner1")
+
+    runBlocking {
+      eventRepo.addEvent(standaloneEvent)
+      eventRepo.addEvent(serieEvent)
+      serieRepo.addSerie(serie)
+    }
+
+    composeTestRule.setContent {
+      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Should display plural form (2 items total: 1 standalone event + 1 serie)
+    composeTestRule.onNodeWithText("Your upcoming activities :").assertExists()
   }
 }

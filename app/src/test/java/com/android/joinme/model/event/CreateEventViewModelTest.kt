@@ -1,5 +1,6 @@
 package com.android.joinme.model.event
 
+import com.android.joinme.model.map.Location
 import com.android.joinme.ui.overview.CreateEventViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -41,7 +42,7 @@ class CreateEventViewModelTest {
     override suspend fun getEvent(eventId: String): Event =
         added.find { it.eventId == eventId } ?: throw NoSuchElementException("Event not found")
 
-    override suspend fun getAllEvents(): List<Event> = added.toList()
+    override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> = added.toList()
 
     override fun getNewEventId(): String = "fake-id-1"
   }
@@ -75,7 +76,7 @@ class CreateEventViewModelTest {
     vm.setType("SPORTS")
     vm.setTitle("Football")
     vm.setDescription("Friendly 5v5")
-    vm.setLocation("EPFL Field")
+    vm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
     vm.setDate("25/12/2023")
     vm.setTime("10:00")
     vm.setMaxParticipants("10")

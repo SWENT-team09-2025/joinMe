@@ -60,7 +60,7 @@ class SeriesRepositoryLocalTest {
     runBlocking {
       repo.addSerie(sampleSerie)
       repo.deleteSerie("1")
-      val all = repo.getAllSeries()
+      val all = repo.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN)
       Assert.assertTrue(all.isEmpty())
     }
   }
@@ -77,7 +77,7 @@ class SeriesRepositoryLocalTest {
       repo.addSerie(s2)
       repo.addSerie(s3)
 
-      val all = repo.getAllSeries()
+      val all = repo.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN)
       Assert.assertEquals(3, all.size)
       Assert.assertTrue(all.any { it.title == "Tennis Series" })
     }
@@ -120,7 +120,8 @@ class SeriesRepositoryLocalTest {
       Assert.assertEquals("Weekly Football", fetched.title)
 
       // and both entries exist with the same ID
-      val allWithSameId = repo.getAllSeries().filter { it.serieId == "1" }
+      val allWithSameId =
+          repo.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN).filter { it.serieId == "1" }
       Assert.assertEquals(2, allWithSameId.size)
     }
   }
@@ -128,7 +129,7 @@ class SeriesRepositoryLocalTest {
   @Test
   fun getAllSeries_returnsEmptyListInitially() {
     runBlocking {
-      val all = repo.getAllSeries()
+      val all = repo.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN)
       Assert.assertTrue(all.isEmpty())
     }
   }
@@ -163,7 +164,7 @@ class SeriesRepositoryLocalTest {
 
       repo.deleteSerie("2")
 
-      val all = repo.getAllSeries()
+      val all = repo.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN)
       Assert.assertEquals(2, all.size)
       Assert.assertTrue(all.any { it.serieId == "1" })
       Assert.assertTrue(all.any { it.serieId == "3" })
