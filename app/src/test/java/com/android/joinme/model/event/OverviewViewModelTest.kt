@@ -1,6 +1,7 @@
 package com.android.joinme.model.event
 
 import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.utils.Visibility
 import com.android.joinme.ui.overview.OverviewViewModel
@@ -477,7 +478,7 @@ class OverviewViewModelTest {
       events.clear()
     }
 
-    override suspend fun getAllEvents(): List<Event> {
+    override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
       if (shouldThrow) throw RuntimeException("Event repository error")
       return events.toList()
     }
@@ -546,7 +547,7 @@ class OverviewViewModelTest {
       return "new_serie_id"
     }
 
-    override suspend fun getAllSeries(): List<Serie> {
+    override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> {
       if (shouldThrow) throw RuntimeException("Serie repository error")
       return series.toList()
     }

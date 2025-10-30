@@ -20,7 +20,7 @@ interface SeriesRepository {
    *
    * @return A list of all Serie items
    */
-  suspend fun getAllSeries(): List<Serie>
+  suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie>
 
   /**
    * Retrieves a specific Serie item by its unique identifier.
