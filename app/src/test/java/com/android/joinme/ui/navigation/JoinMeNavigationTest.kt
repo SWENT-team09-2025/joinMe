@@ -78,6 +78,62 @@ class JoinMeNavigationTest {
   }
 
   @Test
+  fun screen_Groups_hasCorrectRoute() {
+    assertEquals("groups", Screen.Groups.route)
+    assertEquals("Groups", Screen.Groups.name)
+    assertFalse(Screen.Groups.isTopLevelDestination)
+  }
+
+  @Test
+  fun screen_CreateGroup_hasCorrectRoute() {
+    assertEquals("create_group", Screen.CreateGroup.route)
+    assertEquals("Create Group", Screen.CreateGroup.name)
+    assertFalse(Screen.CreateGroup.isTopLevelDestination)
+  }
+
+  @Test
+  fun screen_GroupDetail_hasCorrectRoutePattern() {
+    assertEquals("groupId/{groupId}", Screen.GroupDetail.Companion.route)
+  }
+
+  @Test
+  fun screen_GroupDetail_generatesCorrectRouteWithId() {
+    val groupId = "test-group-123"
+    val groupDetailScreen = Screen.GroupDetail(groupId)
+    assertEquals("groupId/$groupId", groupDetailScreen.route)
+    assertEquals("Group Detail", groupDetailScreen.name)
+    assertFalse(groupDetailScreen.isTopLevelDestination)
+  }
+
+  @Test
+  fun screen_GroupDetail_handlesSpecialCharactersInId() {
+    val groupId = "test-group-with-special-chars-!@#"
+    val groupDetailScreen = Screen.GroupDetail(groupId)
+    assertEquals("groupId/$groupId", groupDetailScreen.route)
+  }
+
+  @Test
+  fun screen_ShowEventScreen_hasCorrectRoutePattern() {
+    assertEquals("show_event/{eventId}", Screen.ShowEventScreen.Companion.route)
+  }
+
+  @Test
+  fun screen_ShowEventScreen_generatesCorrectRouteWithId() {
+    val eventId = "test-event-456"
+    val showEventScreen = Screen.ShowEventScreen(eventId)
+    assertEquals("show_event/$eventId", showEventScreen.route)
+    assertEquals("Show Event", showEventScreen.name)
+    assertFalse(showEventScreen.isTopLevelDestination)
+  }
+
+  @Test
+  fun screen_EditProfile_hasCorrectRoute() {
+    assertEquals("edit_profile", Screen.EditProfile.route)
+    assertEquals("Edit Profile", Screen.EditProfile.name)
+    assertFalse(Screen.EditProfile.isTopLevelDestination)
+  }
+
+  @Test
   fun topLevelDestinations_areCorrectlyFlagged() {
     val topLevelScreens = listOf(Screen.Overview, Screen.Search, Screen.Map, Screen.Profile)
 
@@ -89,7 +145,16 @@ class JoinMeNavigationTest {
   @Test
   fun nonTopLevelDestinations_areCorrectlyFlagged() {
     val nonTopLevelScreens =
-        listOf(Screen.Auth, Screen.CreateEvent, Screen.EditEvent("test-id"), Screen.History)
+        listOf(
+            Screen.Auth,
+            Screen.CreateEvent,
+            Screen.EditEvent("test-id"),
+            Screen.History,
+            Screen.Groups,
+            Screen.CreateGroup,
+            Screen.GroupDetail("test-id"),
+            Screen.ShowEventScreen("test-id"),
+            Screen.EditProfile)
 
     nonTopLevelScreens.forEach { screen ->
       assertFalse(
@@ -108,7 +173,12 @@ class JoinMeNavigationTest {
             Screen.Profile.route,
             Screen.CreateEvent.route,
             Screen.History.route,
-            Screen.EditEvent.Companion.route)
+            Screen.EditEvent.Companion.route,
+            Screen.Groups.route,
+            Screen.CreateGroup.route,
+            Screen.GroupDetail.Companion.route,
+            Screen.ShowEventScreen.Companion.route,
+            Screen.EditProfile.route)
 
     val uniqueRoutes = routes.toSet()
     assertEquals("All screen routes should be unique", routes.size, uniqueRoutes.size)
@@ -124,16 +194,25 @@ class JoinMeNavigationTest {
             Screen.Map,
             Screen.Profile,
             Screen.CreateEvent,
-            Screen.History)
+            Screen.History,
+            Screen.Groups,
+            Screen.CreateGroup,
+            Screen.EditProfile)
 
     screens.forEach { screen ->
       assertTrue("${screen.name} route should not be empty", screen.route.isNotEmpty())
     }
 
-    // Check EditEvent companion route
+    // Check companion routes for screens with parameters
     assertTrue(
         "EditEvent route pattern should not be empty",
         Screen.EditEvent.Companion.route.isNotEmpty())
+    assertTrue(
+        "GroupDetail route pattern should not be empty",
+        Screen.GroupDetail.Companion.route.isNotEmpty())
+    assertTrue(
+        "ShowEventScreen route pattern should not be empty",
+        Screen.ShowEventScreen.Companion.route.isNotEmpty())
   }
 
   @Test
@@ -147,7 +226,12 @@ class JoinMeNavigationTest {
             Screen.Profile,
             Screen.CreateEvent,
             Screen.History,
-            Screen.EditEvent("test-id"))
+            Screen.EditEvent("test-id"),
+            Screen.Groups,
+            Screen.CreateGroup,
+            Screen.GroupDetail("test-id"),
+            Screen.ShowEventScreen("test-id"),
+            Screen.EditProfile)
 
     screens.forEach { screen ->
       assertTrue("${screen.name} name should not be empty", screen.name.isNotEmpty())
@@ -167,6 +251,36 @@ class JoinMeNavigationTest {
     assertTrue(
         "EditEvent route should match pattern 'edit_event/{eventId}'",
         pattern.matches(Screen.EditEvent.Companion.route))
+  }
+
+  @Test
+  fun groupDetailRoute_containsGroupIdPlaceholder() {
+    assertTrue(
+        "GroupDetail companion route should contain {groupId} placeholder",
+        Screen.GroupDetail.Companion.route.contains("{groupId}"))
+  }
+
+  @Test
+  fun groupDetailRoute_followsExpectedPattern() {
+    val pattern = "groupId/\\{groupId\\}".toRegex()
+    assertTrue(
+        "GroupDetail route should match pattern 'groupId/{groupId}'",
+        pattern.matches(Screen.GroupDetail.Companion.route))
+  }
+
+  @Test
+  fun showEventScreenRoute_containsEventIdPlaceholder() {
+    assertTrue(
+        "ShowEventScreen companion route should contain {eventId} placeholder",
+        Screen.ShowEventScreen.Companion.route.contains("{eventId}"))
+  }
+
+  @Test
+  fun showEventScreenRoute_followsExpectedPattern() {
+    val pattern = "show_event/\\{eventId\\}".toRegex()
+    assertTrue(
+        "ShowEventScreen route should match pattern 'show_event/{eventId}'",
+        pattern.matches(Screen.ShowEventScreen.Companion.route))
   }
 
   @Test

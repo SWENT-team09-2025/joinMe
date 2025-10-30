@@ -1,6 +1,7 @@
 package com.android.joinme.ui.overview
 
 import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepository
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
@@ -50,7 +51,7 @@ class CreateSerieViewModelTest {
     override suspend fun getSerie(serieId: String): Serie =
         added.find { it.serieId == serieId } ?: throw NoSuchElementException("Serie not found")
 
-    override suspend fun getAllSeries(): List<Serie> = added.toList()
+    override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> = added.toList()
 
     override fun getNewSerieId(): String = "fake-serie-id-1"
   }
@@ -435,7 +436,7 @@ class CreateSerieViewModelTest {
             throw NoSuchElementException()
           }
 
-          override suspend fun getAllSeries(): List<Serie> = emptyList()
+          override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> = emptyList()
 
           override fun getNewSerieId(): String = "fake-id"
         }

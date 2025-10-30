@@ -15,6 +15,35 @@ import kotlinx.coroutines.tasks.await
 const val EVENTS_COLLECTION_PATH = "events"
 
 /**
+ * Filter criteria for retrieving events from Firestore based on the target screen.
+ *
+ * Determines which events to fetch and how to filter them according to the UI context.
+ */
+enum class EventFilter {
+  /**
+   * Filter for the overview screen.
+   *
+   * Retrieves all events where the current user is a participant.
+   */
+  EVENTS_FOR_OVERVIEW_SCREEN,
+
+  /**
+   * Filter for the history screen.
+   *
+   * Retrieves all events where the current user is a participant, then filters to show only expired
+   * events, sorted by date (most recent first).
+   */
+  EVENTS_FOR_HISTORY_SCREEN,
+
+  /**
+   * Filter for the search screen.
+   *
+   * Retrieves public events that are upcoming, where the current user is neither a participant nor
+   * the owner.
+   */
+  EVENTS_FOR_SEARCH_SCREEN
+}
+/**
  * Firestore-backed implementation of [EventsRepository]. Manages CRUD operations for [Event]
  * objects.
  */
@@ -22,24 +51,51 @@ class EventsRepositoryFirestore(
     private val db: FirebaseFirestore,
     private val context: Context? = null
 ) : EventsRepository {
-  private val ownerAttributeName = "ownerId"
 
   override fun getNewEventId(): String {
     return db.collection(EVENTS_COLLECTION_PATH).document().id
   }
 
-  override suspend fun getAllEvents(): List<Event> {
-    val ownerId =
+  override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
+    val userId =
         Firebase.auth.currentUser?.uid
             ?: throw Exception("EventsRepositoryFirestore: User not logged in.")
 
+    // Database-level filtering: Fetch events from Firestore with filters applied at the database
+    // level
     val snapshot =
-        db.collection(EVENTS_COLLECTION_PATH)
-            .whereEqualTo(ownerAttributeName, ownerId)
-            .get()
-            .await()
+        when (eventFilter) {
+          EventFilter.EVENTS_FOR_OVERVIEW_SCREEN,
+          EventFilter.EVENTS_FOR_HISTORY_SCREEN -> {
+            db.collection(EVENTS_COLLECTION_PATH)
+                .whereArrayContains("participants", userId)
+                .get()
+                .await()
+          }
+          EventFilter.EVENTS_FOR_SEARCH_SCREEN -> {
+            db.collection(EVENTS_COLLECTION_PATH)
+                .whereEqualTo("visibility", EventVisibility.PUBLIC.name)
+                .get()
+                .await()
+          }
+        }
 
-    return snapshot.mapNotNull { documentToEvent(it) }
+    val events = snapshot.mapNotNull { documentToEvent(it) }
+
+    // Client-side filtering: Apply additional filters and sorting in memory for conditions
+    return when (eventFilter) {
+      EventFilter.EVENTS_FOR_OVERVIEW_SCREEN -> {
+        events
+      }
+      EventFilter.EVENTS_FOR_HISTORY_SCREEN -> {
+        events.filter { event -> event.isExpired() }.sortedByDescending { it.date.toDate().time }
+      }
+      EventFilter.EVENTS_FOR_SEARCH_SCREEN -> {
+        events.filter { event ->
+          event.isUpcoming() && !event.participants.contains(userId) && event.ownerId != userId
+        }
+      }
+    }
   }
 
   override suspend fun getEvent(eventId: String): Event {
@@ -147,7 +203,6 @@ class EventsRepositoryFirestore(
           visibility = EventVisibility.valueOf(visibilityString),
           ownerId = ownerId)
     } catch (e: Exception) {
-      Log.e("EventsRepositoryFirestore", "Error converting document to Event", e)
       null
     }
   }

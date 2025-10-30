@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.Event
+import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.event.isExpired
@@ -63,7 +64,7 @@ class HistoryViewModel(
     viewModelScope.launch {
       _uiState.value = _uiState.value.copy(isLoading = true)
       try {
-        val allEvents = eventRepository.getAllEvents()
+        val allEvents = eventRepository.getAllEvents(EventFilter.EVENTS_FOR_HISTORY_SCREEN)
 
         val expired =
             allEvents.filter { it.isExpired() }.sortedByDescending { it.date.toDate().time }

@@ -2,13 +2,18 @@ package com.android.joinme.ui.overview
 
 import android.annotation.SuppressLint
 import android.widget.NumberPicker
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -17,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
+import com.android.joinme.model.map.Location
 import com.android.joinme.ui.theme.ButtonSaveColor
 import com.android.joinme.ui.theme.DarkButtonColor
 import com.android.joinme.ui.theme.DividerColor
@@ -28,9 +34,11 @@ data class EventFormTestTags(
     val inputEventTitle: String,
     val inputEventDescription: String,
     val inputEventLocation: String,
+    val inputEventLocationSuggestions: String,
     val inputEventMaxParticipants: String,
     val inputEventDuration: String,
     val inputEventDate: String,
+    val inputEventTime: String,
     val inputEventVisibility: String,
     val buttonSaveEvent: String,
     val errorMessage: String
@@ -47,6 +55,9 @@ data class EventFormState(
     val date: String,
     val time: String,
     val visibility: String,
+    val locationQuery: String,
+    val locationSuggestions: List<Location>,
+    val selectedLocation: Location?,
     val isValid: Boolean,
     val invalidTypeMsg: String?,
     val invalidTitleMsg: String?,
@@ -67,7 +78,7 @@ data class EventFormState(
  * @param onTypeChange Callback when event type changes
  * @param onTitleChange Callback when title changes
  * @param onDescriptionChange Callback when description changes
- * @param onLocationChange Callback when location changes
+ * @param onLocationQueryChange Callback when location changes
  * @param onMaxParticipantsChange Callback when max participants changes
  * @param onDurationChange Callback when duration changes
  * @param onDateChange Callback when date changes
@@ -87,7 +98,8 @@ fun EventFormScreen(
     onTypeChange: (String) -> Unit,
     onTitleChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
-    onLocationChange: (String) -> Unit,
+    onLocationQueryChange: (String) -> Unit,
+    onSelectLocationChange: (Location) -> Unit,
     onMaxParticipantsChange: (String) -> Unit,
     onDurationChange: (String) -> Unit,
     onDateChange: (String) -> Unit,
@@ -203,21 +215,14 @@ fun EventFormScreen(
                           .testTag(testTags.inputEventDescription))
 
               // Location
-              OutlinedTextField(
-                  value = formState.location,
-                  onValueChange = onLocationChange,
-                  label = { Text("Location") },
-                  placeholder = { Text("Enter location name") },
+              LocationField(
+                  query = formState.locationQuery,
+                  suggestions = formState.locationSuggestions,
                   isError = formState.invalidLocationMsg != null,
-                  supportingText = {
-                    formState.invalidLocationMsg?.let {
-                      Text(
-                          it,
-                          color = MaterialTheme.colorScheme.error,
-                          modifier = Modifier.testTag(testTags.errorMessage))
-                    }
-                  },
-                  modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventLocation))
+                  supportingText = formState.invalidLocationMsg,
+                  onQueryChange = { selection -> onLocationQueryChange(selection) },
+                  onSuggestionSelected = { name -> onSelectLocationChange(name) },
+                  testTags = testTags)
 
               // Max Participants and Duration pickers
               Row(
@@ -468,7 +473,7 @@ fun EventFormScreen(
                                   disabledTrailingIconColor =
                                       MaterialTheme.colorScheme.onSurfaceVariant),
                           enabled = false,
-                          modifier = Modifier.fillMaxWidth())
+                          modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventTime))
                     }
                   }
 
@@ -526,4 +531,100 @@ fun EventFormScreen(
                   }
             }
       }
+}
+
+/**
+ * A composable text field with real-time location suggestions.
+ *
+ * Displays an `OutlinedTextField` where users can type a location name. As the user types, a
+ * dropdown list of matching suggestions appears below the field. Selecting a suggestion fills the
+ * field and hides the dropdown.
+ *
+ * This component is used in Create/Edit Event screens to allow users to easily search and select
+ * real-world locations from Nominatim autocomplete results.
+ *
+ * ### Behavior
+ * - The dropdown menu appears when the query is non-empty and suggestions are available.
+ * - Selecting a suggestion hides the menu and updates the field.
+ * - The menu will not immediately reopen after a selection (managed by [suppressNextOpen]).
+ *
+ * @param query The current text input value of the location field.
+ * @param suggestions A list of [Location] suggestions returned by the repository.
+ * @param isError Whether the field should display an error state.
+ * @param supportingText Optional helper or error message displayed below the field.
+ * @param onQueryChange Callback triggered when the user changes the query text.
+ * @param onSuggestionSelected Callback invoked when a suggestion is selected from the dropdown.
+ * @param modifier Optional [Modifier] for layout customization.
+ * @param testTags [EventFormTestTags] providing identifiers for UI testing (e.g., text field and
+ *   dropdown).
+ */
+@Composable
+fun LocationField(
+    query: String,
+    suggestions: List<Location>,
+    isError: Boolean,
+    supportingText: String?,
+    onQueryChange: (String) -> Unit,
+    onSuggestionSelected: (Location) -> Unit,
+    modifier: Modifier = Modifier,
+    testTags: EventFormTestTags
+) {
+  var showSuggestions by remember { mutableStateOf(false) }
+  var suppressNextOpen by remember { mutableStateOf(false) }
+
+  LaunchedEffect(query, suggestions) {
+    if (!suppressNextOpen) {
+      showSuggestions = query.isNotBlank() && suggestions.isNotEmpty()
+    } else {
+      suppressNextOpen = false
+    }
+  }
+
+  Box(modifier = modifier) {
+    Column {
+      OutlinedTextField(
+          value = query,
+          onValueChange = { onQueryChange(it) },
+          label = { Text("Location") },
+          isError = isError,
+          singleLine = true,
+          supportingText = {
+            if (supportingText != null) {
+              Text(text = supportingText, color = MaterialTheme.colorScheme.error)
+            }
+          },
+          modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventLocation))
+
+      if (showSuggestions) {
+        Spacer(Modifier.height(8.dp))
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 6.dp,
+            modifier =
+                Modifier.fillMaxWidth()
+                    .heightIn(max = 240.dp)
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        shape = RoundedCornerShape(12.dp))) {
+              LazyColumn(modifier = Modifier.testTag(testTags.inputEventLocationSuggestions)) {
+                items(suggestions) { loc ->
+                  ListItem(
+                      headlineContent = { Text(loc.name) },
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .clickable {
+                                showSuggestions = false
+                                suppressNextOpen = true
+                                onSuggestionSelected(loc)
+                              }
+                              .padding(horizontal = 4.dp)
+                              .testTag(testTags.inputEventLocationSuggestions))
+                  HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
+                }
+              }
+            }
+      }
+    }
+  }
 }

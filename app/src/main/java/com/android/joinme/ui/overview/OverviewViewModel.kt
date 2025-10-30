@@ -2,11 +2,13 @@ package com.android.joinme.ui.overview
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.event.isActive
 import com.android.joinme.model.event.isUpcoming
 import com.android.joinme.model.eventItem.EventItem
+import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.model.serie.isActive
@@ -74,8 +76,8 @@ class OverviewViewModel(
       _uiState.value = _uiState.value.copy(isLoading = true)
       try {
         // Load all events and series
-        val allEvents = eventRepository.getAllEvents()
-        val allSeries = serieRepository.getAllSeries()
+        val allEvents = eventRepository.getAllEvents(EventFilter.EVENTS_FOR_OVERVIEW_SCREEN)
+        val allSeries = serieRepository.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN)
 
         // Identify events that belong to series
         val serieEventIds = allSeries.flatMap { it.eventIds }.toSet()

@@ -87,4 +87,94 @@ class NavigationActionsTest {
     actions.goBack()
     verify { navController.popBackStack() }
   }
+
+  @Test
+  fun `navigateTo GroupDetail with groupId navigates to correct route`() {
+    val groupId = "test-group-123"
+    every { navController.currentDestination?.route } returns Screen.Groups.route
+
+    actions.navigateTo(Screen.GroupDetail(groupId))
+
+    verify {
+      navController.navigate(
+          eq("groupId/$groupId"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            // GroupDetail is not a top-level destination, so shouldn't have launchSingleTop
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `navigateTo EditEvent with eventId navigates to correct route`() {
+    val eventId = "test-event-456"
+    every { navController.currentDestination?.route } returns Screen.Overview.route
+
+    actions.navigateTo(Screen.EditEvent(eventId))
+
+    verify {
+      navController.navigate(
+          eq("edit_event/$eventId"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `navigateTo ShowEventScreen with eventId navigates to correct route`() {
+    val eventId = "test-event-789"
+    every { navController.currentDestination?.route } returns Screen.Overview.route
+
+    actions.navigateTo(Screen.ShowEventScreen(eventId))
+
+    verify {
+      navController.navigate(
+          eq("show_event/$eventId"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `navigateTo Groups screen navigates correctly`() {
+    every { navController.currentDestination?.route } returns Screen.Profile.route
+
+    actions.navigateTo(Screen.Groups)
+
+    verify {
+      navController.navigate(
+          eq(Screen.Groups.route),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            // Groups is not a top-level destination
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `navigateTo CreateGroup screen navigates correctly`() {
+    every { navController.currentDestination?.route } returns Screen.Groups.route
+
+    actions.navigateTo(Screen.CreateGroup)
+
+    verify {
+      navController.navigate(
+          eq(Screen.CreateGroup.route),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
 }

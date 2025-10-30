@@ -1,6 +1,5 @@
 package com.android.joinme.model.map
 
-import android.util.Log
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -9,8 +8,26 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 
+/**
+ * Repository implementation backed by the public OpenStreetMap Nominatim API.
+ *
+ * Used to resolve a free-text query into a list of real world locations (lat/lon + human readable
+ * name).
+ *
+ * Notes:
+ * - Network call is dispatched on `Dispatchers.IO`
+ * - Results are limited to Switzerland (`countrycodes=ch`)
+ * - Nominatim requires a proper `User-Agent` header (ours is compliant)
+ */
 class NominatimLocationRepository(private val client: OkHttpClient) : LocationRepository {
 
+  /**
+   * Parses the JSON returned by Nominatim into a list of [Location].
+   *
+   * Expected format: Array of objects with "latitude", "longitude", and "name".
+   *
+   * @throws org.json.JSONException if the body is malformed
+   */
   private fun parseBody(body: String): List<Location> {
     val jsonArray = JSONArray(body)
 
@@ -23,6 +40,14 @@ class NominatimLocationRepository(private val client: OkHttpClient) : LocationRe
     }
   }
 
+  /**
+   * Searches Nominatim with the given textual [query].
+   *
+   * @param query Free-text query such as "lausanne" or "epfl".
+   * @return A list of up to 5 matching [Location] objects.
+   * @throws IOException if the underlying HTTP client fails
+   * @throws Exception if the HTTP response code is not 2xx
+   */
   override suspend fun search(query: String): List<Location> =
       withContext(Dispatchers.IO) {
         // Using HttpUrl.Builder to properly construct the URL with query parameters.
@@ -33,35 +58,28 @@ class NominatimLocationRepository(private val client: OkHttpClient) : LocationRe
                 .addPathSegment("search")
                 .addQueryParameter("q", query)
                 .addQueryParameter("format", "json")
+                .addQueryParameter("limit", "5")
+                .addQueryParameter("countrycodes", "ch") // Limit to Switzerland
                 .build()
 
         // Create the request with a custom User-Agent and optional Referer
-        val request =
-            Request.Builder()
-                .url(url)
-                .header("User-Agent", "JoinMe (mathieu.pfeffer@epfl.ch)") // Set a proper User-Agent
-                .header("Referer", "https://yourapp.com") // Optionally add a Referer
-                .build()
+        val request = Request.Builder().url(url).header("User-Agent", "JoinMe Android App").build()
 
         try {
           val response = client.newCall(request).execute()
           response.use {
             if (!response.isSuccessful) {
-              Log.d("NominatimLocationRepository", "Unexpected code $response")
               throw Exception("Unexpected code $response")
             }
 
             val body = response.body?.string()
             if (body != null) {
-              Log.d("NominatimLocationRepository", "Body: $body")
               return@withContext parseBody(body)
             } else {
-              Log.d("NominatimLocationRepository", "Empty body")
               return@withContext emptyList()
             }
           }
         } catch (e: IOException) {
-          Log.e("NominatimLocationRepository", "Failed to execute request", e)
           throw e
         }
       }

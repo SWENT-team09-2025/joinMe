@@ -1,6 +1,7 @@
 package com.android.joinme.ui.history
 
 import com.android.joinme.model.event.Event
+import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
@@ -331,7 +332,7 @@ class HistoryViewModelTest {
       fakeEvents.clear()
     }
 
-    override suspend fun getAllEvents(): List<Event> {
+    override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
       if (delayMillis > 0) {
         kotlinx.coroutines.delay(delayMillis)
       }
