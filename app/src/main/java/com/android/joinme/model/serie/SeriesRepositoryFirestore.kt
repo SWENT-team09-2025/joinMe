@@ -26,7 +26,7 @@ enum class SerieFilter {
   /**
    * Filter for the history screen.
    *
-   * Retrieves all series where the current user is a participant. TODO: Should filter to show only
+   * Retrieves all series where the current user is a participant.
    * expired series.
    */
   SERIES_FOR_HISTORY_SCREEN,
@@ -34,7 +34,7 @@ enum class SerieFilter {
   /**
    * Filter for the search screen.
    *
-   * Retrieves all series. TODO: Should filter to show only public series that are upcoming, where
+   * Retrieves all series.
    * the current user is neither a participant nor the owner.
    */
   SERIES_FOR_SEARCH_SCREEN
@@ -78,23 +78,36 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
     // level
     val snapshot =
         when (serieFilter) {
-          SerieFilter.SERIES_FOR_OVERVIEW_SCREEN -> {
+          SerieFilter.SERIES_FOR_OVERVIEW_SCREEN,
+               SerieFilter.SERIES_FOR_HISTORY_SCREEN-> {
             db.collection(SERIES_COLLECTION_PATH)
                 .whereArrayContains("participants", userId)
                 .get()
                 .await()
           }
           SerieFilter.SERIES_FOR_SEARCH_SCREEN -> {
-            // TODO add a function to know if a serie is upcoming
-            db.collection(SERIES_COLLECTION_PATH).get().await()
-          }
-          SerieFilter.SERIES_FOR_HISTORY_SCREEN -> {
-            // TODO add a function to know if a serie is expired
-            db.collection(SERIES_COLLECTION_PATH).get().await()
+            db.collection(SERIES_COLLECTION_PATH)
+              .whereEqualTo("visibility", Visibility.PUBLIC)
+              .get()
+              .await()
           }
         }
 
-    return snapshot.mapNotNull { documentToSerie(it) }
+    val series =  snapshot.mapNotNull { documentToSerie(it) }
+
+      return when (serieFilter){
+          SerieFilter.SERIES_FOR_OVERVIEW_SCREEN ->{
+              series
+          }
+          SerieFilter.SERIES_FOR_HISTORY_SCREEN -> {
+              //series.filter { serie -> serie.isExpired()}.sortedByDescending { it.date.toDate().time }
+                series
+          }
+          SerieFilter.SERIES_FOR_SEARCH_SCREEN -> {
+              //series.filter { serie -> serie.isUpcoming() && !serie.participants.contains(userId) && serie.ownerId != userId
+                series
+          }
+      }
   }
 
   /**
