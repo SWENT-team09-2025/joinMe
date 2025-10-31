@@ -22,7 +22,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -365,45 +364,4 @@ private fun SaveButton(enabled: Boolean, onClick: () -> Unit) {
       shape = MaterialTheme.shapes.medium) {
         Text(text = "SAVE CHANGES", fontSize = 16.sp, fontWeight = FontWeight.Bold)
       }
-}
-
-@Preview(showBackground = true, name = "Edit Group Screen - Light Mode")
-@Preview(
-    showBackground = true,
-    name = "Edit Group Screen - Dark Mode",
-    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
-@Composable
-private fun EditGroupScreenPreview() {
-  MaterialTheme {
-    Column(
-        modifier =
-            Modifier.fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally) {
-          GroupPictureSection(onPictureEditClick = {})
-
-          Spacer(modifier = Modifier.height(32.dp))
-
-          GroupNameInput(value = "Basketball Team", onValueChange = {}, error = null)
-
-          Spacer(modifier = Modifier.height(24.dp))
-
-          CategoryDropdown(selectedCategory = EventType.SPORTS, onCategorySelected = {})
-
-          Spacer(modifier = Modifier.height(24.dp))
-
-          DescriptionInput(
-              value = "Weekly basketball games every Saturday morning. All skill levels welcome!",
-              onValueChange = {},
-              error = null)
-
-          Spacer(modifier = Modifier.height(32.dp))
-
-          SaveButton(enabled = true, onClick = {})
-
-          Spacer(modifier = Modifier.height(16.dp))
-        }
-  }
 }
