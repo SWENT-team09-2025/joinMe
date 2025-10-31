@@ -173,7 +173,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3]  # Split tests into 2 shards - adjust based on your test suite size
+        shard: [0, 1]  # Split tests into 2 shards - adjust based on your test suite size
         # For more shards: [0, 1, 2, 3] would give you 4 parallel runs
 
     steps:
