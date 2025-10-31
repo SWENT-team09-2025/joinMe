@@ -27,16 +27,16 @@ import kotlinx.coroutines.launch
  * @property errorMsg Error message to display
  */
 data class CreateGroupUIState(
-    val name: String = "",
-    val category: EventType = EventType.ACTIVITY,
-    val description: String = "",
-    val nameError: String? = null,
-    val descriptionError: String? = null,
-    val isValid: Boolean = false,
-    val isLoading: Boolean = false,
+    override val name: String = "",
+    override val category: EventType = EventType.ACTIVITY,
+    override val description: String = "",
+    override val nameError: String? = null,
+    override val descriptionError: String? = null,
+    override val isValid: Boolean = false,
+    override val isLoading: Boolean = false,
     val createdGroupId: String? = null,
-    val errorMsg: String? = null
-)
+    override val errorMsg: String? = null
+) : GroupFormUIState
 
 /**
  * ViewModel for Create Group screen
@@ -60,72 +60,21 @@ data class CreateGroupUIState(
  */
 class CreateGroupViewModel(
     private val repository: GroupRepository = GroupRepositoryProvider.repository
-) : ViewModel() {
+) : BaseGroupFormViewModel() {
 
   companion object {
-    // Validation limits
-    private const val NAME_MIN_LENGTH = 3
-    private const val NAME_MAX_LENGTH = 30
-    private const val DESCRIPTION_MAX_LENGTH = 300
-
-    // Error messages
-    private const val ERROR_NAME_REQUIRED = "Name is required"
-    private const val ERROR_NAME_TOO_SHORT = "Name must be at least 3 characters"
-    private const val ERROR_NAME_TOO_LONG = "Name must not exceed 30 characters"
-    private const val ERROR_NAME_INVALID_CHARS =
-        "Only letters, numbers, spaces, and underscores allowed"
-    private const val ERROR_NAME_MULTIPLE_SPACES = "Multiple consecutive spaces not allowed"
-    private const val ERROR_DESCRIPTION_TOO_LONG = "Description must not exceed 300 characters"
     private const val ERROR_NOT_AUTHENTICATED = "You must be logged in to create a group"
     private const val ERROR_CREATE_FAILED = "Failed to create group"
     private const val ERROR_UNKNOWN = "Unknown error"
   }
 
-  private val _uiState = MutableStateFlow(CreateGroupUIState())
+  override val _uiState = MutableStateFlow(CreateGroupUIState())
   val uiState: StateFlow<CreateGroupUIState> = _uiState.asStateFlow()
 
-  /**
-   * Sets the group name and validates it
-   *
-   * @param name The group name to set
-   */
-  fun setName(name: String) {
-    // Don't trim while typing, let the user type freely
-    // Only validate the trimmed version, but store the original
-    val trimmedName = name.trim()
-    val error = validateName(trimmedName)
-    _uiState.value = _uiState.value.copy(name = name, nameError = error)
-    updateFormValidity()
-  }
+  override fun getState(): GroupFormUIState = _uiState.value
 
-  /**
-   * Sets the group category and validates it
-   *
-   * @param category The category to set (Social/Activity/Sports)
-   */
-  fun setCategory(category: EventType) {
-    _uiState.value = _uiState.value.copy(category = category)
-    updateFormValidity()
-  }
-
-  /**
-   * Sets the group description and validates it
-   *
-   * @param description The description to set
-   */
-  fun setDescription(description: String) {
-    val error = validateDescription(description)
-    _uiState.value = _uiState.value.copy(description = description, descriptionError = error)
-    updateFormValidity()
-  }
-
-  /**
-   * Clears the error message
-   *
-   * Useful for dismissing error messages after the user acknowledges them
-   */
-  fun clearErrorMsg() {
-    _uiState.value = _uiState.value.copy(errorMsg = null)
+  override fun updateState(transform: (GroupFormUIState) -> GroupFormUIState) {
+    _uiState.value = transform(_uiState.value) as CreateGroupUIState
   }
 
   /**
@@ -190,60 +139,5 @@ class CreateGroupViewModel(
                 isLoading = false, errorMsg = "$ERROR_CREATE_FAILED: ${e.message ?: ERROR_UNKNOWN}")
       }
     }
-  }
-
-  /**
-   * Validates the group name
-   *
-   * Rules:
-   * - Required (not blank)
-   * - 3-30 characters
-   * - Only letters, numbers, spaces, and underscores
-   * - No multiple consecutive spaces
-   *
-   * @param name The name to validate
-   * @return Error message if invalid, null if valid
-   */
-  private fun validateName(name: String): String? {
-    return when {
-      name.isBlank() -> ERROR_NAME_REQUIRED
-      name.length < NAME_MIN_LENGTH -> ERROR_NAME_TOO_SHORT
-      name.length > NAME_MAX_LENGTH -> ERROR_NAME_TOO_LONG
-      name.contains(Regex("\\s{2,}")) -> ERROR_NAME_MULTIPLE_SPACES
-      !name.matches(Regex("^[a-zA-Z0-9_ ]+$")) -> ERROR_NAME_INVALID_CHARS
-      else -> null
-    }
-  }
-
-  /**
-   * Validates the group description
-   *
-   * Rules:
-   * - Optional (can be empty)
-   * - Max 300 characters
-   *
-   * @param description The description to validate
-   * @return Error message if invalid, null if valid
-   */
-  private fun validateDescription(description: String): String? {
-    return when {
-      description.length > DESCRIPTION_MAX_LENGTH -> ERROR_DESCRIPTION_TOO_LONG
-      else -> null
-    }
-  }
-
-  /**
-   * Updates the form validity based on current field values
-   *
-   * Form is valid when:
-   * - Name is not blank
-   * - Category is not blank
-   * - No validation errors exist
-   */
-  private fun updateFormValidity() {
-    val state = _uiState.value
-    val isValid =
-        state.name.isNotBlank() && state.nameError == null && state.descriptionError == null
-    _uiState.value = state.copy(isValid = isValid)
   }
 }

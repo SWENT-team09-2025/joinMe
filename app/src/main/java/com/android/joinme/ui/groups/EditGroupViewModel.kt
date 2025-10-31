@@ -24,16 +24,16 @@ import kotlinx.coroutines.launch
  * @property errorMsg Error message to display
  */
 data class EditGroupUIState(
-    val name: String = "",
-    val category: EventType = EventType.ACTIVITY,
-    val description: String = "",
-    val nameError: String? = null,
-    val descriptionError: String? = null,
-    val isValid: Boolean = false,
-    val isLoading: Boolean = false,
+    override val name: String = "",
+    override val category: EventType = EventType.ACTIVITY,
+    override val description: String = "",
+    override val nameError: String? = null,
+    override val descriptionError: String? = null,
+    override val isValid: Boolean = false,
+    override val isLoading: Boolean = false,
     val editedGroupId: String? = null,
-    val errorMsg: String? = null
-)
+    override val errorMsg: String? = null
+) : GroupFormUIState
 
 /**
  * ViewModel for Edit Group screen
@@ -58,7 +58,7 @@ data class EditGroupUIState(
  */
 class EditGroupViewModel(
     private val repository: GroupRepository = GroupRepositoryProvider.repository
-) : ViewModel() {
+) : BaseGroupFormViewModel() {
 
   companion object {
     private const val ERROR_LOAD_FAILED = "Failed to load group"
@@ -66,74 +66,13 @@ class EditGroupViewModel(
     private const val ERROR_UNKNOWN = "Unknown error"
   }
 
-  private val _uiState = MutableStateFlow(EditGroupUIState())
+  override val _uiState = MutableStateFlow(EditGroupUIState())
   val uiState: StateFlow<EditGroupUIState> = _uiState.asStateFlow()
 
-  /**
-   * Sets the group name and validates it
-   *
-   * Validates against the following rules:
-   * - Required (not blank)
-   * - 3-30 characters
-   * - Only letters, numbers, spaces, and underscores
-   * - No multiple consecutive spaces
-   *
-   * Updates the UI state with the new name, validation error, and form validity.
-   *
-   * @param name The group name to set
-   */
-  fun setName(name: String) {
-    val trimmedName = name.trim()
-    val error =
-        when {
-          trimmedName.isBlank() -> "Name is required"
-          trimmedName.length < 3 -> "Name must be at least 3 characters"
-          trimmedName.length > 30 -> "Name must not exceed 30 characters"
-          trimmedName.contains(Regex("\\s{2,}")) -> "Multiple consecutive spaces not allowed"
-          !trimmedName.matches(Regex("^[a-zA-Z0-9_ ]+$")) ->
-              "Only letters, numbers, spaces, and underscores allowed"
-          else -> null
-        }
-    _uiState.value =
-        _uiState.value.copy(
-            name = trimmedName,
-            nameError = error,
-            isValid = computeValidity(trimmedName, error, _uiState.value.descriptionError))
-  }
+  override fun getState(): GroupFormUIState = _uiState.value
 
-  /**
-   * Sets the group category
-   *
-   * @param category The category to set (Social/Activity/Sports)
-   */
-  fun setCategory(category: EventType) {
-    _uiState.value = _uiState.value.copy(category = category)
-  }
-
-  /**
-   * Sets the group description and validates it
-   *
-   * Validates that the description does not exceed 300 characters. Updates the UI state with the
-   * new description, validation error, and form validity.
-   *
-   * @param description The description to set
-   */
-  fun setDescription(description: String) {
-    val error = if (description.length > 300) "Description must not exceed 300 characters" else null
-    _uiState.value =
-        _uiState.value.copy(
-            description = description,
-            descriptionError = error,
-            isValid = computeValidity(_uiState.value.name, _uiState.value.nameError, error))
-  }
-
-  /**
-   * Clears the error message from the UI state
-   *
-   * Useful for dismissing error messages after the user acknowledges them.
-   */
-  fun clearErrorMsg() {
-    _uiState.value = _uiState.value.copy(errorMsg = null)
+  override fun updateState(transform: (GroupFormUIState) -> GroupFormUIState) {
+    _uiState.value = transform(_uiState.value) as EditGroupUIState
   }
 
   /**
@@ -143,26 +82,6 @@ class EditGroupViewModel(
    */
   fun clearSuccessState() {
     _uiState.value = _uiState.value.copy(editedGroupId = null)
-  }
-
-  /**
-   * Computes whether the form is valid based on field values and validation errors
-   *
-   * Form is valid when:
-   * - Name is not blank
-   * - No validation errors exist for name or description
-   *
-   * @param name The group name
-   * @param nameError Validation error for name field
-   * @param descriptionError Validation error for description field
-   * @return true if form is valid, false otherwise
-   */
-  private fun computeValidity(
-      name: String,
-      nameError: String?,
-      descriptionError: String?
-  ): Boolean {
-    return name.isNotBlank() && nameError == null && descriptionError == null
   }
 
   /**
