@@ -34,8 +34,7 @@ abstract class BaseGroupFormViewModel : ViewModel() {
     const val ERROR_NAME_REQUIRED = "Name is required"
     const val ERROR_NAME_TOO_SHORT = "Name must be at least 3 characters"
     const val ERROR_NAME_TOO_LONG = "Name must not exceed 30 characters"
-    const val ERROR_NAME_INVALID_CHARS =
-        "Only letters, numbers, spaces, and underscores allowed"
+    const val ERROR_NAME_INVALID_CHARS = "Only letters, numbers, spaces, and underscores allowed"
     const val ERROR_NAME_MULTIPLE_SPACES = "Multiple consecutive spaces not allowed"
     const val ERROR_DESCRIPTION_TOO_LONG = "Description must not exceed 300 characters"
   }

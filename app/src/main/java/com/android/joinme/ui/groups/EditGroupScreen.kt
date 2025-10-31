@@ -106,4 +106,3 @@ fun EditGroupScreen(
         Toast.makeText(context, "Not yet implemented", Toast.LENGTH_SHORT).show()
       })
 }
-

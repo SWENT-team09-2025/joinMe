@@ -1,6 +1,5 @@
 package com.android.joinme.ui.groups
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.groups.Group

@@ -91,30 +91,41 @@ fun GroupFormScreen(
         Column {
           CenterAlignedTopAppBar(
               title = {
-                Text(text = title, modifier = Modifier.testTag(testTags.title), style = MaterialTheme.typography.titleLarge)
+                Text(
+                    text = title,
+                    modifier = Modifier.testTag(testTags.title),
+                    style = MaterialTheme.typography.titleLarge)
               },
               navigationIcon = {
                 IconButton(onClick = onGoBack) {
-                  Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                      contentDescription = "Back")
                 }
               },
-              colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface))
+              colors =
+                  TopAppBarDefaults.topAppBarColors(
+                      containerColor = MaterialTheme.colorScheme.surface))
           HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
         }
       }) { paddingValues ->
         when {
           formState.isLoading -> {
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-              CircularProgressIndicator(modifier = Modifier.testTag(testTags.loadingIndicator))
-            }
+            Box(
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                contentAlignment = Alignment.Center) {
+                  CircularProgressIndicator(modifier = Modifier.testTag(testTags.loadingIndicator))
+                }
           }
           formState.errorMsg != null -> {
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-              Text(
-                  text = formState.errorMsg,
-                  color = MaterialTheme.colorScheme.error,
-                  modifier = Modifier.testTag(testTags.errorMessage))
-            }
+            Box(
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                contentAlignment = Alignment.Center) {
+                  Text(
+                      text = formState.errorMsg,
+                      color = MaterialTheme.colorScheme.error,
+                      modifier = Modifier.testTag(testTags.errorMessage))
+                }
           }
           else -> {
             Column(
@@ -125,9 +136,7 @@ fun GroupFormScreen(
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 24.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally) {
-                  GroupPictureSection(
-                      onPictureEditClick = onPictureEditClick,
-                      testTags = testTags)
+                  GroupPictureSection(onPictureEditClick = onPictureEditClick, testTags = testTags)
 
                   Spacer(modifier = Modifier.height(32.dp))
 
@@ -168,15 +177,9 @@ fun GroupFormScreen(
 }
 
 @Composable
-private fun GroupPictureSection(
-    onPictureEditClick: () -> Unit,
-    testTags: GroupFormTestTags
-) {
+private fun GroupPictureSection(onPictureEditClick: () -> Unit, testTags: GroupFormTestTags) {
   Box(
-      modifier =
-          Modifier.fillMaxWidth()
-              .padding(vertical = 24.dp)
-              .testTag(testTags.groupPicture),
+      modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp).testTag(testTags.groupPicture),
       contentAlignment = Alignment.Center) {
         Box(modifier = Modifier.size(140.dp), contentAlignment = Alignment.Center) {
           Image(
@@ -317,11 +320,11 @@ private fun DescriptionInput(
         value = value,
         onValueChange = onValueChange,
         modifier =
-            Modifier.fillMaxWidth()
-                .height(120.dp)
-                .testTag(testTags.groupDescriptionTextField),
+            Modifier.fillMaxWidth().height(120.dp).testTag(testTags.groupDescriptionTextField),
         placeholder = {
-          Text("Tell us what your group is about", color = MaterialTheme.colorScheme.onSurfaceVariant)
+          Text(
+              "Tell us what your group is about",
+              color = MaterialTheme.colorScheme.onSurfaceVariant)
         },
         isError = error != null,
         maxLines = 4,
