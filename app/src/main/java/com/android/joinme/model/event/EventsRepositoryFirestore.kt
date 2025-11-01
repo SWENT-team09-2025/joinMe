@@ -8,6 +8,8 @@ import com.google.firebase.auth.auth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlin.collections.get
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
 
 const val EVENTS_COLLECTION_PATH = "events"
@@ -228,20 +230,26 @@ class EventsRepositoryFirestore(
         snapshot.mapNotNull { documentToEvent(it) }
       }
       EventFilter.EVENTS_FOR_MAP_SCREEN -> {
-        val participantSnapshot =
+        // Execute both Firestore queries in parallel for better performance
+        coroutineScope {
+          val participantSnapshotDeferred = async {
             db.collection(EVENTS_COLLECTION_PATH)
                 .whereArrayContains("participants", userId)
                 .get()
                 .await()
-        val publicSnapshot =
+          }
+          val publicSnapshotDeferred = async {
             db.collection(EVENTS_COLLECTION_PATH)
                 .whereEqualTo("visibility", EventVisibility.PUBLIC.name)
                 .get()
                 .await()
+          }
 
-        val participantEvents = participantSnapshot.mapNotNull { documentToEvent(it) }
-        val publicEvents = publicSnapshot.mapNotNull { documentToEvent(it) }
-        (participantEvents + publicEvents).distinctBy { it.eventId }
+          val participantEvents =
+              participantSnapshotDeferred.await().mapNotNull { documentToEvent(it) }
+          val publicEvents = publicSnapshotDeferred.await().mapNotNull { documentToEvent(it) }
+          (participantEvents + publicEvents).distinctBy { it.eventId }
+        }
       }
     }
   }
