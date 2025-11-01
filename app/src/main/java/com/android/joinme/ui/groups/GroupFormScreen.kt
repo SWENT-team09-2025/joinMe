@@ -176,6 +176,17 @@ fun GroupFormScreen(
       }
 }
 
+/**
+ * Displays the group picture section with an edit button overlay.
+ *
+ * This component shows a circular placeholder image for the group with a blurred background effect.
+ * An edit icon button is overlaid on the image to allow users to change the group picture.
+ * Currently uses a default placeholder image that will be replaced with actual group pictures.
+ *
+ * @param onPictureEditClick Callback invoked when the user taps the edit button to change the
+ *   picture
+ * @param testTags Test tags for UI testing of the picture section and edit button
+ */
 @Composable
 private fun GroupPictureSection(onPictureEditClick: () -> Unit, testTags: GroupFormTestTags) {
   Box(
@@ -206,6 +217,19 @@ private fun GroupPictureSection(onPictureEditClick: () -> Unit, testTags: GroupF
       }
 }
 
+/**
+ * Input field for the group name with validation support.
+ *
+ * This component displays a labeled text field for entering the group name. It provides real-time
+ * validation feedback through visual cues (border color changes) and supporting text messages. The
+ * field is restricted to a single line and validates that the name is 3-30 characters long and
+ * contains only letters, numbers, spaces, or underscores.
+ *
+ * @param value The current value of the group name input
+ * @param onValueChange Callback invoked when the user types in the text field
+ * @param error Optional error message to display. When null, displays default helper text
+ * @param testTags Test tags for UI testing of the text field and supporting text
+ */
 @Composable
 private fun GroupNameInput(
     value: String,
@@ -245,6 +269,19 @@ private fun GroupNameInput(
   }
 }
 
+/**
+ * Dropdown selector for the group category.
+ *
+ * This component displays a read-only text field that opens a dropdown menu when clicked, allowing
+ * users to select from available EventType categories (SPORTS, ACTIVITY, SOCIAL). The dropdown is
+ * implemented using Material3's OutlinedTextField with a trailing dropdown icon and a DropdownMenu
+ * that displays all available event types. The text field is read-only to prevent direct text input
+ * and ensure users can only select predefined categories.
+ *
+ * @param selectedCategory The currently selected EventType category
+ * @param onCategorySelected Callback invoked when a user selects a category from the dropdown
+ * @param testTags Test tags for UI testing of the dropdown field and menu items
+ */
 @Composable
 private fun CategoryDropdown(
     selectedCategory: EventType,
@@ -301,6 +338,20 @@ private fun CategoryDropdown(
   }
 }
 
+/**
+ * Multi-line input field for the group description with validation support.
+ *
+ * This component displays a labeled text field for entering a longer description of the group. It
+ * provides real-time validation feedback through visual cues (border color changes) and supporting
+ * text messages. The field supports up to 4 lines of text and validates that the description is
+ * 0-300 characters long and contains only letters, numbers, spaces, or underscores. Unlike the name
+ * field, the description is optional.
+ *
+ * @param value The current value of the group description input
+ * @param onValueChange Callback invoked when the user types in the text field
+ * @param error Optional error message to display. When null, displays default helper text
+ * @param testTags Test tags for UI testing of the text field and supporting text
+ */
 @Composable
 private fun DescriptionInput(
     value: String,
@@ -346,6 +397,20 @@ private fun DescriptionInput(
   }
 }
 
+/**
+ * Save button for the group form with enabled/disabled states.
+ *
+ * This component displays a full-width button that triggers the form submission. The button
+ * automatically disables itself when the form is invalid or during loading states. The text is
+ * displayed in uppercase and the button uses theme colors for both enabled and disabled states to
+ * maintain visual consistency with the app's design system. The disabled state uses muted colors to
+ * provide clear visual feedback about button availability.
+ *
+ * @param enabled Whether the button should be enabled (typically based on form validation)
+ * @param onClick Callback invoked when the user clicks the save button
+ * @param text The text to display on the button (e.g., "Save", "Create Group")
+ * @param testTags Test tags for UI testing of the save button
+ */
 @Composable
 private fun SaveButton(
     enabled: Boolean,
