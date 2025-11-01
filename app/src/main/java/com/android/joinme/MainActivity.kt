@@ -80,7 +80,7 @@ class MainActivity : ComponentActivity() {
     channel.description = "Notifications for upcoming events"
     channel.enableVibration(true)
 
-    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
     notificationManager.createNotificationChannel(channel)
   }
 }

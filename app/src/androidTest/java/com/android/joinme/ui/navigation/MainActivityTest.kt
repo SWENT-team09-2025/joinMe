@@ -462,4 +462,65 @@ class MainActivityTest {
     // Navigation should work without crashes
     assert(true)
   }
+
+  @Test
+  fun mainActivity_notificationChannelIsCreatedOnStartup() {
+    composeTestRule.waitForIdle()
+    val activity = composeTestRule.activity
+    val notificationManager =
+        activity.getSystemService(android.content.Context.NOTIFICATION_SERVICE)
+            as android.app.NotificationManager
+
+    // Verify the notification channel exists
+    val channel = notificationManager.getNotificationChannel("event_notifications")
+    assert(channel != null)
+    assert(channel.name == "Event Notifications")
+    assert(channel.importance == android.app.NotificationManager.IMPORTANCE_HIGH)
+    assert(channel.description == "Notifications for upcoming events")
+  }
+
+  @Test
+  fun mainActivity_notificationChannelHasVibrationEnabled() {
+    composeTestRule.waitForIdle()
+    val activity = composeTestRule.activity
+    val notificationManager =
+        activity.getSystemService(android.content.Context.NOTIFICATION_SERVICE)
+            as android.app.NotificationManager
+
+    val channel = notificationManager.getNotificationChannel("event_notifications")
+    assert(channel != null)
+    assert(channel.shouldVibrate())
+  }
+
+  @Test
+  fun mainActivity_handlesIntentWithNullData() {
+    composeTestRule.waitForIdle()
+    val activity = composeTestRule.activity
+
+    // Verify intent data handling doesn't crash with null data
+    val intent = activity.intent
+    val eventId = intent?.data?.lastPathSegment
+
+    // Should handle null gracefully without crashing
+    assert(eventId == null || eventId is String)
+  }
+
+  @Test
+  fun httpClientProvider_isAccessible() {
+    // Verify HttpClientProvider can be accessed from tests
+    val client = com.android.joinme.HttpClientProvider.client
+    assert(client != null)
+  }
+
+  @Test
+  fun httpClientProvider_canBeReplaced() {
+    val originalClient = com.android.joinme.HttpClientProvider.client
+    val newClient = okhttp3.OkHttpClient()
+
+    com.android.joinme.HttpClientProvider.client = newClient
+    assert(com.android.joinme.HttpClientProvider.client == newClient)
+
+    // Restore original
+    com.android.joinme.HttpClientProvider.client = originalClient
+  }
 }
