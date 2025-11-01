@@ -94,6 +94,18 @@ sealed class Screen(
   /** Screen for creating a new group */
   object CreateGroup : Screen(route = "create_group", name = "Create Group")
 
+  /**
+   * Screen for editing an existing group
+   *
+   * @param groupId The ID of the group to edit
+   */
+  data class EditGroup(val groupId: String) :
+      Screen(route = "edit_group/${groupId}", name = "Edit Group") {
+    companion object {
+      const val route = "edit_group/{groupId}"
+    }
+  }
+
   data class GroupDetail(val groupId: String) :
       Screen(route = "groupId/${groupId}", name = "Group Detail") {
     companion object {
