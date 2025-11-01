@@ -128,7 +128,7 @@ jobs:
       - name: Firestore Security Rules tests
         run: |
           if [ ! -e "firebase.json" ]; then
-            echo "(B2 Warning): 'firebase.json' file is missing. Use 'firebase emulators:init'. Emulators are setup in B2"
+            echo "Warning: 'firebase.json' file is missing. Use 'firebase emulators:init'."
             exit 0
           fi
           jq -e '.emulators' firebase.json >/dev/null || {
@@ -148,7 +148,7 @@ jobs:
             }
             (cd firebase/firestore/test 2>/dev/null && npm install && npm test) || exit $?
           else
-            echo "(B3 Warning): Firestore rules file not found in firebase/firestore. Rules are setup in B3, you can ignore this warning in B2."
+            echo "Warning: Firestore rules file not found in firebase/firestore."
           fi
 
       - name: Run unit tests
