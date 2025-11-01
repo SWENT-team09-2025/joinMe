@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.getColor
+import com.android.joinme.ui.map.MapScreenTestTags.getTestTagForEventMarker
 import com.android.joinme.ui.map.userLocation.LocationServiceImpl
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
@@ -35,7 +36,6 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
@@ -80,7 +80,7 @@ private fun colorToHue(color: Color): Float {
 @Composable
 fun MapScreen(
     viewModel: MapViewModel = viewModel(),
-    navigationActions: NavigationActions? = null,
+    navigationActions: NavigationActions? = null
 ) {
   val context = LocalContext.current
 
@@ -108,9 +108,7 @@ fun MapScreen(
   }
 
   // --- Initialize the map camera position ---
-  val cameraPositionState = rememberCameraPositionState {
-    position = CameraPosition.fromLatLngZoom(LatLng(46.5187, 6.5629), 10f)
-  }
+  val cameraPositionState = rememberCameraPositionState()
 
   val currentLat = uiState.userLocation?.latitude
   val currentLng = uiState.userLocation?.longitude
@@ -157,7 +155,8 @@ fun MapScreen(
                         Marker(
                             state = MarkerState(position = position),
                             icon = BitmapDescriptorFactory.defaultMarker(hue),
-                            tag = event.eventId)
+                            tag = getTestTagForEventMarker(event.eventId))
+
                       }
                     }
                   }
