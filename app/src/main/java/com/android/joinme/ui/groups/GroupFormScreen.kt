@@ -16,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -26,6 +25,7 @@ import com.android.joinme.R
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.displayString
 import com.android.joinme.ui.theme.ErrorBorderColor
+import com.android.joinme.ui.theme.TransparentColor
 
 /** Data class representing the test tags for group form fields. */
 data class GroupFormTestTags(
@@ -165,7 +165,7 @@ fun GroupFormScreen(
                   Spacer(modifier = Modifier.height(32.dp))
 
                   SaveButton(
-                      enabled = formState.isValid && !formState.isLoading,
+                      enabled = formState.isValid,
                       onClick = onSave,
                       text = saveButtonText,
                       testTags = testTags)
@@ -200,11 +200,11 @@ private fun GroupPictureSection(onPictureEditClick: () -> Unit, testTags: GroupF
 
           Button(
               onClick = onPictureEditClick,
-              colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+              colors = ButtonDefaults.buttonColors(containerColor = TransparentColor),
               shape = CircleShape,
               modifier = Modifier.size(120.dp).testTag(testTags.editPhotoButton)) {
                 Box(
-                    modifier = Modifier.size(50.dp).clip(CircleShape).background(Color.Transparent),
+                    modifier = Modifier.size(50.dp).clip(CircleShape).background(TransparentColor),
                     contentAlignment = Alignment.Center) {
                       Icon(
                           imageVector = Icons.Outlined.Edit,
