@@ -66,8 +66,8 @@ class MapViewModel(
   }
 
   /**
-   * Fetches all upcoming events with a location from the repository and updates the UI state.
-   * This includes owned events, joined events, and public events.
+   * Fetches all upcoming events with a location from the repository and updates the UI state. This
+   * includes owned events, joined events, and public events.
    */
   private fun fetchLocalizableEvents() {
     viewModelScope.launch {
@@ -77,8 +77,7 @@ class MapViewModel(
         _uiState.value = _uiState.value.copy(todos = events, isLoading = false)
       } catch (e: Exception) {
         _uiState.value =
-            _uiState.value.copy(
-                errorMsg = "Failed to load events: ${e.message}", isLoading = false)
+            _uiState.value.copy(errorMsg = "Failed to load events: ${e.message}", isLoading = false)
       }
     }
   }

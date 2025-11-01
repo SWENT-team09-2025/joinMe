@@ -73,37 +73,42 @@ class EventsRepositoryFirestore(
 
     // Database-level filtering: Fetch events from Firestore with filters applied at the database
     // level
-    val events = when (eventFilter) {
-      EventFilter.EVENTS_FOR_OVERVIEW_SCREEN,
-      EventFilter.EVENTS_FOR_HISTORY_SCREEN -> {
-        val snapshot = db.collection(EVENTS_COLLECTION_PATH)
-            .whereArrayContains("participants", userId)
-            .get()
-            .await()
-        snapshot.mapNotNull { documentToEvent(it) }
-      }
-      EventFilter.EVENTS_FOR_SEARCH_SCREEN -> {
-        val snapshot = db.collection(EVENTS_COLLECTION_PATH)
-            .whereEqualTo("visibility", EventVisibility.PUBLIC.name)
-            .get()
-            .await()
-        snapshot.mapNotNull { documentToEvent(it) }
-      }
-      EventFilter.EVENTS_FOR_MAP_SCREEN -> {
-        val participantSnapshot = db.collection(EVENTS_COLLECTION_PATH)
-            .whereArrayContains("participants", userId)
-            .get()
-            .await()
-        val publicSnapshot = db.collection(EVENTS_COLLECTION_PATH)
-            .whereEqualTo("visibility", EventVisibility.PUBLIC.name)
-            .get()
-            .await()
+    val events =
+        when (eventFilter) {
+          EventFilter.EVENTS_FOR_OVERVIEW_SCREEN,
+          EventFilter.EVENTS_FOR_HISTORY_SCREEN -> {
+            val snapshot =
+                db.collection(EVENTS_COLLECTION_PATH)
+                    .whereArrayContains("participants", userId)
+                    .get()
+                    .await()
+            snapshot.mapNotNull { documentToEvent(it) }
+          }
+          EventFilter.EVENTS_FOR_SEARCH_SCREEN -> {
+            val snapshot =
+                db.collection(EVENTS_COLLECTION_PATH)
+                    .whereEqualTo("visibility", EventVisibility.PUBLIC.name)
+                    .get()
+                    .await()
+            snapshot.mapNotNull { documentToEvent(it) }
+          }
+          EventFilter.EVENTS_FOR_MAP_SCREEN -> {
+            val participantSnapshot =
+                db.collection(EVENTS_COLLECTION_PATH)
+                    .whereArrayContains("participants", userId)
+                    .get()
+                    .await()
+            val publicSnapshot =
+                db.collection(EVENTS_COLLECTION_PATH)
+                    .whereEqualTo("visibility", EventVisibility.PUBLIC.name)
+                    .get()
+                    .await()
 
-        val participantEvents = participantSnapshot.mapNotNull { documentToEvent(it) }
-        val publicEvents = publicSnapshot.mapNotNull { documentToEvent(it) }
-        (participantEvents + publicEvents).distinctBy { it.eventId }
-      }
-    }
+            val participantEvents = participantSnapshot.mapNotNull { documentToEvent(it) }
+            val publicEvents = publicSnapshot.mapNotNull { documentToEvent(it) }
+            (participantEvents + publicEvents).distinctBy { it.eventId }
+          }
+        }
 
     // Client-side filtering: Apply additional filters and sorting in memory for conditions
     return when (eventFilter) {
@@ -119,7 +124,10 @@ class EventsRepositoryFirestore(
         }
       }
       EventFilter.EVENTS_FOR_MAP_SCREEN -> {
-        events.filter { event -> event.isUpcoming() && event.location != null }
+        events.filter { event ->
+          (event.isUpcoming() || (event.isActive() && event.participants.contains(userId))) &&
+              event.location != null
+        }
       }
     }
   }

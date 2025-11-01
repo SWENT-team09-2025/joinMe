@@ -78,10 +78,7 @@ private fun colorToHue(color: Color): Float {
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
-fun MapScreen(
-    viewModel: MapViewModel = viewModel(),
-    navigationActions: NavigationActions? = null
-) {
+fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: NavigationActions? = null) {
   val context = LocalContext.current
 
   // --- Initialization of localisation service ---
@@ -156,7 +153,6 @@ fun MapScreen(
                             state = MarkerState(position = position),
                             icon = BitmapDescriptorFactory.defaultMarker(hue),
                             tag = getTestTagForEventMarker(event.eventId))
-
                       }
                     }
                   }

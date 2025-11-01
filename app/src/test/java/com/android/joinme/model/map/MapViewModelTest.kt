@@ -9,15 +9,12 @@ import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
-import com.android.joinme.model.map.Location
 import com.android.joinme.ui.map.MapUIState
 import com.android.joinme.ui.map.MapViewModel
 import com.android.joinme.ui.map.userLocation.UserLocationService
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.Timestamp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
@@ -153,58 +150,61 @@ class MapViewModelTest {
   }
 
   @Test
-  fun `fetchLocalizableEvents loads events successfully`() = runTest(testDispatcher) {
-    // Create test events
-    val testEvents =
-        listOf(
-            Event(
-                eventId = "event1",
-                type = EventType.SPORTS,
-                title = "Test Event",
-                description = "Description",
-                location = Location(46.5, 6.6, "Test Location"),
-                date = Timestamp.now(),
-                duration = 60,
-                participants = emptyList(),
-                maxParticipants = 10,
-                visibility = EventVisibility.PUBLIC,
-                ownerId = "owner1"))
+  fun `fetchLocalizableEvents loads events successfully`() =
+      runTest(testDispatcher) {
+        // Create test events
+        val testEvents =
+            listOf(
+                Event(
+                    eventId = "event1",
+                    type = EventType.SPORTS,
+                    title = "Test Event",
+                    description = "Description",
+                    location = Location(46.5, 6.6, "Test Location"),
+                    date = Timestamp.now(),
+                    duration = 60,
+                    participants = emptyList(),
+                    maxParticipants = 10,
+                    visibility = EventVisibility.PUBLIC,
+                    ownerId = "owner1"))
 
-    // Mock repository to return test events
-    whenever(mockEventsRepository.getAllEvents(EventFilter.EVENTS_FOR_MAP_SCREEN))
-        .thenReturn(testEvents)
+        // Mock repository to return test events
+        whenever(mockEventsRepository.getAllEvents(EventFilter.EVENTS_FOR_MAP_SCREEN))
+            .thenReturn(testEvents)
 
-    // Call fetchLocalizableEvents via reflection
-    val method = viewModel.javaClass.getDeclaredMethod("fetchLocalizableEvents")
-    method.isAccessible = true
-    method.invoke(viewModel)
+        // Call fetchLocalizableEvents via reflection
+        val method = viewModel.javaClass.getDeclaredMethod("fetchLocalizableEvents")
+        method.isAccessible = true
+        method.invoke(viewModel)
 
-    // Advance coroutines
-    advanceUntilIdle()
+        // Advance coroutines
+        advanceUntilIdle()
 
-    // Verify the state is updated with events
-    assertEquals(testEvents, viewModel.uiState.value.todos)
-    assertFalse(viewModel.uiState.value.isLoading)
-    assertNull(viewModel.uiState.value.errorMsg)
-  }
+        // Verify the state is updated with events
+        assertEquals(testEvents, viewModel.uiState.value.todos)
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertNull(viewModel.uiState.value.errorMsg)
+      }
 
   @Test
-  fun `fetchLocalizableEvents handles error correctly`() = runTest(testDispatcher) {
-    // Mock repository to throw exception
-    whenever(mockEventsRepository.getAllEvents(any())).thenThrow(RuntimeException("Network error"))
+  fun `fetchLocalizableEvents handles error correctly`() =
+      runTest(testDispatcher) {
+        // Mock repository to throw exception
+        whenever(mockEventsRepository.getAllEvents(any()))
+            .thenThrow(RuntimeException("Network error"))
 
-    // Call fetchLocalizableEvents via reflection
-    val method = viewModel.javaClass.getDeclaredMethod("fetchLocalizableEvents")
-    method.isAccessible = true
-    method.invoke(viewModel)
+        // Call fetchLocalizableEvents via reflection
+        val method = viewModel.javaClass.getDeclaredMethod("fetchLocalizableEvents")
+        method.isAccessible = true
+        method.invoke(viewModel)
 
-    // Advance coroutines
-    advanceUntilIdle()
+        // Advance coroutines
+        advanceUntilIdle()
 
-    // Verify error state
-    assertTrue(viewModel.uiState.value.todos.isEmpty())
-    assertFalse(viewModel.uiState.value.isLoading)
-    assertNotNull(viewModel.uiState.value.errorMsg)
-    assertTrue(viewModel.uiState.value.errorMsg!!.contains("Failed to load events"))
-  }
+        // Verify error state
+        assertTrue(viewModel.uiState.value.todos.isEmpty())
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertNotNull(viewModel.uiState.value.errorMsg)
+        assertTrue(viewModel.uiState.value.errorMsg!!.contains("Failed to load events"))
+      }
 }
