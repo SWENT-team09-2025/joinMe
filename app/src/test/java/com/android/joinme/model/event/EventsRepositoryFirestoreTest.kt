@@ -454,4 +454,312 @@ class EventsRepositoryFirestoreTest {
     assertEquals(0.0, result.location?.longitude ?: -1.0, 0.001)
     assertEquals("", result.location?.name)
   }
+
+  @Test(expected = Exception::class)
+  fun documentToEvent_returnsNullWhenDateIsMissing() = runTest {
+    // Given
+    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+    every { mockSnapshot.id } returns testEventId
+    every { mockSnapshot.getString("type") } returns EventType.SOCIAL.name
+    every { mockSnapshot.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot.getString("title") } returns "Test Event"
+    every { mockSnapshot.getString("description") } returns "Description"
+    every { mockSnapshot.getTimestamp("date") } returns null // Missing required field
+    every { mockSnapshot.getLong("duration") } returns 60L
+    every { mockSnapshot.get("participants") } returns listOf(testUserId)
+    every { mockSnapshot.getLong("maxParticipants") } returns 5L
+    every { mockSnapshot.getString("ownerId") } returns testUserId
+    every { mockSnapshot.get("location") } returns null
+
+    // When - documentToEvent returns null because date is missing
+    // getEvent throws exception because documentToEvent returned null
+    repository.getEvent(testEventId)
+
+    // Then - exception is thrown
+  }
+
+  @Test(expected = Exception::class)
+  fun documentToEvent_returnsNullWhenOwnerIdIsMissing() = runTest {
+    // Given
+    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+    every { mockSnapshot.id } returns testEventId
+    every { mockSnapshot.getString("type") } returns EventType.SOCIAL.name
+    every { mockSnapshot.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot.getString("title") } returns "Test Event"
+    every { mockSnapshot.getString("description") } returns "Description"
+    every { mockSnapshot.getTimestamp("date") } returns Timestamp(Date())
+    every { mockSnapshot.getLong("duration") } returns 60L
+    every { mockSnapshot.get("participants") } returns listOf(testUserId)
+    every { mockSnapshot.getLong("maxParticipants") } returns 5L
+    every { mockSnapshot.getString("ownerId") } returns null // Missing required field
+    every { mockSnapshot.get("location") } returns null
+
+    // When - documentToEvent returns null because ownerId is missing
+    // getEvent throws exception because documentToEvent returned null
+    repository.getEvent(testEventId)
+
+    // Then - exception is thrown
+  }
+
+  @Test
+  fun getAllEvents_returnsMapEventsFiltered() = runTest {
+    // Given
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns mockUser
+    every { mockUser.uid } returns testUserId
+
+    val mockParticipantQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockPublicQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot3 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot4 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockParticipantQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+    val mockPublicQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+
+    // Mock participant query
+    every { mockCollection.whereArrayContains("participants", testUserId) } returns
+        mockParticipantQuery
+    every { mockParticipantQuery.get() } returns Tasks.forResult(mockParticipantQuerySnapshot)
+    every { mockParticipantQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
+
+    // Mock public query
+    every { mockCollection.whereEqualTo("visibility", EventVisibility.PUBLIC.name) } returns
+        mockPublicQuery
+    every { mockPublicQuery.get() } returns Tasks.forResult(mockPublicQuerySnapshot)
+    every { mockPublicQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot3, mockSnapshot4).iterator()
+
+    // Setup event 1 - upcoming event with location (participant)
+    val futureDate = Timestamp(Date(System.currentTimeMillis() + 86400000)) // Tomorrow
+    every { mockSnapshot1.id } returns "event1"
+    every { mockSnapshot1.getString("type") } returns EventType.SOCIAL.name
+    every { mockSnapshot1.getString("visibility") } returns EventVisibility.PRIVATE.name
+    every { mockSnapshot1.getString("title") } returns "Upcoming Participant Event"
+    every { mockSnapshot1.getString("description") } returns "Description 1"
+    every { mockSnapshot1.getTimestamp("date") } returns futureDate
+    every { mockSnapshot1.getLong("duration") } returns 60L
+    every { mockSnapshot1.get("participants") } returns listOf(testUserId)
+    every { mockSnapshot1.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot1.getString("ownerId") } returns "otherUser"
+    every { mockSnapshot1.get("location") } returns
+        mapOf("latitude" to 46.52, "longitude" to 6.63, "name" to "Location 1")
+
+    // Setup event 2 - active event with location where user is participant
+    val activeDate = Timestamp(Date(System.currentTimeMillis() - 1800000)) // 30 minutes ago
+    every { mockSnapshot2.id } returns "event2"
+    every { mockSnapshot2.getString("type") } returns EventType.SPORTS.name
+    every { mockSnapshot2.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot2.getString("title") } returns "Active Participant Event"
+    every { mockSnapshot2.getString("description") } returns "Description 2"
+    every { mockSnapshot2.getTimestamp("date") } returns activeDate
+    every { mockSnapshot2.getLong("duration") } returns 120L // 2 hours, so still active
+    every { mockSnapshot2.get("participants") } returns listOf(testUserId, "otherUser")
+    every { mockSnapshot2.getLong("maxParticipants") } returns 15L
+    every { mockSnapshot2.getString("ownerId") } returns "otherUser"
+    every { mockSnapshot2.get("location") } returns
+        mapOf("latitude" to 46.53, "longitude" to 6.64, "name" to "Location 2")
+
+    // Setup event 3 - upcoming public event with location (not participant)
+    every { mockSnapshot3.id } returns "event3"
+    every { mockSnapshot3.getString("type") } returns EventType.ACTIVITY.name
+    every { mockSnapshot3.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot3.getString("title") } returns "Upcoming Public Event"
+    every { mockSnapshot3.getString("description") } returns "Description 3"
+    every { mockSnapshot3.getTimestamp("date") } returns futureDate
+    every { mockSnapshot3.getLong("duration") } returns 90L
+    every { mockSnapshot3.get("participants") } returns listOf("otherUser1", "otherUser2")
+    every { mockSnapshot3.getLong("maxParticipants") } returns 20L
+    every { mockSnapshot3.getString("ownerId") } returns "otherUser1"
+    every { mockSnapshot3.get("location") } returns
+        mapOf("latitude" to 46.54, "longitude" to 6.65, "name" to "Location 3")
+
+    // Setup event 4 - expired public event with location (should be filtered out)
+    val expiredDate = Timestamp(Date(System.currentTimeMillis() - 86400000 * 2)) // 2 days ago
+    every { mockSnapshot4.id } returns "event4"
+    every { mockSnapshot4.getString("type") } returns EventType.SOCIAL.name
+    every { mockSnapshot4.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot4.getString("title") } returns "Expired Public Event"
+    every { mockSnapshot4.getString("description") } returns "Description 4"
+    every { mockSnapshot4.getTimestamp("date") } returns expiredDate
+    every { mockSnapshot4.getLong("duration") } returns 60L
+    every { mockSnapshot4.get("participants") } returns listOf("otherUser")
+    every { mockSnapshot4.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot4.getString("ownerId") } returns "otherUser"
+    every { mockSnapshot4.get("location") } returns
+        mapOf("latitude" to 46.55, "longitude" to 6.66, "name" to "Location 4")
+
+    // When
+    val result = repository.getAllEvents(EventFilter.EVENTS_FOR_MAP_SCREEN)
+
+    // Then - should include upcoming and active participant events, exclude expired
+    assertEquals(3, result.size)
+    assertEquals("Upcoming Participant Event", result[0].title)
+    assertEquals("Active Participant Event", result[1].title)
+    assertEquals("Upcoming Public Event", result[2].title)
+  }
+
+  @Test
+  fun getAllEvents_mapScreenFiltersEventsWithoutLocation() = runTest {
+    // Given
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns mockUser
+    every { mockUser.uid } returns testUserId
+
+    val mockParticipantQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockPublicQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockParticipantQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+    val mockPublicQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+
+    // Mock queries
+    every { mockCollection.whereArrayContains("participants", testUserId) } returns
+        mockParticipantQuery
+    every { mockParticipantQuery.get() } returns Tasks.forResult(mockParticipantQuerySnapshot)
+    every { mockParticipantQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot1).iterator()
+
+    every { mockCollection.whereEqualTo("visibility", EventVisibility.PUBLIC.name) } returns
+        mockPublicQuery
+    every { mockPublicQuery.get() } returns Tasks.forResult(mockPublicQuerySnapshot)
+    every { mockPublicQuerySnapshot.iterator() } returns
+        mutableListOf<com.google.firebase.firestore.QueryDocumentSnapshot>().iterator()
+
+    // Setup event without location
+    val futureDate = Timestamp(Date(System.currentTimeMillis() + 86400000)) // Tomorrow
+    every { mockSnapshot1.id } returns "event1"
+    every { mockSnapshot1.getString("type") } returns EventType.SOCIAL.name
+    every { mockSnapshot1.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot1.getString("title") } returns "Event Without Location"
+    every { mockSnapshot1.getString("description") } returns "Description"
+    every { mockSnapshot1.getTimestamp("date") } returns futureDate
+    every { mockSnapshot1.getLong("duration") } returns 60L
+    every { mockSnapshot1.get("participants") } returns listOf(testUserId)
+    every { mockSnapshot1.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot1.getString("ownerId") } returns testUserId
+    every { mockSnapshot1.get("location") } returns null // No location
+
+    // When
+    val result = repository.getAllEvents(EventFilter.EVENTS_FOR_MAP_SCREEN)
+
+    // Then - event should be filtered out because it has no location
+    assertEquals(0, result.size)
+  }
+
+  @Test
+  fun getAllEvents_mapScreenRemovesDuplicateEvents() = runTest {
+    // Given
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns mockUser
+    every { mockUser.uid } returns testUserId
+
+    val mockParticipantQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockPublicQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockParticipantQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+    val mockPublicQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+
+    // Mock queries
+    every { mockCollection.whereArrayContains("participants", testUserId) } returns
+        mockParticipantQuery
+    every { mockParticipantQuery.get() } returns Tasks.forResult(mockParticipantQuerySnapshot)
+    every { mockParticipantQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot1).iterator()
+
+    every { mockCollection.whereEqualTo("visibility", EventVisibility.PUBLIC.name) } returns
+        mockPublicQuery
+    every { mockPublicQuery.get() } returns Tasks.forResult(mockPublicQuerySnapshot)
+    every { mockPublicQuerySnapshot.iterator() } returns mutableListOf(mockSnapshot2).iterator()
+
+    val futureDate = Timestamp(Date(System.currentTimeMillis() + 86400000)) // Tomorrow
+
+    // Setup same event appearing in both queries (public event where user is participant)
+    every { mockSnapshot1.id } returns "duplicateEvent"
+    every { mockSnapshot1.getString("type") } returns EventType.SOCIAL.name
+    every { mockSnapshot1.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot1.getString("title") } returns "Duplicate Event"
+    every { mockSnapshot1.getString("description") } returns "Description"
+    every { mockSnapshot1.getTimestamp("date") } returns futureDate
+    every { mockSnapshot1.getLong("duration") } returns 60L
+    every { mockSnapshot1.get("participants") } returns listOf(testUserId)
+    every { mockSnapshot1.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot1.getString("ownerId") } returns testUserId
+    every { mockSnapshot1.get("location") } returns
+        mapOf("latitude" to 46.52, "longitude" to 6.63, "name" to "Location")
+
+    // Same event from public query
+    every { mockSnapshot2.id } returns "duplicateEvent"
+    every { mockSnapshot2.getString("type") } returns EventType.SOCIAL.name
+    every { mockSnapshot2.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot2.getString("title") } returns "Duplicate Event"
+    every { mockSnapshot2.getString("description") } returns "Description"
+    every { mockSnapshot2.getTimestamp("date") } returns futureDate
+    every { mockSnapshot2.getLong("duration") } returns 60L
+    every { mockSnapshot2.get("participants") } returns listOf(testUserId)
+    every { mockSnapshot2.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot2.getString("ownerId") } returns testUserId
+    every { mockSnapshot2.get("location") } returns
+        mapOf("latitude" to 46.52, "longitude" to 6.63, "name" to "Location")
+
+    // When
+    val result = repository.getAllEvents(EventFilter.EVENTS_FOR_MAP_SCREEN)
+
+    // Then - should only return one event despite appearing in both queries
+    assertEquals(1, result.size)
+    assertEquals("Duplicate Event", result[0].title)
+  }
+
+  @Test
+  fun getAllEvents_mapScreenFiltersActiveEventsWhereUserIsNotParticipant() = runTest {
+    // Given
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns mockUser
+    every { mockUser.uid } returns testUserId
+
+    val mockParticipantQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockPublicQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockParticipantQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+    val mockPublicQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+
+    // Mock queries
+    every { mockCollection.whereArrayContains("participants", testUserId) } returns
+        mockParticipantQuery
+    every { mockParticipantQuery.get() } returns Tasks.forResult(mockParticipantQuerySnapshot)
+    every { mockParticipantQuerySnapshot.iterator() } returns
+        mutableListOf<com.google.firebase.firestore.QueryDocumentSnapshot>().iterator()
+
+    every { mockCollection.whereEqualTo("visibility", EventVisibility.PUBLIC.name) } returns
+        mockPublicQuery
+    every { mockPublicQuery.get() } returns Tasks.forResult(mockPublicQuerySnapshot)
+    every { mockPublicQuerySnapshot.iterator() } returns mutableListOf(mockSnapshot1).iterator()
+
+    // Setup active public event where user is NOT a participant
+    val activeDate = Timestamp(Date(System.currentTimeMillis() - 1800000))
+    every { mockSnapshot1.id } returns "event1"
+    every { mockSnapshot1.getString("type") } returns EventType.SPORTS.name
+    every { mockSnapshot1.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot1.getString("title") } returns "Active Public Event"
+    every { mockSnapshot1.getString("description") } returns "Description"
+    every { mockSnapshot1.getTimestamp("date") } returns activeDate
+    every { mockSnapshot1.getLong("duration") } returns 120L
+    every { mockSnapshot1.get("participants") } returns listOf("otherUser1", "otherUser2")
+    every { mockSnapshot1.getLong("maxParticipants") } returns 15L
+    every { mockSnapshot1.getString("ownerId") } returns "otherUser1"
+    every { mockSnapshot1.get("location") } returns
+        mapOf("latitude" to 46.52, "longitude" to 6.63, "name" to "Location")
+
+    // When
+    val result = repository.getAllEvents(EventFilter.EVENTS_FOR_MAP_SCREEN)
+
+    assertEquals(0, result.size)
+  }
 }
