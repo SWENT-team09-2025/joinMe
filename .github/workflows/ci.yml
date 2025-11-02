@@ -368,6 +368,18 @@ jobs:
           echo "=== Test Results ==="
           find app/build -name "TEST-*.xml" -type f | wc -l
 
+      - name: Debug coverage files in detail
+        run: |
+          echo "=== File sizes ==="
+          for f in $(find app/build -name "*.exec" -o -name "*.ec"); do
+            size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
+            echo "$f: $size bytes"
+          done
+          echo ""
+          echo "=== Class files exist? ==="
+          find app/build/tmp/kotlin-classes/debug -name "*.class" 2>/dev/null | head -10 || echo "No Kotlin classes"
+          find app/build/intermediates/javac/debug -name "*.class" 2>/dev/null | head -10 || echo "No Java classes"
+
       - name: Assemble classes for coverage report
         run: ./gradlew assembleDebug assembleDebugAndroidTest --parallel --build-cache
 
