@@ -120,8 +120,13 @@ sonar {
         property("sonar.projectName", "joinMe")
         property("sonar.organization", "swent-team09-2025")
         property("sonar.host.url", "https://sonarcloud.io")
-        property("sonar.sources", listOf("src/main/java"))
-        property("sonar.tests", listOf("src/test/java", "src/androidTest/java"))
+        
+        // FIXED: Include both Java and Kotlin source directories
+        property("sonar.sources", "src/main/java,src/main/kotlin")
+        
+        // FIXED: Include both Java and Kotlin test directories
+        property("sonar.tests", "src/test/java,src/test/kotlin,src/androidTest/java,src/androidTest/kotlin")
+        
         // Java bytecode directories for coverage analysis
         property(
             "sonar.java.binaries",
@@ -140,13 +145,13 @@ sonar {
         )
         property("sonar.junit.reportPaths", listOf("build/test-results/testDebugUnitTest"))
         property("sonar.androidLint.reportPaths", listOf("build/reports/lint-results-debug.xml"))
+        
+        // FIXED: Only reference the unified coverage report that actually gets generated
         property(
             "sonar.coverage.jacoco.xmlReportPaths",
-            listOf(
-                "build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml",
-                "build/reports/coverage/androidTest/debug/connected/report.xml"
-            )
+            "build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml"
         )
+        
         property("sonar.sourceEncoding", "UTF-8")
     }
 }
@@ -197,6 +202,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
     implementation("com.google.firebase:firebase-auth-ktx:23.0.0")
     implementation("com.firebaseui:firebase-ui-auth:8.0.0")
     implementation("com.google.protobuf:protobuf-javalite:3.25.1")
@@ -282,10 +288,12 @@ tasks.register("jacocoTestReport", JacocoReport::class) {
     sourceDirectories.setFrom(files(mainSrc))
     classDirectories.setFrom(files(debugTree))
 
+    // FIXED: Use proper fileTree with explicit paths instead of wildcards
     executionData.setFrom(
         fileTree(project.layout.buildDirectory.get()) {
             include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
-            include("outputs/code_coverage/debugAndroidTest/connected/*/coverage.ec")
+            include("outputs/code_coverage/debugAndroidTest/connected/**/*.ec")
+            include("jacoco/testDebugUnitTest.exec")
         }
     )
 
