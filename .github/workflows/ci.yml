@@ -13,27 +13,36 @@ on:
       - reopened
 
 jobs:
-  joinme-ci:
-    name: CI-JoinMe
-    runs-on: ubuntu-latest
-
-    env:
-      app_name: JoinMeDebug
+  # Job A: Build and Lint
+  build-and-lint:
+    name: Build and Lint
+    runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:
-      # First step : Checkout the repository on the runner
       - name: Checkout
         uses: actions/checkout@v3
         with:
           submodules: recursive
-          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of Sonar analysis (if we use Sonar Later)
+          fetch-depth: 0
 
-      # This step removes the current gradle cache to avoid any caching issues
-      - name: Remove current gradle cache
-        run: rm -rf ~/.gradle
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "17"
 
-      # Kernel-based Virtual Machine (KVM) is an open source virtualization technology built into Linux. Enabling it allows the Android emulator to run faster.
-      - name: Enable KVM group perms
+      - name: Retrieve gradle cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+      - name: Decode secrets
+        env:
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
+          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
         run: |
           if [ -n "$GOOGLE_SERVICES" ]; then
             echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
@@ -88,11 +97,6 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
-
-      # Caching is a very useful part of a CI, as a workflow is executed in a clean environement every time,
-      # this means that one would need to re-download and re-process gradle files for every run. Which is very time consuming.
-      #
-      # To avoid that, we cache the the gradle folder to reuse it later.
       - name: Retrieve gradle cache
         uses: actions/cache@v3
         with:
@@ -101,7 +105,6 @@ jobs:
             ~/.gradle/wrapper
           key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
 
-      # Load google-services.json from the secrets
       - name: Decode secrets
         env:
           GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
@@ -119,16 +122,13 @@ jobs:
           fi
 
       - name: Grant execute permission for gradlew
-        run: |
-          chmod +x ./gradlew
+        run: chmod +x ./gradlew
 
-      # Install NodeJS
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      # Install Firebase CLI
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
@@ -138,18 +138,17 @@ jobs:
             echo "(B2 Warning): 'firebase.json' file is missing. Use 'firebase emulators:init'. Emulators are setup in B2"
             exit 0
           fi
-          jq -e '.emulators' firebase.json >/dev/null || { # Check if emulators are configured
+          jq -e '.emulators' firebase.json >/dev/null || {
             echo "'firebase.json' is missing 'emulators'. Run 'firebase emulators:init'."
             exit 1
           }
-          for e in auth firestore; do # Check if auth and firestore emulators are configured
+          for e in auth firestore; do
             jq -e ".emulators.$e" firebase.json >/dev/null || {
               echo "'firebase.json' is missing 'emulators.$e'. Run 'firebase emulators:init'."
               exit 1
             }
           done
-          if [ -e "firebase/firestore/firestore.rules" ]; then # Check if firestore.rules exists
-            # Check if firestore.rules is referenced in firebase.json
+          if [ -e "firebase/firestore/firestore.rules" ]; then
             jq -e '.firestore.rules' firebase.json >/dev/null || {
               echo "'firebase.json' is missing 'firestore.rules'."
               exit 1
@@ -192,21 +191,57 @@ jobs:
 
       - name: Enable KVM group perms
         run: |
-          # To run the CI with debug informations, add --info
-          ./gradlew ktfmtCheck
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
 
-      # This step runs gradle commands to build the application
-      - name: Assemble
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Retrieve gradle cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+      - name: Decode secrets
+        env:
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
+          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
         run: |
-          # To run the CI with debug information, add --info
-          ./gradlew assembleDebug lint --parallel --build-cache
+          if [ -n "$GOOGLE_SERVICES" ]; then
+            echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
+          else
+            echo "::warning::GOOGLE_SERVICES secret is not set. google-services.json will not be created."
+          fi
+          if [ -n "$LOCAL_PROPERTIES" ]; then
+            echo "$LOCAL_PROPERTIES" | base64 --decode > ./local.properties
+          else
+            echo "::warning::LOCAL_PROPERTIES secret is not set. local.properties will not be created."
+          fi
 
-      - name: Run tests
-        run: |
-          # To run the CI with debug information, add --info
-          ./gradlew check --parallel --build-cache
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
 
-      # Start Firebase emulators for instrumentation tests
+      - name: Download APKs
+        uses: actions/download-artifact@v4
+        with:
+          name: apks
+          path: app/build/outputs/apk
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
       - name: Start Firebase emulators
         run: |
           if [ -e "firebase.json" ] && jq -e '.emulators' firebase.json >/dev/null; then
@@ -218,16 +253,22 @@ jobs:
             echo "Firebase emulators not configured, skipping emulator startup..."
           fi
 
-      - name: Run instrumentation tests
-        timeout-minutes: 25
+      - name: Verify runner resources
+        run: |
+          nproc
+          free -h
+          lsmod | grep kvm || echo "KVM module not visible (emulator may be slower)"
+
+      - name: Run instrumentation tests (Shard ${{ matrix.shard }})
+        timeout-minutes: 40
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
           target: google_apis
           arch: x86_64
-          avd-name: github
-          force-avd-creation: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -skin 1080x2400
+          avd-name: github-shard-${{ matrix.shard }}
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -skin 1080x2340
           disable-animations: true
           script: ./gradlew connectedCheck -Pandroid.testInstrumentationRunnerArguments.numShards=2 -Pandroid.testInstrumentationRunnerArguments.shardIndex=${{ matrix.shard }} --parallel --build-cache
 
@@ -269,8 +310,10 @@ jobs:
             ~/.gradle/wrapper
           key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
 
-      # This step generates the coverage report which will be used later in the semster for monitoring purposes
-      - name: Generate coverage
+      - name: Decode secrets
+        env:
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
+          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
         run: |
           if [ -n "$GOOGLE_SERVICES" ]; then
             echo "$GOOGLE_SERVICES" | base64 --decode > ./app/google-services.json
@@ -338,14 +381,36 @@ jobs:
             echo "✓ Coverage XML generated successfully"
             echo ""
             echo "Coverage summary:"
-            grep -A 5 '<counter type="LINE"' app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml | head -1 || true
-            echo ""
-            echo "Report location: app/build/reports/jacoco/jacocoTestReport/"
-            ls -lh app/build/reports/jacoco/jacocoTestReport/ || true
+            python3 << 'PYEOF'
+          import xml.etree.ElementTree as ET
+          try:
+              tree = ET.parse("app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
+              root = tree.getroot()
+              for counter in root.findall(".//counter[@type='LINE']"):
+                  covered = int(counter.get('covered', 0))
+                  missed = int(counter.get('missed', 0))
+                  total = covered + missed
+                  if total > 0:
+                      percentage = (covered / total) * 100
+                      print(f"  Line Coverage: {covered}/{total} ({percentage:.1f}%)")
+                      break
+              for counter in root.findall(".//counter[@type='BRANCH']"):
+                  covered = int(counter.get('covered', 0))
+                  missed = int(counter.get('missed', 0))
+                  total = covered + missed
+                  if total > 0:
+                      percentage = (covered / total) * 100
+                      print(f"  Branch Coverage: {covered}/{total} ({percentage:.1f}%)")
+                      break
+          except Exception as e:
+              print(f"Could not parse coverage: {e}")
+          PYEOF
           else
-            echo "✗ Coverage XML not found"
-            echo "Searching for any JaCoCo reports..."
-            find app/build/reports/jacoco -name "*.xml" -type f || echo "No XML reports found"
+            echo "✗ Coverage XML not found - jacocoTestReport may have failed"
+            echo ""
+            echo "Looking for any coverage files:"
+            find app/build/reports/jacoco -type f || echo "No jacoco reports found"
+            exit 1
           fi
 
       - name: Fix JaCoCo XML report
@@ -378,14 +443,12 @@ jobs:
                       source_path = None
                       for package in root.findall(".//package"):
                           pkg_name = package.get('name', '').replace('/', '/')
-          
                           # Check both Java and Kotlin source directories
                           for src_dir in ['app/src/main/java', 'app/src/main/kotlin']:
                               potential_path = f"{src_dir}/{pkg_name}/{sourcefile_name}"
                               if os.path.exists(potential_path):
                                   source_path = potential_path
                                   break
-          
                           if source_path:
                               break
 
@@ -412,14 +475,17 @@ jobs:
           print("JaCoCo XML report validation complete")
           EOF
 
-      - name: Upload coverage
+      - name: Upload coverage report
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: coverage-report
           path: app/build/reports/jacoco/jacocoTestReport
+          if-no-files-found: warn
 
-      # Run SonarCloud analysis after coverage generation
       - name: SonarCloud Scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         with:
           args: >
@@ -427,4 +493,3 @@ jobs:
             -Dsonar.organization=swent-team09-2025
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.token=${{ secrets.SONAR_TOKEN }}
-            
