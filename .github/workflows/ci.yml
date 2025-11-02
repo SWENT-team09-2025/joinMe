@@ -72,6 +72,12 @@ jobs:
             app/build/outputs/apk/debug/*.apk
             app/build/outputs/apk/androidTest/debug/*.apk
 
+      - name: Upload Lint results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-results
+          path: app/build/reports/lint-results-*.xml
 
   # Job B: Unit Tests
   unit-tests:
@@ -129,7 +135,7 @@ jobs:
       - name: Firestore Security Rules tests
         run: |
           if [ ! -e "firebase.json" ]; then
-            echo "Warning: 'firebase.json' file is missing. Use 'firebase emulators:init'."
+            echo "(B2 Warning): 'firebase.json' file is missing. Use 'firebase emulators:init'. Emulators are setup in B2"
             exit 0
           fi
           jq -e '.emulators' firebase.json >/dev/null || {
@@ -149,13 +155,13 @@ jobs:
             }
             (cd firebase/firestore/test 2>/dev/null && npm install && npm test) || exit $?
           else
-            echo "Warning: Firestore rules file not found in firebase/firestore."
+            echo "(B3 Warning): Firestore rules file not found in firebase/firestore. Rules are setup in B3, you can ignore this warning in B2."
           fi
 
       - name: Run unit tests
         run: ./gradlew test --parallel --build-cache
 
-      - name: Upload test results
+      - name: Upload unit test results and coverage data
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -174,8 +180,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1]  # Split tests into 2 shards - adjust based on your test suite size
-        # For more shards: [0, 1, 2, 3] would give you 4 parallel runs
+        shard: [0, 1]
 
     steps:
       - name: Checkout
@@ -242,7 +247,6 @@ jobs:
           if [ -e "firebase.json" ] && jq -e '.emulators' firebase.json >/dev/null; then
             echo "Starting Firebase emulators for instrumentation tests..."
             firebase emulators:start --only auth,firestore --project demo-project &
-            # Wait for emulators to be ready
             sleep 10
             echo "Firebase emulators started"
           else
@@ -268,7 +272,7 @@ jobs:
           disable-animations: true
           script: ./gradlew connectedCheck -Pandroid.testInstrumentationRunnerArguments.numShards=2 -Pandroid.testInstrumentationRunnerArguments.shardIndex=${{ matrix.shard }} --parallel --build-cache
 
-      - name: Upload instrumentation test results
+      - name: Upload instrumentation test results and coverage data
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -283,7 +287,7 @@ jobs:
     name: Coverage and Sonar Analysis
     runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [build-and-lint, unit-tests, instrumentation-tests]
-    if: always()
+    if: always() && (needs.unit-tests.result == 'success' || needs.instrumentation-tests.result == 'success')
 
     steps:
       - name: Checkout
@@ -325,6 +329,13 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
+      - name: Download lint results
+        uses: actions/download-artifact@v4
+        with:
+          name: lint-results
+          path: app/build/reports/
+        continue-on-error: true
+
       - name: Download unit test results
         uses: actions/download-artifact@v4
         with:
@@ -339,7 +350,6 @@ jobs:
           path: app/build
         continue-on-error: true
 
-
       - name: Download instrumentation test results (Shard 1)
         uses: actions/download-artifact@v4
         with:
@@ -347,11 +357,39 @@ jobs:
           path: app/build
         continue-on-error: true
 
-      - name: Run lint
-        run: ./gradlew assembleDebug lint --parallel --build-cache
+      - name: Verify downloaded artifacts
+        run: |
+          echo "=== Lint Results ==="
+          find app/build/reports -name "lint-*.xml" -type f || echo "No lint files found"
+          echo ""
+          echo "=== Coverage Execution Data (.exec and .ec files) ==="
+          find app/build -name "*.exec" -o -name "*.ec" || echo "No coverage execution files found"
+          echo ""
+          echo "=== Test Results ==="
+          find app/build -name "TEST-*.xml" -type f | wc -l
 
-      - name: Generate coverage report
+      - name: Assemble classes for coverage report
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --parallel --build-cache
+
+      - name: Generate unified coverage report
         run: ./gradlew jacocoTestReport
+
+      - name: Verify coverage report generation
+        run: |
+          echo "=== Coverage Report Verification ==="
+          if [ -f "app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml" ]; then
+            echo "✓ Coverage XML generated successfully"
+            echo ""
+            echo "Coverage summary:"
+            grep -A 5 '<counter type="LINE"' app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml | head -1 || true
+            echo ""
+            echo "Report location: app/build/reports/jacoco/jacocoTestReport/"
+            ls -lh app/build/reports/jacoco/jacocoTestReport/ || true
+          else
+            echo "✗ Coverage XML not found"
+            echo "Searching for any JaCoCo reports..."
+            find app/build/reports/jacoco -name "*.xml" -type f || echo "No XML reports found"
+          fi
 
       - name: Fix JaCoCo XML report
         run: |
@@ -362,6 +400,10 @@ jobs:
 
           # Find all JaCoCo XML files
           xml_files = glob.glob("app/build/reports/jacoco/**/*.xml", recursive=True)
+
+          if not xml_files:
+              print("Warning: No JaCoCo XML files found")
+              exit(0)
 
           for xml_file in xml_files:
               try:
@@ -379,13 +421,19 @@ jobs:
                       source_path = None
                       for package in root.findall(".//package"):
                           pkg_name = package.get('name', '').replace('/', '/')
-                          potential_path = f"app/src/main/java/{pkg_name}/{sourcefile_name}"
-                          if os.path.exists(potential_path):
-                              source_path = potential_path
+          
+                          # Check both Java and Kotlin source directories
+                          for src_dir in ['app/src/main/java', 'app/src/main/kotlin']:
+                              potential_path = f"{src_dir}/{pkg_name}/{sourcefile_name}"
+                              if os.path.exists(potential_path):
+                                  source_path = potential_path
+                                  break
+          
+                          if source_path:
                               break
 
                       if source_path and os.path.exists(source_path):
-                          with open(source_path, 'r') as f:
+                          with open(source_path, 'r', encoding='utf-8', errors='ignore') as f:
                               max_line = len(f.readlines())
 
                           # Remove line elements with invalid line numbers
@@ -398,6 +446,8 @@ jobs:
                   if modified:
                       tree.write(xml_file, encoding='utf-8', xml_declaration=True)
                       print(f"Fixed invalid lines in {xml_file}")
+                  else:
+                      print(f"No fixes needed for {xml_file}")
 
               except Exception as e:
                   print(f"Warning: Could not process {xml_file}: {e}")
@@ -409,7 +459,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Coverage report
+          name: coverage-report
           path: app/build/reports/jacoco/jacocoTestReport
           if-no-files-found: warn
 
@@ -423,4 +473,4 @@ jobs:
             -Dsonar.organization=swent-team09-2025
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.token=${{ secrets.SONAR_TOKEN }}
-            -Dsonar.androidLint.reportPaths=app/build/reports/lint-results-debug.xml
+            
