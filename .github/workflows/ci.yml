@@ -159,7 +159,7 @@ jobs:
           fi
 
       - name: Run unit tests
-        run: ./gradlew test --parallel --build-cache
+        run: ./gradlew testDebugUnitTest --parallel --build-cache
 
       - name: Upload unit test results and coverage data
         uses: actions/upload-artifact@v4
@@ -371,9 +371,11 @@ jobs:
       - name: Debug coverage files in detail
         run: |
           echo "=== File sizes ==="
-          for f in $(find app/build -name "*.exec" -o -name "*.ec"); do
-            size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
-            echo "$f: $size bytes"
+          find app/build -name "*.exec" -o -name "*.ec" | while read -r f; do
+            if [ -f "$f" ]; then
+              size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
+              echo "$f: $size bytes"
+            fi
           done
           echo ""
           echo "=== Class files exist? ==="
