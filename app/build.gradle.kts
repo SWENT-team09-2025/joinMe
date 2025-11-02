@@ -279,14 +279,18 @@ tasks.register("jacocoTestReport", JacocoReport::class) {
         "**/*\$*Function*"
     )
 
-    val debugTree = fileTree("${project.layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
+    val kotlinClasses = fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
         exclude(fileFilter)
         exclude("jdk.proxy.*", "jdk.internal.*", "**/*$$*")
     }
+    val javaClasses = fileTree("${layout.buildDirectory.get()}/intermediates/javac/debug") {
+        exclude(fileFilter)
+    }
+
 
     val mainSrc = "${project.layout.projectDirectory}/src/main/java"
     sourceDirectories.setFrom(files(mainSrc))
-    classDirectories.setFrom(files(debugTree))
+    classDirectories.setFrom(files(kotlinClasses, javaClasses))
 
     // FIXED: Use proper fileTree with explicit paths instead of wildcards
     executionData.setFrom(
