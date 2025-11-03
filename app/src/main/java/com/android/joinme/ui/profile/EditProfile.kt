@@ -34,6 +34,7 @@ import com.android.joinme.ui.theme.ErrorBorderColor
 import com.android.joinme.ui.theme.FocusedBorderColor
 import com.android.joinme.ui.theme.JoinMeColor
 import com.android.joinme.ui.theme.LabelTextColor
+import com.android.joinme.ui.theme.ScrimOverlayColorLightTheme
 
 object EditProfileTestTags {
   const val NO_LOADING_PROFILE_MESSAGE = "noLoadingProfileMessage"
@@ -351,6 +352,12 @@ private fun ProfilePictureSection(
               size = 140.dp,
               showLoadingIndicator = false)
 
+          // Blur overlay using a semi-transparent box
+          Box(
+              modifier =
+                  Modifier.size(140.dp).clip(CircleShape).background(ScrimOverlayColorLightTheme))
+
+          // Edit button (disabled while uploading)
           Button(
               onClick = { if (!isUploadingPhoto) onPictureEditClick() },
               enabled = !isUploadingPhoto,
