@@ -220,7 +220,8 @@ tasks.withType<Test>().configureEach {
 
 
 tasks.register("jacocoTestReport", JacocoReport::class) {
-    dependsOn("testDebugUnitTest", "connectedDebugAndroidTest")
+    // Note: In CI, tests are already run via 'check' and 'connectedCheck' before this task
+    // No dependsOn needed to avoid re-running tests (especially connectedCheck without emulator)
     reports {
         xml.required = true
         html.required = true
@@ -257,7 +258,7 @@ tasks.register("jacocoTestReport", JacocoReport::class) {
         fileTree(project.layout.buildDirectory.get()) {
             include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
             include("outputs/code_coverage/debugAndroidTest/connected/**/*.ec")
-            include("jacoco/testDebugUnitTest.exec")
+            // Removed: jacoco/testDebugUnitTest.exec (file not generated, data already in outputs/)
         }
     )
 
