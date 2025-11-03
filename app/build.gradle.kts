@@ -249,7 +249,8 @@ tasks.register("jacocoTestReport", JacocoReport::class) {
     }
 
 
-    val mainSrc = "${project.layout.projectDirectory}/src/main/java"
+    // Use relative path for SonarCloud compatibility
+    val mainSrc = "${projectDir}/src/main/java"
     sourceDirectories.setFrom(files(mainSrc))
     classDirectories.setFrom(files(kotlinClasses, javaClasses))
 
