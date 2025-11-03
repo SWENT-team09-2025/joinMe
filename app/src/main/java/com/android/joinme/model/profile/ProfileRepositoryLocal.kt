@@ -44,32 +44,22 @@ class ProfileRepositoryLocal : ProfileRepository {
     profiles.remove(uid)
   }
 
-    override suspend fun uploadProfilePhoto(
-        context: Context,
-        uid: String,
-        imageUri: Uri
-    ): String {
-        // For local/testing purposes, just return a fake URL
-        val fakePhotoUrl = "http://example.com/photos/${uid}_${System.currentTimeMillis()}.jpg"
+  override suspend fun uploadProfilePhoto(context: Context, uid: String, imageUri: Uri): String {
+    // For local/testing purposes, just return a fake URL
+    val fakePhotoUrl = "http://example.com/photos/${uid}_${System.currentTimeMillis()}.jpg"
 
-        // Update the profile with the fake photo URL
-        profiles[uid]?.let { profile ->
-            profiles[uid] = profile.copy(
-                photoUrl = fakePhotoUrl,
-                updatedAt = Timestamp.now()
-            )
-        }
-
-        return fakePhotoUrl
+    // Update the profile with the fake photo URL
+    profiles[uid]?.let { profile ->
+      profiles[uid] = profile.copy(photoUrl = fakePhotoUrl, updatedAt = Timestamp.now())
     }
 
-    override suspend fun deleteProfilePhoto(uid: String) {
-        // For local/testing purposes, just clear the photoUrl
-        profiles[uid]?.let { profile ->
-            profiles[uid] = profile.copy(
-                photoUrl = null,
-                updatedAt = Timestamp.now()
-            )
-        }
+    return fakePhotoUrl
+  }
+
+  override suspend fun deleteProfilePhoto(uid: String) {
+    // For local/testing purposes, just clear the photoUrl
+    profiles[uid]?.let { profile ->
+      profiles[uid] = profile.copy(photoUrl = null, updatedAt = Timestamp.now())
     }
+  }
 }
