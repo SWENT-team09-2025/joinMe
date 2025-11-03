@@ -445,6 +445,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           ./gradlew sonar \
+            -Dsonar.projectKey=SWENT-team09-2025_joinMe \
+            -Dsonar.organization=swent-team09-2025 \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
             -Dsonar.gradle.skipCompile=true
