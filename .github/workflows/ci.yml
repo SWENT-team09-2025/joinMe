@@ -445,19 +445,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           ./gradlew sonarqube \
-            -Dsonar.projectKey=SWENT-team09-2025_joinMe \
-            -Dsonar.organization=swent-team09-2025 \
-            -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.log.level=DEBUG \
-            -Dsonar.verbose=true \
-            -Dsonar.coverage.jacoco.xmlReportPaths=app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml \
-            -Dsonar.sources=app/src/main/java \
-            -Dsonar.tests=app/src/test/java,app/src/androidTest/java \
-            -Dsonar.java.binaries=app/build/intermediates/javac/debug/classes \
-            -Dsonar.java.test.binaries=app/build/intermediates/javac/debugUnitTest/classes,app/build/intermediates/javac/debugAndroidTest/classes \
-            -Dsonar.kotlin.binaries=app/build/tmp/kotlin-classes/debug \
-            -Dsonar.kotlin.test.binaries=app/build/tmp/kotlin-classes/debugUnitTest,app/build/tmp/kotlin-classes/debugAndroidTest
+            -Dsonar.gradle.skipCompile=true
 
       - name: Post-SonarCloud Validation
         if: always()
