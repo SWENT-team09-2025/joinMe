@@ -1,5 +1,6 @@
 package com.android.joinme.ui.overview
 
+import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.filter.FilterRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,8 +27,9 @@ class SearchViewModelTest {
         object : com.android.joinme.model.event.EventsRepository {
           override fun getNewEventId(): String = "fake-id"
 
-          override suspend fun getAllEvents(): List<com.android.joinme.model.event.Event> =
-              emptyList()
+          override suspend fun getAllEvents(
+              eventFilter: EventFilter
+          ): List<com.android.joinme.model.event.Event> = emptyList()
 
           override suspend fun getEvent(eventId: String): com.android.joinme.model.event.Event {
             throw Exception("Not implemented in fake repo")

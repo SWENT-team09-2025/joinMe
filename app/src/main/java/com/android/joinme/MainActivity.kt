@@ -20,6 +20,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
 import com.android.joinme.ui.groups.CreateGroupScreen
+import com.android.joinme.ui.groups.GroupDetailScreen
 import com.android.joinme.ui.groups.GroupListScreen
 import com.android.joinme.ui.history.HistoryScreen
 import com.android.joinme.ui.map.MapScreen
@@ -27,6 +28,7 @@ import com.android.joinme.ui.map.MapViewModel
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.Screen
 import com.android.joinme.ui.overview.CreateEventScreen
+import com.android.joinme.ui.overview.CreateSerieScreen
 import com.android.joinme.ui.overview.EditEventScreen
 import com.android.joinme.ui.overview.OverviewScreen
 import com.android.joinme.ui.overview.SearchScreen
@@ -146,7 +148,7 @@ fun JoinMe(
     }
 
     // ============================================================================
-    // Events & History
+    // Events, Series & History
     // ============================================================================
     navigation(
         startDestination = Screen.Overview.route,
@@ -156,6 +158,7 @@ fun JoinMe(
         OverviewScreen(
             onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
             onAddEvent = { navigationActions.navigateTo(Screen.CreateEvent) },
+            onAddSerie = { navigationActions.navigateTo(Screen.CreateSerie) },
             onGoToHistory = { navigationActions.navigateTo(Screen.History) },
             navigationActions = navigationActions,
             credentialManager = credentialManager,
@@ -163,6 +166,11 @@ fun JoinMe(
       }
       composable(Screen.CreateEvent.route) {
         CreateEventScreen(
+            onDone = { navigationActions.navigateTo(Screen.Overview) },
+            onGoBack = { navigationActions.goBack() })
+      }
+      composable(Screen.CreateSerie.route) {
+        CreateSerieScreen(
             onDone = { navigationActions.navigateTo(Screen.Overview) },
             onGoBack = { navigationActions.goBack() })
       }
@@ -262,18 +270,44 @@ fun JoinMe(
             onGroup = {
               Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
             }, // TODO navigate to group details screen
-            onMoreOptionMenu = {
-              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
-            }, // TODO show more options menu
             onBackClick = { navigationActions.goBack() },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
-            onEditClick = { navigationActions.navigateTo(Screen.EditProfile) })
+            onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
+            onViewGroupDetails = { navigationActions.navigateTo(Screen.GroupDetail(it.id)) },
+            onLeaveGroup = {
+              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            },
+            onShareGroup = {
+              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            },
+            onEditGroup = {
+              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            },
+            onDeleteGroup = {
+              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            })
       }
 
       composable(route = Screen.CreateGroup.route) {
         CreateGroupScreen(
             onNavigateBack = { navigationActions.goBack() },
             onGroupCreated = { navigationActions.navigateTo(Screen.Groups) })
+      }
+
+      composable(route = Screen.GroupDetail.route) { navBackStackEntry ->
+        val groupId = navBackStackEntry.arguments?.getString("groupId")
+
+        groupId?.let {
+          GroupDetailScreen(
+              groupId = groupId,
+              onBackClick = { navigationActions.goBack() },
+              onGroupEventsClick = {
+                Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+              },
+              onMemberClick = {
+                Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+              })
+        }
       }
     }
   }

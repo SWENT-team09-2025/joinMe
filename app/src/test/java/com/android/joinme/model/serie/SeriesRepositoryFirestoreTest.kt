@@ -149,40 +149,41 @@ class SeriesRepositoryFirestoreTest {
     every { mockAuth.currentUser } returns mockUser
     every { mockUser.uid } returns testUserId
 
-    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
     val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
     val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
     val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
 
-    every { mockCollection.whereEqualTo("ownerId", testUserId) } returns mockQuery
+    // Mock whereArrayContains query
+    every { mockCollection.whereArrayContains("participants", testUserId) } returns mockQuery
     every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
     every { mockQuerySnapshot.iterator() } returns
         mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
 
-    // Setup first serie
+    // Setup first serie - testUserId must be in participants
     every { mockSnapshot1.id } returns "serie1"
     every { mockSnapshot1.getString("title") } returns "Serie 1"
     every { mockSnapshot1.getString("description") } returns "Description 1"
     every { mockSnapshot1.getTimestamp("date") } returns Timestamp(Date())
-    every { mockSnapshot1.get("participants") } returns listOf("user1")
+    every { mockSnapshot1.get("participants") } returns listOf(testUserId, "user1")
     every { mockSnapshot1.getLong("maxParticipants") } returns 10L
     every { mockSnapshot1.getString("visibility") } returns Visibility.PUBLIC.name
     every { mockSnapshot1.get("eventIds") } returns listOf("event1")
     every { mockSnapshot1.getString("ownerId") } returns testUserId
 
-    // Setup second serie
+    // Setup second serie - testUserId must be in participants
     every { mockSnapshot2.id } returns "serie2"
     every { mockSnapshot2.getString("title") } returns "Serie 2"
     every { mockSnapshot2.getString("description") } returns "Description 2"
     every { mockSnapshot2.getTimestamp("date") } returns Timestamp(Date())
-    every { mockSnapshot2.get("participants") } returns listOf("user1", "user2")
+    every { mockSnapshot2.get("participants") } returns listOf(testUserId, "user1", "user2")
     every { mockSnapshot2.getLong("maxParticipants") } returns 8L
     every { mockSnapshot2.getString("visibility") } returns Visibility.PRIVATE.name
     every { mockSnapshot2.get("eventIds") } returns listOf("event2", "event3")
     every { mockSnapshot2.getString("ownerId") } returns testUserId
 
     // When
-    val result = repository.getAllSeries()
+    val result = repository.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN)
 
     // Then
     assertEquals(2, result.size)
@@ -211,7 +212,7 @@ class SeriesRepositoryFirestoreTest {
     every { mockAuth.currentUser } returns null // User not logged in
 
     // When
-    repository.getAllSeries()
+    repository.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN)
 
     // Then - exception is thrown
   }

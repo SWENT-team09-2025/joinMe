@@ -9,7 +9,7 @@ class EventsRepositoryLocal : EventsRepository {
     return (counter++).toString()
   }
 
-  override suspend fun getAllEvents(): List<Event> {
+  override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
     return events
   }
 

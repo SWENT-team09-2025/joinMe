@@ -1,6 +1,7 @@
 package com.android.joinme.model.event
 
 import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.utils.Visibility
 import com.android.joinme.ui.overview.OverviewViewModel
@@ -232,6 +233,21 @@ class OverviewViewModelTest {
 
     fakeEventRepository.addTestEvent(upcomingEvent)
 
+    // Add an upcoming serie (with date in the future)
+    val upcomingSerie =
+        Serie(
+            serieId = "upcoming_serie",
+            title = "Upcoming Serie",
+            description = "Upcoming serie desc",
+            date = Timestamp(calendar.time),
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("upcoming_serie_event"),
+            ownerId = "owner1")
+
+    fakeSerieRepository.addTestSerie(upcomingSerie)
+
     viewModel.refreshUIState()
     testDispatcher.scheduler.advanceUntilIdle()
 
@@ -316,6 +332,35 @@ class OverviewViewModelTest {
     val state = viewModel.uiState.value
     // Expired events should not appear in either list
     assertEquals(0, state.ongoingItems.size)
+    assertEquals(0, state.upcomingItems.size)
+  }
+
+  @Test
+  fun `series with past dates do not appear in upcoming items`() = runTest {
+    fakeEventRepository.clearEvents()
+    fakeSerieRepository.clearSeries()
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -2) // Started 2 hours ago
+    val pastSerie =
+        Serie(
+            serieId = "past_serie",
+            title = "Past Serie",
+            description = "Past serie desc",
+            date = Timestamp(calendar.time),
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("past_serie_event"),
+            ownerId = "owner1")
+
+    fakeSerieRepository.addTestSerie(pastSerie)
+
+    viewModel.refreshUIState()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    // Past series should not appear in upcoming items
     assertEquals(0, state.upcomingItems.size)
   }
 
@@ -433,7 +478,7 @@ class OverviewViewModelTest {
       events.clear()
     }
 
-    override suspend fun getAllEvents(): List<Event> {
+    override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
       if (shouldThrow) throw RuntimeException("Event repository error")
       return events.toList()
     }
@@ -502,7 +547,7 @@ class OverviewViewModelTest {
       return "new_serie_id"
     }
 
-    override suspend fun getAllSeries(): List<Serie> {
+    override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> {
       if (shouldThrow) throw RuntimeException("Serie repository error")
       return series.toList()
     }

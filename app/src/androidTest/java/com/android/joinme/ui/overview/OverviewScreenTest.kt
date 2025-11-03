@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.android.joinme.model.event.*
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryLocal
 import com.android.joinme.model.utils.Visibility
@@ -24,7 +25,7 @@ class EventsRepositoryMock(private val shouldThrowError: Boolean = false) : Even
 
   override fun getNewEventId(): String = (counter++).toString()
 
-  override suspend fun getAllEvents(): List<Event> {
+  override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
     if (shouldThrowError) {
       throw Exception("Network error: Failed to fetch events")
     }
@@ -68,7 +69,7 @@ class SeriesRepositoryMock(private val shouldThrowError: Boolean = false) : Seri
 
   override fun getNewSerieId(): String = (counter++).toString()
 
-  override suspend fun getAllSeries(): List<Serie> {
+  override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> {
     if (shouldThrowError) {
       throw Exception("Network error: Failed to fetch series")
     }
@@ -194,7 +195,11 @@ class OverviewScreenTest {
     }
 
     composeTestRule.waitForIdle()
+    // Click FAB to open bubble menu
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    // Click "Add an event" bubble
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.ADD_EVENT_BUBBLE).performClick()
 
     assert(clicked)
   }
@@ -617,7 +622,11 @@ class OverviewScreenTest {
 
     composeTestRule.waitForIdle()
 
+    // Click FAB to open bubble menu
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    // Click "Add an event" bubble
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.ADD_EVENT_BUBBLE).performClick()
 
     assert(fabClicked)
   }
@@ -1457,8 +1466,15 @@ class OverviewScreenTest {
 
     // Standalone event should be displayed
     composeTestRule.onNodeWithText("Standalone Event").assertExists()
-    // Serie should be displayed
-    composeTestRule.onNodeWithText("My Serie").assertExists()
+    // Serie should be displayed (may appear as multiple nodes in the semantic tree but that's OK)
+    // Just verify at least one serie card with the correct tag exists
+    composeTestRule
+        .onAllNodesWithTag(OverviewScreenTestTags.getTestTagForSerie(serie))[0]
+        .assertExists()
+    // Verify the serie card contains the title
+    composeTestRule
+        .onAllNodesWithTag(OverviewScreenTestTags.getTestTagForSerie(serie))[0]
+        .assertTextContains("My Serie")
     // Serie event should NOT be displayed as standalone
     composeTestRule.onNodeWithText("Serie Event").assertDoesNotExist()
   }

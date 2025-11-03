@@ -2,10 +2,13 @@ package com.android.joinme.ui.groups
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.android.joinme.model.event.EventType
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
+import com.android.joinme.model.profile.ProfileRepositoryProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,8 +37,8 @@ data class GroupDetailUiState(
  * @property profileRepository Repository for profile data operations.
  */
 class GroupDetailViewModel(
-    private val groupRepository: GroupRepository,
-    private val profileRepository: ProfileRepository
+    private val groupRepository: GroupRepository = GroupRepositoryProvider.repository,
+    private val profileRepository: ProfileRepository = ProfileRepositoryProvider.repository
 ) : ViewModel() {
 
   private val _uiState = MutableStateFlow(GroupDetailUiState())
@@ -87,5 +90,9 @@ class GroupDetailViewModel(
         null
       }
     }
+  }
+
+  fun getCategory(): EventType {
+    return _uiState.value.group?.category ?: throw IllegalArgumentException("Not a Category")
   }
 }

@@ -1,6 +1,7 @@
 package com.android.joinme.ui.overview
 
 import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepository
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
@@ -50,7 +51,7 @@ class CreateSerieViewModelTest {
     override suspend fun getSerie(serieId: String): Serie =
         added.find { it.serieId == serieId } ?: throw NoSuchElementException("Serie not found")
 
-    override suspend fun getAllSeries(): List<Serie> = added.toList()
+    override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> = added.toList()
 
     override fun getNewSerieId(): String = "fake-serie-id-1"
   }
@@ -195,6 +196,21 @@ class CreateSerieViewModelTest {
   }
 
   @Test
+  fun setDate_todayDate_marksValid() {
+    val calendar = java.util.Calendar.getInstance()
+    val today =
+        String.format(
+            "%02d/%02d/%04d",
+            calendar.get(java.util.Calendar.DAY_OF_MONTH),
+            calendar.get(java.util.Calendar.MONTH) + 1,
+            calendar.get(java.util.Calendar.YEAR))
+    vm.setDate(today)
+    val s = vm.uiState.value
+    assertNull(s.invalidDateMsg)
+    assertEquals(today, s.date)
+  }
+
+  @Test
   fun setTime_wrongFormat_marksInvalid() {
     vm.setTime("not a time")
     val s = vm.uiState.value
@@ -208,6 +224,56 @@ class CreateSerieViewModelTest {
     val s = vm.uiState.value
     assertNull(s.invalidTimeMsg)
     assertEquals("14:30", s.time)
+  }
+
+  @Test
+  fun setTime_withTodayDateAndPastTime_marksInvalid() {
+    // Set today's date
+    val calendar = java.util.Calendar.getInstance()
+    val today =
+        String.format(
+            "%02d/%02d/%04d",
+            calendar.get(java.util.Calendar.DAY_OF_MONTH),
+            calendar.get(java.util.Calendar.MONTH) + 1,
+            calendar.get(java.util.Calendar.YEAR))
+    vm.setDate(today)
+
+    // Set a time that's definitely in the past (e.g., 00:00)
+    vm.setTime("00:00")
+    val s = vm.uiState.value
+    assertNotNull(s.invalidTimeMsg)
+    assertFalse(s.isValid)
+  }
+
+  @Test
+  fun setTime_withTodayDateAndFutureTime_marksValid() {
+    // Set today's date
+    val calendar = java.util.Calendar.getInstance()
+    val today =
+        String.format(
+            "%02d/%02d/%04d",
+            calendar.get(java.util.Calendar.DAY_OF_MONTH),
+            calendar.get(java.util.Calendar.MONTH) + 1,
+            calendar.get(java.util.Calendar.YEAR))
+    vm.setDate(today)
+
+    // Set a time that's definitely in the future (23:59)
+    vm.setTime("23:59")
+    val s = vm.uiState.value
+    assertNull(s.invalidTimeMsg)
+    assertEquals("23:59", s.time)
+  }
+
+  @Test
+  fun setTime_withFutureDateAndPastTime_marksValid() {
+    // Set a future date
+    vm.setDate("25/12/2025")
+
+    // Even if time is "in the past" (e.g., 00:00), combined date-time is in the future
+    vm.setTime("00:00")
+    val s = vm.uiState.value
+    assertNull(s.invalidTimeMsg)
+    assertEquals("00:00", s.time)
   }
 
   @Test
@@ -435,7 +501,7 @@ class CreateSerieViewModelTest {
             throw NoSuchElementException()
           }
 
-          override suspend fun getAllSeries(): List<Serie> = emptyList()
+          override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> = emptyList()
 
           override fun getNewSerieId(): String = "fake-id"
         }
@@ -486,6 +552,7 @@ class CreateSerieViewModelTest {
     assertEquals(12, serie.maxParticipants)
     assertEquals(0, serie.eventIds.size) // initially empty
     assertEquals("test-user-id", serie.ownerId)
+    assertEquals(listOf("test-user-id"), serie.participants) // owner should be in participants
     assertNotNull(serie.date)
     assertFalse(vm.uiState.value.isLoading)
     assertNull(vm.uiState.value.errorMsg)
