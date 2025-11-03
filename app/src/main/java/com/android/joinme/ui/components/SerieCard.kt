@@ -1,6 +1,7 @@
 package com.android.joinme.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,7 +31,9 @@ import com.android.joinme.model.serie.Serie
 import com.android.joinme.ui.theme.IconColor
 import com.android.joinme.ui.theme.OnEventCardTextColor
 import com.android.joinme.ui.theme.SerieCardBackgroundColor
+import com.android.joinme.ui.theme.SerieCardLayer2BorderColor
 import com.android.joinme.ui.theme.SerieCardLayer2Color
+import com.android.joinme.ui.theme.SerieCardLayer3BorderColor
 import com.android.joinme.ui.theme.SerieCardLayer3Color
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -52,7 +55,7 @@ import java.util.Locale
  */
 @Composable
 fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, testTag: String) {
-  Box(modifier = modifier.fillMaxWidth()) {
+  Box(modifier = modifier.fillMaxWidth().padding(bottom = 12.dp)) {
     // Third layer (furthest back)
     Box(
         modifier =
@@ -61,7 +64,8 @@ fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, 
                 .offset(y = 12.dp)
                 .height(100.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(SerieCardLayer3Color))
+                .background(SerieCardLayer3Color)
+                .border(2.dp, SerieCardLayer3BorderColor, RoundedCornerShape(12.dp)))
 
     // Second layer (middle)
     Box(
@@ -71,7 +75,8 @@ fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, 
                 .offset(y = 6.dp)
                 .height(100.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(SerieCardLayer2Color))
+                .background(SerieCardLayer2Color)
+                .border(2.dp, SerieCardLayer2BorderColor, RoundedCornerShape(12.dp)))
 
     // Main card (front)
     Card(
