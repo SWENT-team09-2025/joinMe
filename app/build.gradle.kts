@@ -220,7 +220,7 @@ tasks.withType<Test>().configureEach {
 
 
 tasks.register("jacocoTestReport", JacocoReport::class) {
-    mustRunAfter("testDebugUnitTest", "connectedDebugAndroidTest")
+    dependsOn("testDebugUnitTest", "connectedDebugAndroidTest")
     reports {
         xml.required = true
         html.required = true

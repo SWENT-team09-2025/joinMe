@@ -183,10 +183,56 @@ jobs:
           disable-animations: true
           script: ./gradlew connectedCheck --parallel --build-cache
 
+      # Stop any Gradle daemons to prevent concurrency issues with coverage files
+      - name: Stop Gradle daemon
+        run: |
+          echo "Stopping Gradle daemon to prevent file concurrency issues..."
+          ./gradlew --stop
+          echo "Waiting for all Gradle processes to finish..."
+          sleep 5
+
+      # Verify that coverage data files were generated correctly
+      - name: Verify coverage files exist
+        run: |
+          echo "==================== Coverage Files Verification ===================="
+          echo "Searching for JaCoCo execution data files (.exec and .ec)..."
+          echo ""
+
+          # Check for unit test coverage files
+          echo "Unit test coverage (.exec files):"
+          find app/build -name "*.exec" -type f -exec ls -lh {} \; || echo "  ⚠️  No .exec files found"
+
+          # Check for instrumentation test coverage files
+          echo ""
+          echo "Android instrumentation test coverage (.ec files):"
+          find app/build -name "*.ec" -type f -exec ls -lh {} \; || echo "  ⚠️  No .ec files found"
+
+          # List specific expected paths
+          echo ""
+          echo "Checking expected coverage file locations:"
+          [ -f "app/build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec" ] && \
+            ls -lh app/build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec || \
+            echo "  ⚠️  app/build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec NOT FOUND"
+
+          [ -f "app/build/jacoco/testDebugUnitTest.exec" ] && \
+            ls -lh app/build/jacoco/testDebugUnitTest.exec || \
+            echo "  ⚠️  app/build/jacoco/testDebugUnitTest.exec NOT FOUND"
+
+          if [ -d "app/build/outputs/code_coverage" ]; then
+            echo ""
+            echo "Android test coverage files in app/build/outputs/code_coverage:"
+            find app/build/outputs/code_coverage -type f -exec ls -lh {} \;
+          else
+            echo "  ⚠️  app/build/outputs/code_coverage directory NOT FOUND"
+          fi
+
+          echo ""
+          echo "====================================================================="
+
       # This step generates the coverage report which will be used later in the semster for monitoring purposes
       - name: Generate coverage
         run: |
-          ./gradlew jacocoTestReport
+          ./gradlew jacocoTestReport --no-parallel --info
 
       # Fix invalid line numbers in JaCoCo XML report (Compose synthetic code issue)
       - name: Fix JaCoCo XML report
