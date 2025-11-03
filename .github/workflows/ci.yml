@@ -604,7 +604,9 @@ jobs:
             -Dsonar.sources=app/src/main/java
             -Dsonar.tests=app/src/test/java,app/src/androidTest/java
             -Dsonar.exclusions=**/build/**,**/generated/**
-      
+            -Dsonar.java.binaries=app/build/tmp/kotlin-classes/debug,app/build/intermediates/javac/debug/classes
+            -Dsonar.java.test.binaries=app/build/tmp/kotlin-classes/debugUnitTest,app/build/tmp/kotlin-classes/debugAndroidTest
+
       - name: Post-SonarCloud Validation
         if: always()
         run: |
