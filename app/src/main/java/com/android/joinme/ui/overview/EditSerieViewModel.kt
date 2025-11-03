@@ -4,9 +4,6 @@ import android.util.Log
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.model.utils.Visibility
-import com.google.firebase.Firebase
-import com.google.firebase.Timestamp
-import com.google.firebase.auth.auth
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -106,7 +103,7 @@ class EditSerieViewModel(
    * @param serieId The ID of the serie to load
    */
   suspend fun loadSerie(serieId: String) {
-    _uiState.value = _uiState.value.copy(isLoading = true)
+    setLoadingState(true)
 
     try {
       val serie = repository.getSerie(serieId)
@@ -128,7 +125,7 @@ class EditSerieViewModel(
     } catch (e: Exception) {
       Log.e("EditSerieViewModel", "Error loading serie", e)
       setErrorMsg("Failed to load serie: ${e.message}")
-      _uiState.value = _uiState.value.copy(isLoading = false)
+      setLoadingState(false)
     }
   }
 
@@ -157,26 +154,18 @@ class EditSerieViewModel(
     }
 
     // Check if user is authenticated
-    val currentUserId = Firebase.auth.currentUser?.uid
+    val currentUserId = getCurrentUserId()
     if (currentUserId == null) {
       setErrorMsg("You must be signed in to update a serie")
       return false
     }
 
-    _uiState.value = _uiState.value.copy(isLoading = true)
+    setLoadingState(true)
 
-    val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-    val combinedDateTime = "${state.date} ${state.time}"
-    val parsedDate =
-        try {
-          Timestamp(sdf.parse(combinedDateTime)!!)
-        } catch (_: Exception) {
-          null
-        }
-
+    val parsedDate = parseDateTime(state.date, state.time)
     if (parsedDate == null) {
       setErrorMsg("Invalid date format (must be dd/MM/yyyy HH:mm)")
-      _uiState.value = _uiState.value.copy(isLoading = false)
+      setLoadingState(false)
       return false
     }
 
@@ -194,12 +183,12 @@ class EditSerieViewModel(
 
       repository.editSerie(state.serieId, updatedSerie)
       clearErrorMsg()
-      _uiState.value = _uiState.value.copy(isLoading = false)
+      setLoadingState(false)
       true
     } catch (e: Exception) {
       Log.e("EditSerieViewModel", "Error updating serie", e)
       setErrorMsg("Failed to update serie: ${e.message}")
-      _uiState.value = _uiState.value.copy(isLoading = false)
+      setLoadingState(false)
       false
     }
   }

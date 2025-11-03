@@ -5,10 +5,6 @@ import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.model.utils.Visibility
-import com.google.firebase.Firebase
-import com.google.firebase.Timestamp
-import com.google.firebase.auth.auth
-import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -121,26 +117,18 @@ class CreateSerieViewModel(
     }
 
     // Check if user is authenticated
-    val currentUserId = Firebase.auth.currentUser?.uid
+    val currentUserId = getCurrentUserId()
     if (currentUserId == null) {
       setErrorMsg("You must be signed in to create a serie")
       return false
     }
 
-    _uiState.value = _uiState.value.copy(isLoading = true)
+    setLoadingState(true)
 
-    val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-    val combinedDateTime = "${state.date} ${state.time}"
-    val parsedDate =
-        try {
-          Timestamp(sdf.parse(combinedDateTime)!!)
-        } catch (_: Exception) {
-          null
-        }
-
+    val parsedDate = parseDateTime(state.date, state.time)
     if (parsedDate == null) {
       setErrorMsg("Invalid date format (must be dd/MM/yyyy HH:mm)")
-      _uiState.value = _uiState.value.copy(isLoading = false)
+      setLoadingState(false)
       return false
     }
 
@@ -159,12 +147,12 @@ class CreateSerieViewModel(
     return try {
       repository.addSerie(serie)
       clearErrorMsg()
-      _uiState.value = _uiState.value.copy(isLoading = false)
+      setLoadingState(false)
       true
     } catch (e: Exception) {
       Log.e("CreateSerieViewModel", "Error creating serie", e)
       setErrorMsg("Failed to create serie: ${e.message}")
-      _uiState.value = _uiState.value.copy(isLoading = false)
+      setLoadingState(false)
       false
     }
   }

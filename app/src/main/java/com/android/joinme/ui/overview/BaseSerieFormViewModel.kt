@@ -1,6 +1,9 @@
 package com.android.joinme.ui.overview
 
 import androidx.lifecycle.ViewModel
+import com.google.firebase.Firebase
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.auth
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -298,6 +301,50 @@ abstract class BaseSerieFormViewModel : ViewModel() {
           is EditSerieUIState -> state.copy(errorMsg = null)
           else -> state
         }
+      }
+    }
+  }
+
+  /**
+   * Parses the date and time strings into a Firebase Timestamp.
+   *
+   * This method combines the date (dd/MM/yyyy) and time (HH:mm) strings into a single timestamp.
+   *
+   * @param date The date string in dd/MM/yyyy format
+   * @param time The time string in HH:mm format
+   * @return A Firebase Timestamp if parsing succeeds, null otherwise
+   */
+  protected fun parseDateTime(date: String, time: String): Timestamp? {
+    val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+    val combinedDateTime = "$date $time"
+    return try {
+      val parsedDate = sdf.parse(combinedDateTime)
+      if (parsedDate != null) Timestamp(parsedDate) else null
+    } catch (_: Exception) {
+      null
+    }
+  }
+
+  /**
+   * Gets the current authenticated user ID from Firebase Auth.
+   *
+   * @return The user ID if authenticated, null otherwise
+   */
+  protected fun getCurrentUserId(): String? {
+    return Firebase.auth.currentUser?.uid
+  }
+
+  /**
+   * Sets the loading state to true.
+   *
+   * This method should be called at the start of any async operation.
+   */
+  protected fun setLoadingState(isLoading: Boolean) {
+    updateState { state ->
+      when (state) {
+        is CreateSerieUIState -> state.copy(isLoading = isLoading)
+        is EditSerieUIState -> state.copy(isLoading = isLoading)
+        else -> state
       }
     }
   }
