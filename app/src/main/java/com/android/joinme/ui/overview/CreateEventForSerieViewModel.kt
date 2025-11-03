@@ -170,9 +170,7 @@ class CreateEventForSerieViewModel(
             invalidLocationMsg = null)
   }
 
-  /**
-   * Clears the currently selected location.
-   */
+  /** Clears the currently selected location. */
   fun clearLocation() {
     _uiState.value =
         _uiState.value.copy(
@@ -272,7 +270,8 @@ class CreateEventForSerieViewModel(
 
     // Get all events in the serie and find the last one
     val allEvents =
-        eventRepository.getAllEvents(com.android.joinme.model.event.EventFilter.EVENTS_FOR_OVERVIEW_SCREEN)
+        eventRepository.getAllEvents(
+            com.android.joinme.model.event.EventFilter.EVENTS_FOR_OVERVIEW_SCREEN)
     val serieEvents =
         allEvents.filter { it.eventId in serie.eventIds }.sortedBy { it.date.toDate().time }
 
@@ -302,8 +301,7 @@ class CreateEventForSerieViewModel(
             type = type,
             invalidTypeMsg =
                 if (type.isBlank()) "Event type cannot be empty"
-                else if (type.uppercase() !in validTypes)
-                    "Type must be SPORTS, ACTIVITY, or SOCIAL"
+                else if (type.uppercase() !in validTypes) "Type must be SPORTS, ACTIVITY, or SOCIAL"
                 else null)
   }
 
@@ -341,8 +339,7 @@ class CreateEventForSerieViewModel(
     _uiState.value =
         _uiState.value.copy(
             duration = value,
-            invalidDurationMsg =
-                if (num == null || num <= 0) "Must be a positive number" else null)
+            invalidDurationMsg = if (num == null || num <= 0) "Must be a positive number" else null)
   }
 
   /**

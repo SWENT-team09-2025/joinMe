@@ -12,8 +12,6 @@ import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.utils.Visibility
 import com.google.firebase.Timestamp
-import io.mockk.coEvery
-import io.mockk.mockk
 import java.util.Calendar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -82,7 +80,8 @@ class CreateEventForSerieViewModelTest {
     override suspend fun getSerie(serieId: String): Serie =
         series[serieId] ?: throw NoSuchElementException("Serie not found")
 
-    override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> = series.values.toList()
+    override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> =
+        series.values.toList()
 
     override fun getNewSerieId(): String = "fake-serie-id"
   }
