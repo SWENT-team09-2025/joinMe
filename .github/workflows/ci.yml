@@ -536,9 +536,10 @@ jobs:
           echo ""
           
           echo "=== 4. Checking Source Directories ==="
-          echo "Java/Kotlin sources (as you stated Kotlin is in /java):"
-          find app/src/main/java -type f -name "*.java" | wc -l || echo "0 Java files"
-          find app/src/main/java -type f -name "*.kt" | wc -l || echo "0 Kotlin files"
+          echo "Java sources:"
+          find app/src/main/java -type f -name "*.java" | wc -l || echo "0"
+          echo "Kotlin sources:"
+          find app/src/main/kotlin -type f -name "*.kt" | wc -l || echo "0"
           echo ""
           
           echo "=== 5. Checking Compiled Classes ==="
