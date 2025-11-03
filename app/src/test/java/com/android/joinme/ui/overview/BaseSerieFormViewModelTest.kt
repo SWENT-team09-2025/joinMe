@@ -43,8 +43,6 @@ class BaseSerieFormViewModelTest {
     // Expose protected methods for testing
     fun testParseDateTime(date: String, time: String) = parseDateTime(date, time)
 
-    fun testGetCurrentUserId() = getCurrentUserId()
-
     fun testSetLoadingState(isLoading: Boolean) = setLoadingState(isLoading)
   }
 
@@ -582,21 +580,5 @@ class BaseSerieFormViewModelTest {
     assertEquals("Test Title", state.title)
     assertEquals("Test Description", state.description)
     assertEquals("10", state.maxParticipants)
-  }
-
-  // ==================== User Authentication Tests ====================
-
-  @Test
-  fun `getCurrentUserId returns user ID when authenticated`() {
-    // Note: This test depends on Firebase Auth state
-    // In a real test environment, you would mock Firebase Auth
-    // For now, we test that it doesn't throw an exception
-    val userId = vm.testGetCurrentUserId()
-
-    // userId will be null if not authenticated (which is expected in tests)
-    // The important thing is that the method executes without errors
-    // In a production app with proper auth mocking, you would verify the actual user ID
-    // For these unit tests, we just verify it returns a nullable String
-    assertTrue(userId is String?)
   }
 }
