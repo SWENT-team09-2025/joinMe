@@ -196,11 +196,11 @@ class SerieTest {
   }
 
   @Test
-  fun `isExpired returns false when serie has no events`() {
+  fun `isExpired returns true when serie has no events`() {
     val serie = sampleSerie.copy(eventIds = emptyList())
     val events = listOf(createEvent("event1", duration = 60, hoursOffset = -5))
 
-    assertFalse(serie.isExpired(events))
+    assertTrue(serie.isExpired(events))
   }
 
   @Test
