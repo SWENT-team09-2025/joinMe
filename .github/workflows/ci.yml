@@ -456,7 +456,7 @@ jobs:
             -Dsonar.tests=app/src/test/java,app/src/androidTest/java \
             -Dsonar.java.binaries=app/build/intermediates/javac/debug/classes \
             -Dsonar.java.test.binaries=app/build/intermediates/javac/debugUnitTest/classes,app/build/intermediates/javac/debugAndroidTest/classes \
-            -Dsonar.kotlin.binaries=appD/build/tmp/kotlin-classes/debug \
+            -Dsonar.kotlin.binaries=app/build/tmp/kotlin-classes/debug \
             -Dsonar.kotlin.test.binaries=app/build/tmp/kotlin-classes/debugUnitTest,app/build/tmp/kotlin-classes/debugAndroidTest
 
       - name: Post-SonarCloud Validation
