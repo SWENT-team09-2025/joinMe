@@ -293,6 +293,37 @@ jobs:
           name: Coverage report
           path: app/build/reports/jacoco/jacocoTestReport
 
+      # Verify compiled classes exist for SonarCloud
+      - name: Verify compiled classes for SonarCloud
+        run: |
+          echo "==================== Compiled Classes Verification ===================="
+          echo "Checking if Kotlin compiled classes exist for coverage mapping..."
+
+          if [ -d "app/build/tmp/kotlin-classes/debug" ]; then
+            echo "✅ Debug classes found:"
+            find app/build/tmp/kotlin-classes/debug -name "*.class" | wc -l
+            echo "classes in debug"
+          else
+            echo "❌ Debug classes directory NOT FOUND"
+          fi
+
+          if [ -d "app/build/tmp/kotlin-classes/debugUnitTest" ]; then
+            echo "✅ Unit test classes found:"
+            find app/build/tmp/kotlin-classes/debugUnitTest -name "*.class" | wc -l
+            echo "classes in debugUnitTest"
+          else
+            echo "❌ Unit test classes directory NOT FOUND"
+          fi
+
+          if [ -d "app/build/tmp/kotlin-classes/debugAndroidTest" ]; then
+            echo "✅ Android test classes found:"
+            find app/build/tmp/kotlin-classes/debugAndroidTest -name "*.class" | wc -l
+            echo "classes in debugAndroidTest"
+          else
+            echo "❌ Android test classes directory NOT FOUND"
+          fi
+          echo "========================================================================"
+
       # Run SonarCloud analysis after coverage generation
       - name: SonarCloud Scan
         env:
