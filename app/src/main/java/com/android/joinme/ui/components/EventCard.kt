@@ -19,13 +19,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.getColor
+import com.android.joinme.ui.theme.IconColor
+import com.android.joinme.ui.theme.OnEventCardTextColor
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -59,14 +59,14 @@ fun EventCard(modifier: Modifier = Modifier, event: Event, onClick: () -> Unit, 
                         SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
                             .format(event.date.toDate()),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White)
+                    color = OnEventCardTextColor)
 
                 Text(
                     text =
                         SimpleDateFormat("HH'h'mm", Locale.getDefault())
                             .format(event.date.toDate()),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White)
+                    color = OnEventCardTextColor)
               }
 
           Spacer(modifier = Modifier.height(6.dp))
@@ -75,7 +75,7 @@ fun EventCard(modifier: Modifier = Modifier, event: Event, onClick: () -> Unit, 
               text = event.title,
               style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.Bold,
-              color = Color.White)
+              color = OnEventCardTextColor)
 
           Spacer(modifier = Modifier.height(4.dp))
 
@@ -86,11 +86,11 @@ fun EventCard(modifier: Modifier = Modifier, event: Event, onClick: () -> Unit, 
                 Text(
                     text = "Place : ${event.location?.name ?: "Unknown"}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.9f))
+                    color = OnEventCardTextColor.copy(alpha = 0.9f))
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "View event details",
-                    tint = Color.White)
+                    tint = IconColor)
               }
         }
       }

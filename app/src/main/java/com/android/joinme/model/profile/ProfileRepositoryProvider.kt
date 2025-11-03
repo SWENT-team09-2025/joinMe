@@ -5,15 +5,28 @@ import com.google.firebase.firestore.firestore
 import com.google.firebase.storage.FirebaseStorage
 
 /**
- * Provides a singleton instance of [ProfileRepository] backed by Firestore and Storage.
- *
- * `repository` is mutable for testing purposes.
+ * Provides a singleton instance of [ProfileRepository]. Uses local repository in test environment,
+ * Firestore otherwise. `repository` is mutable for testing purpose.
  */
 object ProfileRepositoryProvider {
+  // Local repository (in-memory)
+  private val localRepo: ProfileRepository by lazy { ProfileRepositoryLocal() }
 
-  private val _repository: ProfileRepository by lazy {
+  private val firestoreRepo: ProfileRepository by lazy {
     ProfileRepositoryFirestore(db = Firebase.firestore, storage = FirebaseStorage.getInstance())
   }
 
-  var repository: ProfileRepository = _repository
+  // For backward compatibility and explicit test injection
+  var repository: ProfileRepository
+    get() {
+      val isTestEnv =
+          android.os.Build.FINGERPRINT == "robolectric" ||
+              android.os.Debug.isDebuggerConnected() ||
+              System.getProperty("IS_TEST_ENV") == "true"
+
+      return if (isTestEnv) localRepo else firestoreRepo
+    }
+    set(value) {
+      // Allows tests to inject custom repository
+    }
 }

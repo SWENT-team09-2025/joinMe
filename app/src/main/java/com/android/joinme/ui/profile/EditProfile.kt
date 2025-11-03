@@ -15,20 +15,26 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.Tab
+import com.android.joinme.ui.theme.BorderColor
+import com.android.joinme.ui.theme.ButtonSaveColor
+import com.android.joinme.ui.theme.DisabledBorderColor
+import com.android.joinme.ui.theme.DisabledTextColor
+import com.android.joinme.ui.theme.ErrorBorderColor
+import com.android.joinme.ui.theme.FocusedBorderColor
 import com.android.joinme.ui.theme.JoinMeColor
-import com.google.firebase.Timestamp
+import com.android.joinme.ui.theme.LabelTextColor
 
 object EditProfileTestTags {
   const val NO_LOADING_PROFILE_MESSAGE = "noLoadingProfileMessage"
@@ -182,7 +188,8 @@ fun EditProfileScreen(
                       profileViewModel.createOrUpdateProfile(updatedProfile)
                       onSaveSuccess()
                     }
-                  })
+                  }
+              )
             }
             else -> {
               Text(
@@ -346,14 +353,6 @@ private fun ProfilePictureSection(
               size = 140.dp,
               showLoadingIndicator = false)
 
-          // Blur overlay using a semi-transparent box
-          Box(
-              modifier =
-                  Modifier.size(140.dp)
-                      .clip(CircleShape)
-                      .background(Color.Black.copy(alpha = 0.3f)))
-
-          // Edit button (disabled while uploading)
           Button(
               onClick = { if (!isUploadingPhoto) onPictureEditClick() },
               enabled = !isUploadingPhoto,
@@ -369,7 +368,7 @@ private fun ProfilePictureSection(
                       Icon(
                           imageVector = Icons.Outlined.Edit,
                           contentDescription = "Edit Photo",
-                          tint = Color.White,
+                          tint = ButtonSaveColor,
                           modifier = Modifier.size(56.dp))
                     }
               }
@@ -388,14 +387,14 @@ private fun PasswordSection(onChangePasswordClick: () -> Unit) {
     Box(
         modifier =
             Modifier.fillMaxWidth()
-                .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp))
+                .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
                 .padding(16.dp)) {
           Row(
               modifier = Modifier.fillMaxWidth(),
               horizontalArrangement = Arrangement.SpaceBetween,
               verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                  Text(text = "************", fontSize = 16.sp, color = Color.Gray)
+                  Text(text = "************", fontSize = 16.sp, color = LabelTextColor)
                 }
 
                 Button(
@@ -434,11 +433,11 @@ private fun BioSection(bio: String, onBioChange: (String) -> Unit) {
           Text(
               "Tell others a bit about yourself – your passions, what you enjoy doing, or what you're looking for on JoinMe.",
               fontSize = 12.sp,
-              color = Color.Gray)
+              color = LabelTextColor)
         },
         colors =
             OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = Color.LightGray, focusedBorderColor = JoinMeColor),
+                unfocusedBorderColor = BorderColor, focusedBorderColor = JoinMeColor),
         shape = RoundedCornerShape(12.dp))
   }
 }
@@ -471,13 +470,13 @@ private fun EditTextField(
             else modifier.fillMaxWidth(),
         enabled = enabled,
         isError = isError,
-        placeholder = placeholder?.let { { Text(it, color = Color.LightGray) } },
+        placeholder = placeholder?.let { { Text(it, color = BorderColor) } },
         colors =
             OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = if (isError) Color.Red else Color.LightGray,
-                focusedBorderColor = if (isError) Color.Red else JoinMeColor,
-                disabledBorderColor = Color.LightGray,
-                disabledTextColor = Color.Gray),
+                unfocusedBorderColor = if (isError) ErrorBorderColor else BorderColor,
+                focusedBorderColor = if (isError) ErrorBorderColor else FocusedBorderColor,
+                disabledBorderColor = DisabledBorderColor,
+                disabledTextColor = DisabledTextColor),
         shape = RoundedCornerShape(12.dp),
         singleLine = true)
 
@@ -487,61 +486,10 @@ private fun EditTextField(
       Text(
           text = textToShow,
           fontSize = 11.sp,
-          color = if (isError) Color.Red else Color.Gray,
+          color = if (isError) ErrorBorderColor else LabelTextColor,
           modifier =
               if (isError) Modifier.padding(start = 12.dp, top = 4.dp).testTag(errorTestTag)
               else Modifier.padding(start = 12.dp, top = 4.dp))
     }
   }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun EditProfileScreenPreview() {
-  val mockProfile =
-      Profile(
-          uid = "preview-uid",
-          username = "Mathieu Pfeffer",
-          email = "pfeffer@gmail.com",
-          dateOfBirth = "12/12/2012",
-          country = "Nigeria",
-          interests = listOf("Golf", "Nature"),
-          bio = "I am a EPFL student, 21 and I like horses and golf.",
-          createdAt = Timestamp.now(),
-          updatedAt = Timestamp.now())
-
-  Scaffold(
-      containerColor = Color.White,
-      topBar = {
-        ProfileTopBar(
-            currentScreen = ProfileScreen.EDIT_PROFILE,
-            onBackClick = {},
-            onProfileClick = {},
-            onGroupClick = {},
-            onEditClick = {})
-      },
-      bottomBar = { BottomNavigationMenu(selectedTab = Tab.Profile, onTabSelected = {}) }) { padding
-        ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-          EditProfileContent(
-              profile = mockProfile,
-              isUploadingPhoto = false,
-              username = "Mathieu Pfeffer",
-              onPictureEditClick = {},
-              onUsernameChange = {},
-              usernameError = null,
-              dateOfBirth = "12/12/2012",
-              onDateOfBirthChange = {},
-              dateOfBirthError = null,
-              country = "Nigeria",
-              onCountryChange = {},
-              interests = "Golf, Nature",
-              onInterestsChange = {},
-              bio = "I am a EPFL student, 21 and I like horses and golf.",
-              onBioChange = {},
-              isFormValid = true,
-              onChangePasswordClick = {},
-              onSaveClick = {})
-        }
-      }
 }

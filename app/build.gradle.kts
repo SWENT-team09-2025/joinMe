@@ -73,8 +73,14 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
-            excludes += "META-INF/LICENSE.md"
+            merges += "META-INF/LICENSE.md"
+            merges += "META-INF/LICENSE-notice.md"
             excludes += "META-INF/LICENSE-notice.md"
+            excludes += "META-INF/LICENSE.md"
+            excludes += "META-INF/LICENSE"
+            excludes += "META-INF/LICENSE.txt"
+            excludes += "META-INF/NOTICE"
+            excludes += "META-INF/NOTICE.txt"
         }
     }
 
@@ -82,6 +88,11 @@ android {
         unitTests {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
+        }
+        packagingOptions {
+            jniLibs {
+                useLegacyPackaging = true
+            }
         }
     }
 
@@ -163,15 +174,19 @@ dependencies {
 
     // --- Unit testing ---
     testImplementation("junit:junit:4.13.2")
-    testImplementation("io.mockk:mockk:1.13.11")
+    testImplementation("io.mockk:mockk:1.13.7")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     //testImplementation("io.mockk:mockk:1.13.8")
-    androidTestImplementation("io.mockk:mockk-android:1.13.8")
+    androidTestImplementation("io.mockk:mockk:1.13.7")
+    androidTestImplementation("io.mockk:mockk-android:1.13.7")
+    androidTestImplementation("io.mockk:mockk-agent:1.13.7")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
 
     // --- Maps ---
     implementation("com.google.android.gms:play-services-maps:18.2.0")
     implementation("com.google.maps.android:maps-compose:4.3.0")
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
 
     // Firebase
     implementation(libs.firebase.database.ktx)
@@ -220,18 +235,28 @@ dependencies {
     // --------- Kaspresso test framework ----------
     globalTestImplementation(libs.kaspresso)
     globalTestImplementation(libs.kaspresso.compose)
+    testImplementation("org.mockito:mockito-core:5.12.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
 
     // ---------- Robolectric ------------
     testImplementation(libs.robolectric)
+
+    // ---------- WorkManager ------------
+    implementation(libs.androidx.work.runtime.ktx)
 }
 
-tasks.withType<Test> {
-    // Configure Jacoco for each tests
-    configure<JacocoTaskExtension> {
+tasks.withType<Test>().configureEach {
+    extensions.configure<JacocoTaskExtension> {
         isIncludeNoLocationClasses = true
-        excludes = listOf("jdk.internal.*", "**/*\$\$*")
+        excludes = listOf(
+            "jdk.internal.*",
+            "jdk.proxy.*",
+            "**/*$$*"
+        )
     }
 }
+
 
 tasks.register("jacocoTestReport", JacocoReport::class) {
     mustRunAfter("testDebugUnitTest", "connectedDebugAndroidTest")
@@ -255,6 +280,7 @@ tasks.register("jacocoTestReport", JacocoReport::class) {
 
     val debugTree = fileTree("${project.layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
         exclude(fileFilter)
+        exclude("jdk.proxy.*", "jdk.internal.*", "**/*$$*")
     }
 
     val mainSrc = "${project.layout.projectDirectory}/src/main/java"
@@ -273,4 +299,10 @@ tasks.register("jacocoTestReport", JacocoReport::class) {
             force("com.google.protobuf:protobuf-javalite:3.25.1")
         }
     }
+}
+
+configurations.forEach { configuration ->
+    // Exclude protobuf-lite from all configurations
+    // This fixes a fatal exception for tests interacting with Cloud Firestore
+    configuration.exclude("com.google.protobuf", "protobuf-lite")
 }

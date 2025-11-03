@@ -77,7 +77,9 @@ class EventCardTest {
       EventCard(event = event, onClick = { clicked = true }, testTag = "testCard")
     }
 
-    composeTestRule.onNodeWithText("Test Event").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("testCard").performClick()
+    composeTestRule.waitForIdle()
 
     assert(clicked)
   }
@@ -183,7 +185,9 @@ class EventCardTest {
     }
 
     // Click on the card using test tag
+    composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("testCard").performClick()
+    composeTestRule.waitForIdle()
 
     assert(clicked)
   }
@@ -312,8 +316,11 @@ class EventCardTest {
     }
 
     // Click multiple times
+    composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("testCard").performClick()
+    composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("testCard").performClick()
+    composeTestRule.waitForIdle()
 
     assert(clickCount == 2)
   }

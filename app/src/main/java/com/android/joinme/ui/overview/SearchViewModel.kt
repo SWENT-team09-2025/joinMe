@@ -3,66 +3,47 @@ package com.android.joinme.ui.overview
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.Event
-import com.android.joinme.model.event.EventType
+import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
-import com.android.joinme.model.sport.Sports
+import com.android.joinme.model.event.isUpcoming
+import com.android.joinme.model.filter.FilterRepository
+import com.android.joinme.model.filter.FilterState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * Represents a sport category that can be filtered.
- *
- * @property id Unique identifier for the sport
- * @property name Display name of the sport
- * @property isChecked Whether the sport category is currently selected
- */
-data class SportCategory(val id: String, val name: String, val isChecked: Boolean = false)
-
-/**
  * UI state for the Search screen.
  *
  * @property query The current search query text
- * @property isAllSelected Whether all filters (Social, Activity, and all sports) are selected
- * @property isSocialSelected Whether the Social event type filter is selected
- * @property isActivitySelected Whether the Activity event type filter is selected
- * @property sportCategories List of sport categories with their selection states
  * @property categoryExpanded Whether the sport category dropdown menu is expanded
  * @property events List of events to display after applying filters
  * @property errorMsg Error message to display if fetching events fails
- * @property selectedSportsCount Computed property returning the count of selected sports
- * @property isSelectAllChecked Computed property indicating if all sports are selected
  */
 data class SearchUIState(
     val query: String = "",
-    val isAllSelected: Boolean = true,
-    val isSocialSelected: Boolean = true,
-    val isActivitySelected: Boolean = true,
-    val sportCategories: List<SportCategory> =
-        Sports.ALL.map { SportCategory(it.id, it.name, isChecked = true) },
     val categoryExpanded: Boolean = false,
     val events: List<Event> = emptyList(),
     val errorMsg: String? = null,
-) {
-  val selectedSportsCount: Int
-    get() = sportCategories.count { it.isChecked }
-
-  val isSelectAllChecked: Boolean
-    get() = sportCategories.all { it.isChecked }
-}
+)
 
 /**
  * ViewModel for the Search screen.
  *
- * Manages the search query and filter states (Social, Activity, Sports) for event searching.
- * Handles filter toggling logic and maintains the relationship between individual filters and the
- * "All" filter. Fetches events from the repository and applies filters to display relevant results.
+ * Manages the search query and delegates filter management to FilterRepository. Fetches events from
+ * the repository and applies filters to display relevant results. Filter state is shared across the
+ * application through FilterRepository.
  *
  * @property eventRepository Repository for fetching event data
+ * @property filterRepository Repository for managing filter state (defaults to FilterRepository
+ *   singleton)
  */
-class SearchViewModel(private val eventRepository: EventsRepository? = null) : ViewModel() {
+class SearchViewModel(
+    private val eventRepository: EventsRepository? = null,
+    private val filterRepository: FilterRepository = FilterRepository
+) : ViewModel() {
 
   private val repo: EventsRepository by lazy {
     eventRepository ?: EventsRepositoryProvider.getRepository(isOnline = true)
@@ -71,8 +52,16 @@ class SearchViewModel(private val eventRepository: EventsRepository? = null) : V
   private val _uiState = MutableStateFlow(SearchUIState())
   val uiState: StateFlow<SearchUIState> = _uiState.asStateFlow()
 
+  // Expose filter state from FilterRepository
+  val filterState: StateFlow<FilterState> = filterRepository.filterState
+
   // Store all events fetched from repository
   private var allEvents: List<Event> = emptyList()
+
+  init {
+    // Observe filter changes and apply them to events
+    viewModelScope.launch { filterRepository.filterState.collect { applyFiltersToUIState() } }
+  }
 
   /** Clears the error message in the UI state. */
   fun clearErrorMsg() {
@@ -85,49 +74,28 @@ class SearchViewModel(private val eventRepository: EventsRepository? = null) : V
   }
 
   /**
-   * Updates the search query.
+   * Updates the search query and re-applies filters.
    *
    * @param query The new search query text
    */
   fun setQuery(query: String) {
     _uiState.value = _uiState.value.copy(query = query)
+    applyFiltersToUIState()
   }
 
-  /** Toggles the "All" filter and updates related filters. */
+  /** Toggles the "All" filter. Delegates to FilterRepository. */
   fun toggleAll() {
-    val newAllSelected = !_uiState.value.isAllSelected
-    _uiState.value =
-        _uiState.value.copy(
-            isAllSelected = newAllSelected,
-            isSocialSelected = newAllSelected,
-            isActivitySelected = newAllSelected,
-            sportCategories =
-                _uiState.value.sportCategories.map { it.copy(isChecked = newAllSelected) })
-    applyFiltersToUIState()
+    filterRepository.toggleAll()
   }
 
-  /** Toggles the "Social" filter. */
+  /** Toggles the "Social" filter. Delegates to FilterRepository. */
   fun toggleSocial() {
-    val state = _uiState.value
-    val newSocialSelected = !state.isSocialSelected
-    _uiState.value =
-        state.copy(
-            isSocialSelected = newSocialSelected,
-            isAllSelected =
-                newSocialSelected && state.isActivitySelected && state.isSelectAllChecked)
-    applyFiltersToUIState()
+    filterRepository.toggleSocial()
   }
 
-  /** Toggles the "Activity" filter. */
+  /** Toggles the "Activity" filter. Delegates to FilterRepository. */
   fun toggleActivity() {
-    val state = _uiState.value
-    val newActivitySelected = !state.isActivitySelected
-    _uiState.value =
-        state.copy(
-            isActivitySelected = newActivitySelected,
-            isAllSelected =
-                state.isSocialSelected && newActivitySelected && state.isSelectAllChecked)
-    applyFiltersToUIState()
+    filterRepository.toggleActivity()
   }
 
   /**
@@ -139,37 +107,18 @@ class SearchViewModel(private val eventRepository: EventsRepository? = null) : V
     _uiState.value = _uiState.value.copy(categoryExpanded = expanded)
   }
 
-  /** Toggles the "Select All" sports filter. */
+  /** Toggles the "Select All" sports filter. Delegates to FilterRepository. */
   fun toggleSelectAll() {
-    val state = _uiState.value
-    val newSelectAllChecked = !state.isSelectAllChecked
-    _uiState.value =
-        state.copy(
-            sportCategories =
-                state.sportCategories.map { it.copy(isChecked = newSelectAllChecked) },
-            isAllSelected =
-                newSelectAllChecked && state.isSocialSelected && state.isActivitySelected)
-    applyFiltersToUIState()
+    filterRepository.toggleSelectAll()
   }
 
   /**
-   * Toggles a specific sport filter by ID.
+   * Toggles a specific sport filter by ID. Delegates to FilterRepository.
    *
    * @param sportId The unique identifier of the sport to toggle
    */
   fun toggleSport(sportId: String) {
-    val state = _uiState.value
-    val updatedSports =
-        state.sportCategories.map { sport ->
-          if (sport.id == sportId) sport.copy(isChecked = !sport.isChecked) else sport
-        }
-    val allSportsChecked = updatedSports.all { it.isChecked }
-
-    _uiState.value =
-        state.copy(
-            sportCategories = updatedSports,
-            isAllSelected = state.isSocialSelected && state.isActivitySelected && allSportsChecked)
-    applyFiltersToUIState()
+    filterRepository.toggleSport(sportId)
   }
 
   /**
@@ -203,7 +152,8 @@ class SearchViewModel(private val eventRepository: EventsRepository? = null) : V
   private fun getAllEvents() {
     viewModelScope.launch {
       try {
-        allEvents = repo.getAllEvents()
+        allEvents =
+            repo.getAllEvents(EventFilter.EVENTS_FOR_SEARCH_SCREEN).filter { it.isUpcoming() }
         applyFiltersToUIState()
       } catch (e: Exception) {
         setErrorMsg("Failed to load events: ${e.message}")
@@ -211,40 +161,21 @@ class SearchViewModel(private val eventRepository: EventsRepository? = null) : V
     }
   }
 
-  /** Applies filters to all events and updates the UI state. */
+  /** Applies filters and search query to all events and updates the UI state. */
   private fun applyFiltersToUIState() {
-    val filteredEvents = applyFilters(allEvents)
-    _uiState.value = _uiState.value.copy(events = filteredEvents)
-  }
+    // First apply category filters (Social, Activity, Sports)
+    var filteredEvents = filterRepository.applyFilters(allEvents)
 
-  /** Applies the current filters to the list of events. */
-  private fun applyFilters(events: List<Event>): List<Event> {
-    val state = uiState.value
-
-    // If "All" is selected, return all events
-    if (state.isAllSelected) return events
-
-    var filteredEvents = events
-
-    // Filter by event type (Social, Activity)
-    val allowedTypes = mutableListOf<EventType>()
-    if (state.isSocialSelected) allowedTypes.add(EventType.SOCIAL)
-    if (state.isActivitySelected) allowedTypes.add(EventType.ACTIVITY)
-
-    // Add SPORTS if any sport category is selected
-    if (state.sportCategories.any { it.isChecked }) {
-      allowedTypes.add(EventType.SPORTS)
+    // Then apply search query filter if query is not empty
+    val query = _uiState.value.query
+    if (query.isNotBlank()) {
+      filteredEvents =
+          filteredEvents.filter {
+            it.title.contains(query, ignoreCase = true) ||
+                it.description.contains(query, ignoreCase = true)
+          }
     }
 
-    // If no filters are selected, return empty list
-    if (allowedTypes.isEmpty()) return emptyList()
-
-    // Filter by event type
-    filteredEvents = filteredEvents.filter { it.type in allowedTypes }
-
-    // TODO: Add sport-specific filtering when sport metadata is added to Event model
-    // For now, all SPORTS events pass through if any sport is selected
-
-    return filteredEvents
+    _uiState.value = _uiState.value.copy(events = filteredEvents)
   }
 }

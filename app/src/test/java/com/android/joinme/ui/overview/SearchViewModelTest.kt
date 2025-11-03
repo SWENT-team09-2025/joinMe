@@ -1,8 +1,14 @@
 package com.android.joinme.ui.overview
 
+import com.android.joinme.model.event.EventFilter
+import com.android.joinme.model.filter.FilterRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -15,12 +21,15 @@ class SearchViewModelTest {
 
   @Before
   fun setup() {
+    Dispatchers.setMain(testDispatcher)
+    FilterRepository.reset()
     val fakeRepository =
         object : com.android.joinme.model.event.EventsRepository {
           override fun getNewEventId(): String = "fake-id"
 
-          override suspend fun getAllEvents(): List<com.android.joinme.model.event.Event> =
-              emptyList()
+          override suspend fun getAllEvents(
+              eventFilter: EventFilter
+          ): List<com.android.joinme.model.event.Event> = emptyList()
 
           override suspend fun getEvent(eventId: String): com.android.joinme.model.event.Event {
             throw Exception("Not implemented in fake repo")
@@ -37,20 +46,27 @@ class SearchViewModelTest {
         }
 
     viewModel = SearchViewModel(fakeRepository)
+    testDispatcher.scheduler.advanceUntilIdle()
+  }
+
+  @After
+  fun tearDown() {
+    Dispatchers.resetMain()
   }
 
   @Test
   fun `initial state is correct`() = runTest {
-    val state = viewModel.uiState.value
+    val uiState = viewModel.uiState.value
+    val filterState = viewModel.filterState.value
 
-    assertEquals("", state.query)
-    assertTrue(state.isAllSelected)
-    assertTrue(state.isSocialSelected)
-    assertTrue(state.isActivitySelected)
-    assertFalse(state.categoryExpanded)
-    assertEquals(4, state.sportCategories.size)
-    assertEquals(4, state.selectedSportsCount)
-    assertTrue(state.isSelectAllChecked)
+    assertEquals("", uiState.query)
+    assertTrue(filterState.isAllSelected)
+    assertTrue(filterState.isSocialSelected)
+    assertTrue(filterState.isActivitySelected)
+    assertFalse(uiState.categoryExpanded)
+    assertEquals(4, filterState.sportCategories.size)
+    assertEquals(4, filterState.selectedSportsCount)
+    assertTrue(filterState.isSelectAllChecked)
   }
 
   @Test
@@ -67,7 +83,7 @@ class SearchViewModelTest {
     viewModel.toggleAll()
     testDispatcher.scheduler.advanceUntilIdle()
 
-    val state = viewModel.uiState.value
+    val state = viewModel.filterState.value
     assertFalse(state.isAllSelected)
     assertFalse(state.isSocialSelected)
     assertFalse(state.isActivitySelected)
@@ -83,7 +99,7 @@ class SearchViewModelTest {
     viewModel.toggleAll()
     testDispatcher.scheduler.advanceUntilIdle()
 
-    val state = viewModel.uiState.value
+    val state = viewModel.filterState.value
     assertTrue(state.isAllSelected)
     assertTrue(state.isSocialSelected)
     assertTrue(state.isActivitySelected)
@@ -97,8 +113,8 @@ class SearchViewModelTest {
     viewModel.toggleSocial()
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertFalse(viewModel.uiState.value.isSocialSelected)
-    assertFalse(viewModel.uiState.value.isAllSelected)
+    assertFalse(viewModel.filterState.value.isSocialSelected)
+    assertFalse(viewModel.filterState.value.isAllSelected)
   }
 
   @Test
@@ -108,7 +124,7 @@ class SearchViewModelTest {
     viewModel.toggleSocial()
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertTrue(viewModel.uiState.value.isSocialSelected)
+    assertTrue(viewModel.filterState.value.isSocialSelected)
   }
 
   @Test
@@ -116,8 +132,8 @@ class SearchViewModelTest {
     viewModel.toggleActivity()
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertFalse(viewModel.uiState.value.isActivitySelected)
-    assertFalse(viewModel.uiState.value.isAllSelected)
+    assertFalse(viewModel.filterState.value.isActivitySelected)
+    assertFalse(viewModel.filterState.value.isAllSelected)
   }
 
   @Test
@@ -127,13 +143,13 @@ class SearchViewModelTest {
     viewModel.toggleActivity()
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertTrue(viewModel.uiState.value.isActivitySelected)
+    assertTrue(viewModel.filterState.value.isActivitySelected)
   }
 
   @Test
   fun `toggleAll is already selected when social, activity and all sports are selected bydefault`() =
       runTest {
-        assertTrue(viewModel.uiState.value.isAllSelected)
+        assertTrue(viewModel.filterState.value.isAllSelected)
       }
 
   @Test
@@ -141,7 +157,7 @@ class SearchViewModelTest {
     viewModel.toggleSocial()
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertFalse(viewModel.uiState.value.isAllSelected)
+    assertFalse(viewModel.filterState.value.isAllSelected)
   }
 
   @Test
@@ -149,7 +165,7 @@ class SearchViewModelTest {
     viewModel.toggleActivity()
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertFalse(viewModel.uiState.value.isAllSelected)
+    assertFalse(viewModel.filterState.value.isAllSelected)
   }
 
   @Test
@@ -170,7 +186,7 @@ class SearchViewModelTest {
     viewModel.toggleSelectAll()
     testDispatcher.scheduler.advanceUntilIdle()
 
-    val state = viewModel.uiState.value
+    val state = viewModel.filterState.value
     assertFalse(state.isSelectAllChecked)
     assertEquals(0, state.selectedSportsCount)
     assertTrue(state.sportCategories.none { it.isChecked })
@@ -183,7 +199,7 @@ class SearchViewModelTest {
     viewModel.toggleSelectAll()
     testDispatcher.scheduler.advanceUntilIdle()
 
-    val state = viewModel.uiState.value
+    val state = viewModel.filterState.value
     assertTrue(state.isSelectAllChecked)
     assertEquals(4, state.selectedSportsCount)
     assertTrue(state.sportCategories.all { it.isChecked })
@@ -192,7 +208,7 @@ class SearchViewModelTest {
   @Test
   fun `toggleSelectAll maintains isAllSelected when social and activity are selected`() = runTest {
     // All filters are already selected by default
-    assertTrue(viewModel.uiState.value.isAllSelected)
+    assertTrue(viewModel.filterState.value.isAllSelected)
   }
 
   @Test
@@ -200,7 +216,7 @@ class SearchViewModelTest {
     viewModel.toggleSport("basket")
     testDispatcher.scheduler.advanceUntilIdle()
 
-    val state = viewModel.uiState.value
+    val state = viewModel.filterState.value
     val basketSport = state.sportCategories.find { it.id == "basket" }
     assertNotNull(basketSport)
     assertFalse(basketSport!!.isChecked)
@@ -214,7 +230,7 @@ class SearchViewModelTest {
     viewModel.toggleSport("football")
     testDispatcher.scheduler.advanceUntilIdle()
 
-    val state = viewModel.uiState.value
+    val state = viewModel.filterState.value
     val footballSport = state.sportCategories.find { it.id == "football" }
     assertTrue(footballSport!!.isChecked)
     assertEquals(4, state.selectedSportsCount)
@@ -223,21 +239,21 @@ class SearchViewModelTest {
   @Test
   fun `isAllSelected remains true when all filters are selected`() = runTest {
     // All filters are already selected by default
-    assertTrue(viewModel.uiState.value.isAllSelected)
-    assertTrue(viewModel.uiState.value.isSocialSelected)
-    assertTrue(viewModel.uiState.value.isActivitySelected)
-    assertTrue(viewModel.uiState.value.isSelectAllChecked)
+    assertTrue(viewModel.filterState.value.isAllSelected)
+    assertTrue(viewModel.filterState.value.isSocialSelected)
+    assertTrue(viewModel.filterState.value.isActivitySelected)
+    assertTrue(viewModel.filterState.value.isSelectAllChecked)
   }
 
   @Test
   fun `toggleSport deselects isAllSelected when sport is unchecked`() = runTest {
     // All filters are already selected by default
-    assertTrue(viewModel.uiState.value.isAllSelected)
+    assertTrue(viewModel.filterState.value.isAllSelected)
 
     viewModel.toggleSport("basket")
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertFalse(viewModel.uiState.value.isAllSelected)
+    assertFalse(viewModel.filterState.value.isAllSelected)
   }
 
   @Test
@@ -245,13 +261,13 @@ class SearchViewModelTest {
     viewModel.toggleSport("invalid_sport")
     testDispatcher.scheduler.advanceUntilIdle()
 
-    val state = viewModel.uiState.value
+    val state = viewModel.filterState.value
     assertEquals(4, state.selectedSportsCount)
   }
 
   @Test
   fun `sportCategories contains correct initial sports`() = runTest {
-    val state = viewModel.uiState.value
+    val state = viewModel.filterState.value
     val sportIds = state.sportCategories.map { it.id }
 
     assertTrue(sportIds.contains("basket"))
@@ -262,7 +278,7 @@ class SearchViewModelTest {
 
   @Test
   fun `sportCategories contains correct sport names`() = runTest {
-    val state = viewModel.uiState.value
+    val state = viewModel.filterState.value
     val sportNames = state.sportCategories.map { it.name }
 
     assertTrue(sportNames.contains("Basket"))
@@ -279,7 +295,7 @@ class SearchViewModelTest {
     viewModel.toggleSport("tennis")
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertEquals(2, viewModel.uiState.value.selectedSportsCount)
+    assertEquals(2, viewModel.filterState.value.selectedSportsCount)
   }
 
   @Test
@@ -287,12 +303,12 @@ class SearchViewModelTest {
     viewModel.toggleSport("basket")
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertFalse(viewModel.uiState.value.isSelectAllChecked)
+    assertFalse(viewModel.filterState.value.isSelectAllChecked)
 
     viewModel.toggleSport("basket")
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertTrue(viewModel.uiState.value.isSelectAllChecked)
+    assertTrue(viewModel.filterState.value.isSelectAllChecked)
   }
 
   @Test
@@ -303,7 +319,7 @@ class SearchViewModelTest {
     viewModel.toggleSport("football")
     testDispatcher.scheduler.advanceUntilIdle()
 
-    val state = viewModel.uiState.value
+    val state = viewModel.filterState.value
     assertTrue(state.isSocialSelected)
     assertFalse(state.isActivitySelected)
     assertEquals(2, state.selectedSportsCount)
