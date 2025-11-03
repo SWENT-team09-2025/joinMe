@@ -1,6 +1,5 @@
 package com.android.joinme.ui.overview
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import com.android.joinme.HttpClientProvider
 import com.android.joinme.model.event.Event
@@ -141,7 +140,6 @@ class CreateEventForSerieViewModel(
       val suggestions = locationRepository.search(query)
       _uiState.value = _uiState.value.copy(locationSuggestions = suggestions)
     } catch (e: Exception) {
-      Log.e("CreateEventForSerieViewModel", "Error searching locations", e)
       _uiState.value = _uiState.value.copy(locationSuggestions = emptyList())
     }
   }
@@ -245,7 +243,6 @@ class CreateEventForSerieViewModel(
       _uiState.value = _uiState.value.copy(isLoading = false)
       true
     } catch (e: Exception) {
-      Log.e("CreateEventForSerieViewModel", "Error creating event for serie", e)
       setErrorMsg("Failed to create event: ${e.message}")
       _uiState.value = _uiState.value.copy(isLoading = false)
       false
