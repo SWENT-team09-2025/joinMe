@@ -329,14 +329,4 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          ./gradlew sonar \
-            -Dsonar.projectKey=SWENT-team09-2025_joinMe \
-            -Dsonar.organization=swent-team09-2025 \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.sources=app/src/main/java \
-            -Dsonar.tests=app/src/test/java,app/src/androidTest/java \
-            -Dsonar.java.binaries=app/build/tmp/kotlin-classes/debug \
-            -Dsonar.java.test.binaries=app/build/tmp/kotlin-classes/debugUnitTest,app/build/tmp/kotlin-classes/debugAndroidTest \
-            -Dsonar.coverage.jacoco.xmlReportPaths=app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml \
-            -Dsonar.exclusions=**/*.png,**/*.jpg,**/*.jpeg,**/*.webp,**/*.gif,**/*.svg
+          ./gradlew sonar -Dsonar.token=${{ secrets.SONAR_TOKEN }}
