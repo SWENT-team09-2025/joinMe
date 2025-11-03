@@ -1,5 +1,7 @@
 package com.android.joinme.ui.profile
 
+import android.net.Uri
+import android.content.Context
 import com.android.joinme.model.authentification.AuthRepository
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
@@ -16,292 +18,616 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProfileViewModelTest {
 
-  private val testDispatcher = StandardTestDispatcher()
+    private val testDispatcher = StandardTestDispatcher()
 
-  private lateinit var mockProfileRepository: ProfileRepository
-  private lateinit var mockAuthRepository: AuthRepository
-  private lateinit var viewModel: ProfileViewModel
+    private lateinit var mockProfileRepository: ProfileRepository
+    private lateinit var mockAuthRepository: AuthRepository
+    private lateinit var viewModel: ProfileViewModel
 
-  private val testProfile =
-      Profile(
-          uid = "test-uid",
-          username = "TestUser",
-          email = "test@example.com",
-          dateOfBirth = "01/01/2000",
-          country = "TestCountry",
-          interests = listOf("Testing", "Coding"),
-          bio = "Test bio",
-          createdAt = Timestamp.now(),
-          updatedAt = Timestamp.now())
+    private val testProfile =
+        Profile(
+            uid = "test-uid",
+            username = "TestUser",
+            email = "test@example.com",
+            dateOfBirth = "01/01/2000",
+            country = "TestCountry",
+            interests = listOf("Testing", "Coding"),
+            bio = "Test bio",
+            photoUrl = null,
+            createdAt = Timestamp.now(),
+            updatedAt = Timestamp.now()
+        )
 
-  @Before
-  fun setup() {
-    Dispatchers.setMain(testDispatcher)
-    mockProfileRepository = mockk(relaxed = true)
-    mockAuthRepository = mockk(relaxed = true)
-    viewModel = ProfileViewModel(mockProfileRepository, mockAuthRepository)
-  }
+    @Before
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
+        mockProfileRepository = mockk(relaxed = true)
+        mockAuthRepository = mockk(relaxed = true)
+        viewModel = ProfileViewModel(mockProfileRepository, mockAuthRepository)
+    }
 
-  @After
-  fun tearDown() {
-    Dispatchers.resetMain()
-    clearAllMocks()
-  }
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+        clearAllMocks()
+    }
 
-  // ==================== STATE MANAGEMENT TESTS ====================
+    // ==================== STATE MANAGEMENT TESTS ====================
 
-  @Test
-  fun `clearError clears error state`() {
-    viewModel.setError("Test error")
-    viewModel.clearError()
-    assertNull(viewModel.error.value)
-  }
+    @Test
+    fun `clearError clears error state`() {
+        viewModel.setError("Test error")
+        viewModel.clearError()
+        assertNull(viewModel.error.value)
+    }
 
-  @Test
-  fun `setError sets error message`() {
-    viewModel.setError("Error message")
-    assertEquals("Error message", viewModel.error.value)
-  }
+    @Test
+    fun `setError sets error message`() {
+        viewModel.setError("Error message")
+        assertEquals("Error message", viewModel.error.value)
+    }
 
-  @Test
-  fun `clearProfile clears profile state`() {
-    viewModel.clearProfile()
-    assertNull(viewModel.profile.value)
-  }
+    @Test
+    fun `clearProfile clears profile state`() {
+        viewModel.clearProfile()
+        assertNull(viewModel.profile.value)
+    }
 
-  // ==================== LOAD PROFILE TESTS ====================
+    // ==================== LOAD PROFILE TESTS ====================
 
-  @Test
-  fun `loadProfile sets loading state correctly`() = runTest {
-    coEvery { mockProfileRepository.getProfile(any()) } returns testProfile
+    @Test
+    fun `loadProfile sets loading state correctly`() = runTest {
+        coEvery { mockProfileRepository.getProfile(any()) } returns testProfile
 
-    viewModel.loadProfile("test-uid")
-    testScheduler.advanceUntilIdle()
+        viewModel.loadProfile("test-uid")
+        testScheduler.advanceUntilIdle()
 
-    assertFalse(viewModel.isLoading.value)
-  }
+        assertFalse(viewModel.isLoading.value)
+    }
 
-  @Test
-  fun `loadProfile loads existing profile successfully`() = runTest {
-    coEvery { mockProfileRepository.getProfile("test-uid") } returns testProfile
+    @Test
+    fun `loadProfile loads existing profile successfully`() = runTest {
+        coEvery { mockProfileRepository.getProfile("test-uid") } returns testProfile
 
-    viewModel.loadProfile("test-uid")
-    testScheduler.advanceUntilIdle()
+        viewModel.loadProfile("test-uid")
+        testScheduler.advanceUntilIdle()
 
-    assertEquals(testProfile, viewModel.profile.value)
-    assertNull(viewModel.error.value)
-    coVerify { mockProfileRepository.getProfile("test-uid") }
-  }
+        assertEquals(testProfile, viewModel.profile.value)
+        assertNull(viewModel.error.value)
+        coVerify { mockProfileRepository.getProfile("test-uid") }
+    }
 
-  @Test
-  fun `loadProfile creates new profile when profile does not exist`() = runTest {
-    coEvery { mockProfileRepository.getProfile("test-uid") } returns null
-    coEvery { mockAuthRepository.getCurrentUserEmail() } returns "new@example.com"
-    coEvery { mockProfileRepository.createOrUpdateProfile(any()) } just Runs
+    @Test
+    fun `loadProfile creates new profile when profile does not exist`() = runTest {
+        coEvery { mockProfileRepository.getProfile("test-uid") } returns null
+        coEvery { mockAuthRepository.getCurrentUserEmail() } returns "new@example.com"
+        coEvery { mockProfileRepository.createOrUpdateProfile(any()) } just Runs
 
-    viewModel.loadProfile("test-uid")
-    testScheduler.advanceUntilIdle()
+        viewModel.loadProfile("test-uid")
+        testScheduler.advanceUntilIdle()
 
-    assertNotNull(viewModel.profile.value)
-    assertEquals("test-uid", viewModel.profile.value?.uid)
-    assertEquals("new@example.com", viewModel.profile.value?.email)
-    assertEquals("new", viewModel.profile.value?.username)
-    coVerify { mockProfileRepository.createOrUpdateProfile(any()) }
-  }
+        assertNotNull(viewModel.profile.value)
+        assertEquals("test-uid", viewModel.profile.value?.uid)
+        assertEquals("new@example.com", viewModel.profile.value?.email)
+        assertEquals("new", viewModel.profile.value?.username)
+        coVerify { mockProfileRepository.createOrUpdateProfile(any()) }
+    }
 
-  @Test
-  fun `loadProfile handles NoSuchElementException and bootstraps profile`() = runTest {
-    coEvery { mockProfileRepository.getProfile("test-uid") } throws NoSuchElementException()
-    coEvery { mockAuthRepository.getCurrentUserEmail() } returns "test@example.com"
-    coEvery { mockProfileRepository.createOrUpdateProfile(any()) } just Runs
+    @Test
+    fun `loadProfile handles NoSuchElementException and bootstraps profile`() = runTest {
+        coEvery { mockProfileRepository.getProfile("test-uid") } throws NoSuchElementException()
+        coEvery { mockAuthRepository.getCurrentUserEmail() } returns "test@example.com"
+        coEvery { mockProfileRepository.createOrUpdateProfile(any()) } just Runs
 
-    viewModel.loadProfile("test-uid")
-    testScheduler.advanceUntilIdle()
+        viewModel.loadProfile("test-uid")
+        testScheduler.advanceUntilIdle()
 
-    assertNotNull(viewModel.profile.value)
-    assertEquals("test-uid", viewModel.profile.value?.uid)
-    coVerify { mockProfileRepository.createOrUpdateProfile(any()) }
-  }
+        assertNotNull(viewModel.profile.value)
+        assertEquals("test-uid", viewModel.profile.value?.uid)
+        coVerify { mockProfileRepository.createOrUpdateProfile(any()) }
+    }
 
-  @Test
-  fun `loadProfile handles error when email retrieval fails`() = runTest {
-    coEvery { mockProfileRepository.getProfile("test-uid") } returns null
-    coEvery { mockAuthRepository.getCurrentUserEmail() } throws Exception("Auth error")
-    coEvery { mockProfileRepository.createOrUpdateProfile(any()) } just Runs
+    @Test
+    fun `loadProfile handles error when email retrieval fails`() = runTest {
+        coEvery { mockProfileRepository.getProfile("test-uid") } returns null
+        coEvery { mockAuthRepository.getCurrentUserEmail() } throws Exception("Auth error")
+        coEvery { mockProfileRepository.createOrUpdateProfile(any()) } just Runs
 
-    viewModel.loadProfile("test-uid")
-    testScheduler.advanceUntilIdle()
+        viewModel.loadProfile("test-uid")
+        testScheduler.advanceUntilIdle()
 
-    // Should still create profile with empty email
-    assertNotNull(viewModel.profile.value)
-    assertEquals("", viewModel.profile.value?.email)
-  }
+        // Should still create profile with empty email
+        assertNotNull(viewModel.profile.value)
+        assertEquals("", viewModel.profile.value?.email)
+    }
 
-  @Test
-  fun `loadProfile sets error on general exception`() = runTest {
-    coEvery { mockProfileRepository.getProfile("test-uid") } throws Exception("Database error")
+    @Test
+    fun `loadProfile sets error on general exception`() = runTest {
+        coEvery { mockProfileRepository.getProfile("test-uid") } throws Exception("Database error")
 
-    viewModel.loadProfile("test-uid")
-    testScheduler.advanceUntilIdle()
+        viewModel.loadProfile("test-uid")
+        testScheduler.advanceUntilIdle()
 
-    assertNull(viewModel.profile.value)
-    assertTrue(viewModel.error.value?.contains("Failed to load profile") == true)
-  }
+        assertNull(viewModel.profile.value)
+        assertTrue(viewModel.error.value?.contains("Failed to load profile") == true)
+    }
 
-  // ==================== CREATE/UPDATE PROFILE TESTS ====================
+    // ==================== CREATE/UPDATE PROFILE TESTS ====================
 
-  @Test
-  fun `createOrUpdateProfile updates profile successfully`() = runTest {
-    coEvery { mockProfileRepository.createOrUpdateProfile(testProfile) } just Runs
+    @Test
+    fun `createOrUpdateProfile updates profile successfully`() = runTest {
+        coEvery { mockProfileRepository.createOrUpdateProfile(testProfile) } just Runs
 
-    viewModel.createOrUpdateProfile(testProfile)
-    testScheduler.advanceUntilIdle()
+        viewModel.createOrUpdateProfile(testProfile)
+        testScheduler.advanceUntilIdle()
 
-    assertEquals(testProfile, viewModel.profile.value)
-    assertNull(viewModel.error.value)
-    assertFalse(viewModel.isLoading.value)
-    coVerify { mockProfileRepository.createOrUpdateProfile(testProfile) }
-  }
+        assertEquals(testProfile, viewModel.profile.value)
+        assertNull(viewModel.error.value)
+        assertFalse(viewModel.isLoading.value)
+        coVerify { mockProfileRepository.createOrUpdateProfile(testProfile) }
+    }
 
-  @Test
-  fun `createOrUpdateProfile sets error on exception`() = runTest {
-    coEvery { mockProfileRepository.createOrUpdateProfile(testProfile) } throws
-        Exception("Save failed")
+    @Test
+    fun `createOrUpdateProfile sets error on exception`() = runTest {
+        coEvery { mockProfileRepository.createOrUpdateProfile(testProfile) } throws
+                Exception("Save failed")
 
-    viewModel.createOrUpdateProfile(testProfile)
-    testScheduler.advanceUntilIdle()
+        viewModel.createOrUpdateProfile(testProfile)
+        testScheduler.advanceUntilIdle()
 
-    assertTrue(viewModel.error.value?.contains("Failed to save profile") == true)
-    assertFalse(viewModel.isLoading.value)
-  }
+        assertTrue(viewModel.error.value?.contains("Failed to save profile") == true)
+        assertFalse(viewModel.isLoading.value)
+    }
 
-  // ==================== DELETE PROFILE TESTS ====================
+    // ==================== DELETE PROFILE TESTS ====================
 
-  @Test
-  fun `deleteProfile deletes profile successfully`() = runTest {
-    coEvery { mockProfileRepository.deleteProfile("test-uid") } just Runs
+    @Test
+    fun `deleteProfile deletes profile successfully`() = runTest {
+        coEvery { mockProfileRepository.deleteProfile("test-uid") } just Runs
 
-    viewModel.deleteProfile("test-uid")
-    testScheduler.advanceUntilIdle()
+        viewModel.deleteProfile("test-uid")
+        testScheduler.advanceUntilIdle()
 
-    assertNull(viewModel.profile.value)
-    assertNull(viewModel.error.value)
-    assertFalse(viewModel.isLoading.value)
-    coVerify { mockProfileRepository.deleteProfile("test-uid") }
-  }
+        assertNull(viewModel.profile.value)
+        assertNull(viewModel.error.value)
+        assertFalse(viewModel.isLoading.value)
+        coVerify { mockProfileRepository.deleteProfile("test-uid") }
+    }
 
-  @Test
-  fun `deleteProfile sets error on exception`() = runTest {
-    coEvery { mockProfileRepository.deleteProfile("test-uid") } throws Exception("Delete failed")
+    @Test
+    fun `deleteProfile sets error on exception`() = runTest {
+        coEvery { mockProfileRepository.deleteProfile("test-uid") } throws Exception("Delete failed")
 
-    viewModel.deleteProfile("test-uid")
-    testScheduler.advanceUntilIdle()
+        viewModel.deleteProfile("test-uid")
+        testScheduler.advanceUntilIdle()
 
-    assertTrue(viewModel.error.value?.contains("Failed to delete profile") == true)
-    assertFalse(viewModel.isLoading.value)
-  }
+        assertTrue(viewModel.error.value?.contains("Failed to delete profile") == true)
+        assertFalse(viewModel.isLoading.value)
+    }
 
-  // ==================== USERNAME VALIDATION TESTS ====================
+    // ==================== PHOTO UPLOAD TESTS ====================
 
-  @Test
-  fun `getUsernameError returns error for empty username`() {
-    assertEquals("Username is required", viewModel.getUsernameError(""))
-  }
+    @Test
+    fun `uploadProfilePhoto successful upload updates state correctly`() = runTest {
+        // Given
+        val mockContext = mockk<Context>()
+        val mockUri = mockk<Uri>()
+        val expectedUrl = "https://firebase.storage/test-uid/profile.jpg"
 
-  @Test
-  fun `getUsernameError returns error for short username`() {
-    assertEquals("Username must be at least 3 characters", viewModel.getUsernameError("ab"))
-    assertEquals("Username must be at least 3 characters", viewModel.getUsernameError("a"))
-  }
+        // Load profile first
+        coEvery { mockProfileRepository.getProfile("test-uid") } returns testProfile
+        viewModel.loadProfile("test-uid")
+        testScheduler.advanceUntilIdle()
 
-  @Test
-  fun `getUsernameError returns error for long username`() {
-    val longName = "a".repeat(31)
-    assertEquals("Username must not exceed 30 characters", viewModel.getUsernameError(longName))
-  }
+        // Mock upload with delay to capture loading state
+        coEvery {
+            mockProfileRepository.uploadProfilePhoto(mockContext, "test-uid", mockUri)
+        } coAnswers {
+            kotlinx.coroutines.delay(100) // Small delay to keep loading state true
+            expectedUrl
+        }
 
-  @Test
-  fun `getUsernameError returns error for invalid characters`() {
-    assertEquals(
-        "Only letters, numbers, spaces, and underscores allowed",
-        viewModel.getUsernameError("user@name"))
-    assertEquals(
-        "Only letters, numbers, spaces, and underscores allowed",
-        viewModel.getUsernameError("user#name"))
-    assertEquals(
-        "Only letters, numbers, spaces, and underscores allowed",
-        viewModel.getUsernameError("user!name"))
-    assertEquals(
-        "Only letters, numbers, spaces, and underscores allowed",
-        viewModel.getUsernameError("user.name"))
-  }
+        var successCalled = false
+        var errorCalled = false
 
-  @Test
-  fun `getUsernameError returns null for valid username`() {
-    assertNull(viewModel.getUsernameError("valid_user"))
-    assertNull(viewModel.getUsernameError("user123"))
-    assertNull(viewModel.getUsernameError("User Name"))
-    assertNull(viewModel.getUsernameError("ABC"))
-    assertNull(viewModel.getUsernameError("a".repeat(30))) // Exactly 30 chars
-  }
+        // When
+        viewModel.uploadProfilePhoto(
+            context = mockContext,
+            imageUri = mockUri,
+            onSuccess = { successCalled = true },
+            onError = { errorCalled = true }
+        )
 
-  // ==================== DATE OF BIRTH VALIDATION TESTS ====================
+        // Run current coroutine to set loading state
+        testScheduler.runCurrent()
 
-  @Test
-  fun `getDateOfBirthError returns null for empty string`() {
-    assertNull(viewModel.getDateOfBirthError(""))
-    assertNull(viewModel.getDateOfBirthError("   "))
-  }
+        // Then: Check loading state is true
+        assertTrue("isUploadingPhoto should be true during upload", viewModel.isUploadingPhoto.value)
 
-  @Test
-  fun `getDateOfBirthError returns error for invalid format`() {
-    assertEquals(
-        "Enter your date in dd/mm/yyyy format.", viewModel.getDateOfBirthError("2000-01-01"))
-    assertEquals("Enter your date in dd/mm/yyyy format.", viewModel.getDateOfBirthError("01/01/00"))
-    assertEquals("Enter your date in dd/mm/yyyy format.", viewModel.getDateOfBirthError("1/1/2000"))
-    assertEquals(
-        "Enter your date in dd/mm/yyyy format.", viewModel.getDateOfBirthError("01-01-2000"))
-  }
+        // Complete the upload
+        testScheduler.advanceUntilIdle()
 
-  @Test
-  fun `getDateOfBirthError returns error for invalid date`() {
-    assertEquals("Invalid date", viewModel.getDateOfBirthError("32/01/2000"))
-    assertEquals("Invalid date", viewModel.getDateOfBirthError("01/13/2000"))
-    assertEquals("Invalid date", viewModel.getDateOfBirthError("31/02/2000"))
-    assertEquals("Invalid date", viewModel.getDateOfBirthError("00/01/2000"))
-  }
+        // Then: Check final state
+        assertFalse("isUploadingPhoto should be false after upload", viewModel.isUploadingPhoto.value)
+        assertNull("photoUploadError should be null on success", viewModel.photoUploadError.value)
+        assertEquals("Profile photoUrl should be updated", expectedUrl, viewModel.profile.value?.photoUrl)
+        assertTrue("onSuccess callback should be called", successCalled)
+        assertFalse("onError callback should not be called", errorCalled)
 
-  @Test
-  fun `getDateOfBirthError returns null for valid date`() {
-    assertNull(viewModel.getDateOfBirthError("01/01/2000"))
-    assertNull(viewModel.getDateOfBirthError("31/12/1999"))
-    assertNull(viewModel.getDateOfBirthError("29/02/2000")) // Leap year
-    assertNull(viewModel.getDateOfBirthError("15/06/1995"))
-  }
+        coVerify { mockProfileRepository.uploadProfilePhoto(mockContext, "test-uid", mockUri) }
+    }
 
-  // ==================== SIGN OUT TESTS ====================
+    @Test
+    fun `uploadProfilePhoto failure sets error and keeps state`() = runTest {
+        // Given
+        val mockContext = mockk<Context>()
+        val mockUri = mockk<Uri>()
+        val testProfile = Profile(
+            uid = "test-uid",
+            username = "TestUser",
+            email = "test@example.com",
+            photoUrl = "https://old-url.com/photo.jpg"
+        )
 
-  @Test
-  fun `signOut calls onComplete on success`() = runTest {
-    var completeCalled = false
-    coEvery { mockAuthRepository.signOut() } returns Result.success(Unit)
+        // Load profile first
+        coEvery { mockProfileRepository.getProfile("test-uid") } returns testProfile
+        viewModel.loadProfile("test-uid")
+        testScheduler.advanceUntilIdle()
 
-    viewModel.signOut(onComplete = { completeCalled = true }, onError = {})
-    testScheduler.advanceUntilIdle()
+        val originalPhotoUrl = viewModel.profile.value?.photoUrl
 
-    assertTrue(completeCalled)
-    coVerify { mockAuthRepository.signOut() }
-  }
+        // Mock upload failure
+        coEvery {
+            mockProfileRepository.uploadProfilePhoto(
+                mockContext,
+                "test-uid",
+                mockUri
+            )
+        } throws Exception("Upload failed")
 
-  @Test
-  fun `signOut calls onError on failure`() = runTest {
-    var errorMessage: String? = null
-    coEvery { mockAuthRepository.signOut() } throws Exception("Sign out failed")
+        var successCalled = false
+        var errorMessage: String? = null
 
-    viewModel.signOut(onComplete = {}, onError = { errorMessage = it })
-    testScheduler.advanceUntilIdle()
+        // When
+        viewModel.uploadProfilePhoto(
+            context = mockContext,
+            imageUri = mockUri,
+            onSuccess = { successCalled = true },
+            onError = { errorMessage = it }
+        )
 
-    assertNotNull(errorMessage)
-    assertTrue(errorMessage?.contains("Failed to sign out") == true)
-  }
+        testScheduler.advanceUntilIdle()
+
+        // Then
+        assertFalse(
+            "isUploadingPhoto should be false after failed upload",
+            viewModel.isUploadingPhoto.value
+        )
+        assertNotNull(
+            "photoUploadError should not be null on failure",
+            viewModel.photoUploadError.value
+        )
+        assertTrue(
+            "photoUploadError should contain error message",
+            viewModel.photoUploadError.value?.contains("Failed to upload photo") == true
+        )
+        assertEquals(
+            "Profile photoUrl should remain unchanged",
+            originalPhotoUrl,
+            viewModel.profile.value?.photoUrl
+        )
+        assertFalse("onSuccess callback should not be called", successCalled)
+        assertNotNull("onError callback should be called with message", errorMessage)
+        assertTrue(
+            "Error message should contain failure info",
+            errorMessage?.contains("Failed to upload photo") == true
+        )
+    }
+
+    @Test
+    fun `uploadProfilePhoto with no profile loaded does not call repository`() = runTest {
+        // Given: No profile loaded
+        val mockContext = mockk<Context>()
+        val mockUri = mockk<Uri>()
+
+        var successCalled = false
+        var errorMessage: String? = null
+
+        // When
+        viewModel.uploadProfilePhoto(
+            context = mockContext,
+            imageUri = mockUri,
+            onSuccess = { successCalled = true },
+            onError = { errorMessage = it }
+        )
+
+        testScheduler.advanceUntilIdle()
+
+        // Then
+        assertFalse("onSuccess should not be called", successCalled)
+        assertNotNull("onError should be called with error message", errorMessage)
+        assertEquals(
+            "Error message should indicate no profile loaded",
+            "No profile loaded",
+            errorMessage
+        )
+        coVerify(exactly = 0) { mockProfileRepository.uploadProfilePhoto(any(), any(), any()) }
+    }
+
+    @Test
+    fun `uploadProfilePhoto timeout sets appropriate error`() = runTest {
+        // Given
+        val mockContext = mockk<Context>()
+        val mockUri = mockk<Uri>()
+        val testProfile = Profile(
+            uid = "test-uid",
+            username = "TestUser",
+            email = "test@example.com"
+        )
+
+        coEvery { mockProfileRepository.getProfile("test-uid") } returns testProfile
+        viewModel.loadProfile("test-uid")
+        testScheduler.advanceUntilIdle()
+
+        // Mock timeout
+        coEvery {
+            mockProfileRepository.uploadProfilePhoto(
+                mockContext,
+                "test-uid",
+                mockUri
+            )
+        } coAnswers {
+            kotlinx.coroutines.delay(35000) // Longer than 30s timeout
+            "should-not-reach"
+        }
+
+        var errorMessage: String? = null
+
+        // When
+        viewModel.uploadProfilePhoto(
+            context = mockContext,
+            imageUri = mockUri,
+            onError = { errorMessage = it }
+        )
+
+        testScheduler.advanceUntilIdle()
+
+        // Then
+        assertNotNull("Error message should be set", errorMessage)
+        assertTrue("Error should mention timeout", errorMessage?.contains("timeout") == true)
+    }
+
+    @Test
+    fun `deleteProfilePhoto successful deletion updates state`() = runTest {
+        // Given
+        val testProfile = Profile(
+            uid = "test-uid",
+            username = "TestUser",
+            email = "test@example.com",
+            photoUrl = "https://firebase.storage/test-uid/profile.jpg"
+        )
+
+        coEvery { mockProfileRepository.getProfile("test-uid") } returns testProfile
+        viewModel.loadProfile("test-uid")
+        testScheduler.advanceUntilIdle()
+
+        coEvery { mockProfileRepository.deleteProfilePhoto("test-uid") } just Runs
+
+        var successCalled = false
+        var errorCalled = false
+
+        // When
+        viewModel.deleteProfilePhoto(
+            onSuccess = { successCalled = true },
+            onError = { errorCalled = true }
+        )
+
+        testScheduler.advanceUntilIdle()
+
+        // Then
+        assertFalse(
+            "isUploadingPhoto should be false after deletion",
+            viewModel.isUploadingPhoto.value
+        )
+        assertNull("photoUploadError should be null on success", viewModel.photoUploadError.value)
+        assertNull(
+            "Profile photoUrl should be null after deletion",
+            viewModel.profile.value?.photoUrl
+        )
+        assertTrue("onSuccess callback should be called", successCalled)
+        assertFalse("onError callback should not be called", errorCalled)
+
+        coVerify { mockProfileRepository.deleteProfilePhoto("test-uid") }
+    }
+
+    @Test
+    fun `deleteProfilePhoto failure sets error`() = runTest {
+        // Given
+        val testProfile = Profile(
+            uid = "test-uid",
+            username = "TestUser",
+            email = "test@example.com",
+            photoUrl = "https://firebase.storage/test-uid/profile.jpg"
+        )
+
+        coEvery { mockProfileRepository.getProfile("test-uid") } returns testProfile
+        viewModel.loadProfile("test-uid")
+        testScheduler.advanceUntilIdle()
+
+        val originalPhotoUrl = viewModel.profile.value?.photoUrl
+
+        coEvery { mockProfileRepository.deleteProfilePhoto("test-uid") } throws Exception("Delete failed")
+
+        var errorMessage: String? = null
+
+        // When
+        viewModel.deleteProfilePhoto(
+            onError = { errorMessage = it }
+        )
+
+        testScheduler.advanceUntilIdle()
+
+        // Then
+        assertNotNull("photoUploadError should be set", viewModel.photoUploadError.value)
+        assertTrue(
+            "Error should mention deletion failure",
+            viewModel.photoUploadError.value?.contains("Failed to delete photo") == true
+        )
+        assertEquals(
+            "photoUrl should remain unchanged on failure",
+            originalPhotoUrl,
+            viewModel.profile.value?.photoUrl
+        )
+        assertNotNull("onError callback should receive message", errorMessage)
+    }
+
+    @Test
+    fun `deleteProfilePhoto with no profile loaded does not call repository`() = runTest {
+        // Given: No profile loaded
+        var errorMessage: String? = null
+
+        // When
+        viewModel.deleteProfilePhoto(
+            onError = { errorMessage = it }
+        )
+
+        testScheduler.advanceUntilIdle()
+
+        // Then
+        assertNotNull("onError should be called", errorMessage)
+        assertEquals("Error should indicate no profile", "No profile loaded", errorMessage)
+        coVerify(exactly = 0) { mockProfileRepository.deleteProfilePhoto(any()) }
+    }
+
+    @Test
+    fun `clearPhotoUploadError clears error state`() {
+        // Given
+        viewModel.uploadProfilePhoto(
+            context = mockk(),
+            imageUri = mockk(),
+            onError = {}
+        )
+
+        // When
+        viewModel.clearPhotoUploadError()
+
+        // Then
+        assertNull("photoUploadError should be null after clear", viewModel.photoUploadError.value)
+    }
+
+    // ==================== USERNAME VALIDATION TESTS ====================
+
+    @Test
+    fun `getUsernameError returns error for empty username`() {
+        assertEquals("Username is required", viewModel.getUsernameError(""))
+    }
+
+    @Test
+    fun `getUsernameError returns error for short username`() {
+        assertEquals("Username must be at least 3 characters", viewModel.getUsernameError("ab"))
+        assertEquals("Username must be at least 3 characters", viewModel.getUsernameError("a"))
+    }
+
+    @Test
+    fun `getUsernameError returns error for long username`() {
+        val longName = "a".repeat(31)
+        assertEquals("Username must not exceed 30 characters", viewModel.getUsernameError(longName))
+    }
+
+    @Test
+    fun `getUsernameError returns error for invalid characters`() {
+        assertEquals(
+            "Only letters, numbers, spaces, and underscores allowed",
+            viewModel.getUsernameError("user@name")
+        )
+        assertEquals(
+            "Only letters, numbers, spaces, and underscores allowed",
+            viewModel.getUsernameError("user#name")
+        )
+        assertEquals(
+            "Only letters, numbers, spaces, and underscores allowed",
+            viewModel.getUsernameError("user!name")
+        )
+        assertEquals(
+            "Only letters, numbers, spaces, and underscores allowed",
+            viewModel.getUsernameError("user.name")
+        )
+    }
+
+    @Test
+    fun `getUsernameError returns null for valid username`() {
+        assertNull(viewModel.getUsernameError("valid_user"))
+        assertNull(viewModel.getUsernameError("user123"))
+        assertNull(viewModel.getUsernameError("User Name"))
+        assertNull(viewModel.getUsernameError("ABC"))
+        assertNull(viewModel.getUsernameError("a".repeat(30))) // Exactly 30 chars
+    }
+
+    // ==================== DATE OF BIRTH VALIDATION TESTS ====================
+
+    @Test
+    fun `getDateOfBirthError returns null for empty string`() {
+        assertNull(viewModel.getDateOfBirthError(""))
+        assertNull(viewModel.getDateOfBirthError("   "))
+    }
+
+    @Test
+    fun `getDateOfBirthError returns error for invalid format`() {
+        assertEquals(
+            "Enter your date in dd/mm/yyyy format.", viewModel.getDateOfBirthError("2000-01-01")
+        )
+        assertEquals(
+            "Enter your date in dd/mm/yyyy format.",
+            viewModel.getDateOfBirthError("01/01/00")
+        )
+        assertEquals(
+            "Enter your date in dd/mm/yyyy format.",
+            viewModel.getDateOfBirthError("1/1/2000")
+        )
+        assertEquals(
+            "Enter your date in dd/mm/yyyy format.", viewModel.getDateOfBirthError("01-01-2000")
+        )
+    }
+
+    @Test
+    fun `getDateOfBirthError returns error for invalid date`() {
+        assertEquals("Invalid date", viewModel.getDateOfBirthError("32/01/2000"))
+        assertEquals("Invalid date", viewModel.getDateOfBirthError("01/13/2000"))
+        assertEquals("Invalid date", viewModel.getDateOfBirthError("31/02/2000"))
+        assertEquals("Invalid date", viewModel.getDateOfBirthError("00/01/2000"))
+    }
+
+    @Test
+    fun `getDateOfBirthError returns null for valid date`() {
+        assertNull(viewModel.getDateOfBirthError("01/01/2000"))
+        assertNull(viewModel.getDateOfBirthError("31/12/1999"))
+        assertNull(viewModel.getDateOfBirthError("29/02/2000")) // Leap year
+        assertNull(viewModel.getDateOfBirthError("15/06/1995"))
+    }
+
+    // ==================== SIGN OUT TESTS ====================
+
+    @Test
+    fun `signOut calls onComplete on success`() = runTest {
+        var completeCalled = false
+        coEvery { mockAuthRepository.signOut() } returns Result.success(Unit)
+
+        viewModel.signOut(onComplete = { completeCalled = true }, onError = {})
+        testScheduler.advanceUntilIdle()
+
+        assertTrue(completeCalled)
+        coVerify { mockAuthRepository.signOut() }
+    }
+
+    @Test
+    fun `signOut calls onError on failure`() = runTest {
+        var errorMessage: String? = null
+        coEvery { mockAuthRepository.signOut() } throws Exception("Sign out failed")
+
+        viewModel.signOut(onComplete = {}, onError = { errorMessage = it })
+        testScheduler.advanceUntilIdle()
+
+        assertNotNull(errorMessage)
+        assertTrue(errorMessage?.contains("Failed to sign out") == true)
+    }
 }
