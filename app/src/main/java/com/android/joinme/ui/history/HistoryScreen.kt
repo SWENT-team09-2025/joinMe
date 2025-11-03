@@ -68,6 +68,7 @@ object HistoryScreenTestTags {
 fun HistoryScreen(
     historyViewModel: HistoryViewModel = viewModel(),
     onSelectEvent: (Event) -> Unit = {},
+    onSelectSerie: (Serie) -> Unit = {},
     onGoBack: () -> Unit = {},
 ) {
   val context = LocalContext.current
