@@ -159,7 +159,7 @@ jobs:
           fi
 
       - name: Run unit tests
-        run: ./gradlew testDebugUnitTest --parallel --build-cache
+        run: ./gradlew check --parallel --build-cache
 
       - name: Upload unit test results and coverage data
         uses: actions/upload-artifact@v4
@@ -368,20 +368,6 @@ jobs:
           echo "=== Test Results ==="
           find app/build -name "TEST-*.xml" -type f | wc -l
 
-      - name: Debug coverage files in detail
-        run: |
-          echo "=== File sizes ==="
-          find app/build -name "*.exec" -o -name "*.ec" | while read -r f; do
-            if [ -f "$f" ]; then
-              size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
-              echo "$f: $size bytes"
-            fi
-          done
-          echo ""
-          echo "=== Class files exist? ==="
-          find app/build/tmp/kotlin-classes/debug -name "*.class" 2>/dev/null | head -10 || echo "No Kotlin classes"
-          find app/build/intermediates/javac/debug -name "*.class" 2>/dev/null | head -10 || echo "No Java classes"
-
       - name: Assemble classes for coverage report
         run: ./gradlew assembleDebug assembleDebugAndroidTest --parallel --build-cache
 
@@ -497,9 +483,114 @@ jobs:
           path: app/build/reports/jacoco/jacocoTestReport
           if-no-files-found: warn
 
+      - name: Debug SonarCloud Configuration
+        run: |
+          echo "=================================="
+          echo "SONARCLOUD DEBUG INFORMATION"
+          echo "=================================="
+          echo ""
+          
+          echo "=== 1. Checking Configuration Files ==="
+          if [ -f "sonar-project.properties" ]; then
+            echo "✓ sonar-project.properties found"
+            echo "Content:"
+            cat sonar-project.properties
+          else
+            echo "✗ No sonar-project.properties found"
+          fi
+          echo ""
+          
+          if [ -f "app/build.gradle.kts" ]; then
+            echo "✓ app/build.gradle.kts found"
+            echo "Checking for sonar configuration..."
+            grep -A 20 "sonar {" app/build.gradle.kts || echo "No sonar block found in gradle"
+          fi
+          echo ""
+          
+          echo "=== 2. Checking Coverage Report ==="
+          if [ -f "app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml" ]; then
+            echo "✓ Coverage XML found"
+            ls -lh app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml
+            echo ""
+            echo "First 20 lines of coverage report:"
+            head -20 app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml
+            echo ""
+            echo "Coverage counters:"
+            grep '<counter' app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml | head -5
+          else
+            echo "✗ Coverage XML NOT found"
+            echo "Searching for any JaCoCo XML files:"
+            find app/build -name "*.xml" -path "*/jacoco/*" || echo "No JaCoCo XML files found"
+          fi
+          echo ""
+          
+          echo "=== 3. Checking Lint Report ==="
+          if ls app/build/reports/lint-results-*.xml 1> /dev/null 2>&1; then
+            echo "✓ Lint report(s) found:"
+            ls -lh app/build/reports/lint-results-*.xml
+          else
+            echo "✗ No lint reports found"
+            echo "Searching for any lint files:"
+            find app/build/reports -name "*lint*" || echo "No lint files found"
+          fi
+          echo ""
+          
+          echo "=== 4. Checking Source Directories ==="
+          echo "Java sources:"
+          find app/src/main/java -type f -name "*.java" | wc -l || echo "0"
+          echo "Kotlin sources:"
+          find app/src/main/kotlin -type f -name "*.kt" | wc -l || echo "0"
+          echo ""
+          
+          echo "=== 5. Checking Compiled Classes ==="
+          if [ -d "app/build/tmp/kotlin-classes/debug" ]; then
+            echo "✓ Kotlin classes found:"
+            find app/build/tmp/kotlin-classes/debug -name "*.class" | wc -l
+          else
+            echo "✗ Kotlin classes not found"
+          fi
+          
+          if [ -d "app/build/intermediates/javac/debug/classes" ]; then
+            echo "✓ Java classes found:"
+            find app/build/intermediates/javac/debug/classes -name "*.class" | wc -l
+          else
+            echo "✗ Java classes not found"
+          fi
+          echo ""
+          
+          echo "=== 6. Checking SONAR_TOKEN ==="
+          if [ -n "$SONAR_TOKEN" ]; then
+            echo "✓ SONAR_TOKEN is set (length: ${#SONAR_TOKEN} characters)"
+            echo "First 10 chars: ${SONAR_TOKEN:0:10}..."
+          else
+            echo "✗ SONAR_TOKEN is NOT set!"
+          fi
+          echo ""
+          
+          echo "=== 7. Current Directory Structure ==="
+          echo "Root files:"
+          ls -la | grep -E '(sonar|gradle)' || echo "No sonar/gradle files in root"
+          echo ""
+          
+          echo "=== 8. Gradle Properties (if exists) ==="
+          if [ -f "gradle.properties" ]; then
+            echo "gradle.properties content (excluding sensitive data):"
+            grep -v "password\|secret\|token" gradle.properties || echo "Empty or all sensitive"
+          else
+            echo "No gradle.properties file"
+          fi
+          echo ""
+          
+          echo "=================================="
+          echo "END DEBUG INFORMATION"
+          echo "=================================="
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
       - name: SonarCloud Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_SCANNER_OPTS: "-Xmx512m -Dsonar.log.level=DEBUG"
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         with:
           args: >
@@ -507,3 +598,36 @@ jobs:
             -Dsonar.organization=swent-team09-2025
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.verbose=true
+            -Dsonar.log.level=DEBUG
+      
+      - name: Post-SonarCloud Validation
+        if: always()
+        run: |
+          echo "=================================="
+          echo "POST-SONARCLOUD SCAN VALIDATION"
+          echo "=================================="
+          echo ""
+          echo "=== Checking for SonarCloud report ==="
+          if [ -f ".scannerwork/report-task.txt" ]; then
+            echo "✓ SonarCloud report task found:"
+            cat .scannerwork/report-task.txt
+          else
+            echo "✗ No SonarCloud report task found"
+          fi
+          echo ""
+          
+          echo "=== Checking SonarCloud logs ==="
+          if [ -d ".scannerwork" ]; then
+            echo "Scanner work directory contents:"
+            ls -la .scannerwork/
+            if [ -f ".scannerwork/sonar-scanner.log" ]; then
+              echo ""
+              echo "Last 50 lines of scanner log:"
+              tail -50 .scannerwork/sonar-scanner.log
+            fi
+          else
+            echo "✗ No .scannerwork directory found"
+          fi
+          echo ""
+          echo "=================================="
