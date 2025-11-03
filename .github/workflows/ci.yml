@@ -587,6 +587,25 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+      - name: Final verification before SonarCloud
+        run: |
+          echo "=== Verifying class files match coverage ==="
+          echo "1. Sample from coverage XML:"
+          grep '<class name=' app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml | head -5
+          echo ""
+          echo "2. Do matching class files exist?"
+          echo "Looking for: com/android/joinme/ui/history/HistoryViewModel*.class"
+          find app/build -name "HistoryViewModel*.class" -type f
+          echo ""
+          echo "3. What's actually in the binaries directory?"
+          ls -la app/build/tmp/kotlin-classes/debug/com/android/joinme/ui/history/ 2>/dev/null || echo "Directory doesn't exist"
+          echo ""
+          echo "4. Check all class directories:"
+          find app/build/tmp/kotlin-classes/debug -type d | head -10
+          echo ""
+          echo "5. Sample class files:"
+          find app/build/tmp/kotlin-classes/debug -name "*.class" | head -10
+
       - name: SonarCloud Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
