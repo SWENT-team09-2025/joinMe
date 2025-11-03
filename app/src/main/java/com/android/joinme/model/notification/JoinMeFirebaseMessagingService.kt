@@ -78,9 +78,12 @@ class JoinMeFirebaseMessagingService : FirebaseMessagingService() {
   private fun createNotificationChannel() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       val channel =
-          NotificationChannel(
-                  CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT)
-              .apply { description = CHANNEL_DESCRIPTION }
+          NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH)
+              .apply {
+                description = CHANNEL_DESCRIPTION
+                enableVibration(true)
+                enableLights(true)
+              }
 
       val notificationManager =
           getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -111,12 +114,13 @@ class JoinMeFirebaseMessagingService : FirebaseMessagingService() {
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(title)
             .setContentText(body)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
 
-    val notificationManager =
-        getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     notificationManager.notify(System.currentTimeMillis().toInt(), notificationBuilder.build())
   }
 }
