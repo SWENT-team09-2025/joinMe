@@ -239,6 +239,26 @@ class HistoryViewModelTest {
     }
   }
 
+  @Test
+  fun `refreshUIState excludes future serie with no events`() = runTest {
+    fakeSerieRepository.addFutureSerie()
+
+    viewModel.refreshUIState()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+
+    // Should not contain the future serie
+    state.expiredItems.forEach { item ->
+      when (item) {
+        is EventItem.EventSerie -> {
+          assertTrue(item.serie.serieId != "futureSerie1")
+        }
+        else -> {}
+      }
+    }
+  }
+
   /** Fake implementation of [EventsRepository] for isolated ViewModel testing. */
   private class FakeEventsRepository : EventsRepository {
     var shouldThrow = false
@@ -384,7 +404,7 @@ class HistoryViewModelTest {
     private val fakeSeries = mutableListOf<Serie>()
 
     init {
-      // Add an expired serie (all events ended 3 hours ago)
+      // Add an expired serie (date is 5 hours ago, no events)
       val calendar = Calendar.getInstance()
       calendar.add(Calendar.HOUR, -5)
       fakeSeries.add(
@@ -396,12 +416,28 @@ class HistoryViewModelTest {
               participants = listOf("user1"),
               maxParticipants = 10,
               visibility = Visibility.PUBLIC,
-              eventIds = emptyList(), // Empty series is expired
+              eventIds = emptyList(), // Empty series with past date is expired
               ownerId = "owner1"))
     }
 
     fun clearAllSeries() {
       fakeSeries.clear()
+    }
+
+    fun addFutureSerie() {
+      val calendar = Calendar.getInstance()
+      calendar.add(Calendar.DAY_OF_MONTH, 30) // 30 days in the future
+      fakeSeries.add(
+          Serie(
+              serieId = "futureSerie1",
+              title = "Future Serie",
+              description = "Future serie desc",
+              date = Timestamp(calendar.time),
+              participants = listOf("user1"),
+              maxParticipants = 10,
+              visibility = Visibility.PUBLIC,
+              eventIds = emptyList(), // Empty series with future date is not expired
+              ownerId = "owner1"))
     }
 
     override fun getNewSerieId(): String {

@@ -88,7 +88,9 @@ fun Serie.isActive(events: List<Event>): Boolean {
  */
 fun Serie.isExpired(events: List<Event>): Boolean {
   val serieEvents = events.filter { it.eventId in eventIds }
-  if (serieEvents.isEmpty()) return true
+  if (serieEvents.isEmpty()) {
+    return !isUpcoming()
+  }
 
   val now = System.currentTimeMillis()
   return serieEvents.all { event ->
