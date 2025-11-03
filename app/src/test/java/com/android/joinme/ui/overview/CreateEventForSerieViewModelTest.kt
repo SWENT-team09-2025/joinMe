@@ -1,0 +1,659 @@
+package com.android.joinme.ui.overview
+
+import com.android.joinme.model.event.Event
+import com.android.joinme.model.event.EventFilter
+import com.android.joinme.model.event.EventType
+import com.android.joinme.model.event.EventVisibility
+import com.android.joinme.model.event.EventsRepository
+import com.android.joinme.model.map.Location
+import com.android.joinme.model.map.LocationRepository
+import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.serie.SerieFilter
+import com.android.joinme.model.serie.SeriesRepository
+import com.android.joinme.model.utils.Visibility
+import com.google.firebase.Timestamp
+import io.mockk.coEvery
+import io.mockk.mockk
+import java.util.Calendar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
+
+/**
+ * Unit tests for CreateEventForSerieViewModel.
+ *
+ * Tests the creation of events that belong to an existing serie, including:
+ * - Form validation
+ * - Date calculation based on existing events in the serie
+ * - Inheriting properties from the parent serie
+ * - Updating the serie's eventIds list
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+class CreateEventForSerieViewModelTest {
+
+  // ---- Fake repositories ----
+  private class FakeEventsRepository : EventsRepository {
+    val added = mutableListOf<Event>()
+    private var idCounter = 1
+
+    override suspend fun addEvent(event: Event) {
+      added += event
+    }
+
+    override suspend fun editEvent(eventId: String, newValue: Event) {
+      /* no-op */
+    }
+
+    override suspend fun deleteEvent(eventId: String) {
+      /* no-op */
+    }
+
+    override suspend fun getEvent(eventId: String): Event =
+        added.find { it.eventId == eventId } ?: throw NoSuchElementException("Event not found")
+
+    override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> = added.toList()
+
+    override fun getNewEventId(): String = "fake-event-id-${idCounter++}"
+  }
+
+  private class FakeSeriesRepository : SeriesRepository {
+    val series = mutableMapOf<String, Serie>()
+
+    override suspend fun addSerie(serie: Serie) {
+      series[serie.serieId] = serie
+    }
+
+    override suspend fun editSerie(serieId: String, newValue: Serie) {
+      series[serieId] = newValue
+    }
+
+    override suspend fun deleteSerie(serieId: String) {
+      series.remove(serieId)
+    }
+
+    override suspend fun getSerie(serieId: String): Serie =
+        series[serieId] ?: throw NoSuchElementException("Serie not found")
+
+    override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> = series.values.toList()
+
+    override fun getNewSerieId(): String = "fake-serie-id"
+  }
+
+  private class FakeLocationRepository : LocationRepository {
+    override suspend fun search(query: String): List<Location> {
+      return if (query.isBlank()) {
+        emptyList()
+      } else {
+        listOf(
+            Location(latitude = 1.0, longitude = 1.0, name = "Test Location 1"),
+            Location(latitude = 2.0, longitude = 2.0, name = "Test Location 2"))
+      }
+    }
+  }
+
+  private lateinit var eventRepo: FakeEventsRepository
+  private lateinit var serieRepo: FakeSeriesRepository
+  private lateinit var locationRepo: FakeLocationRepository
+  private lateinit var vm: CreateEventForSerieViewModel
+  private val testDispatcher = StandardTestDispatcher()
+
+  @Before
+  fun setUp() {
+    Dispatchers.setMain(testDispatcher)
+
+    eventRepo = FakeEventsRepository()
+    serieRepo = FakeSeriesRepository()
+    locationRepo = FakeLocationRepository()
+    vm = CreateEventForSerieViewModel(eventRepo, serieRepo, locationRepo)
+  }
+
+  @After
+  fun tearDown() {
+    Dispatchers.resetMain()
+  }
+
+  // ---------- Basic validity ----------
+
+  @Test
+  fun initialState_isInvalid() {
+    val s = vm.uiState.value
+    assertFalse(s.isValid)
+    assertFalse(s.isLoading)
+  }
+
+  @Test
+  fun fillingAllFields_makesFormValid() = runTest {
+    vm.setType("SPORTS")
+    vm.setTitle("Weekly Soccer Match")
+    vm.setDescription("Weekly soccer match for serie")
+    vm.setDuration("90")
+    vm.setLocationQuery("Test Location")
+    vm.searchLocations("Test Location")
+    advanceUntilIdle()
+
+    val location = vm.uiState.value.locationSuggestions.firstOrNull()
+    assertNotNull(location)
+    vm.selectLocation(location!!)
+
+    assertTrue(vm.uiState.value.isValid)
+  }
+
+  // ---------- Field validation ----------
+
+  @Test
+  fun setType_blank_marksInvalid() {
+    vm.setType("")
+    val s = vm.uiState.value
+    assertNotNull(s.invalidTypeMsg)
+    assertFalse(s.isValid)
+  }
+
+  @Test
+  fun setType_invalid_marksInvalid() {
+    vm.setType("INVALID_TYPE")
+    val s = vm.uiState.value
+    assertNotNull(s.invalidTypeMsg)
+    assertFalse(s.isValid)
+  }
+
+  @Test
+  fun setType_valid_marksValid() {
+    vm.setType("SPORTS")
+    val s = vm.uiState.value
+    assertNull(s.invalidTypeMsg)
+    assertEquals("SPORTS", s.type)
+  }
+
+  @Test
+  fun setTitle_blank_marksInvalid() {
+    vm.setTitle("")
+    val s = vm.uiState.value
+    assertNotNull(s.invalidTitleMsg)
+    assertFalse(s.isValid)
+  }
+
+  @Test
+  fun setTitle_nonBlank_marksValid() {
+    vm.setTitle("Match 1")
+    val s = vm.uiState.value
+    assertNull(s.invalidTitleMsg)
+    assertEquals("Match 1", s.title)
+  }
+
+  @Test
+  fun setDescription_blank_marksInvalid() {
+    vm.setDescription("")
+    val s = vm.uiState.value
+    assertNotNull(s.invalidDescriptionMsg)
+    assertFalse(s.isValid)
+  }
+
+  @Test
+  fun setDescription_nonBlank_marksValid() {
+    vm.setDescription("First match of the serie")
+    val s = vm.uiState.value
+    assertNull(s.invalidDescriptionMsg)
+    assertEquals("First match of the serie", s.description)
+  }
+
+  @Test
+  fun setDuration_nonNumeric_marksInvalid() {
+    vm.setDuration("ninety")
+    val s = vm.uiState.value
+    assertNotNull(s.invalidDurationMsg)
+    assertFalse(s.isValid)
+  }
+
+  @Test
+  fun setDuration_negative_marksInvalid() {
+    vm.setDuration("-30")
+    val s = vm.uiState.value
+    assertNotNull(s.invalidDurationMsg)
+    assertFalse(s.isValid)
+  }
+
+  @Test
+  fun setDuration_zero_marksInvalid() {
+    vm.setDuration("0")
+    val s = vm.uiState.value
+    assertNotNull(s.invalidDurationMsg)
+    assertFalse(s.isValid)
+  }
+
+  @Test
+  fun setDuration_positive_marksValid() {
+    vm.setDuration("60")
+    val s = vm.uiState.value
+    assertNull(s.invalidDurationMsg)
+    assertEquals("60", s.duration)
+  }
+
+  @Test
+  fun setLocation_blank_marksInvalid() {
+    vm.setLocation("")
+    val s = vm.uiState.value
+    assertNotNull(s.invalidLocationMsg)
+    assertFalse(s.isValid)
+  }
+
+  // ---------- Location search and selection ----------
+
+  @Test
+  fun searchLocations_withBlankQuery_returnEmpty() = runTest {
+    vm.searchLocations("")
+    advanceUntilIdle()
+
+    assertTrue(vm.uiState.value.locationSuggestions.isEmpty())
+  }
+
+  @Test
+  fun searchLocations_withQuery_returnsResults() = runTest {
+    vm.setLocationQuery("Stadium")
+    vm.searchLocations("Stadium")
+    advanceUntilIdle()
+
+    assertTrue(vm.uiState.value.locationSuggestions.isNotEmpty())
+  }
+
+  @Test
+  fun selectLocation_updatesSelectedLocation() = runTest {
+    val location = Location(latitude = 3.0, longitude = 4.0, name = "Stadium")
+    vm.selectLocation(location)
+
+    val s = vm.uiState.value
+    assertEquals(location, s.selectedLocation)
+    assertEquals("Stadium", s.location)
+    assertEquals("Stadium", s.locationQuery)
+    assertTrue(s.locationSuggestions.isEmpty())
+    assertNull(s.invalidLocationMsg)
+  }
+
+  @Test
+  fun clearLocation_resetsLocation() = runTest {
+    val location = Location(latitude = 3.0, longitude = 4.0, name = "Stadium")
+    vm.selectLocation(location)
+    vm.clearLocation()
+
+    val s = vm.uiState.value
+    assertNull(s.selectedLocation)
+    assertEquals("", s.location)
+    assertEquals("", s.locationQuery)
+    assertNotNull(s.invalidLocationMsg)
+  }
+
+  // ---------- createEventForSerie() behavior ----------
+
+  @Test
+  fun createEventForSerie_withInvalidForm_returnsFalse() = runTest {
+    val ok = vm.createEventForSerie("serie-1")
+    advanceUntilIdle()
+
+    assertFalse(ok)
+    assertTrue(eventRepo.added.isEmpty())
+    assertNotNull(vm.uiState.value.errorMsg)
+    assertFalse(vm.uiState.value.isLoading)
+  }
+
+  @Test
+  fun createEventForSerie_withNonexistentSerie_returnsFalse() = runTest {
+    // Fill form
+    vm.setType("SPORTS")
+    vm.setTitle("Match 1")
+    vm.setDescription("First match")
+    vm.setDuration("90")
+    vm.selectLocation(Location(latitude = 1.0, longitude = 1.0, name = "Stadium"))
+
+    assertTrue(vm.uiState.value.isValid)
+
+    val ok = vm.createEventForSerie("nonexistent-serie")
+    advanceUntilIdle()
+
+    assertFalse(ok)
+    assertTrue(eventRepo.added.isEmpty())
+    assertNotNull(vm.uiState.value.errorMsg)
+  }
+
+  @Test
+  fun createEventForSerie_withEmptySerie_usesSerieDate() = runTest {
+    // Create a serie with no events
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_MONTH, 7)
+    val serieDate = Timestamp(calendar.time)
+
+    val serie =
+        Serie(
+            serieId = "serie-1",
+            title = "Soccer League",
+            description = "Weekly soccer",
+            date = serieDate,
+            participants = listOf("owner-1"),
+            maxParticipants = 20,
+            visibility = Visibility.PUBLIC,
+            eventIds = emptyList(),
+            ownerId = "owner-1")
+
+    serieRepo.addSerie(serie)
+
+    // Fill form
+    vm.setType("SPORTS")
+    vm.setTitle("Match 1")
+    vm.setDescription("First match")
+    vm.setDuration("90")
+    vm.selectLocation(Location(latitude = 1.0, longitude = 1.0, name = "Stadium"))
+
+    assertTrue(vm.uiState.value.isValid)
+
+    val ok = vm.createEventForSerie("serie-1")
+    advanceUntilIdle()
+
+    assertTrue(ok)
+    assertEquals(1, eventRepo.added.size)
+
+    val event = eventRepo.added.first()
+    assertEquals(serieDate.toDate().time, event.date.toDate().time)
+    assertEquals(EventType.SPORTS, event.type)
+    assertEquals("Match 1", event.title)
+    assertEquals("First match", event.description)
+    assertEquals(90, event.duration)
+    assertEquals(20, event.maxParticipants) // Inherited from serie
+    assertEquals(EventVisibility.PUBLIC, event.visibility) // Inherited from serie
+    assertEquals("owner-1", event.ownerId) // Inherited from serie
+    assertTrue(event.participants.isEmpty()) // Starts with empty list
+
+    // Verify serie was updated
+    val updatedSerie = serieRepo.getSerie("serie-1")
+    assertEquals(1, updatedSerie.eventIds.size)
+    assertEquals(event.eventId, updatedSerie.eventIds.first())
+  }
+
+  @Test
+  fun createEventForSerie_withExistingEvents_calculatesCorrectDate() = runTest {
+    // Create a serie with one existing event
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_MONTH, 7)
+    val serieDate = Timestamp(calendar.time)
+
+    val serie =
+        Serie(
+            serieId = "serie-1",
+            title = "Soccer League",
+            description = "Weekly soccer",
+            date = serieDate,
+            participants = listOf("owner-1"),
+            maxParticipants = 20,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event-1"),
+            ownerId = "owner-1")
+
+    serieRepo.addSerie(serie)
+
+    // Add an existing event that lasts 90 minutes
+    val existingEvent =
+        Event(
+            eventId = "event-1",
+            type = EventType.SPORTS,
+            title = "Match 1",
+            description = "First match",
+            location = Location(latitude = 1.0, longitude = 1.0, name = "Stadium"),
+            date = serieDate,
+            duration = 90,
+            participants = emptyList(),
+            maxParticipants = 20,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner-1")
+
+    eventRepo.added.add(existingEvent)
+
+    // Fill form for second event
+    vm.setType("ACTIVITY")
+    vm.setTitle("Match 2")
+    vm.setDescription("Second match")
+    vm.setDuration("60")
+    vm.selectLocation(Location(latitude = 2.0, longitude = 2.0, name = "Stadium 2"))
+
+    assertTrue(vm.uiState.value.isValid)
+
+    val ok = vm.createEventForSerie("serie-1")
+    advanceUntilIdle()
+
+    assertTrue(ok)
+    assertEquals(2, eventRepo.added.size)
+
+    val newEvent = eventRepo.added.last()
+    // New event should start when the previous event ends (serieDate + 90 minutes)
+    val expectedStartTime = serieDate.toDate().time + (90 * 60 * 1000)
+    assertEquals(expectedStartTime, newEvent.date.toDate().time)
+    assertEquals(EventType.ACTIVITY, newEvent.type)
+    assertEquals("Match 2", newEvent.title)
+    assertEquals(60, newEvent.duration)
+
+    // Verify serie was updated
+    val updatedSerie = serieRepo.getSerie("serie-1")
+    assertEquals(2, updatedSerie.eventIds.size)
+    assertTrue(updatedSerie.eventIds.contains("event-1"))
+    assertTrue(updatedSerie.eventIds.contains(newEvent.eventId))
+  }
+
+  @Test
+  fun createEventForSerie_inheritsVisibilityPrivate() = runTest {
+    // Create a PRIVATE serie
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_MONTH, 7)
+
+    val serie =
+        Serie(
+            serieId = "serie-1",
+            title = "Private League",
+            description = "Private games",
+            date = Timestamp(calendar.time),
+            participants = listOf("owner-1"),
+            maxParticipants = 10,
+            visibility = Visibility.PRIVATE,
+            eventIds = emptyList(),
+            ownerId = "owner-1")
+
+    serieRepo.addSerie(serie)
+
+    // Fill form
+    vm.setType("SOCIAL")
+    vm.setTitle("Private Match")
+    vm.setDescription("Private event")
+    vm.setDuration("120")
+    vm.selectLocation(Location(latitude = 1.0, longitude = 1.0, name = "Private Venue"))
+
+    val ok = vm.createEventForSerie("serie-1")
+    advanceUntilIdle()
+
+    assertTrue(ok)
+    val event = eventRepo.added.first()
+    assertEquals(EventVisibility.PRIVATE, event.visibility)
+  }
+
+  @Test
+  fun createEventForSerie_setsLoadingState() = runTest {
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_MONTH, 7)
+
+    val serie =
+        Serie(
+            serieId = "serie-1",
+            title = "Test Serie",
+            description = "Test",
+            date = Timestamp(calendar.time),
+            participants = listOf("owner-1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = emptyList(),
+            ownerId = "owner-1")
+
+    serieRepo.addSerie(serie)
+
+    vm.setType("SPORTS")
+    vm.setTitle("Test Event")
+    vm.setDescription("Test description")
+    vm.setDuration("60")
+    vm.selectLocation(Location(latitude = 1.0, longitude = 1.0, name = "Test Location"))
+
+    assertFalse(vm.uiState.value.isLoading)
+
+    val ok = vm.createEventForSerie("serie-1")
+    advanceUntilIdle()
+
+    assertTrue(ok)
+    assertFalse(vm.uiState.value.isLoading)
+  }
+
+  // ---------- Error clearing ----------
+
+  @Test
+  fun clearErrorMsg_resetsErrorField() = runTest {
+    val ok = vm.createEventForSerie("nonexistent")
+    advanceUntilIdle()
+
+    assertFalse(ok)
+    assertNotNull(vm.uiState.value.errorMsg)
+
+    vm.clearErrorMsg()
+    assertNull(vm.uiState.value.errorMsg)
+  }
+
+  // ---------- Repository error handling ----------
+
+  @Test
+  fun createEventForSerie_withRepositoryError_returnsFalse() = runTest {
+    val errorEventRepo =
+        object : EventsRepository {
+          override suspend fun addEvent(event: Event) {
+            throw RuntimeException("Network error")
+          }
+
+          override suspend fun editEvent(eventId: String, newValue: Event) {}
+
+          override suspend fun deleteEvent(eventId: String) {}
+
+          override suspend fun getEvent(eventId: String): Event {
+            throw NoSuchElementException()
+          }
+
+          override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> = emptyList()
+
+          override fun getNewEventId(): String = "fake-id"
+        }
+
+    val errorVm = CreateEventForSerieViewModel(errorEventRepo, serieRepo, locationRepo)
+
+    // Add a serie
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_MONTH, 7)
+
+    val serie =
+        Serie(
+            serieId = "serie-1",
+            title = "Test Serie",
+            description = "Test",
+            date = Timestamp(calendar.time),
+            participants = listOf("owner-1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = emptyList(),
+            ownerId = "owner-1")
+
+    serieRepo.addSerie(serie)
+
+    // Fill form
+    errorVm.setType("SPORTS")
+    errorVm.setTitle("Test Event")
+    errorVm.setDescription("Test description")
+    errorVm.setDuration("60")
+    errorVm.selectLocation(Location(latitude = 1.0, longitude = 1.0, name = "Test Location"))
+
+    assertTrue(errorVm.uiState.value.isValid)
+
+    val ok = errorVm.createEventForSerie("serie-1")
+    advanceUntilIdle()
+
+    assertFalse(ok)
+    assertNotNull(errorVm.uiState.value.errorMsg)
+    assertFalse(errorVm.uiState.value.isLoading)
+  }
+
+  // ---------- Multiple events in sequence ----------
+
+  @Test
+  fun createEventForSerie_multipleEvents_calculatesCorrectSequentialDates() = runTest {
+    // Create a serie
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_MONTH, 7)
+    val serieDate = Timestamp(calendar.time)
+
+    val serie =
+        Serie(
+            serieId = "serie-1",
+            title = "Tournament",
+            description = "Multi-game tournament",
+            date = serieDate,
+            participants = listOf("owner-1"),
+            maxParticipants = 20,
+            visibility = Visibility.PUBLIC,
+            eventIds = emptyList(),
+            ownerId = "owner-1")
+
+    serieRepo.addSerie(serie)
+
+    // Create first event (90 minutes)
+    vm.setType("SPORTS")
+    vm.setTitle("Game 1")
+    vm.setDescription("First game")
+    vm.setDuration("90")
+    vm.selectLocation(Location(latitude = 1.0, longitude = 1.0, name = "Venue 1"))
+
+    var ok = vm.createEventForSerie("serie-1")
+    advanceUntilIdle()
+    assertTrue(ok)
+
+    val event1 = eventRepo.added.last()
+    assertEquals(serieDate.toDate().time, event1.date.toDate().time)
+
+    // Create second event (60 minutes)
+    vm.setType("ACTIVITY")
+    vm.setTitle("Game 2")
+    vm.setDescription("Second game")
+    vm.setDuration("60")
+    vm.selectLocation(Location(latitude = 2.0, longitude = 2.0, name = "Venue 2"))
+
+    ok = vm.createEventForSerie("serie-1")
+    advanceUntilIdle()
+    assertTrue(ok)
+
+    val event2 = eventRepo.added.last()
+    val expectedDate2 = serieDate.toDate().time + (90 * 60 * 1000)
+    assertEquals(expectedDate2, event2.date.toDate().time)
+
+    // Create third event (120 minutes)
+    vm.setType("SOCIAL")
+    vm.setTitle("Game 3")
+    vm.setDescription("Third game")
+    vm.setDuration("120")
+    vm.selectLocation(Location(latitude = 3.0, longitude = 3.0, name = "Venue 3"))
+
+    ok = vm.createEventForSerie("serie-1")
+    advanceUntilIdle()
+    assertTrue(ok)
+
+    val event3 = eventRepo.added.last()
+    val expectedDate3 = expectedDate2 + (60 * 60 * 1000)
+    assertEquals(expectedDate3, event3.date.toDate().time)
+
+    // Verify serie has all three events
+    val updatedSerie = serieRepo.getSerie("serie-1")
+    assertEquals(3, updatedSerie.eventIds.size)
+  }
+}
