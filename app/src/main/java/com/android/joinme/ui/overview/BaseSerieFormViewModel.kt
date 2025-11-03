@@ -118,18 +118,18 @@ abstract class BaseSerieFormViewModel : ViewModel() {
    */
   fun setMaxParticipants(value: String) {
     val num = value.toIntOrNull()
+    val validationMsg =
+        if (num == null || num <= 0) {
+          "Must be a positive number"
+        } else {
+          null
+        }
     updateState { state ->
       when (state) {
         is CreateSerieUIState ->
-            state.copy(
-                maxParticipants = value,
-                invalidMaxParticipantsMsg =
-                    if (num == null || num <= 0) "Must be a positive number" else null)
+            state.copy(maxParticipants = value, invalidMaxParticipantsMsg = validationMsg)
         is EditSerieUIState ->
-            state.copy(
-                maxParticipants = value,
-                invalidMaxParticipantsMsg =
-                    if (num == null || num <= 0) "Must be a positive number" else null)
+            state.copy(maxParticipants = value, invalidMaxParticipantsMsg = validationMsg)
         else -> state
       }
     }
@@ -248,24 +248,20 @@ abstract class BaseSerieFormViewModel : ViewModel() {
    */
   fun setVisibility(visibility: String) {
     val validVisibilities = listOf("PUBLIC", "PRIVATE")
+    val validationMsg =
+        if (visibility.isBlank()) {
+          "Serie visibility cannot be empty"
+        } else if (visibility.uppercase(Locale.ROOT) !in validVisibilities) {
+          "Visibility must be PUBLIC or PRIVATE"
+        } else {
+          null
+        }
     updateState { state ->
       when (state) {
         is CreateSerieUIState ->
-            state.copy(
-                visibility = visibility,
-                invalidVisibilityMsg =
-                    if (visibility.isBlank()) "Serie visibility cannot be empty"
-                    else if (visibility.uppercase(Locale.ROOT) !in validVisibilities)
-                        "Visibility must be PUBLIC or PRIVATE"
-                    else null)
+            state.copy(visibility = visibility, invalidVisibilityMsg = validationMsg)
         is EditSerieUIState ->
-            state.copy(
-                visibility = visibility,
-                invalidVisibilityMsg =
-                    if (visibility.isBlank()) "Serie visibility cannot be empty"
-                    else if (visibility.uppercase(Locale.ROOT) !in validVisibilities)
-                        "Visibility must be PUBLIC or PRIVATE"
-                    else null)
+            state.copy(visibility = visibility, invalidVisibilityMsg = validationMsg)
         else -> state
       }
     }

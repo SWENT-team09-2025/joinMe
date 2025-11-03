@@ -1,6 +1,5 @@
 package com.android.joinme.ui.overview
 
-import android.util.Log
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
@@ -150,7 +149,6 @@ class CreateSerieViewModel(
       setLoadingState(false)
       true
     } catch (e: Exception) {
-      Log.e("CreateSerieViewModel", "Error creating serie", e)
       setErrorMsg("Failed to create serie: ${e.message}")
       setLoadingState(false)
       false
