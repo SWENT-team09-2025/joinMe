@@ -5,7 +5,6 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
     alias(libs.plugins.ktfmt)
-    alias(libs.plugins.sonar)
     id("jacoco")
     id("com.google.gms.google-services")
 }
@@ -111,20 +110,6 @@ android {
         java.setSrcDirs(emptyList<File>())
         res.setSrcDirs(emptyList<File>())
         resources.setSrcDirs(emptyList<File>())
-    }
-}
-
-sonarqube {
-    properties {
-        property("sonar.projectKey", "SWENT-team09-2025_joinMe")
-        property("sonar.organization", "swent-team09-2025")
-        property("sonar.host.url", "https://sonarcloud.io")
-        property("sonar.sources", "src/main/java")
-        property("sonar.tests", "src/test/java,src/androidTest/java")
-        property("sonar.java.binaries", "build/tmp/kotlin-classes/debug")
-        property("sonar.java.test.binaries", "build/tmp/kotlin-classes/debugUnitTest,build/tmp/kotlin-classes/debugAndroidTest")
-        property("sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
-        property("sonar.exclusions", "**/*.png,**/*.jpg,**/*.jpeg,**/*.webp,**/*.gif,**/*.svg")
     }
 }
 
