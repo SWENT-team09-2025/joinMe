@@ -7,12 +7,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 
 /**
- * Test tags for UI testing of the Create Serie screen components.
+ * Test tags for UI testing of the Edit Serie screen components.
  *
  * Provides consistent identifiers for testing individual UI elements including input fields,
  * buttons, and error messages.
  */
-object CreateSerieScreenTestTags {
+object EditSerieScreenTestTags {
   /** Test tag for the serie title input field */
   const val INPUT_SERIE_TITLE = "inputSerieTitle"
 
@@ -31,52 +31,58 @@ object CreateSerieScreenTestTags {
   /** Test tag for the visibility dropdown field (PUBLIC/PRIVATE) */
   const val INPUT_SERIE_VISIBILITY = "inputSerieVisibility"
 
-  /** Test tag for the save/next button */
-  const val BUTTON_SAVE_SERIE = "buttonSaveSerie"
+  /** Test tag for the save button */
+  const val SERIE_SAVE = "serieSave"
 
   /** Test tag for error messages displayed via Toast */
   const val ERROR_MESSAGE = "errorMessage"
 }
 
 /**
- * Screen for creating a new event serie.
+ * Screen for editing an existing event serie.
  *
- * Provides a form to create a serie with title, description, max participants, date, time, and
- * visibility fields. Uses native dialogs for date/time/number selection. Real-time validation
- * displays errors below each field. The "Next" button is enabled only when all fields are valid.
+ * Loads the serie data on mount and provides a form to edit the serie with title, description, max
+ * participants, date, time, and visibility fields. Uses native dialogs for date/time/number
+ * selection. Real-time validation displays errors below each field. The "Save" button is enabled
+ * only when all fields are valid.
  *
- * @param createSerieViewModel ViewModel managing the screen state and business logic
+ * @param serieId The ID of the serie to edit
+ * @param editSerieViewModel ViewModel managing the screen state and business logic
+ * @param onDone Callback invoked when the serie is successfully updated
  * @param onGoBack Callback invoked when the back button is pressed
- * @param onDone Callback invoked when the serie is successfully created
  */
 @Composable
-fun CreateSerieScreen(
-    createSerieViewModel: CreateSerieViewModel = viewModel(),
-    onGoBack: () -> Unit = {},
-    onDone: () -> Unit = {}
+fun EditSerieScreen(
+    serieId: String,
+    editSerieViewModel: EditSerieViewModel = viewModel(),
+    onDone: () -> Unit = {},
+    onGoBack: () -> Unit = {}
 ) {
-  val uiState by createSerieViewModel.uiState.collectAsState()
+  LaunchedEffect(serieId) { editSerieViewModel.loadSerie(serieId) }
+
+  val uiState by editSerieViewModel.uiState.collectAsState()
   val errorMsg = uiState.errorMsg
+
   val context = LocalContext.current
   val coroutineScope = rememberCoroutineScope()
 
   LaunchedEffect(errorMsg) {
     if (errorMsg != null) {
       Toast.makeText(context, errorMsg, Toast.LENGTH_SHORT).show()
-      createSerieViewModel.clearErrorMsg()
+      editSerieViewModel.clearErrorMsg()
     }
   }
 
   val testTags =
       SerieFormTestTags(
-          inputSerieTitle = CreateSerieScreenTestTags.INPUT_SERIE_TITLE,
-          inputSerieDescription = CreateSerieScreenTestTags.INPUT_SERIE_DESCRIPTION,
-          inputSerieMaxParticipants = CreateSerieScreenTestTags.INPUT_SERIE_MAX_PARTICIPANTS,
-          inputSerieDate = CreateSerieScreenTestTags.INPUT_SERIE_DATE,
-          inputSerieTime = CreateSerieScreenTestTags.INPUT_SERIE_TIME,
-          inputSerieVisibility = CreateSerieScreenTestTags.INPUT_SERIE_VISIBILITY,
-          buttonSaveSerie = CreateSerieScreenTestTags.BUTTON_SAVE_SERIE,
-          errorMessage = CreateSerieScreenTestTags.ERROR_MESSAGE)
+          inputSerieTitle = EditSerieScreenTestTags.INPUT_SERIE_TITLE,
+          inputSerieDescription = EditSerieScreenTestTags.INPUT_SERIE_DESCRIPTION,
+          inputSerieMaxParticipants = EditSerieScreenTestTags.INPUT_SERIE_MAX_PARTICIPANTS,
+          inputSerieDate = EditSerieScreenTestTags.INPUT_SERIE_DATE,
+          inputSerieTime = EditSerieScreenTestTags.INPUT_SERIE_TIME,
+          inputSerieVisibility = EditSerieScreenTestTags.INPUT_SERIE_VISIBILITY,
+          buttonSaveSerie = EditSerieScreenTestTags.SERIE_SAVE,
+          errorMessage = EditSerieScreenTestTags.ERROR_MESSAGE)
 
   val formState =
       SerieFormState(
@@ -96,23 +102,23 @@ fun CreateSerieScreen(
           invalidVisibilityMsg = uiState.invalidVisibilityMsg)
 
   SerieFormScreen(
-      title = "Create Serie",
+      title = "Edit Serie",
       formState = formState,
       testTags = testTags,
-      onTitleChange = { createSerieViewModel.setTitle(it) },
-      onDescriptionChange = { createSerieViewModel.setDescription(it) },
-      onMaxParticipantsChange = { createSerieViewModel.setMaxParticipants(it) },
-      onDateChange = { createSerieViewModel.setDate(it) },
-      onTimeChange = { createSerieViewModel.setTime(it) },
-      onVisibilityChange = { createSerieViewModel.setVisibility(it) },
+      onTitleChange = { editSerieViewModel.setTitle(it) },
+      onDescriptionChange = { editSerieViewModel.setDescription(it) },
+      onMaxParticipantsChange = { editSerieViewModel.setMaxParticipants(it) },
+      onDateChange = { editSerieViewModel.setDate(it) },
+      onTimeChange = { editSerieViewModel.setTime(it) },
+      onVisibilityChange = { editSerieViewModel.setVisibility(it) },
       onSave = {
         coroutineScope.launch {
-          if (createSerieViewModel.createSerie()) {
+          if (editSerieViewModel.updateSerie()) {
             onDone()
           }
         }
         true
       },
       onGoBack = onGoBack,
-      saveButtonText = "Next")
+      saveButtonText = "Save")
 }
