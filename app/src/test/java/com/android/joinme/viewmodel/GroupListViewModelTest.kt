@@ -61,7 +61,20 @@ class GroupListViewModelTest {
     }
 
     override suspend fun deleteGroup(groupId: String) {
-      groups.removeIf { it.id == groupId }
+      val removed = groups.removeIf { it.id == groupId }
+      if (!removed) {
+        throw Exception("Group not found")
+      }
+    }
+
+    override suspend fun leaveGroup(groupId: String, userId: String) {
+      val group = getGroup(groupId)
+      val updatedMemberIds = group.memberIds.filter { it != userId }
+      if (updatedMemberIds.size == group.memberIds.size) {
+        throw Exception("User is not a member of this group")
+      }
+      val updatedGroup = group.copy(memberIds = updatedMemberIds)
+      editGroup(groupId, updatedGroup)
     }
   }
 
@@ -448,5 +461,203 @@ class GroupListViewModelTest {
     // Groups are preserved on error to show stale data
     assertEquals(1, state.groups.size)
     assertNotNull(state.errorMsg)
+  }
+
+  // =======================================
+  // Delete Group Tests
+  // =======================================
+
+  @Test
+  fun deleteGroup_removesGroupAndRefreshesState() = runTest {
+    val groups =
+        listOf(
+            Group(id = "1", name = "Group 1", ownerId = "owner1"),
+            Group(id = "2", name = "Group 2", ownerId = "owner2"),
+            Group(id = "3", name = "Group 3", ownerId = "owner3"))
+    fakeRepo.setGroups(groups)
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+    assertEquals(3, viewModel.uiState.value.groups.size)
+
+    var successCalled = false
+    viewModel.deleteGroup("2", onSuccess = { successCalled = true })
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertEquals(2, state.groups.size)
+    assertEquals("Group 1", state.groups[0].name)
+    assertEquals("Group 3", state.groups[1].name)
+    assertTrue(successCalled)
+    assertNull(state.errorMsg)
+  }
+
+  @Test
+  fun deleteGroup_callsOnSuccessCallback() = runTest {
+    fakeRepo.setGroups(listOf(Group(id = "1", name = "Test", ownerId = "owner1")))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+
+    var successCalled = false
+    viewModel.deleteGroup("1", onSuccess = { successCalled = true })
+    advanceUntilIdle()
+
+    assertTrue(successCalled)
+  }
+
+  @Test
+  fun deleteGroup_withNonExistentGroup_callsOnErrorCallback() = runTest {
+    fakeRepo.setGroups(listOf(Group(id = "1", name = "Test", ownerId = "owner1")))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+
+    var errorMessage: String? = null
+    viewModel.deleteGroup("non-existent", onError = { errorMessage = it })
+    advanceUntilIdle()
+
+    assertNotNull(errorMessage)
+    assertTrue(errorMessage!!.contains("Failed to delete group"))
+  }
+
+  @Test
+  fun deleteGroup_setsErrorMessageOnFailure() = runTest {
+    fakeRepo.setGroups(listOf(Group(id = "1", name = "Test", ownerId = "owner1")))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+
+    viewModel.deleteGroup("non-existent")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Failed to delete group"))
+  }
+
+  @Test
+  fun deleteGroup_refreshesGroupListAfterDeletion() = runTest {
+    val groups =
+        listOf(
+            Group(id = "1", name = "Group 1", ownerId = "owner1"),
+            Group(id = "2", name = "Group 2", ownerId = "owner2"))
+    fakeRepo.setGroups(groups)
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+
+    viewModel.deleteGroup("1")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertEquals(1, state.groups.size)
+    assertEquals("Group 2", state.groups[0].name)
+  }
+
+  // =======================================
+  // Leave Group Tests
+  // =======================================
+
+  @Test
+  fun leaveGroup_removesUserFromMembersAndRefreshesState() = runTest {
+    val group =
+        Group(
+            id = "1",
+            name = "Test Group",
+            ownerId = "owner1",
+            memberIds = listOf("owner1", "user1", "user2"))
+    fakeRepo.setGroups(listOf(group))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+    assertEquals(3, viewModel.uiState.value.groups[0].memberIds.size)
+
+    var successCalled = false
+    viewModel.leaveGroup("1", "user1", onSuccess = { successCalled = true })
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertEquals(2, state.groups[0].memberIds.size)
+    assertFalse(state.groups[0].memberIds.contains("user1"))
+    assertTrue(successCalled)
+    assertNull(state.errorMsg)
+  }
+
+  @Test
+  fun leaveGroup_callsOnSuccessCallback() = runTest {
+    val group =
+        Group(id = "1", name = "Test", ownerId = "owner1", memberIds = listOf("owner1", "user1"))
+    fakeRepo.setGroups(listOf(group))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+
+    var successCalled = false
+    viewModel.leaveGroup("1", "user1", onSuccess = { successCalled = true })
+    advanceUntilIdle()
+
+    assertTrue(successCalled)
+  }
+
+  @Test
+  fun leaveGroup_withNonMember_callsOnErrorCallback() = runTest {
+    val group =
+        Group(id = "1", name = "Test", ownerId = "owner1", memberIds = listOf("owner1", "user1"))
+    fakeRepo.setGroups(listOf(group))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+
+    var errorMessage: String? = null
+    viewModel.leaveGroup("1", "non-member", onError = { errorMessage = it })
+    advanceUntilIdle()
+
+    assertNotNull(errorMessage)
+    assertTrue(errorMessage!!.contains("Failed to leave group"))
+  }
+
+  @Test
+  fun leaveGroup_setsErrorMessageOnFailure() = runTest {
+    val group =
+        Group(id = "1", name = "Test", ownerId = "owner1", memberIds = listOf("owner1", "user1"))
+    fakeRepo.setGroups(listOf(group))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+
+    viewModel.leaveGroup("1", "non-member")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Failed to leave group"))
+  }
+
+  @Test
+  fun leaveGroup_refreshesGroupListAfterLeaving() = runTest {
+    val group =
+        Group(
+            id = "1",
+            name = "Test Group",
+            ownerId = "owner1",
+            memberIds = listOf("owner1", "user1", "user2"))
+    fakeRepo.setGroups(listOf(group))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+
+    viewModel.leaveGroup("1", "user2")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertEquals(2, state.groups[0].memberIds.size)
+    assertTrue(state.groups[0].memberIds.contains("owner1"))
+    assertTrue(state.groups[0].memberIds.contains("user1"))
+    assertFalse(state.groups[0].memberIds.contains("user2"))
+  }
+
+  @Test
+  fun leaveGroup_withNonExistentGroup_callsOnErrorCallback() = runTest {
+    fakeRepo.setGroups(listOf(Group(id = "1", name = "Test", ownerId = "owner1")))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+
+    var errorMessage: String? = null
+    viewModel.leaveGroup("non-existent", "user1", onError = { errorMessage = it })
+    advanceUntilIdle()
+
+    assertNotNull(errorMessage)
+    assertTrue(errorMessage!!.contains("Failed to leave group"))
   }
 }

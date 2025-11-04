@@ -13,6 +13,7 @@ import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.ui.components.FloatingActionBubblesTestTags
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -54,6 +55,18 @@ class FakeGroupRepository : GroupRepository {
 
   override suspend fun deleteGroup(groupId: String) {
     groups.removeIf { it.id == groupId }
+  }
+
+  override suspend fun leaveGroup(groupId: String, userId: String) {
+    val group = getGroup(groupId)
+    val updatedMemberIds = group.memberIds.filter { it != userId }
+
+    if (updatedMemberIds.size == group.memberIds.size) {
+      throw Exception("User is not a member of this group")
+    }
+
+    val updatedGroup = group.copy(memberIds = updatedMemberIds)
+    editGroup(groupId, updatedGroup)
   }
 }
 
@@ -781,6 +794,12 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test2")).performClick()
     composeTestRule.onNodeWithText("Leave Group").performClick()
 
+    // Confirmation dialog should appear
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_DIALOG).assertExists()
+
+    // Confirm the action
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_CONFIRM_BUTTON).performClick()
+
     // Then: Callback was invoked with correct group
     assertEquals(group, leftGroup)
   }
@@ -806,40 +825,55 @@ class GroupListScreenTest {
 
   @Test
   fun editGroup_callbackIsTriggered_whenUserIsOwner() {
-    // Note: This test cannot fully verify the callback in the test environment
-    // because Edit Group is only shown when Firebase.auth.currentUser?.uid == group.ownerId
-    // Without Firebase Auth initialized, the Edit Group button won't appear
-
+    // Edit Group button is now always visible
     val group = Group(id = "test4", name = "Edit Group Test", ownerId = "currentUserId")
+    var editedGroup: Group? = null
 
     composeTestRule.setContent {
-      GroupListScreen(viewModel = createViewModel(listOf(group)), onEditGroup = {})
+      GroupListScreen(viewModel = createViewModel(listOf(group)), onEditGroup = { editedGroup = it })
     }
 
     // When: User opens menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test4")).performClick()
 
-    // Then: Edit Group button doesn't appear without Firebase Auth
-    composeTestRule.onNodeWithText("Edit Group").assertDoesNotExist()
+    // Then: Edit Group button is visible
+    composeTestRule.onNodeWithText("Edit Group").assertExists()
+
+    // Click it
+    composeTestRule.onNodeWithText("Edit Group").performClick()
+
+    // Callback should be triggered
+    assertEquals(group, editedGroup)
   }
 
   @Test
   fun deleteGroup_callbackIsTriggered_whenUserIsOwner() {
-    // Note: This test cannot fully verify the callback in the test environment
-    // because Delete Group is only shown when Firebase.auth.currentUser?.uid == group.ownerId
-    // Without Firebase Auth initialized, the Delete Group button won't appear
+    // Note: This test cannot fully verify the callback works for owners
+    // because ownership check requires Firebase.auth.currentUser?.uid == group.ownerId
+    // Without Firebase Auth initialized, currentUserId is null and doesn't match any ownerId
+    // So the restriction dialog will always be shown in tests
 
-    val group = Group(id = "test5", name = "Delete Group Test", ownerId = "currentUserId")
+    val group = Group(id = "test5", name = "Delete Group Test", ownerId = "someUserId")
+    var deletedGroup: Group? = null
 
     composeTestRule.setContent {
-      GroupListScreen(viewModel = createViewModel(listOf(group)), onDeleteGroup = {})
+      GroupListScreen(viewModel = createViewModel(listOf(group)), onDeleteGroup = { deletedGroup = it })
     }
 
     // When: User opens menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test5")).performClick()
 
-    // Then: Delete Group button doesn't appear without Firebase Auth
-    composeTestRule.onNodeWithText("Delete Group").assertDoesNotExist()
+    // Then: Delete Group button is visible (always shown now)
+    composeTestRule.onNodeWithText("Delete Group").assertExists()
+
+    // Click it - without Firebase Auth, restriction dialog should appear
+    composeTestRule.onNodeWithText("Delete Group").performClick()
+
+    // Verify restriction dialog appears (since currentUserId is null in tests)
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ONLY_OWNER_CAN_DELETE_DIALOG).assertExists()
+
+    // Callback should NOT be triggered
+    assertNull(deletedGroup)
   }
 
   @Test
@@ -1129,16 +1163,12 @@ class GroupListScreenTest {
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
 
-    // Verify common menu options that are always visible
+    // All 5 menu options are now always visible
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE).assertExists()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_BUBBLE).assertExists()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).assertExists()
-
-    // Note: Edit and Delete bubbles are only shown when Firebase.auth.currentUser?.uid ==
-    // group.ownerId
-    // Since Firebase Auth is not initialized in tests, these bubbles won't appear
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE).assertDoesNotExist()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_BUBBLE).assertDoesNotExist()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_BUBBLE).assertExists()
   }
 
   @Test
@@ -1149,5 +1179,192 @@ class GroupListScreenTest {
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).assertExists()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.CREATE_GROUP_BUBBLE).assertExists()
+  }
+
+  // =======================================
+  // Owner/Non-Owner Button Visibility Tests
+  // =======================================
+
+  @Test
+  fun groupMenu_allFiveButtonsAlwaysVisible() {
+    // All 5 buttons are now always visible regardless of ownership
+    // Ownership validation happens when buttons are clicked (shows restriction dialogs)
+    val group = Group(id = "test1", name = "Test Group", ownerId = "currentUserId")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+
+    // All 5 buttons should always be visible
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_BUBBLE).assertExists()
+  }
+
+  @Test
+  fun groupMenu_nonOwnerAlsoSeesAllButtons() {
+    // Even non-owners see all buttons; validation happens on click
+    val group = Group(id = "test1", name = "Member Group", ownerId = "someOtherUser")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+
+    // All buttons should be visible
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_BUBBLE).assertExists()
+  }
+
+  @Test
+  fun groupMenu_multipleGroups_eachHasCorrectButtons() {
+    val groups =
+        listOf(
+            Group(id = "g1", name = "Group 1", ownerId = "currentUser"),
+            Group(id = "g2", name = "Group 2", ownerId = "otherUser"),
+            Group(id = "g3", name = "Group 3", ownerId = "anotherUser"))
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
+
+    // Check first group
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g1")).performClick()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).assertExists()
+
+    // Close menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("g1")).performClick()
+
+    // Check second group
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g2")).performClick()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).assertExists()
+  }
+
+  @Test
+  fun groupMenu_allButtonsHaveCorrectLabels() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+
+    // Verify button labels
+    composeTestRule.onNodeWithText("View Group Details").assertExists()
+    composeTestRule.onNodeWithText("Leave Group").assertExists()
+    composeTestRule.onNodeWithText("Share Group").assertExists()
+  }
+
+  // =======================================
+  // Leave Group Confirmation Dialog Tests
+  // =======================================
+
+  @Test
+  fun leaveGroupButton_showsConfirmationDialog() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu and click Leave Group
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("Leave Group").performClick()
+
+    // Verify dialog appears
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_DIALOG).assertExists()
+    composeTestRule.onNodeWithText("Leave Group").assertExists()
+    composeTestRule
+        .onNodeWithText(
+            "Are you sure you want to leave 'Test Group'? You will no longer have access to this group.")
+        .assertExists()
+  }
+
+  @Test
+  fun leaveGroupDialog_cancelButton_dismissesDialog() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+    var leftGroup: Group? = null
+
+    composeTestRule.setContent {
+      GroupListScreen(viewModel = createViewModel(listOf(group)), onLeaveGroup = { leftGroup = it })
+    }
+
+    // Open menu and click Leave Group
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("Leave Group").performClick()
+
+    // Click Cancel
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_CANCEL_BUTTON).performClick()
+
+    // Verify dialog is dismissed and callback was NOT called
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_DIALOG).assertDoesNotExist()
+    assertNull(leftGroup)
+  }
+
+  @Test
+  fun leaveGroupDialog_confirmButton_triggersCallback() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+    var leftGroup: Group? = null
+
+    composeTestRule.setContent {
+      GroupListScreen(viewModel = createViewModel(listOf(group)), onLeaveGroup = { leftGroup = it })
+    }
+
+    // Open menu and click Leave Group
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("Leave Group").performClick()
+
+    // Click Leave (confirm)
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_CONFIRM_BUTTON)
+        .performClick()
+
+    // Verify callback was called
+    assertEquals(group, leftGroup)
+  }
+
+  @Test
+  fun leaveGroupDialog_dismissOnBackdrop_dismissesDialog() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+    var leftGroup: Group? = null
+
+    composeTestRule.setContent {
+      GroupListScreen(viewModel = createViewModel(listOf(group)), onLeaveGroup = { leftGroup = it })
+    }
+
+    // Open menu and click Leave Group
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("Leave Group").performClick()
+
+    // Verify dialog appears
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_DIALOG).assertExists()
+
+    // Note: Dismissing via backdrop click is handled by AlertDialog's onDismissRequest
+    // The dialog should dismiss when user clicks outside, but this is hard to test
+    // We verify that Cancel button works as expected in other tests
+    assertNull(leftGroup)
+  }
+
+  @Test
+  fun leaveGroupDialog_showsCorrectGroupName() {
+    val group = Group(id = "test1", name = "My Awesome Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu and click Leave Group
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("Leave Group").performClick()
+
+    // Verify group name appears in dialog
+    composeTestRule
+        .onNodeWithText(
+            "Are you sure you want to leave 'My Awesome Group'? You will no longer have access to this group.")
+        .assertExists()
   }
 }

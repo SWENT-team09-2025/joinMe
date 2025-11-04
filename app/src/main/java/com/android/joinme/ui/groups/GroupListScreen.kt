@@ -26,7 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
@@ -68,6 +67,7 @@ import com.android.joinme.ui.theme.ScrimOverlayColorDarkTheme
 import com.android.joinme.ui.theme.ScrimOverlayColorLightTheme
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 
 /** Dimensions and styling constants for GroupListScreen and its components */
 private object GroupListScreenDimensions {
@@ -140,6 +140,17 @@ object GroupListScreenTestTags {
   const val EDIT_GROUP_BUBBLE = "editGroupBubble"
   const val DELETE_GROUP_BUBBLE = "deleteGroupBubble"
 
+  // Confirmation dialogs
+  const val LEAVE_GROUP_DIALOG = "leaveGroupDialog"
+  const val LEAVE_GROUP_CONFIRM_BUTTON = "leaveGroupConfirmButton"
+  const val LEAVE_GROUP_CANCEL_BUTTON = "leaveGroupCancelButton"
+
+  // Restriction dialogs
+  const val OWNER_CANNOT_LEAVE_DIALOG = "ownerCannotLeaveDialog"
+  const val OWNER_CANNOT_LEAVE_OK_BUTTON = "ownerCannotLeaveOkButton"
+  const val ONLY_OWNER_CAN_DELETE_DIALOG = "onlyOwnerCanDeleteDialog"
+  const val ONLY_OWNER_CAN_DELETE_OK_BUTTON = "onlyOwnerCanDeleteOkButton"
+
   /**
    * Generates a test tag for a specific group card.
    *
@@ -209,7 +220,16 @@ fun GroupListScreen(
   var openMenuGroupId by remember { mutableStateOf<String?>(null) }
 
   // State for tracking the position of the clicked three-dot button
-  var menuButtonYPosition by remember { mutableStateOf(0f) }
+  var menuButtonYPosition by remember { mutableFloatStateOf(0f) }
+
+  // State for leave group confirmation dialog
+  var groupToLeave by remember { mutableStateOf<Group?>(null) }
+
+  // State for owner trying to leave (restriction dialog)
+  var showOwnerCannotLeaveDialog by remember { mutableStateOf(false) }
+
+  // State for non-owner trying to delete (restriction dialog)
+  var showOnlyOwnerCanDeleteDialog by remember { mutableStateOf(false) }
 
   // Define bubble actions for join/create group FAB
   val groupJoinBubbleActions = remember {
@@ -321,9 +341,9 @@ fun GroupListScreen(
         // Convert pixel position to dp
         val buttonTopPaddingDp = with(density) { menuButtonYPosition.toDp() }
 
-        // Calculate dynamic menu height based on ownership
+        // Calculate menu height - always show all 5 buttons
         val isOwner = group.ownerId == currentUserId
-        val numberOfButtons = if (isOwner) 5 else 3 // 5 if owner, 3 if not
+        val numberOfButtons = 5 // Always show all 5 buttons
         val dynamicMenuHeight =
             GroupListScreenDimensions.bubbleHeight.times(numberOfButtons) +
                 GroupListScreenDimensions.menuBubbleSpacing.times(numberOfButtons - 1)
@@ -385,13 +405,19 @@ fun GroupListScreen(
                         },
                         testTag = GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE)
 
-                    // Leave Group
+                    // Leave Group - Always shown, but validates ownership on click
                     MenuBubble(
                         text = "Leave Group",
-                        icon = Icons.Default.ExitToApp,
+                        icon = Icons.AutoMirrored.Filled.ExitToApp,
                         onClick = {
-                          onLeaveGroup(group)
                           openMenuGroupId = null
+                          if (group.ownerId == currentUserId) {
+                            // Owner cannot leave - show restriction dialog
+                            showOwnerCannotLeaveDialog = true
+                          } else {
+                            // Non-owner can leave - show confirmation dialog
+                            groupToLeave = group
+                          }
                         },
                         testTag = GroupListScreenTestTags.LEAVE_GROUP_BUBBLE)
 
@@ -405,29 +431,31 @@ fun GroupListScreen(
                         },
                         testTag = GroupListScreenTestTags.SHARE_GROUP_BUBBLE)
 
-                    // Edit Group - Only shown if current user is the owner
-                    if (group.ownerId == currentUserId) {
-                      MenuBubble(
-                          text = "Edit Group",
-                          icon = Icons.Default.Edit,
-                          onClick = {
-                            onEditGroup(group)
-                            openMenuGroupId = null
-                          },
-                          testTag = GroupListScreenTestTags.EDIT_GROUP_BUBBLE)
-                    }
+                    // Edit Group - Always shown (owners can edit)
+                    MenuBubble(
+                        text = "Edit Group",
+                        icon = Icons.Default.Edit,
+                        onClick = {
+                          onEditGroup(group)
+                          openMenuGroupId = null
+                        },
+                        testTag = GroupListScreenTestTags.EDIT_GROUP_BUBBLE)
 
-                    // Delete Group - Only shown if current user is the owner
-                    if (group.ownerId == currentUserId) {
-                      MenuBubble(
-                          text = "Delete Group",
-                          icon = Icons.Default.Delete,
-                          onClick = {
+                    // Delete Group - Always shown, but validates ownership on click
+                    MenuBubble(
+                        text = "Delete Group",
+                        icon = Icons.Default.Delete,
+                        onClick = {
+                          openMenuGroupId = null
+                          if (group.ownerId == currentUserId) {
+                            // Owner can delete
                             onDeleteGroup(group)
-                            openMenuGroupId = null
-                          },
-                          testTag = GroupListScreenTestTags.DELETE_GROUP_BUBBLE)
-                    }
+                          } else {
+                            // Non-owner cannot delete - show restriction dialog
+                            showOnlyOwnerCanDeleteDialog = true
+                          }
+                        },
+                        testTag = GroupListScreenTestTags.DELETE_GROUP_BUBBLE)
                   }
             }
       }
@@ -442,6 +470,69 @@ fun GroupListScreen(
         bubbleAlignment = BubbleAlignment.BOTTOM_END,
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface)
+
+    // Leave Group Confirmation Dialog
+    groupToLeave?.let { group ->
+      AlertDialog(
+          modifier = Modifier.testTag(GroupListScreenTestTags.LEAVE_GROUP_DIALOG),
+          onDismissRequest = { groupToLeave = null },
+          title = { Text("Leave Group") },
+          text = {
+            Text("Are you sure you want to leave '${group.name}'? You will no longer have access to this group.")
+          },
+          confirmButton = {
+            Button(
+                modifier = Modifier.testTag(GroupListScreenTestTags.LEAVE_GROUP_CONFIRM_BUTTON),
+                onClick = {
+                  onLeaveGroup(group)
+                  groupToLeave = null
+                }) {
+                  Text("Leave")
+                }
+          },
+          dismissButton = {
+            TextButton(
+                modifier = Modifier.testTag(GroupListScreenTestTags.LEAVE_GROUP_CANCEL_BUTTON),
+                onClick = { groupToLeave = null }) {
+                  Text("Cancel")
+                }
+          })
+    }
+
+    // Owner Cannot Leave Group Dialog (Restriction)
+    if (showOwnerCannotLeaveDialog) {
+      AlertDialog(
+          modifier = Modifier.testTag(GroupListScreenTestTags.OWNER_CANNOT_LEAVE_DIALOG),
+          onDismissRequest = { showOwnerCannotLeaveDialog = false },
+          title = { Text("Cannot Leave Group") },
+          text = {
+            Text("You cannot leave this group because you are the owner. You can only delete the group.")
+          },
+          confirmButton = {
+            Button(
+                modifier = Modifier.testTag(GroupListScreenTestTags.OWNER_CANNOT_LEAVE_OK_BUTTON),
+                onClick = { showOwnerCannotLeaveDialog = false }) {
+                  Text("OK")
+                }
+          })
+    }
+
+    // Only Owner Can Delete Group Dialog (Restriction)
+    if (showOnlyOwnerCanDeleteDialog) {
+      AlertDialog(
+          modifier = Modifier.testTag(GroupListScreenTestTags.ONLY_OWNER_CAN_DELETE_DIALOG),
+          onDismissRequest = { showOnlyOwnerCanDeleteDialog = false },
+          title = { Text("Cannot Delete Group") },
+          text = { Text("Only the owner of the group can delete the group.") },
+          confirmButton = {
+            Button(
+                modifier =
+                    Modifier.testTag(GroupListScreenTestTags.ONLY_OWNER_CAN_DELETE_OK_BUTTON),
+                onClick = { showOnlyOwnerCanDeleteDialog = false }) {
+                  Text("OK")
+                }
+          })
+    }
   } // Close outer Box
 }
 
@@ -495,7 +586,7 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: (Float) 
                         MaterialTheme.colorScheme.onPrimaryContainer.copy(
                             alpha = GroupListScreenDimensions.membersAlpha))
               }
-              var buttonYPosition by remember { mutableStateOf(0f) }
+              var buttonYPosition by remember { mutableFloatStateOf(0f) }
 
               IconButton(
                   onClick = { onMoreOptions(buttonYPosition) },

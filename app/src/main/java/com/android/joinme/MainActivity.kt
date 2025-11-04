@@ -3,6 +3,7 @@ package com.android.joinme
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -23,6 +24,7 @@ import com.android.joinme.ui.groups.CreateGroupScreen
 import com.android.joinme.ui.groups.EditGroupScreen
 import com.android.joinme.ui.groups.GroupDetailScreen
 import com.android.joinme.ui.groups.GroupListScreen
+import com.android.joinme.ui.groups.GroupListViewModel
 import com.android.joinme.ui.history.HistoryScreen
 import com.android.joinme.ui.map.MapScreen
 import com.android.joinme.ui.map.MapViewModel
@@ -68,7 +70,7 @@ class MainActivity : ComponentActivity() {
     }
   }
 
-  override fun onNewIntent(intent: android.content.Intent) {
+  override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
     setIntent(intent)
   }
@@ -250,7 +252,10 @@ fun JoinMe(
       }
 
       composable(Screen.Groups.route) {
+        val groupListViewModel: GroupListViewModel = viewModel()
+
         GroupListScreen(
+            viewModel = groupListViewModel,
             onJoinWithLink = {
               Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
             }, // TODO navigate to join with link screen or popup
@@ -262,15 +267,45 @@ fun JoinMe(
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
             onViewGroupDetails = { navigationActions.navigateTo(Screen.GroupDetail(it.id)) },
-            onLeaveGroup = {
-              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            onLeaveGroup = { group ->
+              val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+              if (currentUserId != null) {
+                groupListViewModel.leaveGroup(
+                    groupId = group.id,
+                    userId = currentUserId,
+                    onSuccess = {
+                      Toast.makeText(context, "Left group successfully", Toast.LENGTH_SHORT).show()
+                    },
+                    onError = { error ->
+                      Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                    })
+              } else {
+                Toast.makeText(context, "You must be logged in to leave a group", Toast.LENGTH_SHORT)
+                    .show()
+              }
             },
-            onShareGroup = {
-              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            onShareGroup = { group ->
+              val shareIntent =
+                  Intent().apply {
+                    action = Intent.ACTION_SEND
+                    putExtra(Intent.EXTRA_SUBJECT, "Join my group on JoinMe!")
+                    putExtra(
+                        Intent.EXTRA_TEXT,
+                        "Join '${group.name}' on JoinMe!\n\nCategory: ${group.category}\n${if (group.description.isNotBlank()) "Description: ${group.description}\n" else ""}Check it out!")
+                    type = "text/plain"
+                  }
+              context.startActivity(Intent.createChooser(shareIntent, "Share Group via"))
             },
             onEditGroup = { group -> navigationActions.navigateTo(Screen.EditGroup(group.id)) },
-            onDeleteGroup = {
-              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            onDeleteGroup = { group ->
+              groupListViewModel.deleteGroup(
+                  groupId = group.id,
+                  onSuccess = {
+                    Toast.makeText(context, "Group deleted successfully", Toast.LENGTH_SHORT).show()
+                  },
+                  onError = { error ->
+                    Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                  })
             })
       }
 
