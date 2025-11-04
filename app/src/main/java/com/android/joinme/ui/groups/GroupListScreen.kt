@@ -144,6 +144,9 @@ object GroupListScreenTestTags {
   const val LEAVE_GROUP_DIALOG = "leaveGroupDialog"
   const val LEAVE_GROUP_CONFIRM_BUTTON = "leaveGroupConfirmButton"
   const val LEAVE_GROUP_CANCEL_BUTTON = "leaveGroupCancelButton"
+  const val DELETE_GROUP_DIALOG = "deleteGroupDialog"
+  const val DELETE_GROUP_CONFIRM_BUTTON = "deleteGroupConfirmButton"
+  const val DELETE_GROUP_CANCEL_BUTTON = "deleteGroupCancelButton"
 
   // Restriction dialogs
   const val OWNER_CANNOT_LEAVE_DIALOG = "ownerCannotLeaveDialog"
@@ -224,6 +227,9 @@ fun GroupListScreen(
 
   // State for leave group confirmation dialog
   var groupToLeave by remember { mutableStateOf<Group?>(null) }
+
+  // State for delete group confirmation dialog
+  var groupToDelete by remember { mutableStateOf<Group?>(null) }
 
   // State for owner trying to leave (restriction dialog)
   var showOwnerCannotLeaveDialog by remember { mutableStateOf(false) }
@@ -448,8 +454,8 @@ fun GroupListScreen(
                         onClick = {
                           openMenuGroupId = null
                           if (group.ownerId == currentUserId) {
-                            // Owner can delete
-                            onDeleteGroup(group)
+                            // Owner can delete - show confirmation dialog
+                            groupToDelete = group
                           } else {
                             // Non-owner cannot delete - show restriction dialog
                             showOnlyOwnerCanDeleteDialog = true
@@ -495,6 +501,35 @@ fun GroupListScreen(
             TextButton(
                 modifier = Modifier.testTag(GroupListScreenTestTags.LEAVE_GROUP_CANCEL_BUTTON),
                 onClick = { groupToLeave = null }) {
+                  Text("Cancel")
+                }
+          })
+    }
+
+    // Delete Group Confirmation Dialog
+    groupToDelete?.let { group ->
+      AlertDialog(
+          modifier = Modifier.testTag(GroupListScreenTestTags.DELETE_GROUP_DIALOG),
+          onDismissRequest = { groupToDelete = null },
+          title = { Text("Delete Group") },
+          text = {
+            Text(
+                "Are you sure you want to delete '${group.name}'? This action cannot be undone and all group data will be permanently removed.")
+          },
+          confirmButton = {
+            Button(
+                modifier = Modifier.testTag(GroupListScreenTestTags.DELETE_GROUP_CONFIRM_BUTTON),
+                onClick = {
+                  onDeleteGroup(group)
+                  groupToDelete = null
+                }) {
+                  Text("Delete")
+                }
+          },
+          dismissButton = {
+            TextButton(
+                modifier = Modifier.testTag(GroupListScreenTestTags.DELETE_GROUP_CANCEL_BUTTON),
+                onClick = { groupToDelete = null }) {
                   Text("Cancel")
                 }
           })
