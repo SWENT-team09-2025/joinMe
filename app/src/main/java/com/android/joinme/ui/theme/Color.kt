@@ -67,3 +67,6 @@ val InactiveTabColor = Color.LightGray
 // Scrim overlay color
 val ScrimOverlayColorLightTheme = Color(0x4D000000) // 30% opacity black
 val ScrimOverlayColorDarkTheme = Color(0xB3000000) // 70% opacity black
+
+// Transparent color for button overlays and invisible backgrounds
+val TransparentColor = Color.Transparent
