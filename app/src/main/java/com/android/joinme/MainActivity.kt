@@ -276,11 +276,10 @@ fun JoinMe(
                     onSuccess = {
                       Toast.makeText(context, "Left group successfully", Toast.LENGTH_SHORT).show()
                     },
-                    onError = { error ->
-                      Toast.makeText(context, error, Toast.LENGTH_LONG).show()
-                    })
+                    onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
               } else {
-                Toast.makeText(context, "You must be logged in to leave a group", Toast.LENGTH_SHORT)
+                Toast.makeText(
+                        context, "You must be logged in to leave a group", Toast.LENGTH_SHORT)
                     .show()
               }
             },
@@ -303,9 +302,7 @@ fun JoinMe(
                   onSuccess = {
                     Toast.makeText(context, "Group deleted successfully", Toast.LENGTH_SHORT).show()
                   },
-                  onError = { error ->
-                    Toast.makeText(context, error, Toast.LENGTH_LONG).show()
-                  })
+                  onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
             })
       }
 

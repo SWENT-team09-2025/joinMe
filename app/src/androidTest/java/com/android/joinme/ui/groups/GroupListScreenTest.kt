@@ -830,7 +830,8 @@ class GroupListScreenTest {
     var editedGroup: Group? = null
 
     composeTestRule.setContent {
-      GroupListScreen(viewModel = createViewModel(listOf(group)), onEditGroup = { editedGroup = it })
+      GroupListScreen(
+          viewModel = createViewModel(listOf(group)), onEditGroup = { editedGroup = it })
     }
 
     // When: User opens menu
@@ -857,7 +858,8 @@ class GroupListScreenTest {
     var deletedGroup: Group? = null
 
     composeTestRule.setContent {
-      GroupListScreen(viewModel = createViewModel(listOf(group)), onDeleteGroup = { deletedGroup = it })
+      GroupListScreen(
+          viewModel = createViewModel(listOf(group)), onDeleteGroup = { deletedGroup = it })
     }
 
     // When: User opens menu
@@ -870,7 +872,9 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithText("Delete Group").performClick()
 
     // Verify restriction dialog appears (since currentUserId is null in tests)
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ONLY_OWNER_CAN_DELETE_DIALOG).assertExists()
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.ONLY_OWNER_CAN_DELETE_DIALOG)
+        .assertExists()
 
     // Callback should NOT be triggered
     assertNull(deletedGroup)
@@ -1321,9 +1325,7 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithText("Leave Group").performClick()
 
     // Click Leave (confirm)
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_CONFIRM_BUTTON)
-        .performClick()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_CONFIRM_BUTTON).performClick()
 
     // Verify callback was called
     assertEquals(group, leftGroup)

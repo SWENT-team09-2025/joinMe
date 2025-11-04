@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -30,14 +31,14 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -67,7 +68,6 @@ import com.android.joinme.ui.theme.ScrimOverlayColorDarkTheme
 import com.android.joinme.ui.theme.ScrimOverlayColorLightTheme
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
 
 /** Dimensions and styling constants for GroupListScreen and its components */
 private object GroupListScreenDimensions {
@@ -478,7 +478,8 @@ fun GroupListScreen(
           onDismissRequest = { groupToLeave = null },
           title = { Text("Leave Group") },
           text = {
-            Text("Are you sure you want to leave '${group.name}'? You will no longer have access to this group.")
+            Text(
+                "Are you sure you want to leave '${group.name}'? You will no longer have access to this group.")
           },
           confirmButton = {
             Button(
@@ -506,7 +507,8 @@ fun GroupListScreen(
           onDismissRequest = { showOwnerCannotLeaveDialog = false },
           title = { Text("Cannot Leave Group") },
           text = {
-            Text("You cannot leave this group because you are the owner. You can only delete the group.")
+            Text(
+                "You cannot leave this group because you are the owner. You can only delete the group.")
           },
           confirmButton = {
             Button(

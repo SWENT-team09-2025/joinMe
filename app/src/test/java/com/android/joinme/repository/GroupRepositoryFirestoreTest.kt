@@ -1,8 +1,8 @@
 package com.android.joinme.repository
 
 import com.android.joinme.model.event.EventType
-import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GROUPS_COLLECTION_PATH
+import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepositoryFirestore
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
@@ -39,9 +39,7 @@ class GroupRepositoryFirestoreTest {
   private val testGroupId = "testGroup123"
   private val testUserId = "testUser456"
 
-  /**
-   * Helper method to create a test group with default values.
-   */
+  /** Helper method to create a test group with default values. */
   private fun createTestGroup(): Group {
     return Group(
         id = testGroupId,
@@ -335,7 +333,8 @@ class GroupRepositoryFirestoreTest {
     every { mockSnapshot.getString("photoUrl") } returns null
 
     // When/Then
-    val exception = assertThrows(Exception::class.java) { runBlocking { repository.deleteGroup(testGroupId) } }
+    val exception =
+        assertThrows(Exception::class.java) { runBlocking { repository.deleteGroup(testGroupId) } }
     assertTrue(exception.message!!.contains("Only the group owner can delete this group"))
 
     verify(exactly = 0) { mockDocument.delete() }
@@ -352,7 +351,8 @@ class GroupRepositoryFirestoreTest {
     every { mockAuth.currentUser } returns null
 
     // When/Then
-    val exception = assertThrows(Exception::class.java) { runBlocking { repository.deleteGroup(testGroupId) } }
+    val exception =
+        assertThrows(Exception::class.java) { runBlocking { repository.deleteGroup(testGroupId) } }
     assertTrue(exception.message!!.contains("User not logged in"))
 
     verify(exactly = 0) { mockDocument.delete() }
@@ -415,7 +415,10 @@ class GroupRepositoryFirestoreTest {
     every { mockSnapshot.getString("photoUrl") } returns null
 
     // When/Then
-    val exception = assertThrows(Exception::class.java) { runBlocking { repository.leaveGroup(testGroupId, nonMemberId) } }
+    val exception =
+        assertThrows(Exception::class.java) {
+          runBlocking { repository.leaveGroup(testGroupId, nonMemberId) }
+        }
     assertTrue(exception.message!!.contains("User is not a member of this group"))
 
     verify(exactly = 0) { mockDocument.set(any<Group>()) }
@@ -443,11 +446,6 @@ class GroupRepositoryFirestoreTest {
     repository.leaveGroup(testGroupId, userId)
 
     // Then
-    verify {
-      mockDocument.set(
-          match<Group> {
-            it.memberIds.isEmpty()
-          })
-    }
+    verify { mockDocument.set(match<Group> { it.memberIds.isEmpty() }) }
   }
 }
