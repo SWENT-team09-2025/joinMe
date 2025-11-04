@@ -71,7 +71,7 @@ object CreateSerieScreenTestTags {
 fun CreateSerieScreen(
     createSerieViewModel: CreateSerieViewModel = viewModel(),
     onGoBack: () -> Unit = {},
-    onDone: () -> Unit = {}
+    onDone: (String) -> Unit = {}
 ) {
   val uiState by createSerieViewModel.uiState.collectAsState()
   val errorMsg = uiState.errorMsg
@@ -341,8 +341,9 @@ fun CreateSerieScreen(
               Button(
                   onClick = {
                     coroutineScope.launch {
-                      if (createSerieViewModel.createSerie()) {
-                        onDone()
+                      val serieId = createSerieViewModel.createSerie()
+                      if (serieId != null) {
+                        onDone(serieId)
                       }
                     }
                   },

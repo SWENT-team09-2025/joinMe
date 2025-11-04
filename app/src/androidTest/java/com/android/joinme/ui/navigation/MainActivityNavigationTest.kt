@@ -506,4 +506,36 @@ class MainActivityNavigationTest {
       // Groups button might not be accessible in test, test passes
     }
   }
+
+  @Test
+  fun createEventForSerie_screenCanBeAccessed() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Note: In a real scenario, CreateEventForSerie is accessed after creating a serie
+    // Since we can't easily test the full flow with Firebase auth in tests,
+    // this test verifies the screen route exists in NavigationActions
+    assert(Screen.CreateEventForSerie.Companion.route == "create_event_for_serie/{serieId}")
+    assert(
+        Screen.CreateEventForSerie("test-serie-id").route == "create_event_for_serie/test-serie-id")
+  }
+
+  @Test
+  fun createEventForSerie_hasCorrectScreenTitle() {
+    composeTestRule.waitForIdle()
+
+    // Verify the Screen object has correct name
+    val screen = Screen.CreateEventForSerie("test-serie-id")
+    assert(screen.name == "Create Event for Serie")
+  }
+
+  @Test
+  fun createEventForSerie_isNotTopLevelDestination() {
+    composeTestRule.waitForIdle()
+
+    // Verify CreateEventForSerie is not a top-level destination
+    val screen = Screen.CreateEventForSerie("test-serie-id")
+    assert(!screen.isTopLevelDestination)
+  }
 }
