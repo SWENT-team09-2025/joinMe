@@ -1,7 +1,9 @@
-package com.android.joinme.model.event
+package com.android.joinme.ui.overview
 
+import com.android.joinme.model.event.Event
+import com.android.joinme.model.event.EventFilter
+import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.map.Location
-import com.android.joinme.ui.overview.CreateEventViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -10,7 +12,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 
@@ -68,7 +70,7 @@ class CreateEventViewModelTest {
   @Test
   fun initialState_isInvalid() {
     val s = vm.uiState.value
-    assertFalse(s.isValid)
+    Assert.assertFalse(s.isValid)
   }
 
   @Test
@@ -83,7 +85,7 @@ class CreateEventViewModelTest {
     vm.setDuration("90")
     vm.setVisibility("PUBLIC")
 
-    assertTrue(vm.uiState.value.isValid)
+    Assert.assertTrue(vm.uiState.value.isValid)
   }
 
   // ---------- Field validation edges ----------
@@ -92,56 +94,56 @@ class CreateEventViewModelTest {
   fun setType_invalid_marksInvalid() {
     vm.setType("MUSIC")
     val s = vm.uiState.value
-    assertNotNull(s.invalidTypeMsg)
-    assertFalse(s.isValid)
+    Assert.assertNotNull(s.invalidTypeMsg)
+    Assert.assertFalse(s.isValid)
   }
 
   @Test
   fun setVisibility_invalid_marksInvalid() {
     vm.setVisibility("PUBLICK")
     val s = vm.uiState.value
-    assertNotNull(s.invalidVisibilityMsg)
-    assertFalse(s.isValid)
+    Assert.assertNotNull(s.invalidVisibilityMsg)
+    Assert.assertFalse(s.isValid)
   }
 
   @Test
   fun setDate_wrongFormat_marksInvalid() {
     vm.setDate("2023-12-25 10:00")
     val s = vm.uiState.value
-    assertNotNull(s.invalidDateMsg)
-    assertFalse(s.isValid)
+    Assert.assertNotNull(s.invalidDateMsg)
+    Assert.assertFalse(s.isValid)
   }
 
   @Test
   fun setMaxParticipants_nonNumeric_marksInvalid() {
     vm.setMaxParticipants("ten")
     val s = vm.uiState.value
-    assertNotNull(s.invalidMaxParticipantsMsg)
-    assertFalse(s.isValid)
+    Assert.assertNotNull(s.invalidMaxParticipantsMsg)
+    Assert.assertFalse(s.isValid)
   }
 
   @Test
   fun setMaxParticipants_negative_marksInvalid() {
     vm.setMaxParticipants("-1")
     val s = vm.uiState.value
-    assertNotNull(s.invalidMaxParticipantsMsg)
-    assertFalse(s.isValid)
+    Assert.assertNotNull(s.invalidMaxParticipantsMsg)
+    Assert.assertFalse(s.isValid)
   }
 
   @Test
   fun setDuration_nonNumeric_marksInvalid() {
     vm.setDuration("abc")
     val s = vm.uiState.value
-    assertNotNull(s.invalidDurationMsg)
-    assertFalse(s.isValid)
+    Assert.assertNotNull(s.invalidDurationMsg)
+    Assert.assertFalse(s.isValid)
   }
 
   @Test
   fun setDuration_zero_marksInvalid() {
     vm.setDuration("0")
     val s = vm.uiState.value
-    assertNotNull(s.invalidDurationMsg)
-    assertFalse(s.isValid)
+    Assert.assertNotNull(s.invalidDurationMsg)
+    Assert.assertFalse(s.isValid)
   }
 
   // ---------- createEvent() behavior ----------
@@ -152,9 +154,9 @@ class CreateEventViewModelTest {
     val ok = vm.createEvent()
     advanceUntilIdle()
 
-    assertFalse(ok)
-    assertTrue(repo.added.isEmpty())
-    assertNotNull(vm.uiState.value.errorMsg) // some error is surfaced
+    Assert.assertFalse(ok)
+    Assert.assertTrue(repo.added.isEmpty())
+    Assert.assertNotNull(vm.uiState.value.errorMsg) // some error is surfaced
   }
 
   @Test
@@ -171,9 +173,9 @@ class CreateEventViewModelTest {
     val ok = vm.createEvent()
     advanceUntilIdle()
 
-    assertFalse(ok)
-    assertTrue(repo.added.isEmpty())
-    assertNotNull(vm.uiState.value.errorMsg)
+    Assert.assertFalse(ok)
+    Assert.assertTrue(repo.added.isEmpty())
+    Assert.assertNotNull(vm.uiState.value.errorMsg)
   }
 
   //  @Test
@@ -213,10 +215,10 @@ class CreateEventViewModelTest {
   fun clearErrorMsg_resetsErrorField() = runTest {
     // trigger an error
     val ok = vm.createEvent()
-    assertFalse(ok)
-    assertNotNull(vm.uiState.value.errorMsg)
+    Assert.assertFalse(ok)
+    Assert.assertNotNull(vm.uiState.value.errorMsg)
 
     vm.clearErrorMsg()
-    assertNull(vm.uiState.value.errorMsg)
+    Assert.assertNull(vm.uiState.value.errorMsg)
   }
 }

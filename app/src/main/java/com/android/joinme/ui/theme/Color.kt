@@ -23,6 +23,8 @@ val SocialColor = Color(0xFFE57373) // Red for SOCIAL
 val SerieCardBackgroundColor = Color(0xFF2D2D3D)
 val SerieCardLayer2Color = Color(0xFF232333)
 val SerieCardLayer3Color = Color(0xFF1A1A24)
+val SerieCardLayer2BorderColor = Color(0xFF7E57C2) // Purple border for second layer
+val SerieCardLayer3BorderColor = Color(0xFF5E35B1) // Darker purple for third layer
 
 // Common UI colors
 val DarkButtonColor = Color(0xFF1C1C1E)
