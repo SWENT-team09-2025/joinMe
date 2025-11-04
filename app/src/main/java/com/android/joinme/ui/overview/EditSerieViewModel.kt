@@ -1,27 +1,28 @@
 package com.android.joinme.ui.overview
 
-import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.model.utils.Visibility
+import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * UI state for the CreateSerie screen.
+ * UI state for the EditSerie screen.
  *
- * Holds all form field values and their corresponding validation messages for creating a new serie.
+ * Holds all form field values and their corresponding validation messages for editing an existing
+ * serie.
  *
- * @property serieId Empty for CreateSerie (not used during creation)
+ * @property serieId The ID of the serie being edited
  * @property title The title of the serie
  * @property description The description of the serie
  * @property maxParticipants String representation of the maximum number of participants
  * @property date The date in dd/MM/yyyy format
  * @property time The time in HH:mm format
  * @property visibility The visibility setting (PUBLIC or PRIVATE)
- * @property isLoading Indicates whether the serie is currently being created
+ * @property isLoading Indicates whether the serie is currently being updated or loaded
  * @property errorMsg Global error message for the form
  * @property invalidTitleMsg Validation message for the title field
  * @property invalidDescriptionMsg Validation message for the description field
@@ -30,7 +31,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * @property invalidTimeMsg Validation message for the time field
  * @property invalidVisibilityMsg Validation message for the visibility field
  */
-data class CreateSerieUIState(
+data class EditSerieUIState(
     override val serieId: String = "",
     override val title: String = "",
     override val description: String = "",
@@ -67,58 +68,85 @@ data class CreateSerieUIState(
             maxParticipants.isNotBlank() &&
             date.isNotBlank() &&
             time.isNotBlank() &&
-            visibility.isNotBlank()
+            visibility.isNotBlank() &&
+            serieId.isNotBlank()
 }
 
 /**
- * ViewModel for the CreateSerie screen.
+ * ViewModel for the EditSerie screen.
  *
- * Manages the UI state and business logic for creating a new serie. Handles form validation,
- * date/time parsing, and repository interactions for saving series.
+ * Manages the UI state and business logic for editing an existing serie. Handles form validation,
+ * date/time parsing, and repository interactions for updating series.
  *
  * @property repository The SeriesRepository used for data operations
  */
-class CreateSerieViewModel(
+class EditSerieViewModel(
     private val repository: SeriesRepository = SeriesRepositoryProvider.repository
 ) : BaseSerieFormViewModel() {
 
-  override val _uiState = MutableStateFlow(CreateSerieUIState())
-  val uiState: StateFlow<CreateSerieUIState> = _uiState.asStateFlow()
+  override val _uiState = MutableStateFlow(EditSerieUIState())
+  val uiState: StateFlow<EditSerieUIState> = _uiState.asStateFlow()
 
   override fun getState(): SerieFormUIState = _uiState.value
 
   override fun updateState(transform: (SerieFormUIState) -> SerieFormUIState) {
-    _uiState.value = transform(_uiState.value) as CreateSerieUIState
+    _uiState.value = transform(_uiState.value) as EditSerieUIState
   }
 
   /**
-   * Creates a new serie and adds it to the repository.
+   * Initializes the UI state with data from an existing serie.
+   *
+   * This function loads the serie data and populates the form fields. It converts the Timestamp to
+   * the appropriate date and time string formats.
+   *
+   * @param serieId The ID of the serie to load
+   */
+  suspend fun loadSerie(serieId: String) {
+    setLoadingState(true)
+
+    try {
+      val serie = repository.getSerie(serieId)
+      val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+      val dateTime = sdf.format(serie.date.toDate())
+      val datePart = dateTime.substring(0, 10) // dd/MM/yyyy
+      val timePart = dateTime.substring(11) // HH:mm
+
+      _uiState.value =
+          EditSerieUIState(
+              serieId = serie.serieId,
+              title = serie.title,
+              description = serie.description,
+              maxParticipants = serie.maxParticipants.toString(),
+              date = datePart,
+              time = timePart,
+              visibility = serie.visibility.name,
+              isLoading = false)
+    } catch (e: Exception) {
+      setErrorMsg("Failed to load serie: ${e.message}")
+      setLoadingState(false)
+    }
+  }
+
+  /**
+   * Updates an existing serie and saves it to the repository.
    *
    * This function performs the following steps:
    * 1. Validates that all form fields are valid
-   * 2. Checks that the user is authenticated (must be signed in)
-   * 3. Parses the date and time into a single Timestamp
-   * 4. Creates a Serie object with the current user as owner
-   * 5. Saves the serie to the repository
+   * 2. Parses the date and time into a single Timestamp
+   * 3. Updates the Serie object with the new values
+   * 4. Saves the updated serie to the repository
    *
    * The loading state is set to true at the start and false upon completion. If any error occurs
-   * during the process (validation failure, authentication check failure, date parsing error, or
-   * repository error), an appropriate error message is set and the function returns false.
+   * during the process (validation failure, date parsing error, or repository error), an
+   * appropriate error message is set and the function returns false.
    *
-   * @return True if the serie was created successfully, false if validation failed, user is not
-   *   authenticated, date parsing failed, or repository save failed
+   * @return True if the serie was updated successfully, false if validation failed, date parsing
+   *   failed, or repository save failed
    */
-  suspend fun createSerie(): Boolean {
+  suspend fun updateSerie(): Boolean {
     val state = _uiState.value
     if (!state.isValid) {
       setErrorMsg("At least one field is not valid")
-      return false
-    }
-
-    // Check if user is authenticated
-    val currentUserId = getCurrentUserId()
-    if (currentUserId == null) {
-      setErrorMsg("You must be signed in to create a serie")
       return false
     }
 
@@ -131,25 +159,24 @@ class CreateSerieViewModel(
       return false
     }
 
-    val serie =
-        Serie(
-            serieId = repository.getNewSerieId(),
-            title = state.title,
-            description = state.description,
-            date = parsedDate,
-            participants = listOf(currentUserId),
-            maxParticipants = state.maxParticipants.toInt(),
-            visibility = Visibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
-            eventIds = emptyList(),
-            ownerId = currentUserId)
-
     return try {
-      repository.addSerie(serie)
+      // Get the existing serie to preserve certain fields
+      val existingSerie = repository.getSerie(state.serieId)
+
+      val updatedSerie =
+          existingSerie.copy(
+              title = state.title,
+              description = state.description,
+              date = parsedDate,
+              maxParticipants = state.maxParticipants.toInt(),
+              visibility = Visibility.valueOf(state.visibility.uppercase(Locale.ROOT)))
+
+      repository.editSerie(state.serieId, updatedSerie)
       clearErrorMsg()
       setLoadingState(false)
       true
     } catch (e: Exception) {
-      setErrorMsg("Failed to create serie: ${e.message}")
+      setErrorMsg("Failed to update serie: ${e.message}")
       setLoadingState(false)
       false
     }

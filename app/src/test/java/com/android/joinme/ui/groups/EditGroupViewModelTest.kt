@@ -115,10 +115,11 @@ class EditGroupViewModelTest {
 
   @Test
   fun `loadGroup sets loading state while loading`() = runTest {
-    coEvery { mockRepository.getGroup(testGroup.id) } coAnswers {
-      viewModel.uiState.value.let { state -> assertTrue(state.isLoading) }
-      testGroup
-    }
+    coEvery { mockRepository.getGroup(testGroup.id) } coAnswers
+        {
+          viewModel.uiState.value.let { state -> assertTrue(state.isLoading) }
+          testGroup
+        }
 
     viewModel.loadGroup(testGroup.id)
     advanceUntilIdle()
@@ -297,6 +298,7 @@ class EditGroupViewModelTest {
     viewModel.setName("   Valid Name   ")
 
     val state = viewModel.uiState.value
+    // Name is stored with spaces, but validation passes on trimmed version
     assertEquals("   Valid Name   ", state.name)
     assertNull(state.nameError)
     assertTrue(state.isValid)
@@ -307,6 +309,7 @@ class EditGroupViewModelTest {
     viewModel.setName("     ")
 
     val state = viewModel.uiState.value
+    // Name is stored with spaces, but validation fails on trimmed version
     assertEquals("     ", state.name)
     assertEquals("Name is required", state.nameError)
     assertFalse(state.isValid)
@@ -517,12 +520,7 @@ class EditGroupViewModelTest {
 
     advanceUntilIdle()
 
-    coVerify {
-      mockRepository.editGroup(
-          testGroup.id,
-          match { it.name == "Trimmed Name"
-          })
-    }
+    coVerify { mockRepository.editGroup(testGroup.id, match { it.name == "Trimmed Name" }) }
   }
 
   @Test
@@ -543,9 +541,10 @@ class EditGroupViewModelTest {
   @Test
   fun `updateGroup sets loading state while updating`() = runTest {
     coEvery { mockRepository.getGroup(testGroup.id) } returns testGroup
-    coEvery { mockRepository.editGroup(testGroup.id, any()) } coAnswers {
-      viewModel.uiState.value.let { state -> assertTrue(state.isLoading) }
-    }
+    coEvery { mockRepository.editGroup(testGroup.id, any()) } coAnswers
+        {
+          viewModel.uiState.value.let { state -> assertTrue(state.isLoading) }
+        }
 
     viewModel.setName("Test Name")
     viewModel.setCategory(EventType.SPORTS)
@@ -595,9 +594,7 @@ class EditGroupViewModelTest {
 
       advanceUntilIdle()
 
-      coVerify {
-        mockRepository.editGroup(testGroup.id, match { it.category == category })
-      }
+      coVerify { mockRepository.editGroup(testGroup.id, match { it.category == category }) }
 
       viewModel.clearSuccessState()
     }
@@ -702,7 +699,7 @@ class EditGroupViewModelTest {
     viewModel.loadGroup(testGroup.id)
     advanceUntilIdle()
 
-    var state = viewModel.uiState.value
+    val state = viewModel.uiState.value
     assertEquals("Basketball Team", state.name)
     assertEquals(EventType.SPORTS, state.category)
 

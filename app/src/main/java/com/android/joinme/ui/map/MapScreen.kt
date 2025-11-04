@@ -18,24 +18,31 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.model.event.getColor
+import com.android.joinme.ui.map.MapScreenTestTags.getTestTagForEventMarker
 import com.android.joinme.ui.map.userLocation.LocationServiceImpl
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
+import com.android.joinme.ui.navigation.Screen
 import com.android.joinme.ui.navigation.Tab
 import com.android.joinme.ui.theme.IconColor
 import com.android.joinme.ui.theme.MapControlBackgroundColor
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 
 object MapScreenTestTags {
@@ -44,6 +51,18 @@ object MapScreenTestTags {
   const val MAP_CONTAINER = "mapContainer"
 
   fun getTestTagForEventMarker(eventId: String): String = "eventMarker$eventId"
+}
+
+/**
+ * Converts a Compose Color to a hue value (0-360) for Google Maps marker coloring.
+ *
+ * @param color The Compose Color to convert
+ * @return The hue value in degrees (0-360)
+ */
+private fun colorToHue(color: Color): Float {
+  val hsv = FloatArray(3)
+  android.graphics.Color.colorToHSV(color.toArgb(), hsv)
+  return hsv[0]
 }
 
 /**
@@ -60,10 +79,7 @@ object MapScreenTestTags {
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
-fun MapScreen(
-    viewModel: MapViewModel = viewModel(),
-    navigationActions: NavigationActions? = null,
-) {
+fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: NavigationActions? = null) {
   val context = LocalContext.current
 
   // --- Initialization of localisation service ---
@@ -90,9 +106,7 @@ fun MapScreen(
   }
 
   // --- Initialize the map camera position ---
-  val cameraPositionState = rememberCameraPositionState {
-    position = CameraPosition.fromLatLngZoom(LatLng(46.5187, 6.5629), 10f)
-  }
+  val cameraPositionState = rememberCameraPositionState()
 
   val currentLat = uiState.userLocation?.latitude
   val currentLng = uiState.userLocation?.longitude
@@ -131,7 +145,22 @@ fun MapScreen(
                   properties = mapProperties,
                   uiSettings =
                       MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = true)) {
-                    // ToDo add marker
+                    uiState.todos.forEach { event ->
+                      event.location?.let { location ->
+                        val position = LatLng(location.latitude, location.longitude)
+                        val hue = colorToHue(event.type.getColor())
+
+                        Marker(
+                            state = MarkerState(position = position),
+                            icon = BitmapDescriptorFactory.defaultMarker(hue),
+                            tag = getTestTagForEventMarker(event.eventId),
+                            title = event.title,
+                            snippet = "Tap to see more & join me",
+                            onInfoWindowClick = {
+                              navigationActions?.navigateTo(Screen.ShowEventScreen(event.eventId))
+                            })
+                      }
+                    }
                   }
 
               IconButton(

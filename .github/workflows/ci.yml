@@ -13,12 +13,12 @@ on:
       - reopened
 
 jobs:
-  bootcamp-ci:
-    name: CI-Bootcamp
+  joinme-ci:
+    name: CI-JoinMe
     runs-on: ubuntu-latest
 
     env:
-      app_name: BootcampDebug
+      app_name: JoinMeDebug
 
     steps:
       # First step : Checkout the repository on the runner
@@ -92,7 +92,7 @@ jobs:
       - name: Firestore Security Rules tests
         run: |
           if [ ! -e "firebase.json" ]; then # Check if firebase.json exists
-            echo "(B2 Warning): 'firebase.json' file is missing. Use 'firebase emulators:init'. Emulators are setup in B2"
+            echo "'firebase.json' file is missing. Use 'firebase emulators:init'."
             exit 0
           fi
           jq -e '.emulators' firebase.json >/dev/null || { # Check if emulators are configured
@@ -113,7 +113,7 @@ jobs:
             }
             (cd firebase/firestore/test 2>/dev/null && npm install && npm test) || exit $?
           else
-            echo "(B3 Warning): Firestore rules file not found in firebase/firestore. Rules are setup in B3, you can ignore this warning in B2."
+            echo "Firestore rules file not found in firebase/firestore."
           fi
 
       - name: KTFmt Check
@@ -144,7 +144,7 @@ jobs:
           fi
 
       - name: Run instrumentation tests
-        timeout-minutes: 40
+        timeout-minutes: 45
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34

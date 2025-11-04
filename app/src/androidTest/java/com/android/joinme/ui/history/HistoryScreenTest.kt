@@ -8,6 +8,10 @@ import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.map.Location
+import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.serie.SerieFilter
+import com.android.joinme.model.serie.SeriesRepository
+import com.android.joinme.model.utils.Visibility
 import com.google.firebase.Timestamp
 import java.util.Calendar
 import kotlinx.coroutines.runBlocking
@@ -47,8 +51,9 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_displaysTopBar() {
-    val repo = FakeHistoryRepository()
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -57,8 +62,9 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_displaysTitle() {
-    val repo = FakeHistoryRepository()
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -67,8 +73,9 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_displaysBackButton() {
-    val repo = FakeHistoryRepository()
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -77,8 +84,9 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_backButtonHasCorrectDescription() {
-    val repo = FakeHistoryRepository()
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -87,8 +95,9 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_backButtonTriggersCallback() {
-    val repo = FakeHistoryRepository()
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
     var backClicked = false
 
     composeTestRule.setContent {
@@ -102,8 +111,9 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_displaysEmptyMessage_whenNoExpiredEvents() {
-    val repo = FakeHistoryRepository()
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -116,8 +126,9 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_emptyMessageHasCorrectText() {
-    val repo = FakeHistoryRepository()
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -133,12 +144,13 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_displaysExpiredEvents() {
-    val repo = FakeHistoryRepository()
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
     val expiredEvent = createExpiredEvent("1", "Past Basketball Game", EventType.SPORTS)
 
-    runBlocking { repo.addEvent(expiredEvent) }
+    runBlocking { eventRepo.addEvent(expiredEvent) }
 
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -151,12 +163,13 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_displaysEventLocation() {
-    val repo = FakeHistoryRepository()
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
     val expiredEvent = createExpiredEvent("1", "Past Event", EventType.SPORTS)
 
-    runBlocking { repo.addEvent(expiredEvent) }
+    runBlocking { eventRepo.addEvent(expiredEvent) }
 
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -169,18 +182,19 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_displaysMultipleExpiredEvents() {
-    val repo = FakeHistoryRepository()
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
     val event1 = createExpiredEvent("1", "Event 1", EventType.SPORTS, 5)
     val event2 = createExpiredEvent("2", "Event 2", EventType.SOCIAL, 10)
     val event3 = createExpiredEvent("3", "Event 3", EventType.ACTIVITY, 15)
 
     runBlocking {
-      repo.addEvent(event1)
-      repo.addEvent(event2)
-      repo.addEvent(event3)
+      eventRepo.addEvent(event1)
+      eventRepo.addEvent(event2)
+      eventRepo.addEvent(event3)
     }
 
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -195,18 +209,19 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_eventsSortedByDateDescending() {
-    val repo = FakeHistoryRepository()
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
     // Most recent expired event
     val recentEvent = createExpiredEvent("1", "Recent Event", EventType.SPORTS, 2)
     // Older expired event
     val olderEvent = createExpiredEvent("2", "Older Event", EventType.SOCIAL, 10)
 
     runBlocking {
-      repo.addEvent(olderEvent)
-      repo.addEvent(recentEvent)
+      eventRepo.addEvent(olderEvent)
+      eventRepo.addEvent(recentEvent)
     }
 
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -225,12 +240,13 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_eventCardClick_triggersCallback() {
-    val repo = FakeHistoryRepository()
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
     val expiredEvent = createExpiredEvent("1", "Clickable Event", EventType.SPORTS)
 
-    runBlocking { repo.addEvent(expiredEvent) }
+    runBlocking { eventRepo.addEvent(expiredEvent) }
 
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
     var selectedEvent: Event? = null
 
     composeTestRule.setContent {
@@ -249,12 +265,13 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_eventCardHasCorrectTestTag() {
-    val repo = FakeHistoryRepository()
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
     val expiredEvent = createExpiredEvent("123", "Test Event", EventType.SPORTS)
 
-    runBlocking { repo.addEvent(expiredEvent) }
+    runBlocking { eventRepo.addEvent(expiredEvent) }
 
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -263,22 +280,23 @@ class HistoryScreenTest {
     composeTestRule.waitForIdle()
 
     composeTestRule
-        .onNodeWithTag(HistoryScreenTestTags.getTestTagForEventItem(expiredEvent))
+        .onNodeWithTag(HistoryScreenTestTags.getTestTagForEvent(expiredEvent))
         .assertIsDisplayed()
   }
 
   @Test
   fun historyScreen_multipleEventCards_haveUniqueTestTags() {
-    val repo = FakeHistoryRepository()
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
     val event1 = createExpiredEvent("1", "Event 1", EventType.SPORTS)
     val event2 = createExpiredEvent("2", "Event 2", EventType.SOCIAL)
 
     runBlocking {
-      repo.addEvent(event1)
-      repo.addEvent(event2)
+      eventRepo.addEvent(event1)
+      eventRepo.addEvent(event2)
     }
 
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -288,16 +306,17 @@ class HistoryScreenTest {
 
     // Both event cards should have unique test tags
     composeTestRule
-        .onNodeWithTag(HistoryScreenTestTags.getTestTagForEventItem(event1))
+        .onNodeWithTag(HistoryScreenTestTags.getTestTagForEvent(event1))
         .assertIsDisplayed()
     composeTestRule
-        .onNodeWithTag(HistoryScreenTestTags.getTestTagForEventItem(event2))
+        .onNodeWithTag(HistoryScreenTestTags.getTestTagForEvent(event2))
         .assertIsDisplayed()
   }
 
   @Test
   fun historyScreen_doesNotDisplayOngoingEvents() {
-    val repo = FakeHistoryRepository()
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
     val expiredEvent = createExpiredEvent("1", "Expired Event", EventType.SPORTS, 3)
 
     // Create an ongoing event (started 30 minutes ago, lasts 2 hours)
@@ -318,11 +337,11 @@ class HistoryScreenTest {
             ownerId = "owner1")
 
     runBlocking {
-      repo.addEvent(expiredEvent)
-      repo.addEvent(ongoingEvent)
+      eventRepo.addEvent(expiredEvent)
+      eventRepo.addEvent(ongoingEvent)
     }
 
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -337,7 +356,8 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_doesNotDisplayUpcomingEvents() {
-    val repo = FakeHistoryRepository()
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
     val expiredEvent = createExpiredEvent("1", "Expired Event", EventType.SPORTS, 3)
 
     // Create an upcoming event (starts in 2 hours)
@@ -358,11 +378,11 @@ class HistoryScreenTest {
             ownerId = "owner1")
 
     runBlocking {
-      repo.addEvent(expiredEvent)
-      repo.addEvent(upcomingEvent)
+      eventRepo.addEvent(expiredEvent)
+      eventRepo.addEvent(upcomingEvent)
     }
 
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -377,12 +397,13 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_displaysHistoryList_whenEventsExist() {
-    val repo = FakeHistoryRepository()
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
     val expiredEvent = createExpiredEvent("1", "Test Event", EventType.SPORTS)
 
-    runBlocking { repo.addEvent(expiredEvent) }
+    runBlocking { eventRepo.addEvent(expiredEvent) }
 
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -395,8 +416,9 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_hidesHistoryList_whenNoEvents() {
-    val repo = FakeHistoryRepository()
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -409,12 +431,13 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_refreshesUIStateOnLaunch() {
-    val repo = FakeHistoryRepository()
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
     val expiredEvent = createExpiredEvent("1", "Pre-added Event", EventType.SPORTS)
 
-    runBlocking { repo.addEvent(expiredEvent) }
+    runBlocking { eventRepo.addEvent(expiredEvent) }
 
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -428,18 +451,19 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_displaysDifferentEventTypes() {
-    val repo = FakeHistoryRepository()
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
     val sportsEvent = createExpiredEvent("1", "Sports Event", EventType.SPORTS, 3)
     val socialEvent = createExpiredEvent("2", "Social Event", EventType.SOCIAL, 5)
     val activityEvent = createExpiredEvent("3", "Activity Event", EventType.ACTIVITY, 7)
 
     runBlocking {
-      repo.addEvent(sportsEvent)
-      repo.addEvent(socialEvent)
-      repo.addEvent(activityEvent)
+      eventRepo.addEvent(sportsEvent)
+      eventRepo.addEvent(socialEvent)
+      eventRepo.addEvent(activityEvent)
     }
 
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -455,16 +479,17 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_eventCard_isScrollable() {
-    val repo = FakeHistoryRepository()
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
 
     // Add many expired events to ensure scrolling is needed
     runBlocking {
       for (i in 1..15) {
-        repo.addEvent(createExpiredEvent("$i", "Event $i", EventType.SPORTS, i + 2))
+        eventRepo.addEvent(createExpiredEvent("$i", "Event $i", EventType.SPORTS, i + 2))
       }
     }
 
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -486,8 +511,9 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_hasCorrectScreenTestTag() {
-    val repo = FakeHistoryRepository()
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -496,8 +522,9 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_displaysLoadingIndicator_whenLoading() {
-    val repo = FakeHistoryRepository(delayMillis = 1000) // Delay to keep loading state
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val eventRepo = FakeHistoryEventsRepository(delayMillis = 1000) // Delay to keep loading state
+    val serieRepo = FakeHistorySeriesRepository()
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -507,12 +534,13 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_hidesLoadingIndicator_afterDataLoaded() {
-    val repo = FakeHistoryRepository()
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
     val expiredEvent = createExpiredEvent("1", "Test Event", EventType.SPORTS)
 
-    runBlocking { repo.addEvent(expiredEvent) }
+    runBlocking { eventRepo.addEvent(expiredEvent) }
 
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -528,8 +556,9 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_showsEmptyMessage_afterLoadingWithNoEvents() {
-    val repo = FakeHistoryRepository()
-    val viewModel = HistoryViewModel(eventRepository = repo)
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
     composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
 
@@ -543,13 +572,312 @@ class HistoryScreenTest {
     composeTestRule.onNodeWithTag(HistoryScreenTestTags.EMPTY_HISTORY_MSG).assertIsDisplayed()
   }
 
-  /** Fake repository for testing */
-  private class FakeHistoryRepository(private val delayMillis: Long = 0) : EventsRepository {
+  @Test
+  fun historyScreen_displaysExpiredSerie() {
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val expiredSerie = createExpiredSerie("1", "Past Series")
+
+    runBlocking { serieRepo.addSerie(expiredSerie) }
+
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
+
+    composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("Past Series").assertIsDisplayed()
+  }
+
+  @Test
+  fun historyScreen_serieCardHasCorrectTestTag() {
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val expiredSerie = createExpiredSerie("123", "Test Serie")
+
+    runBlocking { serieRepo.addSerie(expiredSerie) }
+
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
+
+    composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(HistoryScreenTestTags.getTestTagForSerie(expiredSerie))
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun historyScreen_displaysMultipleSeries() {
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val serie1 = createExpiredSerie("1", "Serie 1", 5)
+    val serie2 = createExpiredSerie("2", "Serie 2", 10)
+
+    runBlocking {
+      serieRepo.addSerie(serie1)
+      serieRepo.addSerie(serie2)
+    }
+
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
+
+    composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("Serie 1").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Serie 2").assertIsDisplayed()
+  }
+
+  @Test
+  fun historyScreen_displaysMixedEventsAndSeries() {
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val expiredEvent = createExpiredEvent("1", "Past Event", EventType.SPORTS, 3)
+    val expiredSerie = createExpiredSerie("2", "Past Serie", 5)
+
+    runBlocking {
+      eventRepo.addEvent(expiredEvent)
+      serieRepo.addSerie(expiredSerie)
+    }
+
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
+
+    composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Both event and serie should be displayed
+    composeTestRule.onNodeWithText("Past Event").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Past Serie").assertIsDisplayed()
+  }
+
+  @Test
+  fun historyScreen_doesNotDisplayOngoingSeries() {
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val expiredSerie = createExpiredSerie("1", "Expired Serie", 10)
+
+    // Create an ongoing serie (started 1 hour ago)
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -1)
+    val startDate = Timestamp(calendar.time)
+
+    // Create an ongoing event that's part of this serie
+    calendar.add(Calendar.MINUTE, 30) // Event is halfway through
+    val ongoingEvent =
+        Event(
+            eventId = "ongoing-event-1",
+            type = EventType.SOCIAL,
+            title = "Ongoing Event",
+            description = "Still happening",
+            location = Location(46.5191, 6.5668, "EPFL"),
+            date = Timestamp(calendar.time),
+            duration = 120,
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    val ongoingSerie =
+        Serie(
+            serieId = "2",
+            title = "Ongoing Serie",
+            description = "Still active",
+            date = startDate,
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("ongoing-event-1"),
+            ownerId = "owner1")
+
+    runBlocking {
+      serieRepo.addSerie(expiredSerie)
+      serieRepo.addSerie(ongoingSerie)
+      eventRepo.addEvent(ongoingEvent)
+    }
+
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
+
+    composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Only expired serie should be displayed
+    composeTestRule.onNodeWithText("Expired Serie").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Ongoing Serie").assertDoesNotExist()
+  }
+
+  @Test
+  fun historyScreen_doesNotDisplayUpcomingSeries() {
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val expiredSerie = createExpiredSerie("1", "Expired Serie", 10)
+
+    // Create an upcoming serie (starts in 2 hours)
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 2)
+    val startDate = Timestamp(calendar.time)
+
+    val upcomingSerie =
+        Serie(
+            serieId = "2",
+            title = "Upcoming Serie",
+            description = "Not started yet",
+            date = startDate,
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf(),
+            ownerId = "owner1")
+
+    runBlocking {
+      serieRepo.addSerie(expiredSerie)
+      serieRepo.addSerie(upcomingSerie)
+    }
+
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
+
+    composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Only expired serie should be displayed
+    composeTestRule.onNodeWithText("Expired Serie").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Upcoming Serie").assertDoesNotExist()
+  }
+
+  @Test
+  fun historyScreen_serieCardClick_triggersCallback() {
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val expiredSerie = createExpiredSerie("1", "Clickable Serie")
+
+    runBlocking { serieRepo.addSerie(expiredSerie) }
+
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
+    var selectedSerie: Serie? = null
+
+    composeTestRule.setContent {
+      HistoryScreen(historyViewModel = viewModel, onSelectSerie = { selectedSerie = it })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("Clickable Serie").performClick()
+
+    assert(selectedSerie != null)
+    assert(selectedSerie?.serieId == "1")
+  }
+
+  @Test
+  fun historyScreen_multipleSerieCards_haveUniqueTestTags() {
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val serie1 = createExpiredSerie("1", "Serie 1")
+    val serie2 = createExpiredSerie("2", "Serie 2")
+
+    runBlocking {
+      serieRepo.addSerie(serie1)
+      serieRepo.addSerie(serie2)
+    }
+
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
+
+    composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Both serie cards should have unique test tags
+    composeTestRule
+        .onNodeWithTag(HistoryScreenTestTags.getTestTagForSerie(serie1))
+        .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(HistoryScreenTestTags.getTestTagForSerie(serie2))
+        .assertIsDisplayed()
+  }
+
+  private fun createExpiredSerie(serieId: String, title: String, daysAgo: Int = 3): Serie {
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_MONTH, -daysAgo) // Date in the past
+    val serieDate = Timestamp(calendar.time)
+
+    return Serie(
+        serieId = serieId,
+        title = title,
+        description = "Description for $title",
+        date = serieDate,
+        participants = listOf("user1"),
+        maxParticipants = 10,
+        visibility = Visibility.PUBLIC,
+        eventIds = listOf(),
+        ownerId = "owner1")
+  }
+
+  @Test
+  fun historyScreen_handlesErrorFromRepository() {
+    val eventRepo = FakeHistoryEventsRepository(shouldThrowError = true)
+    val serieRepo = FakeHistorySeriesRepository()
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
+
+    composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // After error, loading should stop and empty message should show
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.LOADING_INDICATOR).assertDoesNotExist()
+    composeTestRule.onNodeWithTag(HistoryScreenTestTags.EMPTY_HISTORY_MSG).assertIsDisplayed()
+  }
+
+  @Test
+  fun historyScreen_clearsErrorMessage() {
+    val eventRepo = FakeHistoryEventsRepository(shouldThrowError = true)
+    val serieRepo = FakeHistorySeriesRepository()
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
+
+    composeTestRule.setContent { HistoryScreen(historyViewModel = viewModel) }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Error should be cleared after being displayed
+    // Verify the viewModel's error state is null after clearing
+    assert(viewModel.uiState.value.errorMsg == null)
+  }
+
+  /** Fake events repository for testing */
+  private class FakeHistoryEventsRepository(
+      private val delayMillis: Long = 0,
+      private val shouldThrowError: Boolean = false
+  ) : EventsRepository {
     private val events: MutableList<Event> = mutableListOf()
 
     override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
       if (delayMillis > 0) {
         kotlinx.coroutines.delay(delayMillis)
+      }
+      if (shouldThrowError) {
+        throw Exception("Failed to fetch events")
       }
       return events
     }
@@ -572,5 +900,33 @@ class HistoryScreenTest {
     }
 
     override fun getNewEventId(): String = (events.size + 1).toString()
+  }
+
+  /** Fake series repository for testing */
+  private class FakeHistorySeriesRepository : SeriesRepository {
+    private val series: MutableList<Serie> = mutableListOf()
+
+    override fun getNewSerieId(): String = (series.size + 1).toString()
+
+    override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> {
+      return series
+    }
+
+    override suspend fun getSerie(serieId: String): Serie = series.first { it.serieId == serieId }
+
+    override suspend fun addSerie(serie: Serie) {
+      series.add(serie)
+    }
+
+    override suspend fun editSerie(serieId: String, newValue: Serie) {
+      val index = series.indexOfFirst { it.serieId == serieId }
+      if (index != -1) {
+        series[index] = newValue
+      }
+    }
+
+    override suspend fun deleteSerie(serieId: String) {
+      series.removeIf { it.serieId == serieId }
+    }
   }
 }

@@ -49,24 +49,30 @@ class CreateGroupScreenTest {
   @Test
   fun createGroupScreen_displaysAllComponents() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.SCREEN).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.TITLE).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.GROUP_PICTURE).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.EDIT_PHOTO_BUTTON).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.NAME_INPUT).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.NAME_SUPPORTING_TEXT).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.CATEGORY_DROPDOWN).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.DESCRIPTION_INPUT).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.SCREEN).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.TITLE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.GROUP_PICTURE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.EDIT_PHOTO_BUTTON).assertIsDisplayed()
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.DESCRIPTION_SUPPORTING_TEXT)
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_NAME_TEXT_FIELD)
         .assertIsDisplayed()
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.SAVE_BUTTON).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.NAME_SUPPORTING_TEXT)
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_DESCRIPTION_TEXT_FIELD)
+        .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.DESCRIPTION_SUPPORTING_TEXT)
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.SAVE_BUTTON).assertIsDisplayed()
   }
 
   @Test
   fun createGroupScreen_initialState_saveButtonIsDisabled() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.SAVE_BUTTON).assertIsNotEnabled()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.SAVE_BUTTON).assertIsNotEnabled()
   }
 
   @Test
@@ -74,11 +80,11 @@ class CreateGroupScreenTest {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
     // Check that name field has only placeholder text (empty value)
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.NAME_INPUT)
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_NAME_TEXT_FIELD)
         .assert(hasText("", substring = true))
     // Check that description field has only placeholder text (empty value)
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.DESCRIPTION_INPUT)
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_DESCRIPTION_TEXT_FIELD)
         .assert(hasText("", substring = true))
   }
 
@@ -86,50 +92,62 @@ class CreateGroupScreenTest {
   fun createGroupScreen_initialState_categoryShowsActivity() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.CATEGORY_DROPDOWN)
+        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN)
         .assertTextContains("Activity")
   }
 
   @Test
   fun nameInput_acceptsValidInput() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.NAME_INPUT).performTextInput("Test Group")
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.NAME_INPUT).assertTextContains("Test Group")
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_NAME_TEXT_FIELD)
+        .performTextInput("Test Group")
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_NAME_TEXT_FIELD)
+        .assertTextContains("Test Group")
   }
 
   @Test
   fun nameInput_showsErrorForShortName() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.NAME_INPUT).performTextInput("ab")
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.NAME_SUPPORTING_TEXT)
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_NAME_TEXT_FIELD)
+        .performTextInput("ab")
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.NAME_SUPPORTING_TEXT)
         .assertTextEquals("Name must be at least 3 characters")
   }
 
   @Test
   fun nameInput_showsErrorForLongName() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.NAME_INPUT).performTextInput("a".repeat(31))
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.NAME_SUPPORTING_TEXT)
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_NAME_TEXT_FIELD)
+        .performTextInput("a".repeat(31))
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.NAME_SUPPORTING_TEXT)
         .assertTextEquals("Name must not exceed 30 characters")
   }
 
   @Test
   fun nameInput_showsErrorForInvalidCharacters() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.NAME_INPUT).performTextInput("Test@Group!")
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.NAME_SUPPORTING_TEXT)
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_NAME_TEXT_FIELD)
+        .performTextInput("Test@Group!")
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.NAME_SUPPORTING_TEXT)
         .assertTextEquals("Only letters, numbers, spaces, and underscores allowed")
   }
 
   @Test
   fun nameInput_showsErrorForMultipleConsecutiveSpaces() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.NAME_INPUT).performTextInput("Test  Group")
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.NAME_SUPPORTING_TEXT)
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_NAME_TEXT_FIELD)
+        .performTextInput("Test  Group")
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.NAME_SUPPORTING_TEXT)
         .assertTextEquals("Multiple consecutive spaces not allowed")
   }
 
@@ -138,7 +156,7 @@ class CreateGroupScreenTest {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
     // Click on the dropdown arrow icon, not the text field
     composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.CATEGORY_MENU).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_MENU).assertIsDisplayed()
   }
 
   @Test
@@ -147,13 +165,13 @@ class CreateGroupScreenTest {
     // Click the dropdown arrow to open menu
     composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.CATEGORY_OPTION_PREFIX + "SOCIAL")
+        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "SOCIAL")
         .assertIsDisplayed()
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.CATEGORY_OPTION_PREFIX + "ACTIVITY")
+        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "ACTIVITY")
         .assertIsDisplayed()
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.CATEGORY_OPTION_PREFIX + "SPORTS")
+        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "SPORTS")
         .assertIsDisplayed()
   }
 
@@ -163,10 +181,10 @@ class CreateGroupScreenTest {
     // Click the dropdown arrow to open menu
     composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.CATEGORY_OPTION_PREFIX + "SOCIAL")
+        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "SOCIAL")
         .performClick()
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.CATEGORY_DROPDOWN)
+        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN)
         .assertTextContains("Social")
   }
 
@@ -176,10 +194,10 @@ class CreateGroupScreenTest {
     // Click the dropdown arrow to open menu
     composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.CATEGORY_OPTION_PREFIX + "SPORTS")
+        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "SPORTS")
         .performClick()
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.CATEGORY_DROPDOWN)
+        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN)
         .assertTextContains("Sports")
   }
 
@@ -189,19 +207,19 @@ class CreateGroupScreenTest {
     // Click the dropdown arrow to open menu
     composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.CATEGORY_OPTION_PREFIX + "SOCIAL")
+        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "SOCIAL")
         .performClick()
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.CATEGORY_MENU).assertDoesNotExist()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_MENU).assertDoesNotExist()
   }
 
   @Test
   fun descriptionInput_acceptsValidInput() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.DESCRIPTION_INPUT)
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_DESCRIPTION_TEXT_FIELD)
         .performTextInput("A great group")
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.DESCRIPTION_INPUT)
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_DESCRIPTION_TEXT_FIELD)
         .assertTextContains("A great group")
   }
 
@@ -209,10 +227,10 @@ class CreateGroupScreenTest {
   fun descriptionInput_showsErrorForTooLongText() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.DESCRIPTION_INPUT)
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_DESCRIPTION_TEXT_FIELD)
         .performTextInput("a".repeat(301))
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.DESCRIPTION_SUPPORTING_TEXT)
+        .onNodeWithTag(CreateGroupScreenTestTags.DESCRIPTION_SUPPORTING_TEXT)
         .assertTextEquals("Description must not exceed 300 characters")
   }
 
@@ -220,39 +238,45 @@ class CreateGroupScreenTest {
   fun descriptionInput_accepts300Characters() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.DESCRIPTION_INPUT)
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_DESCRIPTION_TEXT_FIELD)
         .performTextInput("a".repeat(300))
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.DESCRIPTION_SUPPORTING_TEXT)
+        .onNodeWithTag(CreateGroupScreenTestTags.DESCRIPTION_SUPPORTING_TEXT)
         .assertTextEquals("0-300 characters. Letters, numbers, spaces, or underscores only")
   }
 
   @Test
   fun saveButton_enabledWhenFormIsValid() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.NAME_INPUT).performTextInput("Valid Group")
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_NAME_TEXT_FIELD)
+        .performTextInput("Valid Group")
     // Wait for validation to process
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.SAVE_BUTTON).assertIsEnabled()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.SAVE_BUTTON).assertIsEnabled()
   }
 
   @Test
   fun saveButton_disabledWhenNameIsInvalid() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.NAME_INPUT).performTextInput("ab")
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_NAME_TEXT_FIELD)
+        .performTextInput("ab")
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.SAVE_BUTTON).assertIsNotEnabled()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.SAVE_BUTTON).assertIsNotEnabled()
   }
 
   @Test
   fun saveButton_disabledWhenDescriptionIsTooLong() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.NAME_INPUT).performTextInput("Valid Group")
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.DESCRIPTION_INPUT)
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_NAME_TEXT_FIELD)
+        .performTextInput("Valid Group")
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_DESCRIPTION_TEXT_FIELD)
         .performTextInput("a".repeat(301))
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.SAVE_BUTTON).assertIsNotEnabled()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.SAVE_BUTTON).assertIsNotEnabled()
   }
 
   @Test
@@ -260,25 +284,27 @@ class CreateGroupScreenTest {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
 
     // Fill in name
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.NAME_INPUT).performTextInput("Test Group")
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_NAME_TEXT_FIELD)
+        .performTextInput("Test Group")
     composeTestRule.waitForIdle()
 
     // Select category
     composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
     composeTestRule.waitForIdle()
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.CATEGORY_OPTION_PREFIX + "SPORTS")
+        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "SPORTS")
         .performClick()
     composeTestRule.waitForIdle()
 
     // Fill in description
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.DESCRIPTION_INPUT)
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_DESCRIPTION_TEXT_FIELD)
         .performTextInput("A sports group")
     composeTestRule.waitForIdle()
 
     // Verify save button is enabled
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.SAVE_BUTTON).assertIsEnabled()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.SAVE_BUTTON).assertIsEnabled()
   }
 
   @Test
@@ -289,22 +315,22 @@ class CreateGroupScreenTest {
     composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
     composeTestRule.waitForIdle()
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.CATEGORY_OPTION_PREFIX + "SOCIAL")
+        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "SOCIAL")
         .performClick()
     composeTestRule.waitForIdle()
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.CATEGORY_DROPDOWN)
+        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN)
         .assertTextContains("Social")
 
     // Switch to Sports
     composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
     composeTestRule.waitForIdle()
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.CATEGORY_OPTION_PREFIX + "SPORTS")
+        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "SPORTS")
         .performClick()
     composeTestRule.waitForIdle()
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.CATEGORY_DROPDOWN)
+        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN)
         .assertTextContains("Sports")
   }
 
@@ -313,17 +339,21 @@ class CreateGroupScreenTest {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
 
     // Start with invalid name
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.NAME_INPUT).performTextInput("ab")
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_NAME_TEXT_FIELD)
+        .performTextInput("ab")
     composeTestRule.waitForIdle()
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.NAME_SUPPORTING_TEXT)
+        .onNodeWithTag(CreateGroupScreenTestTags.NAME_SUPPORTING_TEXT)
         .assertTextEquals("Name must be at least 3 characters")
 
     // Add more characters to make it valid
-    composeTestRule.onNodeWithTag(CreateGroupTestTags.NAME_INPUT).performTextInput("c")
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_NAME_TEXT_FIELD)
+        .performTextInput("c")
     composeTestRule.waitForIdle()
     composeTestRule
-        .onNodeWithTag(CreateGroupTestTags.NAME_SUPPORTING_TEXT)
+        .onNodeWithTag(CreateGroupScreenTestTags.NAME_SUPPORTING_TEXT)
         .assertTextEquals("3-30 characters. Letters, numbers, spaces, or underscores only")
   }
 }

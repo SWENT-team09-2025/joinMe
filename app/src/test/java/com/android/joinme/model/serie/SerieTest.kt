@@ -196,8 +196,20 @@ class SerieTest {
   }
 
   @Test
-  fun `isExpired returns false when serie has no events`() {
-    val serie = sampleSerie.copy(eventIds = emptyList())
+  fun `isExpired returns true when serie has no events and serie date is in past`() {
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -5)
+    val serie = sampleSerie.copy(eventIds = emptyList(), date = Timestamp(calendar.time))
+    val events = listOf(createEvent("event1", duration = 60, hoursOffset = -5))
+
+    assertTrue(serie.isExpired(events))
+  }
+
+  @Test
+  fun `isExpired returns false when serie has no events but serie date is in future`() {
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 5)
+    val serie = sampleSerie.copy(eventIds = emptyList(), date = Timestamp(calendar.time))
     val events = listOf(createEvent("event1", duration = 60, hoursOffset = -5))
 
     assertFalse(serie.isExpired(events))

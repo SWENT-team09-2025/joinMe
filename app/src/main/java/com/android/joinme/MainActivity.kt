@@ -3,24 +3,14 @@ package com.android.joinme
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
@@ -29,12 +19,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
-import com.android.joinme.model.groups.Group
 import com.android.joinme.ui.groups.CreateGroupScreen
 import com.android.joinme.ui.groups.EditGroupScreen
 import com.android.joinme.ui.groups.GroupDetailScreen
 import com.android.joinme.ui.groups.GroupListScreen
-import com.android.joinme.ui.groups.GroupListViewModel
 import com.android.joinme.ui.history.HistoryScreen
 import com.android.joinme.ui.map.MapScreen
 import com.android.joinme.ui.map.MapViewModel
@@ -92,7 +80,7 @@ class MainActivity : ComponentActivity() {
     channel.description = "Notifications for upcoming events"
     channel.enableVibration(true)
 
-    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
     notificationManager.createNotificationChannel(channel)
   }
 }
@@ -188,6 +176,9 @@ fun JoinMe(
       composable(Screen.History.route) {
         HistoryScreen(
             onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
+            onSelectSerie = {
+              Toast.makeText(context, "Not Implemented", Toast.LENGTH_SHORT).show()
+            },
             onGoBack = { navigationActions.goBack() })
       }
       composable(Screen.ShowEventScreen.route) { navBackStackEntry ->
@@ -259,78 +250,7 @@ fun JoinMe(
       }
 
       composable(Screen.Groups.route) {
-        val groupListViewModel: GroupListViewModel = viewModel()
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
-
-        // State for confirmation dialogs
-        var groupToLeave by remember { mutableStateOf<Group?>(null) }
-        var groupToDelete by remember { mutableStateOf<Group?>(null) }
-
-        // Leave Group Confirmation Dialog
-        groupToLeave?.let { group ->
-          AlertDialog(
-              onDismissRequest = { groupToLeave = null },
-              title = { Text("Leave Group") },
-              text = { Text("Are you sure you want to leave \"${group.name}\"?") },
-              confirmButton = {
-                Button(
-                    onClick = {
-                      currentUserId?.let { userId ->
-                        groupListViewModel.leaveGroup(
-                            groupId = group.id,
-                            userId = userId,
-                            onSuccess = {
-                              Toast.makeText(context, "Left group successfully", Toast.LENGTH_SHORT)
-                                  .show()
-                              groupToLeave = null
-                            },
-                            onError = { error ->
-                              Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-                              groupToLeave = null
-                            })
-                      }
-                    }) {
-                      Text("Leave")
-                    }
-              },
-              dismissButton = { TextButton(onClick = { groupToLeave = null }) { Text("Cancel") } })
-        }
-
-        // Delete Group Confirmation Dialog
-        groupToDelete?.let { group ->
-          AlertDialog(
-              onDismissRequest = { groupToDelete = null },
-              title = { Text("Delete Group") },
-              text = {
-                Text(
-                    "Are you sure you want to delete \"${group.name}\"? This action cannot be undone.")
-              },
-              confirmButton = {
-                Button(
-                    onClick = {
-                      groupListViewModel.deleteGroup(
-                          groupId = group.id,
-                          onSuccess = {
-                            Toast.makeText(context, "Group deleted successfully", Toast.LENGTH_SHORT)
-                                .show()
-                            groupToDelete = null
-                          },
-                          onError = { error ->
-                            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-                            groupToDelete = null
-                          })
-                    },
-                    colors =
-                        androidx.compose.material3.ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error)) {
-                      Text("Delete")
-                    }
-              },
-              dismissButton = { TextButton(onClick = { groupToDelete = null }) { Text("Cancel") } })
-        }
-
         GroupListScreen(
-            viewModel = groupListViewModel,
             onJoinWithLink = {
               Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
             }, // TODO navigate to join with link screen or popup
@@ -342,27 +262,22 @@ fun JoinMe(
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
             onViewGroupDetails = { navigationActions.navigateTo(Screen.GroupDetail(it.id)) },
-            onLeaveGroup = { group -> groupToLeave = group },
-            onShareGroup = { group ->
-              val shareIntent =
-                  Intent().apply {
-                    action = Intent.ACTION_SEND
-                    putExtra(Intent.EXTRA_SUBJECT, "Join my group on JoinMe")
-                    putExtra(
-                        Intent.EXTRA_TEXT,
-                        "Join \"${group.name}\" on JoinMe! Group ID: ${group.id}")
-                    type = "text/plain"
-                  }
-              context.startActivity(Intent.createChooser(shareIntent, "Share group via"))
+            onLeaveGroup = {
+              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            },
+            onShareGroup = {
+              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
             },
             onEditGroup = { group -> navigationActions.navigateTo(Screen.EditGroup(group.id)) },
-            onDeleteGroup = { group -> groupToDelete = group })
+            onDeleteGroup = {
+              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+            })
       }
 
       composable(route = Screen.CreateGroup.route) {
         CreateGroupScreen(
-            onNavigateBack = { navigationActions.goBack() },
-            onGroupCreated = { navigationActions.navigateTo(Screen.Groups) })
+            onBackClick = { navigationActions.goBack() },
+            onCreateSuccess = { navigationActions.navigateTo(Screen.Groups) })
       }
 
       composable(route = Screen.EditGroup.route) { navBackStackEntry ->

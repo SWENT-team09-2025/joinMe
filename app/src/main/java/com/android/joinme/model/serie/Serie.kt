@@ -83,12 +83,14 @@ fun Serie.isActive(events: List<Event>): Boolean {
  * A series is considered expired if all its events have finished (end time has passed).
  *
  * @param events List of all events to check
- * @return True if all events in the series have finished, false if any event is ongoing or
- *   upcoming, or if the series has no events
+ * @return True if all events in the series have finished or if the series has no events, false if
+ *   any event is ongoing or upcoming
  */
 fun Serie.isExpired(events: List<Event>): Boolean {
   val serieEvents = events.filter { it.eventId in eventIds }
-  if (serieEvents.isEmpty()) return false
+  if (serieEvents.isEmpty()) {
+    return !isUpcoming()
+  }
 
   val now = System.currentTimeMillis()
   return serieEvents.all { event ->
