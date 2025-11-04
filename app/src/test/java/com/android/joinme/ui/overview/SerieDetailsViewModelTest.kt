@@ -172,8 +172,7 @@ class SerieDetailsViewModelTest {
   fun viewModel_withNullUser_hasNullCurrentUserId() {
     every { mockAuth.currentUser } returns null
 
-    val viewModelWithNullUser =
-        SerieDetailsViewModel(seriesRepository, eventsRepository, mockAuth)
+    val viewModelWithNullUser = SerieDetailsViewModel(seriesRepository, eventsRepository, mockAuth)
 
     val state = viewModelWithNullUser.uiState.value
     assertNull(state.currentUserId)
@@ -262,7 +261,8 @@ class SerieDetailsViewModelTest {
 
   @Test
   fun uiState_participantsCount_returnsCorrectFormat() {
-    val serie = createTestSerie(participants = listOf("user1", "user2", "user3"), maxParticipants = 10)
+    val serie =
+        createTestSerie(participants = listOf("user1", "user2", "user3"), maxParticipants = 10)
     val state = SerieDetailsUIState(serie = serie, isLoading = false)
 
     assertEquals("3/10", state.participantsCount)
@@ -462,8 +462,7 @@ class SerieDetailsViewModelTest {
   fun quitSerie_userNotAuthenticated_returnsFalse() = runTest {
     every { mockAuth.currentUser } returns null
 
-    val viewModelWithNullUser =
-        SerieDetailsViewModel(seriesRepository, eventsRepository, mockAuth)
+    val viewModelWithNullUser = SerieDetailsViewModel(seriesRepository, eventsRepository, mockAuth)
 
     val result = viewModelWithNullUser.quitSerie()
     advanceUntilIdle()
@@ -492,7 +491,8 @@ class SerieDetailsViewModelTest {
   @Test
   fun quitSerie_userIsOwner_returnsFalse() = runTest {
     // Create serie where test-user-id is the owner
-    val serie = createTestSerie(ownerId = "test-user-id", participants = listOf("test-user-id", "user1"))
+    val serie =
+        createTestSerie(ownerId = "test-user-id", participants = listOf("test-user-id", "user1"))
     seriesRepository.addSerie(serie)
 
     viewModel.loadSerieDetails(serie.serieId)
@@ -514,7 +514,8 @@ class SerieDetailsViewModelTest {
 
   @Test
   fun quitSerie_userNotInParticipants_returnsFalse() = runTest {
-    val serie = createTestSerie(participants = listOf("user1", "owner123")) // test-user-id not in list
+    val serie =
+        createTestSerie(participants = listOf("user1", "owner123")) // test-user-id not in list
     seriesRepository.addSerie(serie)
 
     viewModel.loadSerieDetails(serie.serieId)
