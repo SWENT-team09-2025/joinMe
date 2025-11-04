@@ -46,6 +46,23 @@ data class SerieDetailsUIState(
     get() = serie?.ownerId == currentUserId && currentUserId != null
 
   /**
+   * Checks if the current user is a participant of the serie. Used to determine the value of the
+   * button Join/Quit Serie.
+   */
+  val isParticipant: Boolean
+    get() = serie?.participants?.contains(currentUserId) == true
+
+  /**
+   * Checks if the current user is not a participant of the serie and if they can actually join.
+   * Used to determine the value of the button Join/Quit Serie.
+   */
+  val canJoin: Boolean
+    get() =
+        !isOwner &&
+            !isParticipant &&
+            (serie?.participants?.size ?: 0) < (serie?.maxParticipants ?: 0)
+
+  /**
    * Formats the serie date and time for display. Returns a string in format "dd/MM/yyyy at HH:mm"
    */
   val formattedDateTime: String
@@ -125,7 +142,10 @@ class SerieDetailsViewModel(
         // Fetch the serie
         val serie = seriesRepository.getSerie(serieId)
 
-        // Fetch all events and filter by the serie's event IDs
+        // TODO: PERFORMANCE OPTIMIZATION NEEDED
+        // Currently fetching ALL events and filtering client-side
+        // Solution: Add eventsRepository.getEventsBySerie(serieId) method to fetch only
+        // events belonging to this serie from the backend
         val allEvents = eventsRepository.getAllEvents(EventFilter.EVENTS_FOR_OVERVIEW_SCREEN)
         val serieEvents = serie.getSerieEvents(allEvents)
 
@@ -140,13 +160,76 @@ class SerieDetailsViewModel(
   }
 
   /**
+   * Adds the current user to the serie's participants list.
+   *
+   * This function performs the following steps:
+   * 1. Checks if the user is authenticated
+   * 2. Validates that the user is not the owner
+   * 3. Validates that the user is not already a participant
+   * 4. Validates that the serie is not full
+   * 5. Adds the user to the participants list
+   * 6. Updates the serie in the repository
+   *
+   * @return True if the user successfully joined the serie, false otherwise
+   */
+  suspend fun joinSerie(): Boolean {
+    val currentState = _uiState.value
+    val userId = currentState.currentUserId
+    val serie = currentState.serie
+
+    if (userId == null) {
+      setErrorMsg("You must be signed in to join a serie")
+      return false
+    }
+
+    if (serie == null) {
+      setErrorMsg("Serie not loaded")
+      return false
+    }
+
+    // Validation checks
+    if (userId == serie.ownerId) {
+      setErrorMsg("You are the owner of this serie")
+      return false
+    }
+
+    if (serie.participants.contains(userId)) {
+      setErrorMsg("You are already a participant")
+      return false
+    }
+
+    if (serie.participants.size >= serie.maxParticipants) {
+      setErrorMsg("Serie is full")
+      return false
+    }
+
+    return try {
+      if (_uiState.value.canJoin) {
+        // Add user to participants
+        val updatedParticipants = serie.participants + userId
+        val updatedSerie = serie.copy(participants = updatedParticipants)
+
+        // Update in repository
+        seriesRepository.editSerie(serie.serieId, updatedSerie)
+
+        // Update local state
+        _uiState.value = _uiState.value.copy(serie = updatedSerie, errorMsg = null)
+        true
+      } else false
+    } catch (e: Exception) {
+      setErrorMsg("Failed to join serie: ${e.message}")
+      false
+    }
+  }
+
+  /**
    * Removes the current user from the serie's participants list.
    *
    * This function performs the following steps:
    * 1. Checks if the user is authenticated
    * 2. Checks if the serie is loaded
-   * 3. Checks if the user is the owner (owners cannot quit, they must delete the serie)
-   * 4. Checks if the user is in the participants list
+   * 3. Validates that the user is not the owner (owner cannot quit their own serie)
+   * 4. Checks if the user is a participant
    * 5. Removes the user from the participants list
    * 6. Updates the serie in the repository with the new participants list
    *
@@ -167,9 +250,9 @@ class SerieDetailsViewModel(
       return false
     }
 
-    // Check if user is the owner (owners cannot quit, they must delete the serie)
+    // Owner cannot quit their own serie
     if (userId == serie.ownerId) {
-      setErrorMsg("Owners cannot quit the serie")
+      setErrorMsg("You are the owner of this serie and cannot quit")
       return false
     }
 

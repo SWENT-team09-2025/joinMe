@@ -49,10 +49,10 @@ class SerieDetailsViewModelTest {
     }
 
     override suspend fun getSerie(serieId: String): Serie =
-        series[serieId] ?: throw NoSuchElementException("Serie not found")
+      series[serieId] ?: throw NoSuchElementException("Serie not found")
 
     override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> =
-        series.values.toList()
+      series.values.toList()
 
     override fun getNewSerieId(): String = "new-serie-id"
   }
@@ -73,10 +73,10 @@ class SerieDetailsViewModelTest {
     }
 
     override suspend fun getEvent(eventId: String): Event =
-        events[eventId] ?: throw NoSuchElementException("Event not found")
+      events[eventId] ?: throw NoSuchElementException("Event not found")
 
     override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> =
-        events.values.toList()
+      events.values.toList()
 
     override fun getNewEventId(): String = "new-event-id"
   }
@@ -88,48 +88,48 @@ class SerieDetailsViewModelTest {
   private val testDispatcher = StandardTestDispatcher()
 
   private fun createTestSerie(
-      serieId: String = "test-serie-1",
-      title: String = "Weekly Basketball",
-      ownerId: String = "owner123",
-      participants: List<String> = listOf("user1", "user2", "owner123"),
-      maxParticipants: Int = 10,
-      eventIds: List<String> = listOf("event1", "event2")
+    serieId: String = "test-serie-1",
+    title: String = "Weekly Basketball",
+    ownerId: String = "owner123",
+    participants: List<String> = listOf("user1", "user2", "owner123"),
+    maxParticipants: Int = 10,
+    eventIds: List<String> = listOf("event1", "event2")
   ): Serie {
     val calendar = Calendar.getInstance()
     calendar.set(2025, Calendar.JANUARY, 15, 18, 30, 0)
 
     return Serie(
-        serieId = serieId,
-        title = title,
-        description = "Weekly basketball games every Friday",
-        date = Timestamp(calendar.time),
-        participants = participants,
-        maxParticipants = maxParticipants,
-        visibility = Visibility.PUBLIC,
-        eventIds = eventIds,
-        ownerId = ownerId)
+      serieId = serieId,
+      title = title,
+      description = "Weekly basketball games every Friday",
+      date = Timestamp(calendar.time),
+      participants = participants,
+      maxParticipants = maxParticipants,
+      visibility = Visibility.PUBLIC,
+      eventIds = eventIds,
+      ownerId = ownerId)
   }
 
   private fun createTestEvent(
-      eventId: String = "event1",
-      ownerId: String = "owner123",
-      duration: Int = 90
+    eventId: String = "event1",
+    ownerId: String = "owner123",
+    duration: Int = 90
   ): Event {
     val calendar = Calendar.getInstance()
     calendar.set(2025, Calendar.JANUARY, 15, 18, 30, 0)
 
     return Event(
-        eventId = eventId,
-        type = EventType.SPORTS,
-        title = "Basketball Match",
-        description = "Friendly basketball match",
-        location = Location(46.5197, 6.6323, "EPFL"),
-        date = Timestamp(calendar.time),
-        duration = duration,
-        participants = listOf("user1", "user2"),
-        maxParticipants = 10,
-        visibility = EventVisibility.PUBLIC,
-        ownerId = ownerId)
+      eventId = eventId,
+      type = EventType.SPORTS,
+      title = "Basketball Match",
+      description = "Friendly basketball match",
+      location = Location(46.5197, 6.6323, "EPFL"),
+      date = Timestamp(calendar.time),
+      duration = duration,
+      participants = listOf("user1", "user2"),
+      maxParticipants = 10,
+      visibility = EventVisibility.PUBLIC,
+      ownerId = ownerId)
   }
 
   @Before
@@ -233,10 +233,10 @@ class SerieDetailsViewModelTest {
   fun uiState_formattedDuration_calculatesTotalDuration() {
     val serie = createTestSerie()
     val events =
-        listOf(
-            createTestEvent(eventId = "event1", duration = 90), // 1h 30min
-            createTestEvent(eventId = "event2", duration = 120) // 2h
-            )
+      listOf(
+        createTestEvent(eventId = "event1", duration = 90), // 1h 30min
+        createTestEvent(eventId = "event2", duration = 120) // 2h
+      )
     val state = SerieDetailsUIState(serie = serie, events = events, isLoading = false)
 
     val formatted = state.formattedDuration
@@ -262,7 +262,7 @@ class SerieDetailsViewModelTest {
   @Test
   fun uiState_participantsCount_returnsCorrectFormat() {
     val serie =
-        createTestSerie(participants = listOf("user1", "user2", "user3"), maxParticipants = 10)
+      createTestSerie(participants = listOf("user1", "user2", "user3"), maxParticipants = 10)
     val state = SerieDetailsUIState(serie = serie, isLoading = false)
 
     assertEquals("3/10", state.participantsCount)
@@ -336,11 +336,11 @@ class SerieDetailsViewModelTest {
   @Test
   fun loadSerieDetails_repositoryError_setsErrorMessage() = runTest {
     val errorRepository =
-        object : FakeSeriesRepository() {
-          override suspend fun getSerie(serieId: String): Serie {
-            throw Exception("Database error")
-          }
+      object : FakeSeriesRepository() {
+        override suspend fun getSerie(serieId: String): Serie {
+          throw Exception("Database error")
         }
+      }
 
     val errorViewModel = SerieDetailsViewModel(errorRepository, eventsRepository, mockAuth)
 
@@ -415,11 +415,11 @@ class SerieDetailsViewModelTest {
     seriesRepository.addSerie(serie)
 
     val errorEventsRepository =
-        object : FakeEventsRepository() {
-          override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
-            throw Exception("Events fetch error")
-          }
+      object : FakeEventsRepository() {
+        override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
+          throw Exception("Events fetch error")
         }
+      }
 
     val errorViewModel = SerieDetailsViewModel(seriesRepository, errorEventsRepository, mockAuth)
 
@@ -492,7 +492,7 @@ class SerieDetailsViewModelTest {
   fun quitSerie_userIsOwner_returnsFalse() = runTest {
     // Create serie where test-user-id is the owner
     val serie =
-        createTestSerie(ownerId = "test-user-id", participants = listOf("test-user-id", "user1"))
+      createTestSerie(ownerId = "test-user-id", participants = listOf("test-user-id", "user1"))
     seriesRepository.addSerie(serie)
 
     viewModel.loadSerieDetails(serie.serieId)
@@ -505,7 +505,7 @@ class SerieDetailsViewModelTest {
 
     val state = viewModel.uiState.first()
     assertNotNull(state.errorMsg)
-    assertTrue(state.errorMsg!!.contains("Owners cannot quit the serie"))
+    assertTrue(state.errorMsg!!.contains("You are the owner of this serie and cannot quit"))
 
     // Verify repository was NOT updated
     val unchangedSerie = seriesRepository.getSerie(serie.serieId)
@@ -515,7 +515,7 @@ class SerieDetailsViewModelTest {
   @Test
   fun quitSerie_userNotInParticipants_returnsFalse() = runTest {
     val serie =
-        createTestSerie(participants = listOf("user1", "owner123")) // test-user-id not in list
+      createTestSerie(participants = listOf("user1", "owner123")) // test-user-id not in list
     seriesRepository.addSerie(serie)
 
     viewModel.loadSerieDetails(serie.serieId)
@@ -536,13 +536,13 @@ class SerieDetailsViewModelTest {
     val serie = createTestSerie(participants = listOf("test-user-id", "user1", "owner123"))
 
     val errorRepository =
-        object : FakeSeriesRepository() {
-          override suspend fun getSerie(serieId: String): Serie = serie
+      object : FakeSeriesRepository() {
+        override suspend fun getSerie(serieId: String): Serie = serie
 
-          override suspend fun editSerie(serieId: String, newValue: Serie) {
-            throw Exception("Repository update failed")
-          }
+        override suspend fun editSerie(serieId: String, newValue: Serie) {
+          throw Exception("Repository update failed")
         }
+      }
 
     val errorViewModel = SerieDetailsViewModel(errorRepository, eventsRepository, mockAuth)
 
