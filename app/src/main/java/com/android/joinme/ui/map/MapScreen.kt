@@ -29,6 +29,7 @@ import com.android.joinme.ui.map.MapScreenTestTags.getTestTagForEventMarker
 import com.android.joinme.ui.map.userLocation.LocationServiceImpl
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
+import com.android.joinme.ui.navigation.Screen
 import com.android.joinme.ui.navigation.Tab
 import com.android.joinme.ui.theme.IconColor
 import com.android.joinme.ui.theme.MapControlBackgroundColor
@@ -152,7 +153,12 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
                         Marker(
                             state = MarkerState(position = position),
                             icon = BitmapDescriptorFactory.defaultMarker(hue),
-                            tag = getTestTagForEventMarker(event.eventId))
+                            tag = getTestTagForEventMarker(event.eventId),
+                            title = event.title,
+                            snippet = "Tap to see more & join me",
+                            onInfoWindowClick = {
+                              navigationActions?.navigateTo(Screen.ShowEventScreen(event.eventId))
+                            })
                       }
                     }
                   }
