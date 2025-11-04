@@ -20,6 +20,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
 import com.android.joinme.ui.groups.CreateGroupScreen
+import com.android.joinme.ui.groups.EditGroupScreen
 import com.android.joinme.ui.groups.GroupDetailScreen
 import com.android.joinme.ui.groups.GroupListScreen
 import com.android.joinme.ui.history.HistoryScreen
@@ -79,7 +80,7 @@ class MainActivity : ComponentActivity() {
     channel.description = "Notifications for upcoming events"
     channel.enableVibration(true)
 
-    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
     notificationManager.createNotificationChannel(channel)
   }
 }
@@ -264,9 +265,7 @@ fun JoinMe(
             onShareGroup = {
               Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
             },
-            onEditGroup = {
-              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
-            },
+            onEditGroup = { group -> navigationActions.navigateTo(Screen.EditGroup(group.id)) },
             onDeleteGroup = {
               Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
             })
@@ -274,8 +273,19 @@ fun JoinMe(
 
       composable(route = Screen.CreateGroup.route) {
         CreateGroupScreen(
-            onNavigateBack = { navigationActions.goBack() },
-            onGroupCreated = { navigationActions.navigateTo(Screen.Groups) })
+            onBackClick = { navigationActions.goBack() },
+            onCreateSuccess = { navigationActions.navigateTo(Screen.Groups) })
+      }
+
+      composable(route = Screen.EditGroup.route) { navBackStackEntry ->
+        val groupId = navBackStackEntry.arguments?.getString("groupId")
+
+        groupId?.let {
+          EditGroupScreen(
+              groupId = groupId,
+              onBackClick = { navigationActions.goBack() },
+              onSaveSuccess = { navigationActions.navigateTo(Screen.Groups) })
+        } ?: run { Toast.makeText(context, "Group ID is null", Toast.LENGTH_SHORT).show() }
       }
 
       composable(route = Screen.GroupDetail.route) { navBackStackEntry ->
