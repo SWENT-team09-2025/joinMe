@@ -135,7 +135,7 @@ fun SerieFormScreen(
                   supportingText = {
                     if (formState.invalidDescriptionMsg != null) {
                       Text(
-                          text = formState.invalidDescriptionMsg!!,
+                          text = formState.invalidDescriptionMsg,
                           color = MaterialTheme.colorScheme.error,
                           modifier = Modifier.testTag(testTags.errorMessage))
                     }
@@ -164,7 +164,7 @@ fun SerieFormScreen(
                         supportingText = {
                           if (formState.invalidMaxParticipantsMsg != null) {
                             Text(
-                                text = formState.invalidMaxParticipantsMsg!!,
+                                text = formState.invalidMaxParticipantsMsg,
                                 color = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.testTag(testTags.errorMessage))
                           }
@@ -249,7 +249,7 @@ fun SerieFormScreen(
                           supportingText = {
                             if (formState.invalidDateMsg != null) {
                               Text(
-                                  text = formState.invalidDateMsg!!,
+                                  text = formState.invalidDateMsg,
                                   color = MaterialTheme.colorScheme.error,
                                   modifier = Modifier.testTag(testTags.errorMessage))
                             }
@@ -284,7 +284,7 @@ fun SerieFormScreen(
                           supportingText = {
                             if (formState.invalidTimeMsg != null) {
                               Text(
-                                  text = formState.invalidTimeMsg!!,
+                                  text = formState.invalidTimeMsg,
                                   color = MaterialTheme.colorScheme.error,
                                   modifier = Modifier.testTag(testTags.errorMessage))
                             }
@@ -317,7 +317,7 @@ fun SerieFormScreen(
                         supportingText = {
                           if (formState.invalidVisibilityMsg != null) {
                             Text(
-                                text = formState.invalidVisibilityMsg!!,
+                                text = formState.invalidVisibilityMsg,
                                 color = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.testTag(testTags.errorMessage))
                           }
