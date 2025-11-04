@@ -84,22 +84,7 @@ fun EditSerieScreen(
           buttonSaveSerie = EditSerieScreenTestTags.SERIE_SAVE,
           errorMessage = EditSerieScreenTestTags.ERROR_MESSAGE)
 
-  val formState =
-      SerieFormState(
-          title = uiState.title,
-          description = uiState.description,
-          maxParticipants = uiState.maxParticipants,
-          date = uiState.date,
-          time = uiState.time,
-          visibility = uiState.visibility,
-          isValid = uiState.isValid,
-          isLoading = uiState.isLoading,
-          invalidTitleMsg = uiState.invalidTitleMsg,
-          invalidDescriptionMsg = uiState.invalidDescriptionMsg,
-          invalidMaxParticipantsMsg = uiState.invalidMaxParticipantsMsg,
-          invalidDateMsg = uiState.invalidDateMsg,
-          invalidTimeMsg = uiState.invalidTimeMsg,
-          invalidVisibilityMsg = uiState.invalidVisibilityMsg)
+  val formState = createSerieFormState(uiState)
 
   SerieFormScreen(
       title = "Edit Serie",

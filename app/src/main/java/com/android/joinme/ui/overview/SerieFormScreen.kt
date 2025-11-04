@@ -50,6 +50,60 @@ data class SerieFormState(
 )
 
 /**
+ * Creates a SerieFormState from CreateSerieUIState.
+ *
+ * This helper function reduces code duplication between CreateSerieScreen and EditSerieScreen by
+ * centralizing the mapping logic from UI state to form state.
+ *
+ * @param uiState The UI state from CreateSerieViewModel
+ * @return A SerieFormState instance populated with the UI state values
+ */
+fun createSerieFormState(uiState: CreateSerieUIState): SerieFormState {
+  return SerieFormState(
+      title = uiState.title,
+      description = uiState.description,
+      maxParticipants = uiState.maxParticipants,
+      date = uiState.date,
+      time = uiState.time,
+      visibility = uiState.visibility,
+      isValid = uiState.isValid,
+      isLoading = uiState.isLoading,
+      invalidTitleMsg = uiState.invalidTitleMsg,
+      invalidDescriptionMsg = uiState.invalidDescriptionMsg,
+      invalidMaxParticipantsMsg = uiState.invalidMaxParticipantsMsg,
+      invalidDateMsg = uiState.invalidDateMsg,
+      invalidTimeMsg = uiState.invalidTimeMsg,
+      invalidVisibilityMsg = uiState.invalidVisibilityMsg)
+}
+
+/**
+ * Creates a SerieFormState from EditSerieUIState.
+ *
+ * This helper function reduces code duplication between CreateSerieScreen and EditSerieScreen by
+ * centralizing the mapping logic from UI state to form state.
+ *
+ * @param uiState The UI state from EditSerieViewModel
+ * @return A SerieFormState instance populated with the UI state values
+ */
+fun createSerieFormState(uiState: EditSerieUIState): SerieFormState {
+  return SerieFormState(
+      title = uiState.title,
+      description = uiState.description,
+      maxParticipants = uiState.maxParticipants,
+      date = uiState.date,
+      time = uiState.time,
+      visibility = uiState.visibility,
+      isValid = uiState.isValid,
+      isLoading = uiState.isLoading,
+      invalidTitleMsg = uiState.invalidTitleMsg,
+      invalidDescriptionMsg = uiState.invalidDescriptionMsg,
+      invalidMaxParticipantsMsg = uiState.invalidMaxParticipantsMsg,
+      invalidDateMsg = uiState.invalidDateMsg,
+      invalidTimeMsg = uiState.invalidTimeMsg,
+      invalidVisibilityMsg = uiState.invalidVisibilityMsg)
+}
+
+/**
  * Generic serie form screen component used by both Create and Edit serie screens.
  *
  * Provides a form to manage a serie with title, description, max participants, date, time, and
