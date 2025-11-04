@@ -93,7 +93,7 @@ abstract class BaseGroupFormViewModel : ViewModel() {
                 isValid = computeValidity(trimmedName, error, state.descriptionError))
         is EditGroupUIState ->
             state.copy(
-                name = trimmedName,
+                name = name,
                 nameError = error,
                 isValid = computeValidity(trimmedName, error, state.descriptionError))
         else -> state
