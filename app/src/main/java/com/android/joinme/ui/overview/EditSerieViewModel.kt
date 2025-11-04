@@ -1,6 +1,5 @@
 package com.android.joinme.ui.overview
 
-import android.util.Log
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.model.utils.Visibility
@@ -123,7 +122,6 @@ class EditSerieViewModel(
               visibility = serie.visibility.name,
               isLoading = false)
     } catch (e: Exception) {
-      Log.e("EditSerieViewModel", "Error loading serie", e)
       setErrorMsg("Failed to load serie: ${e.message}")
       setLoadingState(false)
     }
@@ -134,29 +132,21 @@ class EditSerieViewModel(
    *
    * This function performs the following steps:
    * 1. Validates that all form fields are valid
-   * 2. Checks that the user is authenticated (must be signed in)
-   * 3. Parses the date and time into a single Timestamp
-   * 4. Updates the Serie object with the new values
-   * 5. Saves the updated serie to the repository
+   * 2. Parses the date and time into a single Timestamp
+   * 3. Updates the Serie object with the new values
+   * 4. Saves the updated serie to the repository
    *
    * The loading state is set to true at the start and false upon completion. If any error occurs
-   * during the process (validation failure, authentication check failure, date parsing error, or
-   * repository error), an appropriate error message is set and the function returns false.
+   * during the process (validation failure, date parsing error, or repository error), an
+   * appropriate error message is set and the function returns false.
    *
-   * @return True if the serie was updated successfully, false if validation failed, user is not
-   *   authenticated, date parsing failed, or repository save failed
+   * @return True if the serie was updated successfully, false if validation failed, date parsing
+   *   failed, or repository save failed
    */
   suspend fun updateSerie(): Boolean {
     val state = _uiState.value
     if (!state.isValid) {
       setErrorMsg("At least one field is not valid")
-      return false
-    }
-
-    // Check if user is authenticated
-    val currentUserId = getCurrentUserId()
-    if (currentUserId == null) {
-      setErrorMsg("You must be signed in to update a serie")
       return false
     }
 
@@ -186,7 +176,6 @@ class EditSerieViewModel(
       setLoadingState(false)
       true
     } catch (e: Exception) {
-      Log.e("EditSerieViewModel", "Error updating serie", e)
       setErrorMsg("Failed to update serie: ${e.message}")
       setLoadingState(false)
       false
