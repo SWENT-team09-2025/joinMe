@@ -164,9 +164,7 @@ fun HistoryScreen(
                         SerieCard(
                             modifier = Modifier.padding(vertical = 6.dp),
                             serie = item.serie,
-                            onClick = {
-                              Toast.makeText(context, "Not Implemented", Toast.LENGTH_SHORT).show()
-                            },
+                            onClick = { onSelectSerie(item.serie) },
                             testTag = HistoryScreenTestTags.getTestTagForSerie(item.serie))
                       }
                     }

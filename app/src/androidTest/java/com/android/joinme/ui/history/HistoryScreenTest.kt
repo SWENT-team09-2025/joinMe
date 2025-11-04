@@ -761,12 +761,41 @@ class HistoryScreenTest {
   }
 
   @Test
-  fun historyScreen_serieCardClick_callbackNotImplemented() {
+  fun historyScreen_serieCardClick_triggersCallback() {
     val eventRepo = FakeHistoryEventsRepository()
     val serieRepo = FakeHistorySeriesRepository()
     val expiredSerie = createExpiredSerie("1", "Clickable Serie")
 
     runBlocking { serieRepo.addSerie(expiredSerie) }
+
+    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
+    var selectedSerie: Serie? = null
+
+    composeTestRule.setContent {
+      HistoryScreen(historyViewModel = viewModel, onSelectSerie = { selectedSerie = it })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("Clickable Serie").performClick()
+
+    assert(selectedSerie != null)
+    assert(selectedSerie?.serieId == "1")
+  }
+
+  @Test
+  fun historyScreen_multipleSerieCards_haveUniqueTestTags() {
+    val eventRepo = FakeHistoryEventsRepository()
+    val serieRepo = FakeHistorySeriesRepository()
+    val serie1 = createExpiredSerie("1", "Serie 1")
+    val serie2 = createExpiredSerie("2", "Serie 2")
+
+    runBlocking {
+      serieRepo.addSerie(serie1)
+      serieRepo.addSerie(serie2)
+    }
 
     val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 
@@ -776,36 +805,13 @@ class HistoryScreenTest {
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
-    // Click on serie card - currently shows "Not Implemented" toast
-    composeTestRule.onNodeWithText("Clickable Serie").performClick()
-
-    // The click is registered but callback is not yet implemented
-    composeTestRule.onNodeWithText("Clickable Serie").assertExists()
-  }
-
-  @Test
-  fun historyScreen_onSelectSerieCallback_isAvailable() {
-    val eventRepo = FakeHistoryEventsRepository()
-    val serieRepo = FakeHistorySeriesRepository()
-    val expiredSerie = createExpiredSerie("1", "Test Serie")
-
-    runBlocking { serieRepo.addSerie(expiredSerie) }
-
-    val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
-    var selectedSerie: Serie? = null
-
-    // Verify that onSelectSerie parameter can be passed
-    composeTestRule.setContent {
-      HistoryScreen(historyViewModel = viewModel, onSelectSerie = { selectedSerie = it })
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Currently the onClick handler shows toast instead of calling onSelectSerie
-    // This test verifies the callback parameter exists
-    composeTestRule.onNodeWithText("Test Serie").assertExists()
+    // Both serie cards should have unique test tags
+    composeTestRule
+        .onNodeWithTag(HistoryScreenTestTags.getTestTagForSerie(serie1))
+        .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(HistoryScreenTestTags.getTestTagForSerie(serie2))
+        .assertIsDisplayed()
   }
 
   private fun createExpiredSerie(serieId: String, title: String, daysAgo: Int = 3): Serie {

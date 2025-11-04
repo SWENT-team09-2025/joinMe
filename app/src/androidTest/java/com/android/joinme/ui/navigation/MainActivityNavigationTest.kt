@@ -506,4 +506,18 @@ class MainActivityNavigationTest {
       // Groups button might not be accessible in test, test passes
     }
   }
+
+  @Test
+  fun historyScreenHasSerieCallback() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Navigate to History
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify History screen is displayed (onSelectSerie callback is configured in MainActivity)
+    composeTestRule.onNodeWithText("History").assertExists()
+  }
 }
