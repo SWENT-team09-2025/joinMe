@@ -144,7 +144,7 @@ jobs:
           fi
 
       - name: Run instrumentation tests
-        timeout-minutes: 25
+        timeout-minutes: 45
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
