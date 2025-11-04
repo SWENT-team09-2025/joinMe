@@ -1,6 +1,5 @@
 package com.android.joinme.ui.history
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.EventFilter
@@ -100,7 +99,6 @@ class HistoryViewModel(
 
         _uiState.value = HistoryUIState(expiredItems = expired, isLoading = false)
       } catch (e: Exception) {
-        Log.e("HistoryViewModel", "Error fetching expired items", e)
         setErrorMsg("Failed to load history: ${e.message}")
         _uiState.value = _uiState.value.copy(isLoading = false)
       }
