@@ -211,6 +211,83 @@ class SerieDetailsViewModelTest {
   }
 
   @Test
+  fun uiState_isParticipant_returnsTrueWhenUserIsParticipant() {
+    val serie = createTestSerie(participants = listOf("user1", "user2", "user3"))
+    val state = SerieDetailsUIState(serie = serie, currentUserId = "user2", isLoading = false)
+
+    assertTrue(state.isParticipant)
+  }
+
+  @Test
+  fun uiState_isParticipant_returnsFalseWhenUserIsNotParticipant() {
+    val serie = createTestSerie(participants = listOf("user1", "user2"))
+    val state = SerieDetailsUIState(serie = serie, currentUserId = "user3", isLoading = false)
+
+    assertFalse(state.isParticipant)
+  }
+
+  @Test
+  fun uiState_isParticipant_returnsFalseWhenSerieIsNull() {
+    val state = SerieDetailsUIState(serie = null, currentUserId = "user1", isLoading = false)
+
+    assertFalse(state.isParticipant)
+  }
+
+  @Test
+  fun uiState_isParticipant_returnsFalseWhenCurrentUserIdIsNull() {
+    val serie = createTestSerie(participants = listOf("user1", "user2"))
+    val state = SerieDetailsUIState(serie = serie, currentUserId = null, isLoading = false)
+
+    assertFalse(state.isParticipant)
+  }
+
+  @Test
+  fun uiState_canJoin_returnsTrueWhenUserCanJoin() {
+    val serie =
+        createTestSerie(
+            ownerId = "owner123", participants = listOf("user1", "user2"), maxParticipants = 10)
+    val state = SerieDetailsUIState(serie = serie, currentUserId = "user3", isLoading = false)
+
+    assertTrue(state.canJoin)
+  }
+
+  @Test
+  fun uiState_canJoin_returnsFalseWhenUserIsOwner() {
+    val serie =
+        createTestSerie(ownerId = "owner123", participants = listOf("user1"), maxParticipants = 10)
+    val state = SerieDetailsUIState(serie = serie, currentUserId = "owner123", isLoading = false)
+
+    assertFalse(state.canJoin)
+  }
+
+  @Test
+  fun uiState_canJoin_returnsFalseWhenUserIsAlreadyParticipant() {
+    val serie =
+        createTestSerie(
+            ownerId = "owner123", participants = listOf("user1", "user2"), maxParticipants = 10)
+    val state = SerieDetailsUIState(serie = serie, currentUserId = "user1", isLoading = false)
+
+    assertFalse(state.canJoin)
+  }
+
+  @Test
+  fun uiState_canJoin_returnsFalseWhenSerieIsFull() {
+    val serie =
+        createTestSerie(
+            ownerId = "owner123", participants = listOf("user1", "user2"), maxParticipants = 2)
+    val state = SerieDetailsUIState(serie = serie, currentUserId = "user3", isLoading = false)
+
+    assertFalse(state.canJoin)
+  }
+
+  @Test
+  fun uiState_canJoin_returnsFalseWhenSerieIsNull() {
+    val state = SerieDetailsUIState(serie = null, currentUserId = "user1", isLoading = false)
+
+    assertFalse(state.canJoin)
+  }
+
+  @Test
   fun uiState_formattedDateTime_returnsFormattedDate() {
     val calendar = Calendar.getInstance()
     calendar.set(2025, Calendar.JANUARY, 15, 18, 30, 0)
@@ -431,6 +508,191 @@ class SerieDetailsViewModelTest {
     assertTrue(state.errorMsg!!.contains("Failed to load serie"))
   }
 
+  /** --- JOIN SERIE TESTS --- */
+  @Test
+  fun joinSerie_validUser_joinsSuccessfully() = runTest {
+    val serie = createTestSerie(participants = listOf("user1", "owner123"), maxParticipants = 10)
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val result = viewModel.joinSerie()
+    advanceUntilIdle()
+
+    assertTrue(result)
+
+    val state = viewModel.uiState.first()
+    assertNotNull(state.serie)
+    assertTrue(state.serie!!.participants.contains("test-user-id"))
+    assertEquals(3, state.serie!!.participants.size)
+    assertNull(state.errorMsg)
+
+    // Verify repository was updated
+    val updatedSerie = seriesRepository.getSerie(serie.serieId)
+    assertTrue(updatedSerie.participants.contains("test-user-id"))
+  }
+
+  @Test
+  fun joinSerie_userNotAuthenticated_returnsFalse() = runTest {
+    every { mockAuth.currentUser } returns null
+
+    val viewModelWithNullUser = SerieDetailsViewModel(seriesRepository, eventsRepository, mockAuth)
+
+    val result = viewModelWithNullUser.joinSerie()
+    advanceUntilIdle()
+
+    assertFalse(result)
+
+    val state = viewModelWithNullUser.uiState.first()
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("must be signed in"))
+  }
+
+  @Test
+  fun joinSerie_serieNotLoaded_returnsFalse() = runTest {
+    // Don't load any serie
+
+    val result = viewModel.joinSerie()
+    advanceUntilIdle()
+
+    assertFalse(result)
+
+    val state = viewModel.uiState.first()
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Serie not loaded"))
+  }
+
+  @Test
+  fun joinSerie_userIsOwner_returnsFalse() = runTest {
+    val serie =
+        createTestSerie(
+            ownerId = "test-user-id", participants = listOf("user1"), maxParticipants = 10)
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val result = viewModel.joinSerie()
+    advanceUntilIdle()
+
+    assertFalse(result)
+
+    val state = viewModel.uiState.first()
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("owner of this serie"))
+
+    // Verify repository was NOT updated
+    val unchangedSerie = seriesRepository.getSerie(serie.serieId)
+    assertFalse(unchangedSerie.participants.contains("test-user-id"))
+  }
+
+  @Test
+  fun joinSerie_userAlreadyParticipant_returnsFalse() = runTest {
+    val serie =
+        createTestSerie(participants = listOf("test-user-id", "user1"), maxParticipants = 10)
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val result = viewModel.joinSerie()
+    advanceUntilIdle()
+
+    assertFalse(result)
+
+    val state = viewModel.uiState.first()
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("already a participant"))
+  }
+
+  @Test
+  fun joinSerie_serieIsFull_returnsFalse() = runTest {
+    val serie = createTestSerie(participants = listOf("user1", "user2"), maxParticipants = 2)
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val result = viewModel.joinSerie()
+    advanceUntilIdle()
+
+    assertFalse(result)
+
+    val state = viewModel.uiState.first()
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Serie is full"))
+
+    // Verify repository was NOT updated
+    val unchangedSerie = seriesRepository.getSerie(serie.serieId)
+    assertFalse(unchangedSerie.participants.contains("test-user-id"))
+  }
+
+  @Test
+  fun joinSerie_repositoryError_returnsFalse() = runTest {
+    val serie = createTestSerie(participants = listOf("user1"), maxParticipants = 10)
+
+    val errorRepository =
+        object : FakeSeriesRepository() {
+          override suspend fun getSerie(serieId: String): Serie = serie
+
+          override suspend fun editSerie(serieId: String, newValue: Serie) {
+            throw Exception("Repository update failed")
+          }
+        }
+
+    val errorViewModel = SerieDetailsViewModel(errorRepository, eventsRepository, mockAuth)
+
+    errorViewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val result = errorViewModel.joinSerie()
+    advanceUntilIdle()
+
+    assertFalse(result)
+
+    val state = errorViewModel.uiState.first()
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Failed to join serie"))
+    assertTrue(state.errorMsg!!.contains("Repository update failed"))
+  }
+
+  @Test
+  fun joinSerie_whenCanJoinIsFalse_returnsFalse() = runTest {
+    // Create a situation where canJoin is false (serie is full)
+    val serie = createTestSerie(participants = listOf("user1", "user2"), maxParticipants = 2)
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.canJoin)
+
+    val result = viewModel.joinSerie()
+    advanceUntilIdle()
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun joinSerie_participantCountUpdatesCorrectly() = runTest {
+    val serie = createTestSerie(participants = listOf("user1"), maxParticipants = 10)
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    var state = viewModel.uiState.first()
+    assertEquals("1/10", state.participantsCount) // Only user1 is in participants
+
+    viewModel.joinSerie()
+    advanceUntilIdle()
+
+    state = viewModel.uiState.first()
+    assertEquals("2/10", state.participantsCount) // user1 + test-user-id
+  }
+
   /** --- QUIT SERIE TESTS --- */
   @Test
   fun quitSerie_regularParticipant_quitsSuccessfully() = runTest {
@@ -645,39 +907,39 @@ class SerieDetailsViewModelTest {
   }
 
   @Test
-  fun quitSerie_afterLoadingDifferentSerie_operatesOnCurrentSerie() = runTest {
-    val serie1 = createTestSerie(serieId = "serie1", participants = listOf("test-user-id", "user1"))
-    val serie2 = createTestSerie(serieId = "serie2", participants = listOf("test-user-id", "user2"))
+  fun joinAndQuitSerie_workflow_worksCorrectly() = runTest {
+    val serie = createTestSerie(participants = listOf("user1", "owner123"), maxParticipants = 10)
+    seriesRepository.addSerie(serie)
 
-    seriesRepository.addSerie(serie1)
-    seriesRepository.addSerie(serie2)
-
-    // Load serie1
-    viewModel.loadSerieDetails(serie1.serieId)
+    viewModel.loadSerieDetails(serie.serieId)
     advanceUntilIdle()
 
-    // Load serie2
-    viewModel.loadSerieDetails(serie2.serieId)
+    var state = viewModel.uiState.first()
+    assertFalse(state.isParticipant)
+    assertTrue(state.canJoin)
+
+    // Join the serie
+    val joinResult = viewModel.joinSerie()
     advanceUntilIdle()
 
-    // Quit should operate on serie2
-    val result = viewModel.quitSerie()
+    assertTrue(joinResult)
+    state = viewModel.uiState.first()
+    assertTrue(state.isParticipant)
+    assertFalse(state.canJoin)
+
+    // Quit the serie
+    val quitResult = viewModel.quitSerie()
     advanceUntilIdle()
 
-    assertTrue(result)
-
-    // Verify serie2 was updated, not serie1
-    val serie1Updated = seriesRepository.getSerie(serie1.serieId)
-    val serie2Updated = seriesRepository.getSerie(serie2.serieId)
-
-    assertTrue(serie1Updated.participants.contains("test-user-id"))
-    assertFalse(serie2Updated.participants.contains("test-user-id"))
+    assertTrue(quitResult)
+    state = viewModel.uiState.first()
+    assertFalse(state.isParticipant)
+    assertTrue(state.canJoin)
   }
 
   @Test
   fun viewModel_withLargeParticipantList_handlesCorrectly() = runTest {
     val largeParticipantList = (1..100).map { "user$it" }.toMutableList()
-    largeParticipantList.add("test-user-id")
 
     val serie = createTestSerie(participants = largeParticipantList, maxParticipants = 150)
     seriesRepository.addSerie(serie)
@@ -686,16 +948,17 @@ class SerieDetailsViewModelTest {
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
-    assertEquals("101/150", state.participantsCount)
+    assertEquals("100/150", state.participantsCount)
+    assertTrue(state.canJoin)
 
-    // Quit serie
-    val result = viewModel.quitSerie()
+    // Join serie
+    val joinResult = viewModel.joinSerie()
     advanceUntilIdle()
 
-    assertTrue(result)
+    assertTrue(joinResult)
 
     val updatedState = viewModel.uiState.first()
-    assertEquals("100/150", updatedState.participantsCount)
+    assertEquals("101/150", updatedState.participantsCount)
   }
 
   @Test
@@ -708,5 +971,25 @@ class SerieDetailsViewModelTest {
 
     val state = viewModel.uiState.first()
     assertEquals("Test ✓ Serie \"with\" special <chars>", state.serie?.title)
+  }
+
+  @Test
+  fun joinSerie_exactlyAtMaxCapacity_preventsFurtherJoins() = runTest {
+    // Create serie with 2 participants, max 3
+    val serie = createTestSerie(participants = listOf("user1", "user2"), maxParticipants = 3)
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    // test-user-id joins (should succeed - now 3/3)
+    val joinResult = viewModel.joinSerie()
+    advanceUntilIdle()
+
+    assertTrue(joinResult)
+
+    val state = viewModel.uiState.first()
+    assertEquals("3/3", state.participantsCount)
+    assertFalse(state.canJoin) // Serie is now full
   }
 }
