@@ -10,6 +10,7 @@ enum class MessageType {
 
 data class Message(
     val id: String,
+    val chatId: String,
     val senderId: String,
     val senderName: String,
     val content: String,
