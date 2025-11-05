@@ -13,11 +13,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.android.joinme.ui.theme.JoinMeColor
+
+/**
+ * Test tags for ProfilePhotoImage components to enable UI testing. These tags allow tests to
+ * distinguish between different photo states.
+ */
+object ProfilePhotoImageTestTags {
+  const val REMOTE_IMAGE = "profilePhotoRemoteImage"
+  const val DEFAULT_AVATAR = "profilePhotoDefaultAvatar"
+  const val LOADING_INDICATOR = "profilePhotoLoadingIndicator"
+}
 
 /**
  * Displays a profile photo using Coil with proper loading and error states.
@@ -46,7 +57,7 @@ fun ProfilePhotoImage(
     showLoadingIndicator: Boolean = true
 ) {
   Box(modifier = modifier.size(size), contentAlignment = Alignment.Center) {
-    if (photoUrl != null) {
+    if (photoUrl != null && photoUrl.isNotEmpty()) {
       // Load remote image with Coil
       SubcomposeAsyncImage(
           model =
@@ -55,14 +66,19 @@ fun ProfilePhotoImage(
                   .crossfade(true) // Smooth transition when image loads
                   .build(),
           contentDescription = contentDescription,
-          modifier = Modifier.size(size).clip(shape),
+          modifier =
+              Modifier.size(size).clip(shape).testTag(ProfilePhotoImageTestTags.REMOTE_IMAGE),
           contentScale = ContentScale.Crop, // Fill the space, cropping if needed
           loading = {
             // Show loading state
             if (showLoadingIndicator) {
-              Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(modifier = Modifier.size(size / 3), color = JoinMeColor)
-              }
+              Box(
+                  modifier =
+                      Modifier.size(size).testTag(ProfilePhotoImageTestTags.LOADING_INDICATOR),
+                  contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(size / 3), color = JoinMeColor)
+                  }
             }
           },
           error = {
@@ -70,7 +86,7 @@ fun ProfilePhotoImage(
             DefaultProfileAvatar(contentDescription = contentDescription, size = size)
           })
     } else {
-      // No photo URL, show default avatar
+      // No photo URL or empty string, show default avatar
       DefaultProfileAvatar(contentDescription = contentDescription, size = size)
     }
   }
@@ -82,6 +98,6 @@ private fun DefaultProfileAvatar(contentDescription: String, size: Dp) {
   Icon(
       imageVector = Icons.Sharp.AccountCircle,
       contentDescription = contentDescription,
-      modifier = Modifier.size(size),
+      modifier = Modifier.size(size).testTag(ProfilePhotoImageTestTags.DEFAULT_AVATAR),
       tint = JoinMeColor)
 }
