@@ -41,7 +41,13 @@ class FakeGroupDetailRepository : GroupRepository {
     groups[groupId] = newValue
   }
 
-  override suspend fun deleteGroup(groupId: String) {
+  override suspend fun deleteGroup(groupId: String, userId: String) {
+    val group = getGroup(groupId)
+
+    if (group.ownerId != userId) {
+      throw Exception("Only the group owner can delete this group")
+    }
+
     groups.remove(groupId)
   }
 
