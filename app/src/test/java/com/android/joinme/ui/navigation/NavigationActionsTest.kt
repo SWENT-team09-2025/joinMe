@@ -196,4 +196,23 @@ class NavigationActionsTest {
           })
     }
   }
+
+  @Test
+  fun `navigateTo EditGroup with groupId navigates to correct route`() {
+    val groupId = "test-group-789"
+    every { navController.currentDestination?.route } returns Screen.Groups.route
+
+    actions.navigateTo(Screen.EditGroup(groupId))
+
+    verify {
+      navController.navigate(
+          eq("edit_group/$groupId"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            // EditGroup is not a top-level destination, so shouldn't have launchSingleTop
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
 }
