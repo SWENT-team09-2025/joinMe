@@ -194,7 +194,8 @@ object GroupListScreenTestTags {
  * @param onBackClick Callback invoked when the user taps the back button in the top bar.
  * @param onProfileClick Callback invoked when the user taps the profile icon in the top bar.
  * @param onEditClick Callback invoked when the user taps the edit icon in the top bar.
- * @param testCurrentUserId Optional user ID for testing. When provided, this overrides Firebase Auth's current user ID.
+ * @param testCurrentUserId Optional user ID for testing. When provided, this overrides Firebase
+ *   Auth's current user ID.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -215,7 +216,9 @@ fun GroupListScreen(
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val groups = uiState.groups
-  val currentUserId = testCurrentUserId ?: Firebase.auth.currentUser?.uid // Use test ID if provided, otherwise Firebase Auth
+  val currentUserId =
+      testCurrentUserId
+          ?: Firebase.auth.currentUser?.uid // Use test ID if provided, otherwise Firebase Auth
   val context = LocalContext.current
 
   // State for showing/hiding floating bubbles in the join/create group FAB

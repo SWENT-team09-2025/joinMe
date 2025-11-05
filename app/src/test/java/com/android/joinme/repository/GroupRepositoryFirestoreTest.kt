@@ -334,7 +334,9 @@ class GroupRepositoryFirestoreTest {
 
     // When/Then
     val exception =
-        assertThrows(Exception::class.java) { runBlocking { repository.deleteGroup(testGroupId, "different-user-id") } }
+        assertThrows(Exception::class.java) {
+          runBlocking { repository.deleteGroup(testGroupId, "different-user-id") }
+        }
     assertTrue(exception.message!!.contains("Only the group owner can delete this group"))
 
     verify(exactly = 0) { mockDocument.delete() }
@@ -365,7 +367,9 @@ class GroupRepositoryFirestoreTest {
 
     // When/Then
     val exception =
-        assertThrows(Exception::class.java) { runBlocking { repository.deleteGroup(testGroupId, "any-user-id") } }
+        assertThrows(Exception::class.java) {
+          runBlocking { repository.deleteGroup(testGroupId, "any-user-id") }
+        }
     assertTrue(exception.message!!.contains("Only the group owner can delete this group"))
 
     verify(exactly = 0) { mockDocument.delete() }

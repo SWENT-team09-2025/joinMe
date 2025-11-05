@@ -84,8 +84,7 @@ class GroupListViewModel(
     viewModelScope.launch {
       try {
         val currentUserId =
-            FirebaseAuth.getInstance().currentUser?.uid
-                ?: throw Exception("User not authenticated")
+            FirebaseAuth.getInstance().currentUser?.uid ?: throw Exception("User not authenticated")
 
         groupRepository.deleteGroup(groupId, currentUserId)
         refreshUIState()
@@ -109,8 +108,7 @@ class GroupListViewModel(
     viewModelScope.launch {
       try {
         val currentUserId =
-            FirebaseAuth.getInstance().currentUser?.uid
-                ?: throw Exception("User not authenticated")
+            FirebaseAuth.getInstance().currentUser?.uid ?: throw Exception("User not authenticated")
 
         groupRepository.leaveGroup(groupId, currentUserId)
         refreshUIState()
