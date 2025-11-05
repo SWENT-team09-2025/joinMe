@@ -19,6 +19,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
+import com.android.joinme.model.notification.FCMTokenManager
 import com.android.joinme.ui.groups.CreateGroupScreen
 import com.android.joinme.ui.groups.EditGroupScreen
 import com.android.joinme.ui.groups.GroupDetailScreen
@@ -39,7 +40,6 @@ import com.android.joinme.ui.profile.ViewProfileScreen
 import com.android.joinme.ui.signIn.SignInScreen
 import com.android.joinme.ui.theme.SampleAppTheme
 import com.google.firebase.auth.FirebaseAuth
-import com.android.joinme.model.notification.FCMTokenManager
 import okhttp3.OkHttpClient
 
 /** Provides a singleton OkHttpClient instance for network operations. */

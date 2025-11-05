@@ -78,12 +78,11 @@ class JoinMeFirebaseMessagingService : FirebaseMessagingService() {
   private fun createNotificationChannel() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       val channel =
-          NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH)
-              .apply {
-                description = CHANNEL_DESCRIPTION
-                enableVibration(true)
-                enableLights(true)
-              }
+          NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH).apply {
+            description = CHANNEL_DESCRIPTION
+            enableVibration(true)
+            enableLights(true)
+          }
 
       val notificationManager =
           getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

@@ -4,15 +4,9 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.android.joinme.MainActivity
 import com.android.joinme.model.notification.FCMTokenManager
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import io.mockk.every
-import io.mockk.mockk
 import io.mockk.mockkObject
-import io.mockk.mockkStatic
 import io.mockk.unmockkObject
-import io.mockk.unmockkStatic
-import io.mockk.verify
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule

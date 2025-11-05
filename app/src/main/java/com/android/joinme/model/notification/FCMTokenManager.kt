@@ -2,7 +2,6 @@ package com.android.joinme.model.notification
 
 import android.content.Context
 import android.util.Log
-import com.android.joinme.model.profile.ProfileRepositoryFirestore
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
@@ -43,10 +42,7 @@ object FCMTokenManager {
 
         // Update the user's profile with the FCM token
         val db = FirebaseFirestore.getInstance()
-        db.collection("profiles")
-            .document(currentUser.uid)
-            .update("fcmToken", token)
-            .await()
+        db.collection("profiles").document(currentUser.uid).update("fcmToken", token).await()
 
         Log.d(TAG, "FCM token saved to Firestore for user ${currentUser.uid}")
       } catch (e: Exception) {
@@ -72,10 +68,7 @@ object FCMTokenManager {
     CoroutineScope(Dispatchers.IO).launch {
       try {
         val db = FirebaseFirestore.getInstance()
-        db.collection("profiles")
-            .document(currentUser.uid)
-            .update("fcmToken", newToken)
-            .await()
+        db.collection("profiles").document(currentUser.uid).update("fcmToken", newToken).await()
 
         Log.d(TAG, "FCM token updated in Firestore for user ${currentUser.uid}")
       } catch (e: Exception) {

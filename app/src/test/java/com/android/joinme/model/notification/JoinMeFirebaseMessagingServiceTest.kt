@@ -6,7 +6,6 @@ import com.google.firebase.messaging.RemoteMessage
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
-import io.mockk.slot
 import io.mockk.unmockkObject
 import io.mockk.verify
 import org.junit.After
