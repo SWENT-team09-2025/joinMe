@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,8 +24,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.profile.Profile
-import com.android.joinme.ui.navigation.BottomNavigationMenu
-import com.android.joinme.ui.navigation.Tab
 import com.android.joinme.ui.theme.BorderColor
 import com.android.joinme.ui.theme.ButtonSaveColor
 import com.android.joinme.ui.theme.DeleteButtonColor
@@ -63,11 +60,9 @@ object EditProfileTestTags {
 fun EditProfileScreen(
     uid: String,
     profileViewModel: ProfileViewModel = viewModel(),
-    onTabSelected: (Tab) -> Unit = {},
     onBackClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
     onGroupClick: () -> Unit = {},
-    onChangePasswordClick: () -> Unit = {},
     onSaveSuccess: () -> Unit = {}
 ) {
   val context = LocalContext.current
@@ -139,9 +134,6 @@ fun EditProfileScreen(
             onProfileClick = onProfileClick,
             onGroupClick = onGroupClick,
             onEditClick = {})
-      },
-      bottomBar = {
-        BottomNavigationMenu(selectedTab = Tab.Profile, onTabSelected = onTabSelected)
       }) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
           when {
@@ -184,7 +176,6 @@ fun EditProfileScreen(
                   bio = bio,
                   onBioChange = { bio = it },
                   isFormValid = isFormValid,
-                  onChangePasswordClick = onChangePasswordClick,
                   onSaveClick = {
                     if (isFormValid) {
                       val updatedProfile =
@@ -231,7 +222,6 @@ private fun EditProfileContent(
     bio: String,
     onBioChange: (String) -> Unit,
     isFormValid: Boolean,
-    onChangePasswordClick: () -> Unit,
     onSaveClick: () -> Unit
 ) {
   Column(

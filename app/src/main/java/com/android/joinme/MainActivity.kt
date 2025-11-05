@@ -79,7 +79,7 @@ class MainActivity : ComponentActivity() {
     channel.description = "Notifications for upcoming events"
     channel.enableVibration(true)
 
-    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
     notificationManager.createNotificationChannel(channel)
   }
 }
@@ -239,9 +239,6 @@ fun JoinMe(
             onBackClick = { navigationActions.goBack() },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
             onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
-            onChangePasswordClick = {
-              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
-            }, // TODO implement change password flow in a future update
             onSaveSuccess = { navigationActions.navigateTo(Screen.Profile) })
       }
 
