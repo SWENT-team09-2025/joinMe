@@ -3,6 +3,11 @@ package com.android.joinme.model.profile
 import android.content.Context
 import android.net.Uri
 import com.google.firebase.Timestamp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
+import androidx.core.net.toUri
 
 /**
  * In-memory implementation of [ProfileRepository] for testing purposes.
@@ -44,22 +49,58 @@ class ProfileRepositoryLocal : ProfileRepository {
     profiles.remove(uid)
   }
 
-  override suspend fun uploadProfilePhoto(context: Context, uid: String, imageUri: Uri): String {
-    // For local/testing purposes, just return a fake URL
-    val fakePhotoUrl = "http://example.com/photos/${uid}_${System.currentTimeMillis()}.jpg"
+    override suspend fun uploadProfilePhoto(
+        context: Context,
+        uid: String,
+        imageUri: Uri
+    ): String = withContext(Dispatchers.IO) {
+        // 1) Resolve current profile
+        val current = getProfile(uid)
+            ?: throw IllegalArgumentException("Profile with UID $uid does not exist")
 
-    // Update the profile with the fake photo URL
-    profiles[uid]?.let { profile ->
-      profiles[uid] = profile.copy(photoUrl = fakePhotoUrl, updatedAt = Timestamp.now())
+        // 2) Ensure app-local pictures dir
+        val picturesDir = File(context.filesDir, "profile_photos").apply { mkdirs() }
+
+        // 3) If there was a previous local file, delete it
+        current.photoUrl?.let { previousUrl ->
+            // Only delete if it points into our app dir (avoid deleting arbitrary files)
+            runCatching {
+                val prev = previousUrl.toUri()
+                if (prev.scheme == "file") {
+                    File(prev.path ?: "").takeIf { it.exists() && it.parentFile == picturesDir }?.delete()
+                }
+            }
+        }
+
+        // 4) Copy new content into app storage with a stable name
+        val filename = "${uid}_${System.currentTimeMillis()}.jpg"
+        val dest = File(picturesDir, filename)
+
+        context.contentResolver.openInputStream(imageUri).use { inStream ->
+            requireNotNull(inStream) { "Unable to open input stream for $imageUri" }
+            FileOutputStream(dest).use { out -> inStream.copyTo(out) }
+        }
+
+        // 5) Build a file:// URL (or use FileProvider if you prefer content://)
+        val fileUrl = dest.toURI().toURL().toString() // "file:///data/user/0/.../profile_photos/uid_....jpg"
+
+        // 6) Update profile
+        val updated = current.copy(photoUrl = fileUrl, updatedAt = Timestamp.now())
+        profiles[uid] = updated
+
+        return@withContext fileUrl
     }
 
-    return fakePhotoUrl
-  }
-
-  override suspend fun deleteProfilePhoto(uid: String) {
-    // For local/testing purposes, just clear the photoUrl
-    profiles[uid]?.let { profile ->
-      profiles[uid] = profile.copy(photoUrl = null, updatedAt = Timestamp.now())
+    override suspend fun deleteProfilePhoto(uid: String) = withContext(Dispatchers.IO) {
+        val current = profiles[uid] ?: return@withContext
+        current.photoUrl?.let { url ->
+            runCatching {
+                val uri = url.toUri()
+                if (uri.scheme == "file") {
+                    File(uri.path ?: "").takeIf { it.exists() }?.delete()
+                }
+            }
+        }
+        profiles[uid] = current.copy(photoUrl = null, updatedAt = Timestamp.now())
     }
-  }
 }
