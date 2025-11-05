@@ -1,7 +1,6 @@
 package com.android.joinme.model.notification
 
 import android.content.Context
-import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
@@ -31,22 +30,19 @@ object FCMTokenManager {
   fun initializeFCMToken(context: Context) {
     val currentUser = FirebaseAuth.getInstance().currentUser
     if (currentUser == null) {
-      Log.w(TAG, "Cannot initialize FCM token: no user is logged in")
       return
     }
 
     CoroutineScope(Dispatchers.IO).launch {
       try {
         val token = FirebaseMessaging.getInstance().token.await()
-        Log.d(TAG, "FCM Token retrieved: $token")
 
         // Update the user's profile with the FCM token
         val db = FirebaseFirestore.getInstance()
         db.collection("profiles").document(currentUser.uid).update("fcmToken", token).await()
 
-        Log.d(TAG, "FCM token saved to Firestore for user ${currentUser.uid}")
       } catch (e: Exception) {
-        Log.e(TAG, "Error initializing FCM token", e)
+        // exception ignored
       }
     }
   }
@@ -61,7 +57,6 @@ object FCMTokenManager {
   fun updateFCMToken(newToken: String) {
     val currentUser = FirebaseAuth.getInstance().currentUser
     if (currentUser == null) {
-      Log.w(TAG, "Cannot update FCM token: no user is logged in")
       return
     }
 
@@ -69,10 +64,8 @@ object FCMTokenManager {
       try {
         val db = FirebaseFirestore.getInstance()
         db.collection("profiles").document(currentUser.uid).update("fcmToken", newToken).await()
-
-        Log.d(TAG, "FCM token updated in Firestore for user ${currentUser.uid}")
       } catch (e: Exception) {
-        Log.e(TAG, "Error updating FCM token", e)
+        // exception ignored
       }
     }
   }
@@ -86,7 +79,6 @@ object FCMTokenManager {
   fun clearFCMToken() {
     val currentUser = FirebaseAuth.getInstance().currentUser
     if (currentUser == null) {
-      Log.w(TAG, "Cannot clear FCM token: no user is logged in")
       return
     }
 
@@ -94,10 +86,8 @@ object FCMTokenManager {
       try {
         val db = FirebaseFirestore.getInstance()
         db.collection("profiles").document(currentUser.uid).update("fcmToken", null).await()
-
-        Log.d(TAG, "FCM token cleared from Firestore for user ${currentUser.uid}")
       } catch (e: Exception) {
-        Log.e(TAG, "Error clearing FCM token", e)
+        // exception ignored
       }
     }
   }

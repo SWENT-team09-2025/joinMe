@@ -1,6 +1,5 @@
 package com.android.joinme.model.profile
 
-import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
@@ -115,7 +114,7 @@ class ProfileRepositoryFirestore(db: FirebaseFirestore) : ProfileRepository {
           updatedAt = updatedAt,
           fcmToken = fcmToken)
     } catch (e: Exception) {
-      Log.e("ProfileRepositoryFirestore", "Error converting document to Profile", e)
+      // exception ignored
       null
     }
   }
