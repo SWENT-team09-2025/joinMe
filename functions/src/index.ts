@@ -82,7 +82,7 @@ async function getUsername(userId: string): Promise<string> {
 
 /**
  * Triggered when an event document is updated.
- * Detects when a new participant joins and notifies the event owner.
+ * Detects when a new participant joins or leaves and notifies the event owner.
  */
 export const onEventParticipantAdded = functions.firestore
   .document("events/{eventId}")
@@ -100,30 +100,44 @@ export const onEventParticipantAdded = functions.firestore
       (userId) => !beforeParticipants.includes(userId)
     );
 
-    if (newParticipants.length === 0) {
-      // No new participants, nothing to do
-      return;
-    }
+    // Find removed participants (users who left/quit)
+    const removedParticipants = beforeParticipants.filter(
+      (userId) => !afterParticipants.includes(userId)
+    );
 
     const ownerId = afterData.ownerId;
     const eventTitle = afterData.title || "your event";
 
-    // Don't notify the owner if they are the one who joined (shouldn't happen)
-    const participantsToNotifyAbout = newParticipants.filter(
-      (userId) => userId !== ownerId
-    );
+    // Notify the owner about new participants
+    if (newParticipants.length > 0) {
+      // Don't notify the owner if they are the one who joined (shouldn't happen)
+      const participantsToNotifyAbout = newParticipants.filter(
+        (userId) => userId !== ownerId
+      );
 
-    if (participantsToNotifyAbout.length === 0) {
-      return;
+      for (const newParticipantId of participantsToNotifyAbout) {
+        const username = await getUsername(newParticipantId);
+        const title = "New participant joined!";
+        const body = `${username} joined "${eventTitle}"`;
+
+        await sendNotificationToUser(ownerId, title, body, eventId);
+      }
     }
 
-    // Notify the owner about each new participant
-    for (const newParticipantId of participantsToNotifyAbout) {
-      const username = await getUsername(newParticipantId);
-      const title = "New participant joined!";
-      const body = `${username} joined "${eventTitle}"`;
+    // Notify the owner about removed participants
+    if (removedParticipants.length > 0) {
+      // Don't notify the owner if they are the one who left (shouldn't happen)
+      const participantsToNotifyAbout = removedParticipants.filter(
+        (userId) => userId !== ownerId
+      );
 
-      await sendNotificationToUser(ownerId, title, body, eventId);
+      for (const removedParticipantId of participantsToNotifyAbout) {
+        const username = await getUsername(removedParticipantId);
+        const title = "Participant left";
+        const body = `${username} left "${eventTitle}"`;
+
+        await sendNotificationToUser(ownerId, title, body, eventId);
+      }
     }
   });
 
@@ -141,16 +155,34 @@ export const onEventUpdated = functions.firestore
     // Check if any meaningful event details changed
     const titleChanged = beforeData.title !== afterData.title;
     const descriptionChanged = beforeData.description !== afterData.description;
-    const dateChanged = beforeData.date !== afterData.date;
+    // Compare Firestore Timestamps properly using seconds and nanoseconds
+    const dateChanged =
+      beforeData.date?.seconds !== afterData.date?.seconds ||
+      beforeData.date?.nanoseconds !== afterData.date?.nanoseconds;
     const locationChanged =
       JSON.stringify(beforeData.location) !==
       JSON.stringify(afterData.location);
     const durationChanged = beforeData.duration !== afterData.duration;
+    const typeChanged = beforeData.type !== afterData.type;
+    const visibilityChanged = beforeData.visibility !== afterData.visibility;
+    const maxParticipantsChanged =
+      beforeData.maxParticipants !== afterData.maxParticipants;
 
-    // If only participants list changed, don't send event update notification
-    // (that's handled by onEventParticipantAdded)
-    if (!titleChanged && !descriptionChanged &&
-        !dateChanged && !locationChanged && !durationChanged) {
+    // Determine if any meaningful fields changed (excluding participants)
+    const meaningfulChangeOccurred =
+      titleChanged ||
+      descriptionChanged ||
+      dateChanged ||
+      locationChanged ||
+      durationChanged ||
+      typeChanged ||
+      visibilityChanged ||
+      maxParticipantsChanged;
+
+    // If only participants list changed (or nothing changed), don't send
+    // event update notification (participants changes are handled by
+    // onEventParticipantAdded)
+    if (!meaningfulChangeOccurred) {
       return;
     }
 
