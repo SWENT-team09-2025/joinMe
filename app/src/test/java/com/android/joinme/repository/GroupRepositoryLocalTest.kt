@@ -143,4 +143,62 @@ class GroupRepositoryLocalTest {
       Assert.assertEquals(sampleGroup.eventIds, retrieved.eventIds)
     }
   }
+
+  // ---------------- LEAVE GROUP TESTS ----------------
+
+  @Test
+  fun leaveGroup_removesUserFromMemberList() {
+    runBlocking {
+      val group = sampleGroup.copy(memberIds = listOf("user1", "user2", "user3"))
+      repo.addGroup(group)
+
+      repo.leaveGroup("1", "user2")
+
+      val updated = repo.getGroup("1")
+      Assert.assertEquals(2, updated.memberIds.size)
+      Assert.assertFalse(updated.memberIds.contains("user2"))
+      Assert.assertTrue(updated.memberIds.contains("user1"))
+      Assert.assertTrue(updated.memberIds.contains("user3"))
+    }
+  }
+
+  @Test
+  fun leaveGroup_lastMemberLeaves_groupStillExists() {
+    runBlocking {
+      val group = sampleGroup.copy(memberIds = listOf("onlyUser"))
+      repo.addGroup(group)
+
+      repo.leaveGroup("1", "onlyUser")
+
+      val updated = repo.getGroup("1")
+      Assert.assertTrue(updated.memberIds.isEmpty())
+    }
+  }
+
+  @Test(expected = Exception::class)
+  fun leaveGroup_userNotInGroup_throwsException() {
+    runBlocking {
+      repo.addGroup(sampleGroup)
+      repo.leaveGroup("1", "userNotInGroup")
+    }
+  }
+
+  @Test(expected = Exception::class)
+  fun leaveGroup_groupNotFound_throwsException() {
+    runBlocking { repo.leaveGroup("nonexistent", "user1") }
+  }
+
+  @Test
+  fun leaveGroup_oneOfManyMembers_onlyRemovesThatUser() {
+    runBlocking {
+      val group = sampleGroup.copy(memberIds = listOf("user1", "user2", "user3", "user4", "user5"))
+      repo.addGroup(group)
+
+      repo.leaveGroup("1", "user3")
+
+      val updated = repo.getGroup("1")
+      Assert.assertEquals(4, updated.memberIds.size)
+      Assert.assertEquals(listOf("user1", "user2", "user4", "user5"), updated.memberIds)
+    }
+  }
 }
