@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
@@ -28,6 +29,7 @@ import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.Tab
 import com.android.joinme.ui.theme.BorderColor
 import com.android.joinme.ui.theme.ButtonSaveColor
+import com.android.joinme.ui.theme.DeleteButtonColor
 import com.android.joinme.ui.theme.DisabledBorderColor
 import com.android.joinme.ui.theme.DisabledTextColor
 import com.android.joinme.ui.theme.ErrorBorderColor
@@ -43,14 +45,13 @@ object EditProfileTestTags {
   const val TITLE = "editProfileTitle"
   const val PROFILE_PICTURE = "editProfilePicture"
   const val EDIT_PHOTO_BUTTON = "editProfilePhotoButton"
+  const val DELETE_PHOTO_BUTTON = "editProfileDeletePhotoButton"
   const val USERNAME_FIELD = "editProfileUsernameField"
   const val USERNAME_ERROR = "editProfileUsernameError"
   const val EMAIL_FIELD = "editProfileEmailField"
   const val DATE_OF_BIRTH_FIELD = "editProfileDateOfBirthField"
   const val DATE_OF_BIRTH_ERROR = "editProfileDateOfBirthError"
   const val INTERESTS_FIELD = "editProfileInterestsField"
-  const val PASSWORD_SECTION = "editProfilePasswordSection"
-  const val CHANGE_PASSWORD_BUTTON = "editProfileChangePasswordButton"
   const val COUNTRY_FIELD = "editProfileCountryField"
   const val BIO_FIELD = "editProfileBioField"
   const val SAVE_BUTTON = "editProfileSaveButton"
@@ -155,6 +156,15 @@ fun EditProfileScreen(
                   profile = profile!!,
                   isUploadingPhoto = isUploadingPhoto,
                   onPictureEditClick = { photoPicker.launch() },
+                  onPictureDeleteClick = {
+                    profileViewModel.deleteProfilePhoto(
+                        onSuccess = {
+                          Toast.makeText(context, "Photo deleted", Toast.LENGTH_SHORT).show()
+                        },
+                        onError = { error ->
+                          Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                        })
+                  },
                   username = username,
                   onUsernameChange = {
                     username = it
@@ -207,6 +217,7 @@ private fun EditProfileContent(
     profile: Profile,
     isUploadingPhoto: Boolean,
     onPictureEditClick: () -> Unit,
+    onPictureDeleteClick: () -> Unit,
     username: String,
     onUsernameChange: (String) -> Unit,
     usernameError: String?,
@@ -237,7 +248,8 @@ private fun EditProfileContent(
         ProfilePictureSection(
             photoUrl = profile.photoUrl,
             isUploadingPhoto = isUploadingPhoto,
-            onPictureEditClick = onPictureEditClick)
+            onPictureEditClick = onPictureEditClick,
+            onPictureDeleteClick = onPictureDeleteClick)
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -289,10 +301,6 @@ private fun EditProfileContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        PasswordSection(onChangePasswordClick = onChangePasswordClick)
-
-        Spacer(modifier = Modifier.height(16.dp))
-
         EditTextField(
             label = "Country/Region",
             value = country,
@@ -327,7 +335,8 @@ private fun EditProfileContent(
 private fun ProfilePictureSection(
     photoUrl: String?,
     isUploadingPhoto: Boolean,
-    onPictureEditClick: () -> Unit
+    onPictureEditClick: () -> Unit,
+    onPictureDeleteClick: () -> Unit
 ) {
   Box(
       modifier =
@@ -336,89 +345,69 @@ private fun ProfilePictureSection(
               .testTag(EditProfileTestTags.PROFILE_PICTURE),
       contentAlignment = Alignment.Center) {
         Box(modifier = Modifier.size(140.dp), contentAlignment = Alignment.Center) {
-          // Show loading indicator while uploading
+          // Show loading indicator while uploading OR deleting
           if (isUploadingPhoto) {
             CircularProgressIndicator(
                 modifier =
                     Modifier.size(140.dp).testTag(EditProfileTestTags.PHOTO_UPLOADING_INDICATOR),
                 color = JoinMeColor,
                 strokeWidth = 4.dp)
-          }
+          } else {
+            // Display actual profile photo with blur effect
+            ProfilePhotoImage(
+                photoUrl = photoUrl,
+                contentDescription = "Profile Picture",
+                size = 140.dp,
+                showLoadingIndicator = false) // Use our own indicator
 
-          // Display actual profile photo with blur effect
-          ProfilePhotoImage(
-              photoUrl = photoUrl,
-              contentDescription = "Profile Picture",
-              size = 140.dp,
-              showLoadingIndicator = false)
+            // Blur overlay using a semi-transparent box
+            Box(
+                modifier =
+                    Modifier.size(140.dp).clip(CircleShape).background(ScrimOverlayColorLightTheme))
 
-          // Blur overlay using a semi-transparent box
-          Box(
-              modifier =
-                  Modifier.size(140.dp).clip(CircleShape).background(ScrimOverlayColorLightTheme))
-
-          // Edit button (disabled while uploading)
-          Button(
-              onClick = { if (!isUploadingPhoto) onPictureEditClick() },
-              enabled = !isUploadingPhoto,
-              colors =
-                  ButtonDefaults.buttonColors(
-                      containerColor = Color.Transparent,
-                      disabledContainerColor = Color.Transparent),
-              shape = CircleShape,
-              modifier = Modifier.size(120.dp).testTag(EditProfileTestTags.EDIT_PHOTO_BUTTON)) {
-                Box(
-                    modifier = Modifier.size(50.dp).clip(CircleShape).background(Color.Transparent),
-                    contentAlignment = Alignment.Center) {
-                      Icon(
-                          imageVector = Icons.Outlined.Edit,
-                          contentDescription = "Edit Photo",
-                          tint = ButtonSaveColor,
-                          modifier = Modifier.size(56.dp))
-                    }
-              }
-        }
-      }
-}
-
-@Composable
-private fun PasswordSection(onChangePasswordClick: () -> Unit) {
-  Column(modifier = Modifier.testTag(EditProfileTestTags.PASSWORD_SECTION)) {
-    Text(
-        text = "Password",
-        fontSize = 16.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(bottom = 8.dp))
-    Box(
-        modifier =
-            Modifier.fillMaxWidth()
-                .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
-                .padding(16.dp)) {
-          Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                  Text(text = "************", fontSize = 16.sp, color = LabelTextColor)
+            // Edit button
+            Button(
+                onClick = onPictureEditClick,
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent),
+                shape = CircleShape,
+                modifier = Modifier.size(120.dp).testTag(EditProfileTestTags.EDIT_PHOTO_BUTTON)) {
+                  Box(
+                      modifier =
+                          Modifier.size(50.dp).clip(CircleShape).background(Color.Transparent),
+                      contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Outlined.Edit,
+                            contentDescription = "Edit Photo",
+                            tint = ButtonSaveColor,
+                            modifier = Modifier.size(56.dp))
+                      }
                 }
 
-                Button(
-                    onClick = onChangePasswordClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = JoinMeColor),
-                    shape = RoundedCornerShape(24.dp),
-                    modifier =
-                        Modifier.height(40.dp)
-                            .testTag(EditProfileTestTags.CHANGE_PASSWORD_BUTTON)) {
-                      Icon(
-                          imageVector = Icons.Default.Edit,
-                          contentDescription = null,
-                          modifier = Modifier.size(16.dp))
-                      Spacer(modifier = Modifier.width(4.dp))
-                      Text("Change password", fontSize = 12.sp)
-                    }
-              }
+            // Delete Icon Button (Bottom Right)
+            // Show only if a photo exists and we are not loading
+            if (photoUrl != null && photoUrl.isNotEmpty()) {
+              IconButton(
+                  onClick = onPictureDeleteClick,
+                  modifier =
+                      Modifier.align(Alignment.BottomEnd)
+                          .size(40.dp) // Small icon button
+                          .clip(CircleShape)
+                          .background(MaterialTheme.colorScheme.surface)
+                          .border(1.dp, Color.LightGray, CircleShape)
+                          .testTag(EditProfileTestTags.DELETE_PHOTO_BUTTON)) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Photo",
+                        tint = DeleteButtonColor,
+                        modifier = Modifier.size(24.dp))
+                  }
+            }
+          }
         }
-  }
+      }
 }
 
 @Composable

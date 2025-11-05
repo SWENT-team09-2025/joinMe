@@ -37,7 +37,8 @@ class EditProfileScreenTest {
       private var stored: Profile? = null,
       private var failOnce: Boolean = false,
       private var photoUploadShouldFail: Boolean = false,
-      private var simulateUploadDelay: Boolean = false
+      private var simulateUploadDelay: Boolean = false,
+      private var simulateDeleteDelay: Boolean = false
   ) : ProfileRepository {
 
     override suspend fun getProfile(uid: String): Profile? {
@@ -74,6 +75,9 @@ class EditProfileScreenTest {
     }
 
     override suspend fun deleteProfilePhoto(uid: String) {
+      if (simulateDeleteDelay) {
+        kotlinx.coroutines.delay(100)
+      }
       stored = stored?.copy(photoUrl = null)
     }
   }
@@ -100,7 +104,6 @@ class EditProfileScreenTest {
 
     composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.COUNTRY_FIELD)
     composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.INTERESTS_FIELD)
-    composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.PASSWORD_SECTION)
     composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.BIO_FIELD)
     composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.SAVE_BUTTON)
   }
@@ -417,32 +420,6 @@ class EditProfileScreenTest {
     composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).assertIsNotEnabled()
   }
 
-  // ==================== PASSWORD SECTION TESTS ====================
-
-  @Test
-  fun editProfile_passwordSection_isDisplayed() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
-    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
-
-    composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.PASSWORD_SECTION)
-    composeTestRule.onNodeWithTag(EditProfileTestTags.CHANGE_PASSWORD_BUTTON).assertIsDisplayed()
-  }
-
-  @Test
-  fun editProfile_changePasswordButton_isClickable() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
-    var clicked = false
-    composeTestRule.setContent {
-      EditProfileScreen(
-          uid = testUid, profileViewModel = vm, onChangePasswordClick = { clicked = true })
-    }
-
-    composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.CHANGE_PASSWORD_BUTTON)
-    composeTestRule.onNodeWithTag(EditProfileTestTags.CHANGE_PASSWORD_BUTTON).performClick()
-
-    assert(clicked)
-  }
-
   // ==================== PHOTO EDIT BUTTON TESTS ====================
 
   @Test
@@ -485,7 +462,7 @@ class EditProfileScreenTest {
   }
 
   @Test
-  fun editProfile_editPhotoButton_disabledDuringUpload() = runTest {
+  fun editProfile_editPhotoButton_hidesDuringUpload() = runTest {
     val repo = FakeProfileRepository(testProfile, simulateUploadDelay = true)
     val vm = ProfileViewModel(repo)
 
@@ -501,8 +478,8 @@ class EditProfileScreenTest {
     // Wait a moment for state to update
     composeTestRule.waitForIdle()
 
-    // During upload, the button should be disabled
-    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertIsNotEnabled()
+    // During upload, the button should be hidden
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertDoesNotExist()
   }
 
   @Test
@@ -523,6 +500,9 @@ class EditProfileScreenTest {
 
     // Upload indicator should be visible during upload
     composeTestRule.onNodeWithTag(EditProfileTestTags.PHOTO_UPLOADING_INDICATOR).assertIsDisplayed()
+    // Buttons should be hidden
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertDoesNotExist()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertDoesNotExist()
   }
 
   @Test
@@ -730,5 +710,81 @@ class EditProfileScreenTest {
 
     // Photo button should still be enabled
     composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertIsEnabled()
+  }
+
+  // ==================== PHOTO DELETE TESTS ====================
+
+  @Test
+  fun editProfile_deletePhotoButton_notShown_whenNoPhoto() = runTest {
+    val profileWithoutPhoto = testProfile.copy(photoUrl = null)
+    val repo = FakeProfileRepository(profileWithoutPhoto) // Repo with no photo
+    val vm = ProfileViewModel(repo)
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    // Delete button should not be displayed
+    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertDoesNotExist()
+  }
+
+  @Test
+  fun editProfile_deletePhotoButton_isShown_whenPhotoExists() = runTest {
+    val profileWithPhoto = testProfile.copy(photoUrl = "https://example.com/photo.jpg")
+    val repo = FakeProfileRepository(profileWithPhoto) // Repo with photo
+    val vm = ProfileViewModel(repo)
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    // Delete button should be displayed
+    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun editProfile_clickingDeleteButton_triggersDeletion() = runTest {
+    val profileWithPhoto = testProfile.copy(photoUrl = "https://example.com/photo.jpg")
+    val repo = FakeProfileRepository(profileWithPhoto) // Repo with photo
+    val vm = ProfileViewModel(repo)
+
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    // 1. Verify photo and delete button are visible
+    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ProfilePhotoImageTestTags.REMOTE_IMAGE).assertExists()
+    // FIX: In test env, Coil load fails, so error fallback (DEFAULT_AVATAR) is displayed.
+    composeTestRule
+        .onNodeWithTag(ProfilePhotoImageTestTags.DEFAULT_AVATAR)
+        .assertIsDisplayed() // <-- CORRECTED ASSERTION
+
+    // 2. Click delete button
+    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).performClick()
+
+    // 3. Wait for UI to update
+    composeTestRule.waitForIdle()
+
+    // 4. Verify UI updates: delete button is gone, default avatar is shown
+    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertDoesNotExist()
+    composeTestRule.onNodeWithTag(ProfilePhotoImageTestTags.REMOTE_IMAGE).assertDoesNotExist()
+    composeTestRule.onNodeWithTag(ProfilePhotoImageTestTags.DEFAULT_AVATAR).assertIsDisplayed()
+  }
+
+  @Test
+  fun editProfile_deletePhotoButton_hidesDuringUpload() = runTest {
+    val profileWithPhoto = testProfile.copy(photoUrl = "https://example.com/photo.jpg")
+    val repo = FakeProfileRepository(profileWithPhoto, simulateUploadDelay = true)
+    val vm = ProfileViewModel(repo)
+
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    // Delete button is visible and enabled
+    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertIsEnabled()
+
+    // Start upload
+    vm.uploadProfilePhoto(
+        context = ApplicationProvider.getApplicationContext(),
+        imageUri = Uri.parse("content://test/image.jpg"),
+        onSuccess = {},
+        onError = {})
+
+    composeTestRule.waitForIdle()
+
+    // Delete button should now be hidden
+    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertDoesNotExist()
   }
 }
