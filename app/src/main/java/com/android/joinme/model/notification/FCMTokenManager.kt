@@ -40,7 +40,6 @@ object FCMTokenManager {
         // Update the user's profile with the FCM token
         val db = FirebaseFirestore.getInstance()
         db.collection("profiles").document(currentUser.uid).update("fcmToken", token).await()
-
       } catch (e: Exception) {
         // exception ignored
       }
