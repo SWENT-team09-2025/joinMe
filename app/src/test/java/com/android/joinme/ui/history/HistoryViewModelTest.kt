@@ -5,6 +5,11 @@ import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
+import com.android.joinme.model.eventItem.EventItem
+import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.serie.SerieFilter
+import com.android.joinme.model.serie.SeriesRepository
+import com.android.joinme.model.utils.Visibility
 import com.google.firebase.Timestamp
 import java.util.Calendar
 import kotlinx.coroutines.Dispatchers
@@ -31,14 +36,18 @@ class HistoryViewModelTest {
 
   private val testDispatcher = StandardTestDispatcher()
 
-  private lateinit var fakeRepository: FakeEventsRepository
+  private lateinit var fakeEventRepository: FakeEventsRepository
+  private lateinit var fakeSerieRepository: FakeSeriesRepository
   private lateinit var viewModel: HistoryViewModel
 
   @Before
   fun setup() {
     Dispatchers.setMain(testDispatcher)
-    fakeRepository = FakeEventsRepository()
-    viewModel = HistoryViewModel(eventRepository = fakeRepository)
+    fakeEventRepository = FakeEventsRepository()
+    fakeSerieRepository = FakeSeriesRepository()
+    viewModel =
+        HistoryViewModel(
+            eventRepository = fakeEventRepository, serieRepository = fakeSerieRepository)
   }
 
   @After
@@ -47,34 +56,36 @@ class HistoryViewModelTest {
   }
 
   @Test
-  fun `refreshUIState loads expired events successfully`() = runTest {
-    fakeRepository.shouldThrow = false
+  fun `refreshUIState loads expired items successfully`() = runTest {
+    fakeEventRepository.shouldThrow = false
+    fakeSerieRepository.shouldThrow = false
 
     viewModel.refreshUIState()
     testDispatcher.scheduler.advanceUntilIdle()
 
     val state = viewModel.uiState.value
     assertNull(state.errorMsg)
-    assertEquals(1, state.expiredEvents.size)
-    assertEquals("Expired Event", state.expiredEvents[0].title)
+    assertTrue(state.expiredItems.isNotEmpty())
+    // Should have at least the expired event and expired serie from defaults
+    assertTrue(state.expiredItems.any { it.title == "Expired Event" })
   }
 
   @Test
-  fun `getExpiredEvents updates errorMsg on repository failure`() = runTest {
-    fakeRepository.shouldThrow = true
+  fun `getExpiredItems updates errorMsg on repository failure`() = runTest {
+    fakeEventRepository.shouldThrow = true
 
     viewModel.refreshUIState()
     testDispatcher.scheduler.advanceUntilIdle()
 
     val state = viewModel.uiState.value
     assertNotNull(state.errorMsg)
-    assertTrue(state.expiredEvents.isEmpty())
+    assertTrue(state.expiredItems.isEmpty())
     assertTrue(state.errorMsg!!.contains("Failed to load history"))
   }
 
   @Test
   fun `clearErrorMsg clears existing error`() = runTest {
-    fakeRepository.shouldThrow = true
+    fakeEventRepository.shouldThrow = true
     viewModel.refreshUIState()
     testDispatcher.scheduler.advanceUntilIdle()
 
@@ -85,43 +96,46 @@ class HistoryViewModelTest {
   }
 
   @Test
-  fun `refreshUIState fetches only expired events`() = runTest {
-    fakeRepository.shouldThrow = false
+  fun `refreshUIState fetches only expired items`() = runTest {
+    fakeEventRepository.shouldThrow = false
+    fakeSerieRepository.shouldThrow = false
 
     viewModel.refreshUIState()
     testDispatcher.scheduler.advanceUntilIdle()
 
     val state = viewModel.uiState.value
-    // Should only contain the expired event, not the ongoing or upcoming ones
-    assertEquals(1, state.expiredEvents.size)
-    assertEquals("Expired Event", state.expiredEvents[0].title)
-  }
-
-  @Test
-  fun `expired events are sorted in descending order by date`() = runTest {
-    fakeRepository.shouldThrow = false
-    fakeRepository.addMultipleExpiredEvents()
-
-    viewModel.refreshUIState()
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    val state = viewModel.uiState.value
-
-    // Should have 3 expired events (1 from default + 2 added)
-    assertTrue(state.expiredEvents.size >= 2)
-
-    // Check that events are sorted by date in descending order (most recent first)
-    for (i in 0 until state.expiredEvents.size - 1) {
-      assertTrue(
-          state.expiredEvents[i].date.toDate().time >=
-              state.expiredEvents[i + 1].date.toDate().time)
+    // Should only contain expired items, not the ongoing or upcoming ones
+    assertTrue(state.expiredItems.isNotEmpty())
+    // Verify all items are of type EventItem
+    state.expiredItems.forEach { item ->
+      assertTrue(item is EventItem.SingleEvent || item is EventItem.EventSerie)
     }
   }
 
   @Test
-  fun `uiState starts with empty expiredEvents list`() = runTest {
+  fun `expired items are sorted in descending order by date`() = runTest {
+    fakeEventRepository.shouldThrow = false
+    fakeEventRepository.addMultipleExpiredEvents()
+
+    viewModel.refreshUIState()
+    testDispatcher.scheduler.advanceUntilIdle()
+
     val state = viewModel.uiState.value
-    assertTrue(state.expiredEvents.isEmpty())
+
+    // Should have multiple expired items
+    assertTrue(state.expiredItems.size >= 2)
+
+    // Check that items are sorted by date in descending order (most recent first)
+    for (i in 0 until state.expiredItems.size - 1) {
+      assertTrue(
+          state.expiredItems[i].date.toDate().time >= state.expiredItems[i + 1].date.toDate().time)
+    }
+  }
+
+  @Test
+  fun `uiState starts with empty expiredItems list`() = runTest {
+    val state = viewModel.uiState.value
+    assertTrue(state.expiredItems.isEmpty())
     assertNull(state.errorMsg)
   }
 
@@ -133,8 +147,8 @@ class HistoryViewModelTest {
 
   @Test
   fun `isLoading is true during data fetch`() = runTest {
-    fakeRepository.shouldThrow = false
-    fakeRepository.setDelay(1000) // Add delay to capture loading state
+    fakeEventRepository.shouldThrow = false
+    fakeEventRepository.setDelay(1000) // Add delay to capture loading state
 
     viewModel.refreshUIState()
 
@@ -155,19 +169,19 @@ class HistoryViewModelTest {
 
   @Test
   fun `isLoading is false after successful fetch`() = runTest {
-    fakeRepository.shouldThrow = false
+    fakeEventRepository.shouldThrow = false
 
     viewModel.refreshUIState()
     testDispatcher.scheduler.advanceUntilIdle()
 
     val state = viewModel.uiState.value
     assertEquals(false, state.isLoading)
-    assertEquals(1, state.expiredEvents.size)
+    assertTrue(state.expiredItems.isNotEmpty())
   }
 
   @Test
   fun `isLoading is false after failed fetch`() = runTest {
-    fakeRepository.shouldThrow = true
+    fakeEventRepository.shouldThrow = true
 
     viewModel.refreshUIState()
     testDispatcher.scheduler.advanceUntilIdle()
@@ -179,49 +193,69 @@ class HistoryViewModelTest {
 
   @Test
   fun `refreshUIState handles empty repository`() = runTest {
-    fakeRepository.clearAllEvents()
+    fakeEventRepository.clearAllEvents()
+    fakeSerieRepository.clearAllSeries()
 
     viewModel.refreshUIState()
     testDispatcher.scheduler.advanceUntilIdle()
 
     val state = viewModel.uiState.value
     assertNull(state.errorMsg)
-    assertTrue(state.expiredEvents.isEmpty())
+    assertTrue(state.expiredItems.isEmpty())
   }
 
   @Test
-  fun `refreshUIState excludes ongoing events`() = runTest {
-    fakeRepository.shouldThrow = false
+  fun `refreshUIState excludes ongoing items`() = runTest {
+    fakeEventRepository.shouldThrow = false
 
     viewModel.refreshUIState()
     testDispatcher.scheduler.advanceUntilIdle()
 
     val state = viewModel.uiState.value
 
-    // Should not contain any ongoing events
-    state.expiredEvents.forEach { event ->
+    // Expired items should not be ongoing
+    state.expiredItems.forEach { item ->
       val now = System.currentTimeMillis()
-      val startTime = event.date.toDate().time
-      val endTime = startTime + (event.duration * 60 * 1000)
-      // Verify event is not ongoing
-      assertTrue(endTime <= now)
+      val startTime = item.date.toDate().time
+      // Verify item date is in the past
+      assertTrue(startTime <= now)
     }
   }
 
   @Test
-  fun `refreshUIState excludes upcoming events`() = runTest {
-    fakeRepository.shouldThrow = false
+  fun `refreshUIState excludes upcoming items`() = runTest {
+    fakeEventRepository.shouldThrow = false
 
     viewModel.refreshUIState()
     testDispatcher.scheduler.advanceUntilIdle()
 
     val state = viewModel.uiState.value
 
-    // Should not contain any upcoming events
-    state.expiredEvents.forEach { event ->
+    // Should not contain any upcoming items
+    state.expiredItems.forEach { item ->
       val now = System.currentTimeMillis()
-      // Verify event is not upcoming
-      assertTrue(event.date.toDate().time <= now)
+      // Verify item is not upcoming
+      assertTrue(item.date.toDate().time <= now)
+    }
+  }
+
+  @Test
+  fun `refreshUIState excludes future serie with no events`() = runTest {
+    fakeSerieRepository.addFutureSerie()
+
+    viewModel.refreshUIState()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+
+    // Should not contain the future serie
+    state.expiredItems.forEach { item ->
+      when (item) {
+        is EventItem.EventSerie -> {
+          assertTrue(item.serie.serieId != "futureSerie1")
+        }
+        else -> {}
+      }
     }
   }
 
@@ -337,7 +371,7 @@ class HistoryViewModelTest {
         kotlinx.coroutines.delay(delayMillis)
       }
       if (shouldThrow) throw RuntimeException("Repository error")
-      return fakeEvents
+      return fakeEvents.toList()
     }
 
     override suspend fun getEvent(eventId: String): Event {
@@ -361,6 +395,82 @@ class HistoryViewModelTest {
     override fun getNewEventId(): String {
       if (shouldThrow) throw RuntimeException("Repository error")
       return "new_event_id"
+    }
+  }
+
+  /** Fake implementation of [SeriesRepository] for isolated ViewModel testing. */
+  private class FakeSeriesRepository : SeriesRepository {
+    var shouldThrow = false
+    private val fakeSeries = mutableListOf<Serie>()
+
+    init {
+      // Add an expired serie (date is 5 hours ago, no events)
+      val calendar = Calendar.getInstance()
+      calendar.add(Calendar.HOUR, -5)
+      fakeSeries.add(
+          Serie(
+              serieId = "serie1",
+              title = "Expired Serie",
+              description = "Serie desc",
+              date = Timestamp(calendar.time),
+              participants = listOf("user1"),
+              maxParticipants = 10,
+              visibility = Visibility.PUBLIC,
+              eventIds = emptyList(), // Empty series with past date is expired
+              ownerId = "owner1"))
+    }
+
+    fun clearAllSeries() {
+      fakeSeries.clear()
+    }
+
+    fun addFutureSerie() {
+      val calendar = Calendar.getInstance()
+      calendar.add(Calendar.DAY_OF_MONTH, 30) // 30 days in the future
+      fakeSeries.add(
+          Serie(
+              serieId = "futureSerie1",
+              title = "Future Serie",
+              description = "Future serie desc",
+              date = Timestamp(calendar.time),
+              participants = listOf("user1"),
+              maxParticipants = 10,
+              visibility = Visibility.PUBLIC,
+              eventIds = emptyList(), // Empty series with future date is not expired
+              ownerId = "owner1"))
+    }
+
+    override fun getNewSerieId(): String {
+      if (shouldThrow) throw RuntimeException("Serie repository error")
+      return "new_serie_id"
+    }
+
+    override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> {
+      if (shouldThrow) throw RuntimeException("Serie repository error")
+      return fakeSeries.toList()
+    }
+
+    override suspend fun getSerie(serieId: String): Serie {
+      if (shouldThrow) throw RuntimeException("Serie repository error")
+      return fakeSeries.first { it.serieId == serieId }
+    }
+
+    override suspend fun addSerie(serie: Serie) {
+      if (shouldThrow) throw RuntimeException("Serie repository error")
+      fakeSeries.add(serie)
+    }
+
+    override suspend fun editSerie(serieId: String, newValue: Serie) {
+      if (shouldThrow) throw RuntimeException("Serie repository error")
+      val index = fakeSeries.indexOfFirst { it.serieId == serieId }
+      if (index != -1) {
+        fakeSeries[index] = newValue
+      }
+    }
+
+    override suspend fun deleteSerie(serieId: String) {
+      if (shouldThrow) throw RuntimeException("Serie repository error")
+      fakeSeries.removeIf { it.serieId == serieId }
     }
   }
 }

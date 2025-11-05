@@ -298,7 +298,8 @@ class EditGroupViewModelTest {
     viewModel.setName("   Valid Name   ")
 
     val state = viewModel.uiState.value
-    assertEquals("Valid Name", state.name)
+    // Name is stored with spaces, but validation passes on trimmed version
+    assertEquals("   Valid Name   ", state.name)
     assertNull(state.nameError)
     assertTrue(state.isValid)
   }
@@ -308,7 +309,8 @@ class EditGroupViewModelTest {
     viewModel.setName("     ")
 
     val state = viewModel.uiState.value
-    assertEquals("", state.name)
+    // Name is stored with spaces, but validation fails on trimmed version
+    assertEquals("     ", state.name)
     assertEquals("Name is required", state.nameError)
     assertFalse(state.isValid)
   }

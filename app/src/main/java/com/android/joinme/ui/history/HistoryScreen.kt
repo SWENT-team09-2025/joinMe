@@ -34,7 +34,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.Event
+import com.android.joinme.model.eventItem.EventItem
+import com.android.joinme.model.serie.Serie
 import com.android.joinme.ui.components.EventCard
+import com.android.joinme.ui.components.SerieCard
 import com.android.joinme.ui.theme.DividerColor
 
 object HistoryScreenTestTags {
@@ -45,17 +48,18 @@ object HistoryScreenTestTags {
   const val HISTORY_LIST = "historyList"
   const val LOADING_INDICATOR = "historyLoadingIndicator"
 
-  fun getTestTagForEventItem(event: Event): String = "historyEventItem${event.eventId}"
+  fun getTestTagForEvent(event: Event): String = "historyEventItem${event.eventId}"
+
+  fun getTestTagForSerie(serie: Serie): String = "historySerieItem${serie.serieId}"
 }
 
 /**
- * Screen displaying a list of expired events from the user's history.
+ * Screen displaying a list of expired items (events and series) from the user's history.
  *
- * Shows all events that have passed their end time (date + duration), sorted by date in descending
- * order (most recent first). Users can tap on events to view details or navigate back to the
- * previous screen.
+ * Shows all items that have passed their end time, sorted by date in descending order (most recent
+ * first). Users can tap on items to view details or navigate back to the previous screen.
  *
- * @param historyViewModel ViewModel managing the history state and expired events data.
+ * @param historyViewModel ViewModel managing the history state and expired items data.
  * @param onSelectEvent Callback invoked when a user taps on an event card.
  * @param onGoBack Callback invoked when the user taps the back button.
  */
@@ -64,11 +68,12 @@ object HistoryScreenTestTags {
 fun HistoryScreen(
     historyViewModel: HistoryViewModel = viewModel(),
     onSelectEvent: (Event) -> Unit = {},
+    onSelectSerie: (Serie) -> Unit = {},
     onGoBack: () -> Unit = {},
 ) {
   val context = LocalContext.current
   val uiState by historyViewModel.uiState.collectAsState()
-  val expiredEvents = uiState.expiredEvents
+  val expiredItems = uiState.expiredItems
   val isLoading = uiState.isLoading
 
   LaunchedEffect(Unit) { historyViewModel.refreshUIState() }
@@ -122,7 +127,7 @@ fun HistoryScreen(
                       modifier = Modifier.testTag(HistoryScreenTestTags.LOADING_INDICATOR))
                 }
           }
-          expiredEvents.isEmpty() -> {
+          expiredItems.isEmpty() -> {
             // Empty state
             Column(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
@@ -146,13 +151,23 @@ fun HistoryScreen(
                     Modifier.fillMaxWidth()
                         .padding(innerPadding)
                         .testTag(HistoryScreenTestTags.HISTORY_LIST)) {
-                  items(expiredEvents.size) { index ->
-                    EventCard(
-                        modifier = Modifier.padding(vertical = 6.dp),
-                        event = expiredEvents[index],
-                        onClick = { onSelectEvent(expiredEvents[index]) },
-                        testTag =
-                            HistoryScreenTestTags.getTestTagForEventItem(expiredEvents[index]))
+                  items(expiredItems.size) { index ->
+                    when (val item = expiredItems[index]) {
+                      is EventItem.SingleEvent -> {
+                        EventCard(
+                            modifier = Modifier.padding(vertical = 6.dp),
+                            event = item.event,
+                            onClick = { onSelectEvent(item.event) },
+                            testTag = HistoryScreenTestTags.getTestTagForEvent(item.event))
+                      }
+                      is EventItem.EventSerie -> {
+                        SerieCard(
+                            modifier = Modifier.padding(vertical = 6.dp),
+                            serie = item.serie,
+                            onClick = { onSelectSerie(item.serie) },
+                            testTag = HistoryScreenTestTags.getTestTagForSerie(item.serie))
+                      }
+                    }
                   }
                 }
           }
