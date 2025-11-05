@@ -297,12 +297,20 @@ fun JoinMe(
             },
             onEditGroup = { group -> navigationActions.navigateTo(Screen.EditGroup(group.id)) },
             onDeleteGroup = { group ->
-              groupListViewModel.deleteGroup(
-                  groupId = group.id,
-                  onSuccess = {
-                    Toast.makeText(context, "Group deleted successfully", Toast.LENGTH_SHORT).show()
-                  },
-                  onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
+              val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+              if (currentUserId != null) {
+                groupListViewModel.deleteGroup(
+                    groupId = group.id,
+                    userId = currentUserId,
+                    onSuccess = {
+                      Toast.makeText(context, "Group deleted successfully", Toast.LENGTH_SHORT)
+                          .show()
+                    },
+                    onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
+              } else {
+                Toast.makeText(context, "You must be logged in to delete a group", Toast.LENGTH_SHORT)
+                    .show()
+              }
             })
       }
 

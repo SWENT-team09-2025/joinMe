@@ -31,7 +31,13 @@ class GroupRepositoryLocal : GroupRepository {
     }
   }
 
-  override suspend fun deleteGroup(groupId: String) {
+  override suspend fun deleteGroup(groupId: String, userId: String) {
+    val group = getGroup(groupId)
+
+    if (group.ownerId != userId) {
+      throw Exception("GroupRepositoryLocal: Only the group owner can delete this group")
+    }
+
     val index = groups.indexOfFirst { it.id == groupId }
     if (index != -1) {
       groups.removeAt(index)

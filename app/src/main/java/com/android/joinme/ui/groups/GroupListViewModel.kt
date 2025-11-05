@@ -76,13 +76,19 @@ class GroupListViewModel(
    * Deletes a group from the repository and refreshes the UI state.
    *
    * @param groupId The ID of the group to delete.
+   * @param userId The ID of the user attempting to delete the group (must be the owner).
    * @param onSuccess Callback invoked when the group is successfully deleted.
    * @param onError Callback invoked when deletion fails, receives error message.
    */
-  fun deleteGroup(groupId: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
+  fun deleteGroup(
+      groupId: String,
+      userId: String,
+      onSuccess: () -> Unit = {},
+      onError: (String) -> Unit = {}
+  ) {
     viewModelScope.launch {
       try {
-        groupRepository.deleteGroup(groupId)
+        groupRepository.deleteGroup(groupId, userId)
         refreshUIState()
         onSuccess()
       } catch (e: Exception) {

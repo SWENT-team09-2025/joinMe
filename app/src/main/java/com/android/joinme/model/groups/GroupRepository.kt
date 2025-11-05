@@ -42,9 +42,10 @@ interface GroupRepository {
    * Deletes a Group item from the repository.
    *
    * @param groupId The unique identifier of the Group item to delete.
-   * @throws Exception if the Group item is not found.
+   * @param userId The ID of the user attempting to delete the group (must be the owner).
+   * @throws Exception if the Group item is not found or user is not the owner.
    */
-  suspend fun deleteGroup(groupId: String)
+  suspend fun deleteGroup(groupId: String, userId: String)
 
   /**
    * Removes the current user from a Group's member list.

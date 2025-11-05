@@ -49,14 +49,10 @@ class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupReposit
     db.collection(GROUPS_COLLECTION_PATH).document(groupId).set(newValue).await()
   }
 
-  override suspend fun deleteGroup(groupId: String) {
-    val currentUserId =
-        Firebase.auth.currentUser?.uid
-            ?: throw Exception("GroupRepositoryFirestore: User not logged in.")
-
+  override suspend fun deleteGroup(groupId: String, userId: String) {
     val group = getGroup(groupId)
 
-    if (group.ownerId != currentUserId) {
+    if (group.ownerId != userId) {
       throw Exception("GroupRepositoryFirestore: Only the group owner can delete this group")
     }
 
