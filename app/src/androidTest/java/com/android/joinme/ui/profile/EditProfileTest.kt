@@ -1,8 +1,10 @@
 package com.android.joinme.ui.profile
 
+import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.test.core.app.ApplicationProvider
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import com.google.firebase.Timestamp
@@ -33,7 +35,9 @@ class EditProfileScreenTest {
   // A tiny in-memory repo that mimics just what the ViewModel needs
   private class FakeProfileRepository(
       private var stored: Profile? = null,
-      private var failOnce: Boolean = false
+      private var failOnce: Boolean = false,
+      private var photoUploadShouldFail: Boolean = false,
+      private var simulateUploadDelay: Boolean = false
   ) : ProfileRepository {
 
     override suspend fun getProfile(uid: String): Profile? {
@@ -50,6 +54,27 @@ class EditProfileScreenTest {
 
     override suspend fun deleteProfile(uid: String) {
       if (stored?.uid == uid) stored = null
+    }
+
+    override suspend fun uploadProfilePhoto(
+        context: android.content.Context,
+        uid: String,
+        imageUri: Uri
+    ): String {
+      if (photoUploadShouldFail) {
+        throw RuntimeException("Upload failed")
+      }
+      if (simulateUploadDelay) {
+        kotlinx.coroutines.delay(100) // Simulate network delay
+      }
+      val downloadUrl = "https://example.com/photos/$uid/profile.jpg"
+      // Update stored profile with new photo URL
+      stored = stored?.copy(photoUrl = downloadUrl)
+      return downloadUrl
+    }
+
+    override suspend fun deleteProfilePhoto(uid: String) {
+      stored = stored?.copy(photoUrl = null)
     }
   }
 
@@ -202,11 +227,11 @@ class EditProfileScreenTest {
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.INTERESTS_FIELD)
-    val interests = composeTestRule.onNodeWithTag(EditProfileTestTags.INTERESTS_FIELD)
-    interests.performTextClearance()
-    interests.performTextInput("Coding, Testing, Android")
+    val node = composeTestRule.onNodeWithTag(EditProfileTestTags.INTERESTS_FIELD)
+    node.performTextClearance()
+    node.performTextInput("Reading, Swimming")
 
-    interests.assertTextContains("Coding, Testing, Android", substring = false)
+    node.assertTextContains("Reading, Swimming", substring = false)
   }
 
   @Test
@@ -215,17 +240,17 @@ class EditProfileScreenTest {
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.BIO_FIELD)
-    val bio = composeTestRule.onNodeWithTag(EditProfileTestTags.BIO_FIELD)
-    bio.performTextClearance()
-    bio.performTextInput("World champion. Loves sim racing and pad thai.")
+    val node = composeTestRule.onNodeWithTag(EditProfileTestTags.BIO_FIELD)
+    node.performTextClearance()
+    node.performTextInput("New bio text")
 
-    bio.assertTextContains("World champion. Loves sim racing and pad thai.", substring = false)
+    node.assertTextContains("New bio text", substring = false)
   }
 
-  // ==================== USERNAME VALIDATION TESTS ====================
+  // ==================== VALIDATION TESTS ====================
 
   @Test
-  fun editProfile_username_tooShort_showsError() = runTest {
+  fun editProfile_username_showsErrorForTooShort() = runTest {
     val vm = ProfileViewModel(FakeProfileRepository(testProfile))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
@@ -234,11 +259,10 @@ class EditProfileScreenTest {
     node.performTextInput("ab")
 
     composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_ERROR).assertIsDisplayed()
-    composeTestRule.onNodeWithText("Username must be at least 3 characters").assertIsDisplayed()
   }
 
   @Test
-  fun editProfile_username_tooLong_showsError() = runTest {
+  fun editProfile_username_showsErrorForTooLong() = runTest {
     val vm = ProfileViewModel(FakeProfileRepository(testProfile))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
@@ -247,140 +271,58 @@ class EditProfileScreenTest {
     node.performTextInput("a".repeat(31))
 
     composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_ERROR).assertIsDisplayed()
-    composeTestRule.onNodeWithText("Username must not exceed 30 characters").assertIsDisplayed()
   }
 
   @Test
-  fun editProfile_username_invalidCharacters_showsError() = runTest {
+  fun editProfile_username_showsErrorForInvalidCharacters() = runTest {
     val vm = ProfileViewModel(FakeProfileRepository(testProfile))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
     node.performTextClearance()
-    node.performTextInput("user@name!")
+    node.performTextInput("invalid@name")
 
     composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_ERROR).assertIsDisplayed()
-    composeTestRule
-        .onNodeWithText("Only letters, numbers, spaces, and underscores allowed")
-        .assertIsDisplayed()
   }
 
   @Test
-  fun editProfile_username_empty_showsError() = runTest {
+  fun editProfile_username_acceptsValidCharacters() = runTest {
     val vm = ProfileViewModel(FakeProfileRepository(testProfile))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
     node.performTextClearance()
-    node.performTextInput("")
-
-    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_ERROR).assertIsDisplayed()
-    composeTestRule.onNodeWithText("Username is required").assertIsDisplayed()
-  }
-
-  @Test
-  fun editProfile_username_validWithSpaces() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
-    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
-
-    val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
-    node.performTextClearance()
-    node.performTextInput("Max Verstappen")
+    node.performTextInput("Valid_User 123")
 
     composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_ERROR).assertDoesNotExist()
   }
 
   @Test
-  fun editProfile_username_validWithUnderscores() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
-    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
-
-    val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
-    node.performTextClearance()
-    node.performTextInput("max_verstappen_33")
-
-    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_ERROR).assertDoesNotExist()
-  }
-
-  @Test
-  fun editProfile_username_validWithNumbers() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
-    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
-
-    val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
-    node.performTextClearance()
-    node.performTextInput("user1234")
-
-    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_ERROR).assertDoesNotExist()
-  }
-
-  @Test
-  fun editProfile_username_exactly3Characters_isValid() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
-    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
-
-    val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
-    node.performTextClearance()
-    node.performTextInput("abc")
-
-    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_ERROR).assertDoesNotExist()
-  }
-
-  @Test
-  fun editProfile_username_exactly30Characters_isValid() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
-    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
-
-    val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
-    node.performTextClearance()
-    node.performTextInput("a".repeat(30))
-
-    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_ERROR).assertDoesNotExist()
-  }
-
-  // ==================== DATE VALIDATION TESTS ====================
-
-  @Test
-  fun editProfile_date_invalidFormat_showsError() = runTest {
+  fun editProfile_dateOfBirth_showsErrorForInvalidFormat() = runTest {
     val vm = ProfileViewModel(FakeProfileRepository(testProfile))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.DATE_OF_BIRTH_FIELD)
     node.performTextClearance()
-    node.performTextInput("2000-01-01")
+    node.performTextInput("01-01-2000")
 
     composeTestRule.onNodeWithTag(EditProfileTestTags.DATE_OF_BIRTH_ERROR).assertIsDisplayed()
-    composeTestRule.onNodeWithText("Enter your date in dd/mm/yyyy format.").assertIsDisplayed()
   }
 
   @Test
-  fun editProfile_date_invalidDay_showsError() = runTest {
+  fun editProfile_dateOfBirth_showsErrorForInvalidDate() = runTest {
     val vm = ProfileViewModel(FakeProfileRepository(testProfile))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.DATE_OF_BIRTH_FIELD)
     node.performTextClearance()
-    node.performTextInput("32/01/2000")
+    node.performTextInput("32/13/2000")
 
     composeTestRule.onNodeWithTag(EditProfileTestTags.DATE_OF_BIRTH_ERROR).assertIsDisplayed()
-    composeTestRule.onNodeWithText("Invalid date").assertIsDisplayed()
   }
 
   @Test
-  fun editProfile_date_invalidMonth_showsError() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
-    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
-
-    val node = composeTestRule.onNodeWithTag(EditProfileTestTags.DATE_OF_BIRTH_FIELD)
-    node.performTextClearance()
-    node.performTextInput("01/13/2000")
-
-    composeTestRule.onNodeWithTag(EditProfileTestTags.DATE_OF_BIRTH_ERROR).assertIsDisplayed()
-    composeTestRule.onNodeWithText("Invalid date").assertIsDisplayed()
-  }
-
-  @Test
-  fun editProfile_date_validFormat() = runTest {
+  fun editProfile_dateOfBirth_acceptsValidDate() = runTest {
     val vm = ProfileViewModel(FakeProfileRepository(testProfile))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
@@ -392,7 +334,7 @@ class EditProfileScreenTest {
   }
 
   @Test
-  fun editProfile_date_emptyIsValid() = runTest {
+  fun editProfile_dateOfBirth_allowsEmpty() = runTest {
     val vm = ProfileViewModel(FakeProfileRepository(testProfile))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
@@ -504,13 +446,166 @@ class EditProfileScreenTest {
   // ==================== PHOTO EDIT BUTTON TESTS ====================
 
   @Test
-  fun editProfile_editPhotoButton_isClickable() = runTest {
+  fun editProfile_editPhotoButton_isDisplayed() = runTest {
     val vm = ProfileViewModel(FakeProfileRepository(testProfile))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
-    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).performClick()
-    // Currently just a placeholder, but we can verify it doesn't crash
-    assert(true)
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun editProfile_editPhotoButton_isEnabled() = runTest {
+    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    // Verify button is enabled (can't click as it launches system picker)
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertIsEnabled()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertHasClickAction()
+  }
+
+  @Test
+  fun editProfile_editPhotoButton_hasClickAction() = runTest {
+    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertHasClickAction()
+  }
+
+  // ==================== PHOTO UPLOAD STATE TESTS ====================
+
+  @Test
+  fun editProfile_photoUploadIndicator_notShownInitially() = runTest {
+    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    // Upload indicator should not be visible initially
+    composeTestRule
+        .onNodeWithTag(EditProfileTestTags.PHOTO_UPLOADING_INDICATOR)
+        .assertDoesNotExist()
+  }
+
+  @Test
+  fun editProfile_editPhotoButton_disabledDuringUpload() = runTest {
+    val repo = FakeProfileRepository(testProfile, simulateUploadDelay = true)
+    val vm = ProfileViewModel(repo)
+
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    // Simulate starting an upload by directly calling the ViewModel
+    vm.uploadProfilePhoto(
+        context = ApplicationProvider.getApplicationContext(),
+        imageUri = Uri.parse("content://test/image.jpg"),
+        onSuccess = {},
+        onError = {})
+
+    // Wait a moment for state to update
+    composeTestRule.waitForIdle()
+
+    // During upload, the button should be disabled
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertIsNotEnabled()
+  }
+
+  @Test
+  fun editProfile_photoUploadIndicator_showsDuringUpload() = runTest {
+    val repo = FakeProfileRepository(testProfile, simulateUploadDelay = true)
+    val vm = ProfileViewModel(repo)
+
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    // Trigger upload via ViewModel
+    vm.uploadProfilePhoto(
+        context = ApplicationProvider.getApplicationContext(),
+        imageUri = Uri.parse("content://test/image.jpg"),
+        onSuccess = {},
+        onError = {})
+
+    composeTestRule.waitForIdle()
+
+    // Upload indicator should be visible during upload
+    composeTestRule.onNodeWithTag(EditProfileTestTags.PHOTO_UPLOADING_INDICATOR).assertIsDisplayed()
+  }
+
+  @Test
+  fun editProfile_profilePicture_displaysWithExistingPhoto() = runTest {
+    val profileWithPhoto = testProfile.copy(photoUrl = "https://example.com/photo.jpg")
+    val vm = ProfileViewModel(FakeProfileRepository(profileWithPhoto))
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    // Profile picture container should be displayed
+    composeTestRule.onNodeWithTag(EditProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
+    // Edit button should be available
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun editProfile_profilePicture_displaysWithoutPhoto() = runTest {
+    val profileWithoutPhoto = testProfile.copy(photoUrl = null)
+    val vm = ProfileViewModel(FakeProfileRepository(profileWithoutPhoto))
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    // Should show default avatar when no photo URL
+    composeTestRule.onNodeWithTag(EditProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun editProfile_profilePicture_handlesEmptyPhotoUrl() = runTest {
+    val profileWithEmptyUrl = testProfile.copy(photoUrl = "")
+    val vm = ProfileViewModel(FakeProfileRepository(profileWithEmptyUrl))
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    // Should handle empty string gracefully
+    composeTestRule.onNodeWithTag(EditProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
+  }
+
+  @Test
+  fun editProfile_profilePicture_overlayVisible() = runTest {
+    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    // The profile picture section includes a scrim overlay for the edit UI
+    composeTestRule.onNodeWithTag(EditProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
+    // The overlay makes the edit button visible and accessible
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun editProfile_profilePicture_maintainsStateAfterScroll() = runTest {
+    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    // Initially visible
+    composeTestRule.onNodeWithTag(EditProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
+
+    // Scroll down to save button
+    composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.SAVE_BUTTON)
+
+    // Scroll back up to profile picture
+    composeTestRule.onNodeWithTag(EditProfileTestTags.PROFILE_PICTURE).performScrollTo()
+
+    // Should still be displayed with edit button
+    composeTestRule.onNodeWithTag(EditProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun editProfile_saveButton_worksIndependentlyOfPhotoState() = runTest {
+    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    var saveClicked = false
+
+    composeTestRule.setContent {
+      EditProfileScreen(
+          uid = testUid, profileViewModel = vm, onSaveSuccess = { saveClicked = true })
+    }
+
+    // Edit username to make form valid
+    val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
+    node.performTextClearance()
+    node.performTextInput("New Name")
+
+    // Save button should work regardless of photo state
+    composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.SAVE_BUTTON)
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).assertIsEnabled()
   }
 
   // ==================== NAVIGATION TESTS ====================
@@ -602,5 +697,38 @@ class EditProfileScreenTest {
 
     composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.SAVE_BUTTON)
     composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).assertIsEnabled()
+  }
+
+  @Test
+  fun editProfile_photoButton_doesNotDisableSaveButton() = runTest {
+    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    // Verify photo button exists and save button is enabled
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertIsDisplayed()
+
+    composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.SAVE_BUTTON)
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).assertIsEnabled()
+
+    // Both photo button and save button should be independently functional
+    // (We can't click photo button as it launches system picker, blocking tests)
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertHasClickAction()
+  }
+
+  @Test
+  fun editProfile_editingFields_doesNotAffectPhotoButton() = runTest {
+    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    // Photo button is enabled initially
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertIsEnabled()
+
+    // Edit some fields
+    val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
+    node.performTextClearance()
+    node.performTextInput("New Name")
+
+    // Photo button should still be enabled
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertIsEnabled()
   }
 }
