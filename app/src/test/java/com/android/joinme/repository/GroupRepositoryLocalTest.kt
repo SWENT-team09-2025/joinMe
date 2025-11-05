@@ -56,7 +56,7 @@ class GroupRepositoryLocalTest {
   fun deleteGroup_removesSuccessfully() {
     runBlocking {
       repo.addGroup(sampleGroup)
-      repo.deleteGroup("1")
+      repo.deleteGroup("1", "user1")
       val all = repo.getAllGroups()
       Assert.assertTrue(all.isEmpty())
     }
@@ -101,7 +101,7 @@ class GroupRepositoryLocalTest {
   fun deleteGroup_notFound_throwsException() {
     runBlocking {
       repo.addGroup(sampleGroup)
-      repo.deleteGroup("nonexistent")
+      repo.deleteGroup("nonexistent", "user1")
     }
   }
 

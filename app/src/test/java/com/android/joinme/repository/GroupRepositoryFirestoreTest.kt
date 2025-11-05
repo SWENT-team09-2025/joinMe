@@ -169,7 +169,7 @@ class GroupRepositoryFirestoreTest {
     every { mockDocument.delete() } returns Tasks.forResult(null)
 
     // When
-    repository.deleteGroup(testGroupId)
+    repository.deleteGroup(testGroupId, testUserId)
 
     // Then
     verify { mockCollection.document(testGroupId) }
@@ -302,7 +302,7 @@ class GroupRepositoryFirestoreTest {
     every { mockDocument.delete() } returns Tasks.forResult(null)
 
     // When
-    repository.deleteGroup(testGroupId)
+    repository.deleteGroup(testGroupId, testUserId)
 
     // Then
     verify { mockDocument.delete() }
@@ -334,7 +334,7 @@ class GroupRepositoryFirestoreTest {
 
     // When/Then
     val exception =
-        assertThrows(Exception::class.java) { runBlocking { repository.deleteGroup(testGroupId) } }
+        assertThrows(Exception::class.java) { runBlocking { repository.deleteGroup(testGroupId, "different-user-id") } }
     assertTrue(exception.message!!.contains("Only the group owner can delete this group"))
 
     verify(exactly = 0) { mockDocument.delete() }
@@ -350,10 +350,23 @@ class GroupRepositoryFirestoreTest {
     every { FirebaseAuth.getInstance() } returns mockAuth
     every { mockAuth.currentUser } returns null
 
+    // Mock the getGroup call that deleteGroup makes
+    val group = createTestGroup()
+    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+    every { mockSnapshot.exists() } returns true
+    every { mockSnapshot.id } returns testGroupId
+    every { mockSnapshot.getString("name") } returns group.name
+    every { mockSnapshot.getString("category") } returns "SPORTS"
+    every { mockSnapshot.getString("description") } returns group.description
+    every { mockSnapshot.getString("ownerId") } returns testUserId
+    every { mockSnapshot.get("memberIds") } returns group.memberIds
+    every { mockSnapshot.get("eventIds") } returns group.eventIds
+    every { mockSnapshot.getString("photoUrl") } returns null
+
     // When/Then
     val exception =
-        assertThrows(Exception::class.java) { runBlocking { repository.deleteGroup(testGroupId) } }
-    assertTrue(exception.message!!.contains("User not logged in"))
+        assertThrows(Exception::class.java) { runBlocking { repository.deleteGroup(testGroupId, "any-user-id") } }
+    assertTrue(exception.message!!.contains("Only the group owner can delete this group"))
 
     verify(exactly = 0) { mockDocument.delete() }
 

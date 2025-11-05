@@ -3,6 +3,12 @@ package com.android.joinme.viewmodel
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.ui.groups.GroupListViewModel
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -60,7 +66,13 @@ class GroupListViewModelTest {
       }
     }
 
-    override suspend fun deleteGroup(groupId: String) {
+    override suspend fun deleteGroup(groupId: String, userId: String) {
+      val group = getGroup(groupId)
+
+      if (group.ownerId != userId) {
+        throw Exception("Only the group owner can delete this group")
+      }
+
       val removed = groups.removeIf { it.id == groupId }
       if (!removed) {
         throw Exception("Group not found")
@@ -81,6 +93,7 @@ class GroupListViewModelTest {
   private lateinit var fakeRepo: FakeGroupRepository
   private lateinit var viewModel: GroupListViewModel
   private val testDispatcher = StandardTestDispatcher()
+  private val testUserId = "test-user-123"
 
   @Before
   fun setUp() {
@@ -91,6 +104,21 @@ class GroupListViewModelTest {
   @After
   fun tearDown() {
     Dispatchers.resetMain()
+  }
+
+  /** Helper to mock Firebase Auth with a logged-in user */
+  private fun mockFirebaseAuth() {
+    mockkStatic(FirebaseAuth::class)
+    val mockAuth = mockk<FirebaseAuth>()
+    val mockUser = mockk<FirebaseUser>()
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns mockUser
+    every { mockUser.uid } returns testUserId
+  }
+
+  /** Helper to clean up Firebase Auth mocks */
+  private fun cleanupFirebaseAuth() {
+    unmockkStatic(FirebaseAuth::class)
   }
 
   @Test
@@ -469,11 +497,12 @@ class GroupListViewModelTest {
 
   @Test
   fun deleteGroup_removesGroupAndRefreshesState() = runTest {
+    mockFirebaseAuth()
     val groups =
         listOf(
-            Group(id = "1", name = "Group 1", ownerId = "owner1"),
-            Group(id = "2", name = "Group 2", ownerId = "owner2"),
-            Group(id = "3", name = "Group 3", ownerId = "owner3"))
+            Group(id = "1", name = "Group 1", ownerId = testUserId),
+            Group(id = "2", name = "Group 2", ownerId = testUserId),
+            Group(id = "3", name = "Group 3", ownerId = testUserId))
     fakeRepo.setGroups(groups)
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
@@ -489,11 +518,14 @@ class GroupListViewModelTest {
     assertEquals("Group 3", state.groups[1].name)
     assertTrue(successCalled)
     assertNull(state.errorMsg)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun deleteGroup_callsOnSuccessCallback() = runTest {
-    fakeRepo.setGroups(listOf(Group(id = "1", name = "Test", ownerId = "owner1")))
+    mockFirebaseAuth()
+    fakeRepo.setGroups(listOf(Group(id = "1", name = "Test", ownerId = testUserId)))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
 
@@ -502,6 +534,8 @@ class GroupListViewModelTest {
     advanceUntilIdle()
 
     assertTrue(successCalled)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
@@ -534,10 +568,11 @@ class GroupListViewModelTest {
 
   @Test
   fun deleteGroup_refreshesGroupListAfterDeletion() = runTest {
+    mockFirebaseAuth()
     val groups =
         listOf(
-            Group(id = "1", name = "Group 1", ownerId = "owner1"),
-            Group(id = "2", name = "Group 2", ownerId = "owner2"))
+            Group(id = "1", name = "Group 1", ownerId = testUserId),
+            Group(id = "2", name = "Group 2", ownerId = testUserId))
     fakeRepo.setGroups(groups)
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
@@ -548,6 +583,8 @@ class GroupListViewModelTest {
     val state = viewModel.uiState.value
     assertEquals(1, state.groups.size)
     assertEquals("Group 2", state.groups[0].name)
+
+    cleanupFirebaseAuth()
   }
 
   // =======================================
@@ -556,41 +593,47 @@ class GroupListViewModelTest {
 
   @Test
   fun leaveGroup_removesUserFromMembersAndRefreshesState() = runTest {
+    mockFirebaseAuth()
     val group =
         Group(
             id = "1",
             name = "Test Group",
             ownerId = "owner1",
-            memberIds = listOf("owner1", "user1", "user2"))
+            memberIds = listOf("owner1", testUserId, "user2"))
     fakeRepo.setGroups(listOf(group))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
     assertEquals(3, viewModel.uiState.value.groups[0].memberIds.size)
 
     var successCalled = false
-    viewModel.leaveGroup("1", "user1", onSuccess = { successCalled = true })
+    viewModel.leaveGroup("1", onSuccess = { successCalled = true })
     advanceUntilIdle()
 
     val state = viewModel.uiState.value
     assertEquals(2, state.groups[0].memberIds.size)
-    assertFalse(state.groups[0].memberIds.contains("user1"))
+    assertFalse(state.groups[0].memberIds.contains(testUserId))
     assertTrue(successCalled)
     assertNull(state.errorMsg)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun leaveGroup_callsOnSuccessCallback() = runTest {
+    mockFirebaseAuth()
     val group =
-        Group(id = "1", name = "Test", ownerId = "owner1", memberIds = listOf("owner1", "user1"))
+        Group(id = "1", name = "Test", ownerId = "owner1", memberIds = listOf("owner1", testUserId))
     fakeRepo.setGroups(listOf(group))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
 
     var successCalled = false
-    viewModel.leaveGroup("1", "user1", onSuccess = { successCalled = true })
+    viewModel.leaveGroup("1", onSuccess = { successCalled = true })
     advanceUntilIdle()
 
     assertTrue(successCalled)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
@@ -602,7 +645,7 @@ class GroupListViewModelTest {
     advanceUntilIdle()
 
     var errorMessage: String? = null
-    viewModel.leaveGroup("1", "non-member", onError = { errorMessage = it })
+    viewModel.leaveGroup("1", onError = { errorMessage = it })
     advanceUntilIdle()
 
     assertNotNull(errorMessage)
@@ -617,7 +660,7 @@ class GroupListViewModelTest {
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
 
-    viewModel.leaveGroup("1", "non-member")
+    viewModel.leaveGroup("1")
     advanceUntilIdle()
 
     val state = viewModel.uiState.value
@@ -627,24 +670,25 @@ class GroupListViewModelTest {
 
   @Test
   fun leaveGroup_refreshesGroupListAfterLeaving() = runTest {
+    mockFirebaseAuth()
     val group =
         Group(
             id = "1",
             name = "Test Group",
             ownerId = "owner1",
-            memberIds = listOf("owner1", "user1", "user2"))
+            memberIds = listOf("owner1", testUserId, "user2"))
     fakeRepo.setGroups(listOf(group))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
 
-    viewModel.leaveGroup("1", "user2")
+    viewModel.leaveGroup("1")
     advanceUntilIdle()
 
     val state = viewModel.uiState.value
     assertEquals(2, state.groups[0].memberIds.size)
-    assertTrue(state.groups[0].memberIds.contains("owner1"))
-    assertTrue(state.groups[0].memberIds.contains("user1"))
-    assertFalse(state.groups[0].memberIds.contains("user2"))
+    assertFalse(state.groups[0].memberIds.contains(testUserId))
+
+    cleanupFirebaseAuth()
   }
 
   @Test
@@ -654,7 +698,7 @@ class GroupListViewModelTest {
     advanceUntilIdle()
 
     var errorMessage: String? = null
-    viewModel.leaveGroup("non-existent", "user1", onError = { errorMessage = it })
+    viewModel.leaveGroup("non-existent", onError = { errorMessage = it })
     advanceUntilIdle()
 
     assertNotNull(errorMessage)
