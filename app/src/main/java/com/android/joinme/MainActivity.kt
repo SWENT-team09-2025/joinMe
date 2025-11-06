@@ -28,6 +28,7 @@ import com.android.joinme.ui.map.MapScreen
 import com.android.joinme.ui.map.MapViewModel
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.Screen
+import com.android.joinme.ui.overview.CreateEventForSerieScreen
 import com.android.joinme.ui.overview.CreateEventScreen
 import com.android.joinme.ui.overview.CreateSerieScreen
 import com.android.joinme.ui.overview.EditEventScreen
@@ -162,8 +163,20 @@ fun JoinMe(
       }
       composable(Screen.CreateSerie.route) {
         CreateSerieScreen(
-            onDone = { navigationActions.navigateTo(Screen.Overview) },
+            onDone = { serieId ->
+              navigationActions.navigateTo(Screen.CreateEventForSerie(serieId))
+            },
             onGoBack = { navigationActions.goBack() })
+      }
+      composable(Screen.CreateEventForSerie.route) { navBackStackEntry ->
+        val serieId = navBackStackEntry.arguments?.getString("serieId")
+
+        serieId?.let {
+          CreateEventForSerieScreen(
+              serieId = serieId,
+              onDone = { navigationActions.navigateTo(Screen.Overview) },
+              onGoBack = { navigationActions.goBack() })
+        } ?: run { Toast.makeText(context, "Serie ID is null", Toast.LENGTH_SHORT).show() }
       }
       composable(Screen.EditEvent.route) { navBackStackEntry ->
         val eventId = navBackStackEntry.arguments?.getString("eventId")

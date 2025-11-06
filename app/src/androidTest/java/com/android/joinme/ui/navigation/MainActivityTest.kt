@@ -111,6 +111,7 @@ class MainActivityTest {
     assert(Screen.Profile.route.isNotEmpty())
     assert(Screen.CreateEvent.route.isNotEmpty())
     assert(Screen.CreateSerie.route.isNotEmpty())
+    assert(Screen.CreateEventForSerie.Companion.route.isNotEmpty())
     assert(Screen.EditEvent.Companion.route.isNotEmpty())
     assert(Screen.ShowEventScreen.Companion.route.isNotEmpty())
     assert(Screen.EditGroup.Companion.route.isNotEmpty())
@@ -324,6 +325,38 @@ class MainActivityTest {
     // Verifies that MainActivity overrides onNewIntent
     // This allows handling new intents when the activity is already running
     assert(true)
+  }
+
+  @Test
+  fun navHost_overviewNavigationContainsCreateEventForSerie() {
+    composeTestRule.waitForIdle()
+    // Verifies that the Overview navigation contains CreateEventForSerie screen
+    // CreateEventForSerie should have route "create_event_for_serie/{serieId}"
+    assert(Screen.CreateEventForSerie.Companion.route == "create_event_for_serie/{serieId}")
+  }
+
+  @Test
+  fun navHost_createEventForSerieScreenHasValidRoute() {
+    composeTestRule.waitForIdle()
+    // Verifies that CreateEventForSerie screen has valid, non-empty route pattern
+    assert(Screen.CreateEventForSerie.Companion.route.isNotEmpty())
+    assert(Screen.CreateEventForSerie("test-serie-id").name.isNotEmpty())
+  }
+
+  @Test
+  fun navHost_createEventForSerieIsNotTopLevelDestination() {
+    composeTestRule.waitForIdle()
+    // Verifies that CreateEventForSerie is not flagged as a top-level destination
+    assert(!Screen.CreateEventForSerie("test-serie-id").isTopLevelDestination)
+  }
+
+  @Test
+  fun navHost_createEventForSerieAcceptsSerieIdParameter() {
+    composeTestRule.waitForIdle()
+    // Verifies that CreateEventForSerie properly accepts serieId parameter
+    val testSerieId = "test-serie-123"
+    val screen = Screen.CreateEventForSerie(testSerieId)
+    assert(screen.route == "create_event_for_serie/$testSerieId")
   }
 
   @Test

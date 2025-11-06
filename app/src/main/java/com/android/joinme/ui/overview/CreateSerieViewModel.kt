@@ -103,23 +103,23 @@ class CreateSerieViewModel(
    *
    * The loading state is set to true at the start and false upon completion. If any error occurs
    * during the process (validation failure, authentication check failure, date parsing error, or
-   * repository error), an appropriate error message is set and the function returns false.
+   * repository error), an appropriate error message is set and the function returns null.
    *
-   * @return True if the serie was created successfully, false if validation failed, user is not
-   *   authenticated, date parsing failed, or repository save failed
+   * @return The serie ID if the serie was created successfully, null if validation failed, user is
+   *   not authenticated, date parsing failed, or repository save failed
    */
-  suspend fun createSerie(): Boolean {
+  suspend fun createSerie(): String? {
     val state = _uiState.value
     if (!state.isValid) {
       setErrorMsg("At least one field is not valid")
-      return false
+      return null
     }
 
     // Check if user is authenticated
     val currentUserId = getCurrentUserId()
     if (currentUserId == null) {
       setErrorMsg("You must be signed in to create a serie")
-      return false
+      return null
     }
 
     setLoadingState(true)
@@ -128,12 +128,13 @@ class CreateSerieViewModel(
     if (parsedDate == null) {
       setErrorMsg("Invalid date format (must be dd/MM/yyyy HH:mm)")
       setLoadingState(false)
-      return false
+      return null
     }
 
+    val serieId = repository.getNewSerieId()
     val serie =
         Serie(
-            serieId = repository.getNewSerieId(),
+            serieId = serieId,
             title = state.title,
             description = state.description,
             date = parsedDate,
@@ -147,11 +148,11 @@ class CreateSerieViewModel(
       repository.addSerie(serie)
       clearErrorMsg()
       setLoadingState(false)
-      true
+      serieId
     } catch (e: Exception) {
       setErrorMsg("Failed to create serie: ${e.message}")
       setLoadingState(false)
-      false
+      null
     }
   }
 
