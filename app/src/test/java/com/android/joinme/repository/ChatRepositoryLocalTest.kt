@@ -12,8 +12,8 @@ import org.junit.Test
 /**
  * Comprehensive tests for ChatRepositoryLocal.
  *
- * Tests all CRUD operations, Flow-based real-time updates, message read tracking,
- * and multi-chat isolation.
+ * Tests all CRUD operations, Flow-based real-time updates, message read tracking, and multi-chat
+ * isolation.
  *
  * Note: This test suite was implemented with the help of Claude AI.
  */
