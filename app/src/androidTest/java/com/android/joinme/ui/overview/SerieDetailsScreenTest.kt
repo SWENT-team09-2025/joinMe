@@ -1,6 +1,5 @@
 package com.android.joinme.ui.overview
 
-import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.Event
@@ -15,7 +14,6 @@ import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.utils.Visibility
 import com.google.firebase.Timestamp
 import java.util.*
-import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -51,8 +49,7 @@ class FakeSerieDetailsSeriesRepository : SeriesRepository {
     return series[serieId] ?: throw NoSuchElementException("Serie not found")
   }
 
-  override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> =
-      series.values.toList()
+  override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> = series.values.toList()
 
   override fun getNewSerieId(): String = "new-serie-id"
 }
@@ -84,8 +81,7 @@ class FakeSerieDetailsEventsRepository : EventsRepository {
   override suspend fun getEvent(eventId: String): Event =
       events[eventId] ?: throw NoSuchElementException("Event not found")
 
-  override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> =
-      events.values.toList()
+  override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> = events.values.toList()
 
   override fun getNewEventId(): String = "new-event-id"
 }
@@ -272,7 +268,10 @@ class SerieDetailsScreenTest {
             .onAllNodesWithTag(SerieDetailsScreenTestTags.LOADING)
             .fetchSemanticsNodes()
             .isNotEmpty() ||
-            composeTestRule.onAllNodesWithText("Weekly Basketball").fetchSemanticsNodes().isNotEmpty()
+            composeTestRule
+                .onAllNodesWithText("Weekly Basketball")
+                .fetchSemanticsNodes()
+                .isNotEmpty()
 
     assertTrue(loadingOrContentExists)
   }
@@ -339,9 +338,7 @@ class SerieDetailsScreenTest {
 
     // Verify owner buttons are shown
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT).assertIsDisplayed()
-    composeTestRule
-        .onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON)
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON).assertIsDisplayed()
     composeTestRule
         .onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT)
         .assertTextContains("ADD EVENT")
@@ -366,8 +363,7 @@ class SerieDetailsScreenTest {
   fun participantCanQuitSerieSuccessfully() {
     setup()
     val serie =
-        createTestSerie(
-            ownerId = "owner123", participants = listOf("user1", "user2", "owner123"))
+        createTestSerie(ownerId = "owner123", participants = listOf("user1", "user2", "owner123"))
     fakeSeriesRepo.setSerie(serie)
 
     var quitSerieSuccessCalled = false
@@ -389,16 +385,12 @@ class SerieDetailsScreenTest {
     }
 
     // Verify quit button is shown and owner buttons are hidden
-    composeTestRule
-        .onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE)
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE).assertIsDisplayed()
     composeTestRule
         .onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE)
         .assertTextContains("QUIT SERIE")
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT).assertDoesNotExist()
-    composeTestRule
-        .onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON)
-        .assertDoesNotExist()
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON).assertDoesNotExist()
 
     // Verify initial members count
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.MEMBERS_COUNT).assertIsDisplayed()
@@ -414,9 +406,7 @@ class SerieDetailsScreenTest {
     assertTrue(quitSerieSuccessCalled)
 
     // Verify button now shows JOIN
-    composeTestRule
-        .onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE)
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE).assertIsDisplayed()
   }
 
   // ========== Non-Participant Tests ==========
@@ -442,9 +432,7 @@ class SerieDetailsScreenTest {
     }
 
     // Verify join button is shown
-    composeTestRule
-        .onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE)
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE).assertIsDisplayed()
     composeTestRule
         .onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE)
         .assertTextContains("JOIN SERIE")
@@ -460,9 +448,7 @@ class SerieDetailsScreenTest {
     composeTestRule.waitForIdle()
 
     // Verify user joined successfully - button should now show QUIT
-    composeTestRule
-        .onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE)
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE).assertIsDisplayed()
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.MEMBERS_COUNT).assertIsDisplayed()
   }
 
@@ -539,7 +525,8 @@ class SerieDetailsScreenTest {
 
     composeTestRule.waitUntil(timeoutMillis = 3000) {
       composeTestRule
-          .onAllNodesWithText("Basketball & Football ⚽ - Very Long Title That Tests Layout Handling")
+          .onAllNodesWithText(
+              "Basketball & Football ⚽ - Very Long Title That Tests Layout Handling")
           .fetchSemanticsNodes()
           .isNotEmpty()
     }
@@ -613,8 +600,6 @@ class SerieDetailsScreenTest {
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.SCREEN).assertIsDisplayed()
 
     // Should show join button for unknown user (non-owner, non-participant)
-    composeTestRule
-        .onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE)
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE).assertIsDisplayed()
   }
 }

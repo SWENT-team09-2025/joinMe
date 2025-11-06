@@ -20,7 +20,6 @@ import com.android.joinme.ui.components.EventCard
 import com.android.joinme.ui.theme.ButtonSaveColor
 import com.android.joinme.ui.theme.DarkButtonColor
 import com.android.joinme.ui.theme.DividerColor
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
@@ -316,12 +315,15 @@ fun SerieDetailsScreen(
                               .height(56.dp)
                               .testTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE),
                       shape = RoundedCornerShape(8.dp),
-                      enabled = uiState.isParticipant(currentUserId) || uiState.canJoin(currentUserId),
+                      enabled =
+                          uiState.isParticipant(currentUserId) || uiState.canJoin(currentUserId),
                       colors =
                           ButtonDefaults.buttonColors(
                               containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
                         Text(
-                            text = if (uiState.isParticipant(currentUserId)) "QUIT SERIE" else "JOIN SERIE",
+                            text =
+                                if (uiState.isParticipant(currentUserId)) "QUIT SERIE"
+                                else "JOIN SERIE",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Medium)
                       }

@@ -690,8 +690,7 @@ class SerieDetailsViewModelTest {
   @Test
   fun quitSerie_userIsOwner_returnsFalse() = runTest {
     // Create serie where test-user-id is the owner
-    val serie =
-        createTestSerie(ownerId = testUserId, participants = listOf(testUserId, "user1"))
+    val serie = createTestSerie(ownerId = testUserId, participants = listOf(testUserId, "user1"))
     seriesRepository.addSerie(serie)
 
     viewModel.loadSerieDetails(serie.serieId)

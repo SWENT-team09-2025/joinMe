@@ -210,8 +210,7 @@ fun JoinMe(
                     .show()
               },
               onEditSerieClick = {
-                Toast.makeText(
-                        context, "Edit serie - not yet implemented", Toast.LENGTH_SHORT)
+                Toast.makeText(context, "Edit serie - not yet implemented", Toast.LENGTH_SHORT)
                     .show()
               } // TODO: Implement navigation to Edit serie screen with serieId
               ,
