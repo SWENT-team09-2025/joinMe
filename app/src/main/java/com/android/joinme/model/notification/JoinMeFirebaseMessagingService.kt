@@ -6,7 +6,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.android.joinme.MainActivity
 import com.android.joinme.R
@@ -22,7 +21,6 @@ import com.google.firebase.messaging.RemoteMessage
 class JoinMeFirebaseMessagingService : FirebaseMessagingService() {
 
   companion object {
-    private const val TAG = "JoinMeFCMService"
     private const val CHANNEL_ID = "joinme_notifications"
     private const val CHANNEL_NAME = "JoinMe Notifications"
     private const val CHANNEL_DESCRIPTION = "Notifications for event updates and invitations"
@@ -41,8 +39,6 @@ class JoinMeFirebaseMessagingService : FirebaseMessagingService() {
    */
   override fun onNewToken(token: String) {
     super.onNewToken(token)
-    Log.d(TAG, "New FCM token: $token")
-
     // Update the token in Firestore
     FCMTokenManager.updateFCMToken(token)
   }
@@ -54,7 +50,6 @@ class JoinMeFirebaseMessagingService : FirebaseMessagingService() {
    */
   override fun onMessageReceived(message: RemoteMessage) {
     super.onMessageReceived(message)
-    Log.d(TAG, "Message received from: ${message.from}")
 
     // Extract notification data
     val notification = message.notification
@@ -63,8 +58,6 @@ class JoinMeFirebaseMessagingService : FirebaseMessagingService() {
     val title = notification?.title ?: data["title"] ?: "JoinMe"
     val body = notification?.body ?: data["body"] ?: ""
     val eventId = data["eventId"]
-
-    Log.d(TAG, "Notification - Title: $title, Body: $body, EventId: $eventId")
 
     // Display the notification
     showNotification(title, body, eventId)
@@ -110,7 +103,7 @@ class JoinMeFirebaseMessagingService : FirebaseMessagingService() {
 
     val notificationBuilder =
         NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.app_logo)
             .setContentTitle(title)
             .setContentText(body)
             .setPriority(NotificationCompat.PRIORITY_HIGH)

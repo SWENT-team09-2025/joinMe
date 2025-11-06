@@ -3,6 +3,7 @@ package com.android.joinme.model.notification
 import android.content.Context
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,7 +40,10 @@ object FCMTokenManager {
 
         // Update the user's profile with the FCM token
         val db = FirebaseFirestore.getInstance()
-        db.collection("profiles").document(currentUser.uid).update("fcmToken", token).await()
+        db.collection("profiles")
+            .document(currentUser.uid)
+            .set(mapOf("fcmToken" to token), SetOptions.merge())
+            .await()
       } catch (e: Exception) {
         // exception ignored
       }
@@ -62,7 +66,10 @@ object FCMTokenManager {
     CoroutineScope(Dispatchers.IO).launch {
       try {
         val db = FirebaseFirestore.getInstance()
-        db.collection("profiles").document(currentUser.uid).update("fcmToken", newToken).await()
+        db.collection("profiles")
+            .document(currentUser.uid)
+            .set(mapOf("fcmToken" to newToken), SetOptions.merge())
+            .await()
       } catch (e: Exception) {
         // exception ignored
       }
@@ -84,7 +91,10 @@ object FCMTokenManager {
     CoroutineScope(Dispatchers.IO).launch {
       try {
         val db = FirebaseFirestore.getInstance()
-        db.collection("profiles").document(currentUser.uid).update("fcmToken", null).await()
+        db.collection("profiles")
+            .document(currentUser.uid)
+            .set(mapOf("fcmToken" to null), SetOptions.merge())
+            .await()
       } catch (e: Exception) {
         // exception ignored
       }
