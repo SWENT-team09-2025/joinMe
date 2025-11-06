@@ -74,7 +74,8 @@ class FCMTokenManagerTest {
     // Given
     every { mockAuth.currentUser } returns mockUser
     every { mockMessaging.token } returns Tasks.forResult(testToken)
-    every { mockDocument.set(mapOf("fcmToken" to testToken), SetOptions.merge()) } returns Tasks.forResult(null)
+    every { mockDocument.set(mapOf("fcmToken" to testToken), SetOptions.merge()) } returns
+        Tasks.forResult(null)
 
     // When
     FCMTokenManager.initializeFCMToken(mockContext)
@@ -107,7 +108,8 @@ class FCMTokenManagerTest {
   fun `updateFCMToken with logged in user updates token in Firestore`() = runTest {
     // Given
     every { mockAuth.currentUser } returns mockUser
-    every { mockDocument.set(mapOf("fcmToken" to testToken), SetOptions.merge()) } returns Tasks.forResult(null)
+    every { mockDocument.set(mapOf("fcmToken" to testToken), SetOptions.merge()) } returns
+        Tasks.forResult(null)
 
     // When
     FCMTokenManager.updateFCMToken(testToken)
@@ -139,7 +141,8 @@ class FCMTokenManagerTest {
   fun `clearFCMToken with logged in user clears token in Firestore`() = runTest {
     // Given
     every { mockAuth.currentUser } returns mockUser
-    every { mockDocument.set(mapOf("fcmToken" to null), SetOptions.merge()) } returns Tasks.forResult(null)
+    every { mockDocument.set(mapOf("fcmToken" to null), SetOptions.merge()) } returns
+        Tasks.forResult(null)
 
     // When
     FCMTokenManager.clearFCMToken()
