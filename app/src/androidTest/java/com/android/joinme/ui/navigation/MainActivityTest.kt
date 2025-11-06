@@ -279,7 +279,6 @@ class MainActivityTest {
     assert(!Screen.EditProfile.isTopLevelDestination)
   }
 
-
   @Test
   fun httpClientProvider_providesNonNullClient() {
     // Verifies that HttpClientProvider provides a non-null OkHttpClient
