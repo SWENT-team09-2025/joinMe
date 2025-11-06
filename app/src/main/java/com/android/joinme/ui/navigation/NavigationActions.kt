@@ -50,6 +50,18 @@ sealed class Screen(
   object CreateSerie : Screen(route = "create_serie", name = "Create a new serie")
 
   /**
+   * Screen for creating a new event for an existing serie
+   *
+   * @param serieId The ID of the serie to add the event to
+   */
+  data class CreateEventForSerie(val serieId: String) :
+      Screen(route = "create_event_for_serie/${serieId}", name = "Create Event for Serie") {
+    companion object {
+      const val route = "create_event_for_serie/{serieId}"
+    }
+  }
+
+  /**
    * Screen for viewing event details
    *
    * @param eventId The ID of the event to display

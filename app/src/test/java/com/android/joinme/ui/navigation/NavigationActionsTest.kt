@@ -179,6 +179,25 @@ class NavigationActionsTest {
   }
 
   @Test
+  fun `navigateTo CreateEventForSerie with serieId navigates to correct route`() {
+    val serieId = "test-serie-123"
+    every { navController.currentDestination?.route } returns Screen.CreateSerie.route
+
+    actions.navigateTo(Screen.CreateEventForSerie(serieId))
+
+    verify {
+      navController.navigate(
+          eq("create_event_for_serie/$serieId"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            // CreateEventForSerie is not a top-level destination
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
   fun `navigateTo EditGroup with groupId navigates to correct route`() {
     val groupId = "test-group-789"
     every { navController.currentDestination?.route } returns Screen.Groups.route
