@@ -1,11 +1,11 @@
 package com.android.joinme.model.chat
 
 enum class MessageType {
-    TEXT,
-    SYSTEM, // For "User joined," "User left," etc.
-    //IMAGE, Implement this later if possible
-    //VIDEO, Implement this later if possible
-    //AUDIO, Implement this later if possible
+  TEXT,
+  SYSTEM, // For "User joined," "User left," etc.
+  // IMAGE, Implement this later if possible
+  // VIDEO, Implement this later if possible
+  // AUDIO, Implement this later if possible
 }
 
 data class Message(
