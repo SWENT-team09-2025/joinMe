@@ -7,6 +7,7 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.messaging.FirebaseMessaging
 import io.mockk.every
 import io.mockk.mockk
@@ -73,7 +74,7 @@ class FCMTokenManagerTest {
     // Given
     every { mockAuth.currentUser } returns mockUser
     every { mockMessaging.token } returns Tasks.forResult(testToken)
-    every { mockDocument.update("fcmToken", testToken) } returns Tasks.forResult(null)
+    every { mockDocument.set(mapOf("fcmToken" to testToken), SetOptions.merge()) } returns Tasks.forResult(null)
 
     // When
     FCMTokenManager.initializeFCMToken(mockContext)
@@ -83,7 +84,7 @@ class FCMTokenManagerTest {
 
     // Then
     verify { mockMessaging.token }
-    verify { mockDocument.update("fcmToken", testToken) }
+    verify { mockDocument.set(mapOf("fcmToken" to testToken), SetOptions.merge()) }
   }
 
   @Test
@@ -99,14 +100,14 @@ class FCMTokenManagerTest {
 
     // Then
     verify(exactly = 0) { mockMessaging.token }
-    verify(exactly = 0) { mockDocument.update(any<String>(), any()) }
+    verify(exactly = 0) { mockDocument.set(any<Map<String, Any?>>(), any<SetOptions>()) }
   }
 
   @Test
   fun `updateFCMToken with logged in user updates token in Firestore`() = runTest {
     // Given
     every { mockAuth.currentUser } returns mockUser
-    every { mockDocument.update("fcmToken", testToken) } returns Tasks.forResult(null)
+    every { mockDocument.set(mapOf("fcmToken" to testToken), SetOptions.merge()) } returns Tasks.forResult(null)
 
     // When
     FCMTokenManager.updateFCMToken(testToken)
@@ -116,7 +117,7 @@ class FCMTokenManagerTest {
 
     // Then
     verify { mockCollection.document(testUserId) }
-    verify { mockDocument.update("fcmToken", testToken) }
+    verify { mockDocument.set(mapOf("fcmToken" to testToken), SetOptions.merge()) }
   }
 
   @Test
@@ -131,14 +132,14 @@ class FCMTokenManagerTest {
     Thread.sleep(100)
 
     // Then
-    verify(exactly = 0) { mockDocument.update(any<String>(), any()) }
+    verify(exactly = 0) { mockDocument.set(any<Map<String, Any?>>(), any<SetOptions>()) }
   }
 
   @Test
   fun `clearFCMToken with logged in user clears token in Firestore`() = runTest {
     // Given
     every { mockAuth.currentUser } returns mockUser
-    every { mockDocument.update("fcmToken", null as Any?) } returns Tasks.forResult(null)
+    every { mockDocument.set(mapOf("fcmToken" to null), SetOptions.merge()) } returns Tasks.forResult(null)
 
     // When
     FCMTokenManager.clearFCMToken()
@@ -148,7 +149,7 @@ class FCMTokenManagerTest {
 
     // Then
     verify { mockCollection.document(testUserId) }
-    verify { mockDocument.update("fcmToken", null as Any?) }
+    verify { mockDocument.set(mapOf("fcmToken" to null), SetOptions.merge()) }
   }
 
   @Test
@@ -163,7 +164,7 @@ class FCMTokenManagerTest {
     Thread.sleep(100)
 
     // Then
-    verify(exactly = 0) { mockDocument.update(any<String>(), any()) }
+    verify(exactly = 0) { mockDocument.set(any<Map<String, Any?>>(), any<SetOptions>()) }
   }
 
   @Test
@@ -180,14 +181,14 @@ class FCMTokenManagerTest {
 
     // Then - should not crash, just log error
     verify { mockMessaging.token }
-    verify(exactly = 0) { mockDocument.update(any<String>(), any()) }
+    verify(exactly = 0) { mockDocument.set(any<Map<String, Any?>>(), any<SetOptions>()) }
   }
 
   @Test
   fun `updateFCMToken handles exception gracefully`() = runTest {
     // Given
     every { mockAuth.currentUser } returns mockUser
-    every { mockDocument.update("fcmToken", testToken) } returns
+    every { mockDocument.set(mapOf("fcmToken" to testToken), SetOptions.merge()) } returns
         Tasks.forException(RuntimeException("Firestore update failed"))
 
     // When
@@ -197,14 +198,14 @@ class FCMTokenManagerTest {
     Thread.sleep(100)
 
     // Then - should not crash, just log error
-    verify { mockDocument.update("fcmToken", testToken) }
+    verify { mockDocument.set(mapOf("fcmToken" to testToken), SetOptions.merge()) }
   }
 
   @Test
   fun `clearFCMToken handles exception gracefully`() = runTest {
     // Given
     every { mockAuth.currentUser } returns mockUser
-    every { mockDocument.update("fcmToken", null as Any?) } returns
+    every { mockDocument.set(mapOf("fcmToken" to null), SetOptions.merge()) } returns
         Tasks.forException(RuntimeException("Firestore update failed"))
 
     // When
@@ -214,6 +215,6 @@ class FCMTokenManagerTest {
     Thread.sleep(100)
 
     // Then - should not crash, just log error
-    verify { mockDocument.update("fcmToken", null as Any?) }
+    verify { mockDocument.set(mapOf("fcmToken" to null), SetOptions.merge()) }
   }
 }
