@@ -856,4 +856,19 @@ class MainActivityNavigationTest {
       composeTestRule.onNodeWithTag(NavigationTestTags.tabTag(tab)).assertExists()
     }
   }
+
+  // ========== Serie Details Navigation Tests ==========
+
+  @Test
+  fun verifySerieDetailsRouteConfiguration() {
+    composeTestRule.waitForIdle()
+
+    // Verify SerieDetails route is configured correctly
+    assert(Screen.SerieDetails.Companion.route == "serie_details/{serieId}")
+    assert(!Screen.SerieDetails("test-id").isTopLevelDestination)
+
+    // Verify the route accepts a serieId parameter
+    val testSerieDetails = Screen.SerieDetails("test-serie-123")
+    assert(testSerieDetails.route == "serie_details/test-serie-123")
+  }
 }

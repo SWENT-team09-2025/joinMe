@@ -13,23 +13,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.android.joinme.model.event.Event
-import com.android.joinme.model.event.EventType
-import com.android.joinme.model.event.EventVisibility
-import com.android.joinme.model.map.Location
-import com.android.joinme.model.serie.Serie
-import com.android.joinme.model.utils.Visibility
 import com.android.joinme.ui.components.EventCard
 import com.android.joinme.ui.theme.ButtonSaveColor
 import com.android.joinme.ui.theme.DarkButtonColor
 import com.android.joinme.ui.theme.DividerColor
-import com.android.joinme.ui.theme.SampleAppTheme
-import com.google.firebase.Timestamp
-import java.util.Date
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
 
 /**
@@ -79,6 +72,9 @@ object SerieDetailsScreenTestTags {
 
   /** Test tag for the back button */
   const val BACK_BUTTON = "backButton"
+
+  /** Test tag for the edit serie button */
+  const val EDIT_SERIE_BUTTON = "editSerieButton"
 }
 
 /**
@@ -103,13 +99,14 @@ fun SerieDetailsScreen(
     onGoBack: () -> Unit = {},
     onEventCardClick: (String) -> Unit = {},
     onAddEventClick: () -> Unit = {},
-    onQuitSerieSuccess: () -> Unit = {}
+    onQuitSerieSuccess: () -> Unit = {},
+    onEditSerieClick: () -> Unit = {},
+    currentUserId: String = Firebase.auth.currentUser?.uid ?: "unknown"
 ) {
   val uiState by serieDetailsViewModel.uiState.collectAsState()
   val errorMsg = uiState.errorMsg
   val context = LocalContext.current
   val coroutineScope = rememberCoroutineScope()
-
   // Load serie details when the screen is first displayed
   LaunchedEffect(serieId) { serieDetailsViewModel.loadSerieDetails(serieId) }
 
@@ -125,17 +122,13 @@ fun SerieDetailsScreen(
       modifier = Modifier.testTag(SerieDetailsScreenTestTags.SCREEN),
       topBar = {
         Column {
-          TopAppBar(
+          CenterAlignedTopAppBar(
               title = {
-                Box(
-                    modifier = Modifier.fillMaxWidth().offset(x = (-24).dp),
-                    contentAlignment = Alignment.Center) {
-                      Text(
-                          text = uiState.serie?.title ?: "Loading...",
-                          fontSize = 20.sp,
-                          fontWeight = FontWeight.Medium,
-                          modifier = Modifier.testTag(SerieDetailsScreenTestTags.SERIE_TITLE))
-                    }
+                Text(
+                    text = uiState.serie?.title ?: "Loading...",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.testTag(SerieDetailsScreenTestTags.SERIE_TITLE))
               },
               navigationIcon = {
                 IconButton(
@@ -273,7 +266,7 @@ fun SerieDetailsScreen(
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center)
 
                 // Add event button (only shown to owner)
-                if (uiState.isOwner) {
+                if (uiState.isOwner(currentUserId)) {
                   Button(
                       onClick = onAddEventClick,
                       modifier =
@@ -286,20 +279,33 @@ fun SerieDetailsScreen(
                               containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
                         Text(text = "ADD EVENT", fontSize = 16.sp, fontWeight = FontWeight.Medium)
                       }
+                  Button(
+                      onClick = onEditSerieClick,
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .height(56.dp)
+                              .testTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON),
+                      shape = RoundedCornerShape(8.dp),
+                      enabled = uiState.isOwner(currentUserId),
+                      colors =
+                          ButtonDefaults.buttonColors(
+                              containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
+                        Text(text = "EDIT SERIE", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                      }
                 }
 
                 // Join/Quit serie button (shown to non-owners)
-                if (!uiState.isOwner) {
+                if (!uiState.isOwner(currentUserId)) {
                   Button(
                       onClick = {
                         coroutineScope.launch {
                           val success =
-                              if (uiState.isParticipant) {
-                                serieDetailsViewModel.quitSerie()
+                              if (uiState.isParticipant(currentUserId)) {
+                                serieDetailsViewModel.quitSerie((currentUserId))
                               } else {
-                                serieDetailsViewModel.joinSerie()
+                                serieDetailsViewModel.joinSerie(currentUserId)
                               }
-                          if (success && !uiState.isParticipant) {
+                          if (success && !uiState.isParticipant(currentUserId)) {
                             // If user quit successfully, navigate back
                             onQuitSerieSuccess()
                           }
@@ -310,257 +316,17 @@ fun SerieDetailsScreen(
                               .height(56.dp)
                               .testTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE),
                       shape = RoundedCornerShape(8.dp),
-                      enabled = uiState.isParticipant || uiState.canJoin,
+                      enabled = uiState.isParticipant(currentUserId) || uiState.canJoin(currentUserId),
                       colors =
                           ButtonDefaults.buttonColors(
                               containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
                         Text(
-                            text = if (uiState.isParticipant) "QUIT SERIE" else "JOIN SERIE",
+                            text = if (uiState.isParticipant(currentUserId)) "QUIT SERIE" else "JOIN SERIE",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Medium)
-                      }
-                } else {
-                  Button(
-                      onClick = {},
-                      modifier = Modifier.fillMaxWidth().height(56.dp),
-                      shape = RoundedCornerShape(8.dp),
-                      enabled = uiState.isOwner,
-                      colors =
-                          ButtonDefaults.buttonColors(
-                              containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
-                        Text(text = "EDIT SERIE", fontSize = 16.sp, fontWeight = FontWeight.Medium)
                       }
                 }
               }
         }
       }
-}
-
-/**
- * Preview for SerieDetailsScreen showing a loaded state with sample events.
- *
- * Duplicates the screen layout with mock data to show actual UI in preview.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Preview(showBackground = true)
-@Composable
-fun SerieDetailsScreenPreview() {
-  // Sample events
-  val sampleEvents =
-      listOf(
-          Event(
-              eventId = "event1",
-              type = EventType.ACTIVITY,
-              title = "Bar",
-              description = "Casual bar meetup",
-              location = Location(latitude = 0.0, longitude = 0.0, name = "Bulldog"),
-              date = Timestamp(Date(System.currentTimeMillis() + 86400000)),
-              duration = 120,
-              participants = listOf("user1", "user2", "user3"),
-              maxParticipants = 12,
-              visibility = EventVisibility.PUBLIC,
-              ownerId = "james123"),
-          Event(
-              eventId = "event2",
-              type = EventType.SOCIAL,
-              title = "Club",
-              description = "Night out at the club",
-              location = Location(latitude = 0.0, longitude = 0.0, name = "MAD"),
-              date = Timestamp(Date(System.currentTimeMillis() + 172800000)),
-              duration = 180,
-              participants = listOf("user1", "user2"),
-              maxParticipants = 12,
-              visibility = EventVisibility.PUBLIC,
-              ownerId = "james123"),
-          Event(
-              eventId = "event3",
-              type = EventType.SPORTS,
-              title = "Football Match",
-              description = "Friendly football game at the park",
-              location = Location(latitude = 0.0, longitude = 0.0, name = "Central Park"),
-              date = Timestamp(Date(System.currentTimeMillis() + 259200000)),
-              duration = 90,
-              participants = listOf("user1", "user2", "user3", "user4"),
-              maxParticipants = 12,
-              visibility = EventVisibility.PUBLIC,
-              ownerId = "james123"))
-
-  // Sample serie
-  val sampleSerie =
-      Serie(
-          serieId = "serie1",
-          title = "Title of serie",
-          description =
-              "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-          date = Timestamp(Date(1733666700000)),
-          participants =
-              listOf("user1", "user2", "user3", "user4", "user5", "user6", "user7", "user8"),
-          maxParticipants = 12,
-          visibility = Visibility.PUBLIC,
-          eventIds = listOf("event1", "event2", "event3"),
-          ownerId = "james123")
-
-  // Create preview state
-  val previewState =
-      SerieDetailsUIState(
-          serie = sampleSerie,
-          events = sampleEvents,
-          isLoading = false,
-          errorMsg = null,
-          currentUserId = "james123")
-
-  SampleAppTheme {
-    Scaffold(
-        modifier = Modifier.testTag(SerieDetailsScreenTestTags.SCREEN),
-        topBar = {
-          Column {
-            TopAppBar(
-                title = {
-                  Box(
-                      modifier = Modifier.fillMaxWidth().offset(x = (-24).dp),
-                      contentAlignment = Alignment.Center) {
-                        Text(
-                            text = previewState.serie?.title ?: "Loading...",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Medium)
-                      }
-                },
-                navigationIcon = {
-                  IconButton(onClick = {}) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back")
-                  }
-                },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface))
-            HorizontalDivider(color = DividerColor, thickness = 1.dp)
-          }
-        }) { paddingValues ->
-          Column(
-              modifier =
-                  Modifier.fillMaxSize()
-                      .padding(paddingValues)
-                      .padding(horizontal = 16.dp)
-                      .padding(bottom = 16.dp),
-              verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "MEETING: ${previewState.formattedDateTime}",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically) {
-                      Text(
-                          text = previewState.visibilityDisplay,
-                          fontSize = 16.sp,
-                          fontWeight = FontWeight.Medium,
-                          color = MaterialTheme.colorScheme.onSurface)
-
-                      Text(
-                          text = "MEMBERS : ${previewState.participantsCount}",
-                          fontSize = 14.sp,
-                          fontWeight = FontWeight.Medium,
-                          color = MaterialTheme.colorScheme.onSurface)
-
-                      Text(
-                          text = previewState.formattedDuration,
-                          fontSize = 14.sp,
-                          fontWeight = FontWeight.Medium,
-                          color = MaterialTheme.colorScheme.onSurface)
-                    }
-
-                HorizontalDivider(thickness = 1.dp, color = DividerColor)
-
-                Text(
-                    text = previewState.serie?.description ?: "",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp))
-
-                HorizontalDivider(thickness = 1.dp, color = DividerColor)
-
-                if (previewState.events.isNotEmpty()) {
-                  LazyColumn(
-                      modifier = Modifier.fillMaxWidth().weight(1f),
-                      verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(previewState.events.size) { index ->
-                          val event = previewState.events[index]
-                          EventCard(
-                              event = event, onClick = {}, testTag = "eventCard_${event.eventId}")
-                        }
-                      }
-                } else {
-                  Box(
-                      modifier = Modifier.fillMaxWidth().weight(1f),
-                      contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "No events in this serie yet",
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                      }
-                }
-
-                HorizontalDivider(thickness = 1.dp, color = DividerColor)
-
-                Text(
-                    text = "CREATED BY ${previewState.serie?.ownerId ?: "Unknown"}",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-
-                if (previewState.isOwner) {
-                  Button(
-                      onClick = {},
-                      modifier = Modifier.fillMaxWidth().height(56.dp),
-                      shape = RoundedCornerShape(8.dp),
-                      colors =
-                          ButtonDefaults.buttonColors(
-                              containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
-                        Text(text = "ADD EVENT", fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                      }
-                }
-
-                if (!previewState.isOwner) {
-                  Button(
-                      onClick = {},
-                      modifier = Modifier.fillMaxWidth().height(56.dp),
-                      shape = RoundedCornerShape(8.dp),
-                      enabled = previewState.isParticipant || previewState.canJoin,
-                      colors =
-                          ButtonDefaults.buttonColors(
-                              containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
-                        Text(
-                            text = if (previewState.isParticipant) "QUIT SERIE" else "JOIN SERIE",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium)
-                      }
-                } else {
-                  Button(
-                      onClick = {},
-                      modifier = Modifier.fillMaxWidth().height(56.dp),
-                      shape = RoundedCornerShape(8.dp),
-                      enabled = previewState.isOwner,
-                      colors =
-                          ButtonDefaults.buttonColors(
-                              containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
-                        Text(text = "EDIT SERIE", fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                      }
-                }
-              }
-        }
-  }
 }
