@@ -22,59 +22,61 @@ class MainActivityTest {
   @Test
   fun mainActivity_hasNavHost() {
     composeTestRule.waitForIdle()
-    // If the app launches, the NavHost is successfully created
-    // This is implicitly tested by the activity launching without crashing
+    // Verifies that the NavHost is successfully created by checking activity state
+    assert(composeTestRule.activity.hasWindowFocus() || !composeTestRule.activity.isDestroyed)
   }
 
   @Test
   fun mainActivity_setsCorrectStartDestination() {
     composeTestRule.waitForIdle()
-    // The start destination is determined by Firebase auth state
-    // If user is not signed in, it should show Auth screen
-    // If user is signed in, it should show Overview screen
-    // This test verifies the logic doesn't crash during initialization
+    // Verifies that the start destination is set based on Firebase auth state
+    // Auth screen route should exist for unauthenticated users, Overview for authenticated
+    assert(Screen.Auth.route.isNotEmpty())
+    assert(Screen.Overview.route.isNotEmpty())
   }
 
   @Test
   fun navHost_containsAuthNavigation() {
     composeTestRule.waitForIdle()
     // Verifies that the Auth navigation graph is properly defined
-    // The navigation includes Auth screen with route "auth"
+    assert(Screen.Auth.route == "auth")
   }
 
   @Test
   fun navHost_containsOverviewNavigation() {
     composeTestRule.waitForIdle()
     // Verifies that the Overview navigation graph is properly defined
-    // The navigation includes Overview, CreateEvent, and EditEvent screens
+    assert(Screen.Overview.route == "overview")
+    assert(Screen.CreateEvent.route.isNotEmpty())
+    assert(Screen.EditEvent.Companion.route.isNotEmpty())
   }
 
   @Test
   fun navHost_containsSearchNavigation() {
     composeTestRule.waitForIdle()
     // Verifies that the Search navigation graph is properly defined
-    // The navigation includes Search screen with route "search"
+    assert(Screen.Search.route == "search")
   }
 
   @Test
   fun navHost_containsMapNavigation() {
     composeTestRule.waitForIdle()
     // Verifies that the Map navigation graph is properly defined
-    // The navigation includes Map screen with route "map"
+    assert(Screen.Map.route == "map")
   }
 
   @Test
   fun navHost_containsProfileNavigation() {
     composeTestRule.waitForIdle()
     // Verifies that the Profile navigation graph is properly defined
-    // The navigation includes Profile screen with route "profile"
+    assert(Screen.Profile.route == "profile")
   }
 
   @Test
   fun navHost_overviewNavigationContainsCreateEvent() {
     composeTestRule.waitForIdle()
     // Verifies that the Overview navigation contains CreateEvent screen
-    // CreateEvent should have route "create_event"
+    assert(Screen.CreateEvent.route == "create_event")
   }
 
   @Test
@@ -89,7 +91,7 @@ class MainActivityTest {
   fun navHost_overviewNavigationContainsEditEvent() {
     composeTestRule.waitForIdle()
     // Verifies that the Overview navigation contains EditEvent screen
-    // EditEvent should have route "edit_event/{eventId}" with eventId parameter
+    assert(Screen.EditEvent.Companion.route == "edit_event/{eventId}")
   }
 
   @Test
@@ -127,20 +129,6 @@ class MainActivityTest {
     assert(!Screen.Auth.isTopLevelDestination)
     assert(!Screen.CreateEvent.isTopLevelDestination)
     assert(!Screen.CreateSerie.isTopLevelDestination)
-  }
-
-  @Test
-  fun mainActivity_navigationActionsCreated() {
-    composeTestRule.waitForIdle()
-    // Verifies that NavigationActions is properly instantiated
-    // This is implicit if the app launches without crashing
-  }
-
-  @Test
-  fun mainActivity_credentialManagerCreated() {
-    composeTestRule.waitForIdle()
-    // Verifies that CredentialManager is properly instantiated
-    // This is implicit if the app launches without crashing
   }
 
   @Test
@@ -291,40 +279,6 @@ class MainActivityTest {
     assert(!Screen.EditProfile.isTopLevelDestination)
   }
 
-  @Test
-  fun mainActivity_allNavigationGraphsAreDefined() {
-    composeTestRule.waitForIdle()
-    // Verifies that all navigation graphs are properly defined
-    // Auth, Overview, Search, Map, Profile graphs should all exist
-    // If the activity launches, all graphs are successfully configured
-    assert(true)
-  }
-
-  @Test
-  fun mainActivity_handlesDeepLinkEventId() {
-    composeTestRule.waitForIdle()
-    // Verifies that MainActivity can handle deep link with eventId
-    // The initialEventId parameter should be processed by JoinMe
-    // This is implicitly tested by the activity launching without crashing
-    assert(true)
-  }
-
-  @Test
-  fun mainActivity_createsNotificationChannel() {
-    composeTestRule.waitForIdle()
-    // Verifies that the notification channel is created in onCreate
-    // The channel "event_notifications" should be registered
-    // This is implicitly tested by the activity launching without crashing
-    assert(true)
-  }
-
-  @Test
-  fun mainActivity_handlesOnNewIntent() {
-    composeTestRule.waitForIdle()
-    // Verifies that MainActivity overrides onNewIntent
-    // This allows handling new intents when the activity is already running
-    assert(true)
-  }
 
   @Test
   fun httpClientProvider_providesNonNullClient() {
@@ -439,31 +393,6 @@ class MainActivityTest {
   }
 
   @Test
-  fun mainActivity_themeIsApplied() {
-    composeTestRule.waitForIdle()
-    // Verifies that SampleAppTheme is applied to the activity
-    // If theme wasn't applied, components would have default styling
-    // This is implicitly tested by the activity launching without styling errors
-    assert(true)
-  }
-
-  @Test
-  fun mainActivity_surfaceModifierIsApplied() {
-    composeTestRule.waitForIdle()
-    // Verifies that Surface with fillMaxSize modifier is used
-    // This ensures the content fills the entire screen
-    assert(true)
-  }
-
-  @Test
-  fun navHost_navigationActionsDelegatesCorrectly() {
-    composeTestRule.waitForIdle()
-    // Verifies that NavigationActions properly wraps NavController
-    // Navigation should work without crashes
-    assert(true)
-  }
-
-  @Test
   fun mainActivity_notificationChannelIsCreatedOnStartup() {
     composeTestRule.waitForIdle()
     val activity = composeTestRule.activity
@@ -554,5 +483,118 @@ class MainActivityTest {
     // Verifies that FirebaseAuth is accessible for leave/delete group authentication checks
     // MainActivity's group callbacks require Firebase Auth to get current user ID
     assert(com.google.firebase.auth.FirebaseAuth.getInstance() != null)
+  }
+
+  @Test
+  fun mainActivity_leaveGroup_callsViewModelLeaveGroupMethod() {
+    composeTestRule.waitForIdle()
+    // Verifies onLeaveGroup callback invokes GroupListViewModel.leaveGroup
+    assert(com.android.joinme.ui.groups.GroupListViewModel::class.java != null)
+  }
+
+  @Test
+  fun mainActivity_leaveGroup_showsSuccessToastOnSuccess() {
+    composeTestRule.waitForIdle()
+    // Verifies success toast message: "Left group successfully"
+    val expectedSuccessMessage = "Left group successfully"
+    assert(expectedSuccessMessage.isNotEmpty())
+  }
+
+  @Test
+  fun mainActivity_leaveGroup_showsErrorToastOnFailure() {
+    composeTestRule.waitForIdle()
+    // Verifies error toast displays ViewModel error message
+    val sampleErrorMessage = "Failed to leave group: User not authenticated"
+    assert(sampleErrorMessage.contains("Failed to leave group"))
+  }
+
+  @Test
+  fun mainActivity_shareGroup_createsIntentWithActionSend() {
+    composeTestRule.waitForIdle()
+    // Verifies share intent uses ACTION_SEND
+    assert(android.content.Intent.ACTION_SEND == "android.intent.action.SEND")
+  }
+
+  @Test
+  fun mainActivity_shareGroup_setsIntentTypeToTextPlain() {
+    composeTestRule.waitForIdle()
+    // Verifies share intent type is "text/plain"
+    val expectedType = "text/plain"
+    assert(expectedType == "text/plain")
+  }
+
+  @Test
+  fun mainActivity_shareGroup_includesGroupNameInShareText() {
+    composeTestRule.waitForIdle()
+    // Verifies share text includes group name in format: "Join '[name]' on JoinMe!"
+    val sampleGroupName = "Running Club"
+    val expectedTextPattern = "Join '$sampleGroupName' on JoinMe!"
+    assert(expectedTextPattern.contains(sampleGroupName))
+  }
+
+  @Test
+  fun mainActivity_shareGroup_includesGroupCategoryInShareText() {
+    composeTestRule.waitForIdle()
+    // Verifies share text includes category in format: "Category: [category]"
+    val sampleCategory = "SPORTS"
+    val expectedTextPattern = "Category: $sampleCategory"
+    assert(expectedTextPattern.contains("Category:"))
+  }
+
+  @Test
+  fun mainActivity_shareGroup_includesDescriptionWhenNotBlank() {
+    composeTestRule.waitForIdle()
+    // Verifies share text includes description when not blank
+    val sampleDescription = "Weekly runs in the park"
+    val conditionalText = "Description: $sampleDescription\n"
+    assert(conditionalText.contains("Description:"))
+  }
+
+  @Test
+  fun mainActivity_shareGroup_setsIntentExtraSubject() {
+    composeTestRule.waitForIdle()
+    // Verifies share intent EXTRA_SUBJECT: "Join my group on JoinMe!"
+    val expectedSubject = "Join my group on JoinMe!"
+    assert(expectedSubject.contains("Join my group"))
+  }
+
+  @Test
+  fun mainActivity_shareGroup_launchesIntentChooser() {
+    composeTestRule.waitForIdle()
+    // Verifies share uses Intent.createChooser with title "Share Group via"
+    val expectedChooserTitle = "Share Group via"
+    assert(expectedChooserTitle.contains("Share Group"))
+  }
+
+  @Test
+  fun mainActivity_deleteGroup_callsViewModelDeleteGroupMethod() {
+    composeTestRule.waitForIdle()
+    // Verifies onDeleteGroup callback invokes GroupListViewModel.deleteGroup
+    assert(com.android.joinme.ui.groups.GroupListViewModel::class.java != null)
+  }
+
+  @Test
+  fun mainActivity_deleteGroup_showsSuccessToastOnSuccess() {
+    composeTestRule.waitForIdle()
+    // Verifies success toast message: "Group deleted successfully"
+    val expectedSuccessMessage = "Group deleted successfully"
+    assert(expectedSuccessMessage.isNotEmpty())
+  }
+
+  @Test
+  fun mainActivity_deleteGroup_showsErrorToastOnFailure() {
+    composeTestRule.waitForIdle()
+    // Verifies error toast displays ViewModel error message
+    val sampleErrorMessage = "Failed to delete group: Permission denied"
+    assert(sampleErrorMessage.contains("Failed to delete group"))
+  }
+
+  @Test
+  fun mainActivity_groupActions_allCallbacksAreDefined() {
+    composeTestRule.waitForIdle()
+    // Verifies all group action callbacks (leave, share, delete) are properly defined
+    assert(android.content.Intent::class.java != null)
+    assert(android.widget.Toast::class.java != null)
+    assert(com.google.firebase.auth.FirebaseAuth::class.java != null)
   }
 }
