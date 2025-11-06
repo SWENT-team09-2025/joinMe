@@ -60,6 +60,7 @@ sealed class Screen(
       const val route = "serie_details/{serieId}"
     }
   }
+  /**
    * Screen for creating a new event for an existing serie
    *
    * @param serieId The ID of the serie to add the event to
