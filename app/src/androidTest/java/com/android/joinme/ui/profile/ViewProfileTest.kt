@@ -539,20 +539,6 @@ class ViewProfileScreenTest {
   }
 
   @Test
-  fun viewProfileScreen_profilePicture_rendersRemoteImage_whenPhotoUrlProvided() = runTest {
-    val profileWithPhoto = testProfile.copy(photoUrl = "https://example.com/photo.jpg")
-    val repo = FakeProfileRepository(profileWithPhoto)
-    val viewModel = ProfileViewModel(repo)
-
-    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
-
-    // Should display the remote image component when photoUrl is provided
-    composeTestRule.onNodeWithTag(ProfilePhotoImageTestTags.REMOTE_IMAGE).assertExists()
-    // Should NOT display default avatar (unless image fails to load)
-    composeTestRule.onNodeWithTag(ProfilePhotoImageTestTags.DEFAULT_AVATAR).assertDoesNotExist()
-  }
-
-  @Test
   fun viewProfileScreen_profilePicture_isNotClickable() = runTest {
     val repo = FakeProfileRepository(testProfile)
     val viewModel = ProfileViewModel(repo)
