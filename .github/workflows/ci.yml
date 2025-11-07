@@ -258,6 +258,8 @@ jobs:
       # Run SonarCloud analysis after coverage generation
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: >
             -Dsonar.projectKey=SWENT-team09-2025_joinMe
