@@ -18,6 +18,10 @@ object MathUtils {
     return a + b
   }
 
+  fun operation(): Int{
+    return 1
+  }
+
   /**
    * Subtracts the second integer from the first.
    *
