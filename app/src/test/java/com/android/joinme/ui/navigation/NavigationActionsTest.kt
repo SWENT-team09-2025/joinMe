@@ -177,4 +177,141 @@ class NavigationActionsTest {
           })
     }
   }
+
+  @Test
+  fun `navigateTo CreateEventForSerie with serieId navigates to correct route`() {
+    val serieId = "test-serie-123"
+    every { navController.currentDestination?.route } returns Screen.CreateSerie.route
+
+    actions.navigateTo(Screen.CreateEventForSerie(serieId))
+
+    verify {
+      navController.navigate(
+          eq("create_event_for_serie/$serieId"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            // CreateEventForSerie is not a top-level destination
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `navigateTo EditGroup with groupId navigates to correct route`() {
+    val groupId = "test-group-789"
+    every { navController.currentDestination?.route } returns Screen.Groups.route
+
+    actions.navigateTo(Screen.EditGroup(groupId))
+
+    verify {
+      navController.navigate(
+          eq("edit_group/$groupId"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            // EditGroup is not a top-level destination, so shouldn't have launchSingleTop
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  // ========== Serie Details Navigation Tests ==========
+
+  @Test
+  fun `navigateTo SerieDetails with serieId navigates to correct route`() {
+    val serieId = "test-serie-123"
+    every { navController.currentDestination?.route } returns Screen.Overview.route
+
+    actions.navigateTo(Screen.SerieDetails(serieId))
+
+    verify {
+      navController.navigate(
+          eq("serie_details/$serieId"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            // SerieDetails is not a top-level destination, so shouldn't have launchSingleTop
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `SerieDetails route companion object matches pattern`() {
+    assertEquals("serie_details/{serieId}", Screen.SerieDetails.Companion.route)
+  }
+
+  @Test
+  fun `SerieDetails instance route contains actual serieId`() {
+    val serieId = "my-serie-456"
+    val screen = Screen.SerieDetails(serieId)
+    assertEquals("serie_details/$serieId", screen.route)
+  }
+
+  @Test
+  fun `SerieDetails is not a top-level destination`() {
+    val screen = Screen.SerieDetails("any-id")
+    assertFalse(screen.isTopLevelDestination)
+  }
+
+  @Test
+  fun `SerieDetails screen has correct name`() {
+    val screen = Screen.SerieDetails("test-id")
+    assertEquals("Serie Details", screen.name)
+  }
+
+  @Test
+  fun `navigateTo SerieDetails from History screen works correctly`() {
+    val serieId = "serie-from-history-789"
+    every { navController.currentDestination?.route } returns Screen.History.route
+
+    actions.navigateTo(Screen.SerieDetails(serieId))
+
+    verify {
+      navController.navigate(
+          eq("serie_details/$serieId"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `navigateTo SerieDetails with special characters in serieId`() {
+    val serieId = "serie-with-dashes-123_underscores"
+    every { navController.currentDestination?.route } returns Screen.Overview.route
+
+    actions.navigateTo(Screen.SerieDetails(serieId))
+
+    verify {
+      navController.navigate(
+          eq("serie_details/$serieId"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `navigateTo SerieDetails multiple times with different serieIds`() {
+    every { navController.currentDestination?.route } returns Screen.Overview.route
+
+    val serieId1 = "serie-1"
+    val serieId2 = "serie-2"
+
+    actions.navigateTo(Screen.SerieDetails(serieId1))
+    actions.navigateTo(Screen.SerieDetails(serieId2))
+
+    verify {
+      navController.navigate(eq("serie_details/$serieId1"), any<NavOptionsBuilder.() -> Unit>())
+    }
+    verify {
+      navController.navigate(eq("serie_details/$serieId2"), any<NavOptionsBuilder.() -> Unit>())
+    }
+  }
 }

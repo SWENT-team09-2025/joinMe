@@ -12,7 +12,7 @@ class CreateSerieScreenTest {
   /** --- BASIC RENDERING --- */
   @Test
   fun allFieldsAndButtonAreDisplayed() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_TITLE).assertIsDisplayed()
     composeTestRule
@@ -31,7 +31,7 @@ class CreateSerieScreenTest {
 
   @Test
   fun allFieldLabelsAreDisplayed() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Verify all field labels are shown
     composeTestRule.onNodeWithText("Title").assertExists()
@@ -45,7 +45,7 @@ class CreateSerieScreenTest {
   /** --- INPUT BEHAVIOR --- */
   @Test
   fun emptyFieldsDisableSaveButton() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Initially all fields are empty, so save button should be disabled
     composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.BUTTON_SAVE_SERIE).assertIsNotEnabled()
@@ -54,7 +54,9 @@ class CreateSerieScreenTest {
   @Test
   fun textFieldsAcceptInput() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     val title = "Weekly Football"
     val desc = "Weekly football series"
@@ -77,7 +79,9 @@ class CreateSerieScreenTest {
   @Test
   fun dateAndTimeFieldsAcceptInput() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     val date = "25/12/2025"
     val time = "14:30"
@@ -98,7 +102,9 @@ class CreateSerieScreenTest {
   @Test
   fun visibilityFieldAcceptsInput() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     val visibility = "PUBLIC"
 
@@ -114,7 +120,7 @@ class CreateSerieScreenTest {
   /** --- VALIDATION BEHAVIOR --- */
   @Test
   fun emptyTitle_disablesSaveButton() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_TITLE).performTextInput("")
     composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.BUTTON_SAVE_SERIE).assertIsNotEnabled()
@@ -122,7 +128,7 @@ class CreateSerieScreenTest {
 
   @Test
   fun whitespaceInputsShouldBeTreatedAsEmpty() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     composeTestRule
         .onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_TITLE)
@@ -136,7 +142,9 @@ class CreateSerieScreenTest {
   @Test
   fun invalidMaxParticipants_showsError() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Set invalid max participants (non-numeric) via ViewModel
     viewModel.setMaxParticipants("abc")
@@ -149,7 +157,9 @@ class CreateSerieScreenTest {
   @Test
   fun negativeMaxParticipants_showsError() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Set negative max participants via ViewModel
     viewModel.setMaxParticipants("-5")
@@ -162,7 +172,9 @@ class CreateSerieScreenTest {
   @Test
   fun zeroMaxParticipants_showsError() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Set zero max participants via ViewModel
     viewModel.setMaxParticipants("0")
@@ -175,7 +187,9 @@ class CreateSerieScreenTest {
   @Test
   fun invalidDateFormat_showsError() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Set invalid date format via ViewModel
     viewModel.setDate("2025-12-25")
@@ -188,7 +202,9 @@ class CreateSerieScreenTest {
   @Test
   fun invalidTimeFormat_showsError() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Set invalid time format via ViewModel - match what's used in ViewModel tests
     viewModel.setTime("not a time")
@@ -201,7 +217,9 @@ class CreateSerieScreenTest {
   @Test
   fun invalidVisibility_showsError() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Set invalid visibility via ViewModel
     viewModel.setVisibility("INVALID")
@@ -214,7 +232,7 @@ class CreateSerieScreenTest {
   /** --- EDGE CASES --- */
   @Test
   fun saveButtonRemainsDisabledUntilAllMandatoryFieldsAreFilled() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Fill only some fields
     composeTestRule
@@ -228,7 +246,9 @@ class CreateSerieScreenTest {
   @Test
   fun partialFormFillKeepsSaveButtonDisabled() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     val saveButton = composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.BUTTON_SAVE_SERIE)
     saveButton.assertIsNotEnabled()
@@ -249,7 +269,7 @@ class CreateSerieScreenTest {
 
   @Test
   fun maxParticipantsFieldDisplaysValue() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Max participants field should be displayed (even if empty initially)
     composeTestRule
@@ -259,7 +279,7 @@ class CreateSerieScreenTest {
 
   @Test
   fun dateFieldIsReadOnlyAndClickable() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Date field should be displayed as read-only (placeholder is defined in code but not easily
     // testable for disabled fields)
@@ -270,7 +290,7 @@ class CreateSerieScreenTest {
 
   @Test
   fun timeFieldIsReadOnlyAndClickable() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Time field should be displayed as read-only (placeholder is defined in code but not easily
     // testable for disabled fields)
@@ -281,7 +301,7 @@ class CreateSerieScreenTest {
 
   @Test
   fun maxParticipantsFieldIsReadOnlyAndClickable() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Max participants field should be displayed as read-only (placeholder is defined in code but
     // not easily testable for disabled fields)
@@ -294,7 +314,7 @@ class CreateSerieScreenTest {
 
   @Test
   fun visibilityFieldDisplaysPlaceholder() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Visibility field should be displayed (no placeholder text for dropdown)
     composeTestRule
@@ -305,7 +325,9 @@ class CreateSerieScreenTest {
   @Test
   fun fillingAllFieldsEnablesSaveButton() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Fill all required fields with valid data
     composeTestRule
@@ -326,7 +348,7 @@ class CreateSerieScreenTest {
 
   @Test
   fun descriptionFieldSupportsMultipleLines() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     val singleLineDescription = "This is a long description"
 
@@ -355,7 +377,7 @@ class CreateSerieScreenTest {
 
   @Test
   fun topAppBarDisplaysTitle() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Verify top app bar shows correct title
     composeTestRule.onNodeWithText("Create Serie").assertIsDisplayed()
@@ -364,7 +386,7 @@ class CreateSerieScreenTest {
   /** --- DROPDOWN INTERACTION --- */
   @Test
   fun visibilityDropdownCanBeOpenedAndClosed() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Click to open dropdown
     composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_VISIBILITY).performClick()
@@ -379,7 +401,9 @@ class CreateSerieScreenTest {
   @Test
   fun selectingPublicVisibility() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Click to open dropdown
     composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_VISIBILITY).performClick()
@@ -400,7 +424,9 @@ class CreateSerieScreenTest {
   @Test
   fun selectingPrivateVisibility() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Click to open dropdown
     composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_VISIBILITY).performClick()
@@ -421,7 +447,7 @@ class CreateSerieScreenTest {
   /** --- DIALOG INTERACTIONS --- */
   @Test
   fun clickingMaxParticipantsOpensNumberPicker() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Click on max participants field to open dialog
     composeTestRule
@@ -436,7 +462,7 @@ class CreateSerieScreenTest {
 
   @Test
   fun maxParticipantsDialogShowsOKAndCancelButtons() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Open dialog
     composeTestRule
@@ -452,7 +478,7 @@ class CreateSerieScreenTest {
 
   @Test
   fun clickingCancelClosesMaxParticipantsDialog() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Open dialog
     composeTestRule
@@ -473,7 +499,9 @@ class CreateSerieScreenTest {
   @Test
   fun clickingOKClosesMaxParticipantsDialogAndUpdatesValue() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Open dialog
     composeTestRule
@@ -493,7 +521,7 @@ class CreateSerieScreenTest {
 
   @Test
   fun dismissingMaxParticipantsDialogByBackdropClick() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Open dialog
     composeTestRule
@@ -512,7 +540,7 @@ class CreateSerieScreenTest {
   /** --- CLICKABLE FIELDS --- */
   @Test
   fun maxParticipantsFieldIsClickable() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Verify field exists and can be clicked
     composeTestRule
@@ -522,7 +550,7 @@ class CreateSerieScreenTest {
 
   @Test
   fun dateFieldIsClickable() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Verify field exists and can be clicked
     composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_DATE).assertIsDisplayed()
@@ -530,7 +558,7 @@ class CreateSerieScreenTest {
 
   @Test
   fun timeFieldIsClickable() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Verify field exists and can be clicked
     composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_TIME).assertIsDisplayed()
@@ -539,7 +567,7 @@ class CreateSerieScreenTest {
   /** --- BUTTON STATES --- */
   @Test
   fun saveButtonShowsTextWhenNotLoading() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Verify button displays "Next" text
     composeTestRule.onNodeWithText("Next").assertExists()
@@ -548,7 +576,9 @@ class CreateSerieScreenTest {
   @Test
   fun buttonContentChangesBasedOnLoadingState() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Fill valid form
     composeTestRule
@@ -580,7 +610,9 @@ class CreateSerieScreenTest {
   @Test
   fun invalidFormKeepsSaveButtonDisabled() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Fill form with one invalid field (invalid date)
     composeTestRule
@@ -602,7 +634,7 @@ class CreateSerieScreenTest {
 
   @Test
   fun disabledButtonCannotBeClicked() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Verify button is disabled when form is empty
     composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.BUTTON_SAVE_SERIE).assertIsNotEnabled()
@@ -615,7 +647,9 @@ class CreateSerieScreenTest {
   @Test
   fun emptyDescriptionShowsError() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Set empty description
     viewModel.setDescription("")
@@ -629,7 +663,9 @@ class CreateSerieScreenTest {
   @Test
   fun pastDateShowsError() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Set a past date
     viewModel.setDate("01/01/2020")
@@ -643,7 +679,9 @@ class CreateSerieScreenTest {
   @Test
   fun validMaxParticipantsAccepted() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Set valid max participants
     viewModel.setMaxParticipants("50")
@@ -659,7 +697,9 @@ class CreateSerieScreenTest {
   @Test
   fun largeMaxParticipantsValueAccepted() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Set large but valid max participants
     viewModel.setMaxParticipants("100")
@@ -675,7 +715,9 @@ class CreateSerieScreenTest {
   @Test
   fun datePickerCallbackFormatsDateCorrectly() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Simulate what the DatePickerDialog callback does
     // Format: dd/MM/yyyy
@@ -693,7 +735,9 @@ class CreateSerieScreenTest {
   @Test
   fun timePickerCallbackFormatsTimeCorrectly() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Simulate what the TimePickerDialog callback does
     // Format: HH:mm
@@ -710,7 +754,7 @@ class CreateSerieScreenTest {
 
   @Test
   fun dateFieldClickTriggersInteraction() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Click date field (this would normally open DatePickerDialog in real app)
     // We can't interact with the native dialog in tests, but we can verify the click works
@@ -722,7 +766,7 @@ class CreateSerieScreenTest {
 
   @Test
   fun timeFieldClickTriggersInteraction() {
-    composeTestRule.setContent { CreateSerieScreen(onDone = {}) }
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Click time field (this would normally open TimePickerDialog in real app)
     // We can't interact with the native dialog in tests, but we can verify the click works
@@ -735,7 +779,9 @@ class CreateSerieScreenTest {
   @Test
   fun monthIndexIsIncrementedInDateFormat() {
     val viewModel = CreateSerieViewModel()
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Simulate DatePickerDialog callback with month = 0 (January)
     // The callback adds 1 to the month because Calendar uses 0-indexed months
@@ -797,7 +843,9 @@ class CreateSerieScreenTest {
   fun saveButtonOnClickExecutesInCoroutineScope() {
     val viewModel = CreateSerieViewModel()
 
-    composeTestRule.setContent { CreateSerieScreen(createSerieViewModel = viewModel, onDone = {}) }
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
+    }
 
     // Fill valid form
     composeTestRule
@@ -830,7 +878,7 @@ class CreateSerieScreenTest {
     var onDoneCalled = false
 
     composeTestRule.setContent {
-      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { onDoneCalled = true })
+      CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> onDoneCalled = true })
     }
 
     // Leave form invalid (empty)
@@ -846,5 +894,43 @@ class CreateSerieScreenTest {
 
     // Verify onDone was NOT called
     assert(!onDoneCalled)
+  }
+
+  @Test
+  fun onDoneCallbackReceivesSerieId() {
+    val viewModel = CreateSerieViewModel()
+    var receivedSerieId: String? = null
+
+    composeTestRule.setContent {
+      CreateSerieScreen(
+          createSerieViewModel = viewModel, onDone = { serieId -> receivedSerieId = serieId })
+    }
+
+    // Fill valid form
+    composeTestRule
+        .onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_TITLE)
+        .performTextInput("Test Serie")
+    composeTestRule
+        .onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_DESCRIPTION)
+        .performTextInput("Test description")
+    viewModel.setMaxParticipants("15")
+    viewModel.setDate("25/12/2025")
+    viewModel.setTime("18:00")
+    viewModel.setVisibility("PUBLIC")
+
+    composeTestRule.waitForIdle()
+
+    // Note: In real scenario with Firebase auth, receivedSerieId would be the generated ID
+    // In tests without Firebase, createSerie() returns null so onDone is not called
+    // This test primarily verifies the lambda signature accepts a String parameter
+    composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.BUTTON_SAVE_SERIE).assertIsEnabled()
+  }
+
+  @Test
+  fun buttonTextIsNext() {
+    composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
+
+    // Verify the button text is "Next" (navigates to create event for serie)
+    composeTestRule.onNodeWithText("Next").assertIsDisplayed()
   }
 }

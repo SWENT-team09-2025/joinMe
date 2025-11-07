@@ -20,6 +20,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
 import com.android.joinme.ui.groups.CreateGroupScreen
+import com.android.joinme.ui.groups.EditGroupScreen
 import com.android.joinme.ui.groups.GroupDetailScreen
 import com.android.joinme.ui.groups.GroupListScreen
 import com.android.joinme.ui.history.HistoryScreen
@@ -27,11 +28,13 @@ import com.android.joinme.ui.map.MapScreen
 import com.android.joinme.ui.map.MapViewModel
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.Screen
+import com.android.joinme.ui.overview.CreateEventForSerieScreen
 import com.android.joinme.ui.overview.CreateEventScreen
 import com.android.joinme.ui.overview.CreateSerieScreen
 import com.android.joinme.ui.overview.EditEventScreen
 import com.android.joinme.ui.overview.OverviewScreen
 import com.android.joinme.ui.overview.SearchScreen
+import com.android.joinme.ui.overview.SerieDetailsScreen
 import com.android.joinme.ui.overview.ShowEventScreen
 import com.android.joinme.ui.profile.EditProfileScreen
 import com.android.joinme.ui.profile.ViewProfileScreen
@@ -147,6 +150,7 @@ fun JoinMe(
             onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
             onAddEvent = { navigationActions.navigateTo(Screen.CreateEvent) },
             onAddSerie = { navigationActions.navigateTo(Screen.CreateSerie) },
+            onSelectedSerie = { navigationActions.navigateTo(Screen.SerieDetails(it.serieId)) },
             onGoToHistory = { navigationActions.navigateTo(Screen.History) },
             navigationActions = navigationActions,
             credentialManager = credentialManager,
@@ -159,8 +163,20 @@ fun JoinMe(
       }
       composable(Screen.CreateSerie.route) {
         CreateSerieScreen(
-            onDone = { navigationActions.navigateTo(Screen.Overview) },
+            onDone = { serieId ->
+              navigationActions.navigateTo(Screen.CreateEventForSerie(serieId))
+            },
             onGoBack = { navigationActions.goBack() })
+      }
+      composable(Screen.CreateEventForSerie.route) { navBackStackEntry ->
+        val serieId = navBackStackEntry.arguments?.getString("serieId")
+
+        serieId?.let {
+          CreateEventForSerieScreen(
+              serieId = serieId,
+              onDone = { navigationActions.navigateTo(Screen.Overview) },
+              onGoBack = { navigationActions.goBack() })
+        } ?: run { Toast.makeText(context, "Serie ID is null", Toast.LENGTH_SHORT).show() }
       }
       composable(Screen.EditEvent.route) { navBackStackEntry ->
         val eventId = navBackStackEntry.arguments?.getString("eventId")
@@ -175,6 +191,9 @@ fun JoinMe(
       composable(Screen.History.route) {
         HistoryScreen(
             onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
+            onSelectSerie = {
+              Toast.makeText(context, "Not Implemented", Toast.LENGTH_SHORT).show()
+            },
             onGoBack = { navigationActions.goBack() })
       }
       composable(Screen.ShowEventScreen.route) { navBackStackEntry ->
@@ -186,6 +205,30 @@ fun JoinMe(
               onGoBack = { navigationActions.goBack() },
               onEditEvent = { id -> navigationActions.navigateTo(Screen.EditEvent(id)) })
         } ?: run { Toast.makeText(context, "Event UID is null", Toast.LENGTH_SHORT).show() }
+      }
+      composable(Screen.SerieDetails.route) { navBackStackEntry ->
+        val serieId = navBackStackEntry.arguments?.getString("serieId")
+
+        serieId?.let {
+          SerieDetailsScreen(
+              serieId = serieId,
+              onGoBack = { navigationActions.goBack() },
+              onEventCardClick = { eventId ->
+                navigationActions.navigateTo(Screen.ShowEventScreen(eventId))
+              },
+              onAddEventClick = {
+                // TODO: Implement navigation to CreateEvent with serieId
+                Toast.makeText(
+                        context, "Add event to serie - not yet implemented", Toast.LENGTH_SHORT)
+                    .show()
+              },
+              onEditSerieClick = {
+                Toast.makeText(context, "Edit serie - not yet implemented", Toast.LENGTH_SHORT)
+                    .show()
+              } // TODO: Implement navigation to Edit serie screen with serieId
+              ,
+              onQuitSerieSuccess = { navigationActions.goBack() })
+        } ?: run { Toast.makeText(context, "Serie ID is null", Toast.LENGTH_SHORT).show() }
       }
     }
 
@@ -261,9 +304,7 @@ fun JoinMe(
             onShareGroup = {
               Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
             },
-            onEditGroup = {
-              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
-            },
+            onEditGroup = { group -> navigationActions.navigateTo(Screen.EditGroup(group.id)) },
             onDeleteGroup = {
               Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
             })
@@ -271,8 +312,19 @@ fun JoinMe(
 
       composable(route = Screen.CreateGroup.route) {
         CreateGroupScreen(
-            onNavigateBack = { navigationActions.goBack() },
-            onGroupCreated = { navigationActions.navigateTo(Screen.Groups) })
+            onBackClick = { navigationActions.goBack() },
+            onCreateSuccess = { navigationActions.navigateTo(Screen.Groups) })
+      }
+
+      composable(route = Screen.EditGroup.route) { navBackStackEntry ->
+        val groupId = navBackStackEntry.arguments?.getString("groupId")
+
+        groupId?.let {
+          EditGroupScreen(
+              groupId = groupId,
+              onBackClick = { navigationActions.goBack() },
+              onSaveSuccess = { navigationActions.navigateTo(Screen.Groups) })
+        } ?: run { Toast.makeText(context, "Group ID is null", Toast.LENGTH_SHORT).show() }
       }
 
       composable(route = Screen.GroupDetail.route) { navBackStackEntry ->

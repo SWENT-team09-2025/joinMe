@@ -50,6 +50,29 @@ sealed class Screen(
   object CreateSerie : Screen(route = "create_serie", name = "Create a new serie")
 
   /**
+   * Screen for viewing serie details
+   *
+   * @param serieId The ID of the serie to display
+   */
+  data class SerieDetails(val serieId: String) :
+      Screen(route = "serie_details/${serieId}", name = "Serie Details") {
+    companion object {
+      const val route = "serie_details/{serieId}"
+    }
+  }
+  /**
+   * Screen for creating a new event for an existing serie
+   *
+   * @param serieId The ID of the serie to add the event to
+   */
+  data class CreateEventForSerie(val serieId: String) :
+      Screen(route = "create_event_for_serie/${serieId}", name = "Create Event for Serie") {
+    companion object {
+      const val route = "create_event_for_serie/{serieId}"
+    }
+  }
+
+  /**
    * Screen for viewing event details
    *
    * @param eventId The ID of the event to display
@@ -93,6 +116,18 @@ sealed class Screen(
 
   /** Screen for creating a new group */
   object CreateGroup : Screen(route = "create_group", name = "Create Group")
+
+  /**
+   * Screen for editing an existing group
+   *
+   * @param groupId The ID of the group to edit
+   */
+  data class EditGroup(val groupId: String) :
+      Screen(route = "edit_group/${groupId}", name = "Edit Group") {
+    companion object {
+      const val route = "edit_group/{groupId}"
+    }
+  }
 
   data class GroupDetail(val groupId: String) :
       Screen(route = "groupId/${groupId}", name = "Group Detail") {
