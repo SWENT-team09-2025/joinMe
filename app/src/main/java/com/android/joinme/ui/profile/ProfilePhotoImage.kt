@@ -25,9 +25,9 @@ import coil.request.ImageRequest
  * distinguish between different photo states.
  */
 object ProfilePhotoImageTestTags {
-    const val REMOTE_IMAGE = "profilePhotoRemoteImage"
-    const val DEFAULT_AVATAR = "profilePhotoDefaultAvatar"
-    const val LOADING_INDICATOR = "profilePhotoLoadingIndicator"
+  const val REMOTE_IMAGE = "profilePhotoRemoteImage"
+  const val DEFAULT_AVATAR = "profilePhotoDefaultAvatar"
+  const val LOADING_INDICATOR = "profilePhotoLoadingIndicator"
 }
 
 /**
@@ -56,49 +56,49 @@ fun ProfilePhotoImage(
     shape: Shape = androidx.compose.foundation.shape.CircleShape,
     showLoadingIndicator: Boolean = true
 ) {
-    Box(modifier = modifier.size(size), contentAlignment = Alignment.Center) {
-        if (photoUrl != null && photoUrl.isNotEmpty()) {
-            // Load remote image with Coil
-            SubcomposeAsyncImage(
-                model =
-                    ImageRequest.Builder(LocalContext.current)
-                        .data(photoUrl)
-                        .crossfade(true) // Smooth transition when image loads
-                        .build(),
-                contentDescription = contentDescription,
-                modifier =
-                    Modifier.size(size).clip(shape).testTag(ProfilePhotoImageTestTags.REMOTE_IMAGE),
-                contentScale = ContentScale.Crop, // Fill the space, cropping if needed
-                loading = {
-                    // Show loading state
-                    if (showLoadingIndicator) {
-                        Box(
-                            modifier =
-                                Modifier.size(size).testTag(ProfilePhotoImageTestTags.LOADING_INDICATOR),
-                            contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(size / 3),
-                                color = MaterialTheme.colorScheme.primary)
-                        }
-                    }
-                },
-                error = {
-                    // Show default avatar on error
-                    DefaultProfileAvatar(contentDescription = contentDescription, size = size)
-                })
-        } else {
-            // No photo URL or empty string, show default avatar
+  Box(modifier = modifier.size(size), contentAlignment = Alignment.Center) {
+    if (photoUrl != null && photoUrl.isNotEmpty()) {
+      // Load remote image with Coil
+      SubcomposeAsyncImage(
+          model =
+              ImageRequest.Builder(LocalContext.current)
+                  .data(photoUrl)
+                  .crossfade(true) // Smooth transition when image loads
+                  .build(),
+          contentDescription = contentDescription,
+          modifier =
+              Modifier.size(size).clip(shape).testTag(ProfilePhotoImageTestTags.REMOTE_IMAGE),
+          contentScale = ContentScale.Crop, // Fill the space, cropping if needed
+          loading = {
+            // Show loading state
+            if (showLoadingIndicator) {
+              Box(
+                  modifier =
+                      Modifier.size(size).testTag(ProfilePhotoImageTestTags.LOADING_INDICATOR),
+                  contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(size / 3),
+                        color = MaterialTheme.colorScheme.primary)
+                  }
+            }
+          },
+          error = {
+            // Show default avatar on error
             DefaultProfileAvatar(contentDescription = contentDescription, size = size)
-        }
+          })
+    } else {
+      // No photo URL or empty string, show default avatar
+      DefaultProfileAvatar(contentDescription = contentDescription, size = size)
     }
+  }
 }
 
 /** The default profile avatar icon shown when no photo is available. */
 @Composable
 private fun DefaultProfileAvatar(contentDescription: String, size: Dp) {
-    Icon(
-        imageVector = Icons.Sharp.AccountCircle,
-        contentDescription = contentDescription,
-        modifier = Modifier.size(size).testTag(ProfilePhotoImageTestTags.DEFAULT_AVATAR),
-        tint = MaterialTheme.colorScheme.primary)
+  Icon(
+      imageVector = Icons.Sharp.AccountCircle,
+      contentDescription = contentDescription,
+      modifier = Modifier.size(size).testTag(ProfilePhotoImageTestTags.DEFAULT_AVATAR),
+      tint = MaterialTheme.colorScheme.primary)
 }
