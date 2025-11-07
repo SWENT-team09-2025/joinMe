@@ -24,6 +24,9 @@ import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.ScrimOverlayColorLightTheme
 
+/**
+ * Test tags for EditProfileScreen components to enable UI testing.
+ */
 object EditProfileTestTags {
     const val NO_LOADING_PROFILE_MESSAGE = "noLoadingProfileMessage"
     const val SCREEN = "editProfileScreen"
@@ -192,6 +195,9 @@ fun EditProfileScreen(
     }
 }
 
+/**
+ * Composable displaying the content of the Edit Profile screen.
+ */
 @Composable
 private fun EditProfileContent(
     profile: Profile,
@@ -318,6 +324,9 @@ private fun EditProfileContent(
     }
 }
 
+/**
+ * Composable displaying the profile picture section with edit and delete options.
+ */
 @Composable
 private fun ProfilePictureSection(
     photoUrl: String?,
@@ -409,6 +418,9 @@ private fun ProfilePictureSection(
     }
 }
 
+/**
+ * Composable for the Bio section with a multi-line text field.
+ */
 @Composable
 private fun BioSection(bio: String, onBioChange: (String) -> Unit) {
     Column {
@@ -439,6 +451,9 @@ private fun BioSection(bio: String, onBioChange: (String) -> Unit) {
     }
 }
 
+/**
+ * Composable for a labeled editable text field with error and supporting text.
+ */
 @Composable
 private fun EditTextField(
     label: String,
