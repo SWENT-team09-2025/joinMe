@@ -1,5 +1,7 @@
 package com.android.joinme.ui.profile
 
+// AI-assisted implementation — reviewed and adapted for project standards.
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -21,8 +23,9 @@ import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 
 /**
- * Test tags for ProfilePhotoImage components to enable UI testing. These tags allow tests to
- * distinguish between different photo states.
+ * Test tags for ProfilePhotoImage components to enable UI testing.
+ *
+ * These tags allow tests to distinguish between different photo states (loading, error, success).
  */
 object ProfilePhotoImageTestTags {
   const val REMOTE_IMAGE = "profilePhotoRemoteImage"
@@ -34,18 +37,48 @@ object ProfilePhotoImageTestTags {
  * Displays a profile photo using Coil with proper loading and error states.
  *
  * This composable handles:
- * - Loading remote images from URLs (photoUrl)
- * - Showing a loading indicator while the image loads
- * - Falling back to default avatar icon if no photo or on error
- * - Caching for offline support and performance
- * - Proper content scaling to fill the available space
+ * - Loading remote images from URLs with automatic caching
+ * - Showing a loading indicator while the image loads (optional)
+ * - Falling back to default avatar icon if no photo URL provided or on error
+ * - Proper content scaling to fill the available space without distortion
+ * - Smooth crossfade transition when image loads
  *
- * @param photoUrl The URL of the profile photo, or null to show default avatar
- * @param contentDescription Accessibility description for the image
- * @param modifier Modifier for styling and positioning
- * @param size The size of the profile photo
- * @param shape The shape to clip the image to (default: CircleShape for most profile photos)
- * @param showLoadingIndicator Whether to show a loading spinner while image loads
+ * The component uses Coil's SubcomposeAsyncImage which provides:
+ * - Automatic memory and disk caching for performance
+ * - Lifecycle-aware loading (pauses when app is backgrounded)
+ * - Efficient bitmap pooling
+ *
+ * Usage examples:
+ * ```
+ * // Large profile photo with loading indicator
+ * ProfilePhotoImage(
+ *     photoUrl = profile.photoUrl,
+ *     contentDescription = "Profile Picture",
+ *     size = 210.dp
+ * )
+ *
+ * // Small avatar without loading indicator
+ * ProfilePhotoImage(
+ *     photoUrl = user.photoUrl,
+ *     contentDescription = "User Avatar",
+ *     size = 40.dp,
+ *     showLoadingIndicator = false
+ * )
+ * ```
+ *
+ * @param photoUrl The URL of the profile photo, or null to show default avatar. Empty strings are
+ *   treated as null.
+ * @param contentDescription Accessibility description for the image. Should describe what the photo
+ *   shows (e.g., "User's profile picture").
+ * @param modifier Modifier for styling and positioning the container.
+ * @param size The size (width and height) of the profile photo. Default is 140.dp, suitable for
+ *   medium-sized avatars.
+ * @param shape The shape to clip the image to. Default is CircleShape for typical profile photos.
+ *   Can be changed to RoundedCornerShape or other shapes as needed.
+ * @param showLoadingIndicator Whether to show a loading spinner while image loads. Default is true.
+ *   Set to false for small avatars or when a custom loading indicator is used externally.
+ *
+ * (AI-assisted implementation; reviewed and verified for project standards.)
  */
 @Composable
 fun ProfilePhotoImage(
@@ -83,7 +116,7 @@ fun ProfilePhotoImage(
             }
           },
           error = {
-            // Show default avatar on error
+            // Show default avatar on error (e.g., invalid URL, network error)
             DefaultProfileAvatar(contentDescription = contentDescription, size = size)
           })
     } else {
@@ -93,7 +126,15 @@ fun ProfilePhotoImage(
   }
 }
 
-/** The default profile avatar icon shown when no photo is available. */
+/**
+ * The default profile avatar icon shown when no photo is available.
+ *
+ * Uses Material's AccountCircle icon as a fallback avatar. The icon color adapts to the app theme
+ * (primary color) for consistency.
+ *
+ * @param contentDescription Accessibility description passed through from parent.
+ * @param size The size of the icon, matching the parent container size.
+ */
 @Composable
 private fun DefaultProfileAvatar(contentDescription: String, size: Dp) {
   Icon(
