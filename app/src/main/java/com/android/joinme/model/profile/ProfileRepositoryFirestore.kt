@@ -23,6 +23,7 @@ private const val F_INTERESTS = "interests"
 private const val F_DOB = "dateOfBirth"
 private const val F_CREATED_AT = "createdAt"
 private const val F_UPDATED_AT = "updatedAt"
+private const val F_FCM_TOKEN = "fcmToken"
 
 /**
  * Firestore implementation of [ProfileRepository] that manages user profile data in Firebase
@@ -74,7 +75,8 @@ class ProfileRepositoryFirestore(db: FirebaseFirestore, private val storage: Fir
             F_COUNTRY to profile.country,
             F_BIO to profile.bio,
             F_INTERESTS to profile.interests,
-            F_DOB to profile.dateOfBirth)
+            F_DOB to profile.dateOfBirth,
+            F_FCM_TOKEN to profile.fcmToken)
 
     val data =
         if (snapshot.exists()) {
@@ -184,6 +186,7 @@ class ProfileRepositoryFirestore(db: FirebaseFirestore, private val storage: Fir
       val country = document.getString(F_COUNTRY)?.takeIf { it.isNotBlank() }
       val bio = document.getString(F_BIO)?.takeIf { it.isNotBlank() }
       val dateOfBirth = document.getString(F_DOB)?.takeIf { it.isNotBlank() }
+      val fcmToken = document.getString(F_FCM_TOKEN)?.takeIf { it.isNotBlank() }
 
       // Optional list<string>, guard against mixed types
       val interests: List<String> =
@@ -203,7 +206,8 @@ class ProfileRepositoryFirestore(db: FirebaseFirestore, private val storage: Fir
           interests = interests,
           dateOfBirth = dateOfBirth,
           createdAt = createdAt,
-          updatedAt = updatedAt)
+          updatedAt = updatedAt,
+          fcmToken = fcmToken)
     } catch (e: Exception) {
       Log.e(TAG, "Error converting document to Profile", e)
       null

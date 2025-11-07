@@ -202,6 +202,8 @@ dependencies {
     implementation("com.google.protobuf:protobuf-javalite:3.25.1")
     implementation("com.google.firebase:firebase-storage-ktx:21.0.1")
     
+    implementation("com.google.firebase:firebase-messaging-ktx:24.0.0")
+
     // Credential Manager (for Google Sign-In)
     implementation(libs.credentials)
     implementation(libs.credentials.play.services.auth)
