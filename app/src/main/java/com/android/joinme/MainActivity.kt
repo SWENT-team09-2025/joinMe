@@ -34,6 +34,7 @@ import com.android.joinme.ui.overview.CreateSerieScreen
 import com.android.joinme.ui.overview.EditEventScreen
 import com.android.joinme.ui.overview.OverviewScreen
 import com.android.joinme.ui.overview.SearchScreen
+import com.android.joinme.ui.overview.SerieDetailsScreen
 import com.android.joinme.ui.overview.ShowEventScreen
 import com.android.joinme.ui.profile.EditProfileScreen
 import com.android.joinme.ui.profile.ViewProfileScreen
@@ -149,6 +150,7 @@ fun JoinMe(
             onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
             onAddEvent = { navigationActions.navigateTo(Screen.CreateEvent) },
             onAddSerie = { navigationActions.navigateTo(Screen.CreateSerie) },
+            onSelectedSerie = { navigationActions.navigateTo(Screen.SerieDetails(it.serieId)) },
             onGoToHistory = { navigationActions.navigateTo(Screen.History) },
             navigationActions = navigationActions,
             credentialManager = credentialManager,
@@ -203,6 +205,30 @@ fun JoinMe(
               onGoBack = { navigationActions.goBack() },
               onEditEvent = { id -> navigationActions.navigateTo(Screen.EditEvent(id)) })
         } ?: run { Toast.makeText(context, "Event UID is null", Toast.LENGTH_SHORT).show() }
+      }
+      composable(Screen.SerieDetails.route) { navBackStackEntry ->
+        val serieId = navBackStackEntry.arguments?.getString("serieId")
+
+        serieId?.let {
+          SerieDetailsScreen(
+              serieId = serieId,
+              onGoBack = { navigationActions.goBack() },
+              onEventCardClick = { eventId ->
+                navigationActions.navigateTo(Screen.ShowEventScreen(eventId))
+              },
+              onAddEventClick = {
+                // TODO: Implement navigation to CreateEvent with serieId
+                Toast.makeText(
+                        context, "Add event to serie - not yet implemented", Toast.LENGTH_SHORT)
+                    .show()
+              },
+              onEditSerieClick = {
+                Toast.makeText(context, "Edit serie - not yet implemented", Toast.LENGTH_SHORT)
+                    .show()
+              } // TODO: Implement navigation to Edit serie screen with serieId
+              ,
+              onQuitSerieSuccess = { navigationActions.goBack() })
+        } ?: run { Toast.makeText(context, "Serie ID is null", Toast.LENGTH_SHORT).show() }
       }
     }
 
