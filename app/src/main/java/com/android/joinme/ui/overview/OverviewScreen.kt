@@ -119,6 +119,7 @@ object OverviewScreenTestTags {
  * @param credentialManager Credential manager for authentication (currently unused)
  * @param onSelectEvent Callback invoked when a standalone event is clicked
  * @param onAddEvent Callback invoked when the create event FAB is clicked
+ * @param onSelectedSerie Callback invoked when a serie is clicked
  * @param onGoToHistory Callback invoked when the history FAB is clicked
  * @param navigationActions Navigation controller for bottom navigation menu
  */
@@ -131,6 +132,7 @@ fun OverviewScreen(
     onAddEvent: () -> Unit = {},
     onAddSerie: () -> Unit = {},
     onGoToHistory: () -> Unit = {},
+    onSelectedSerie: (Serie) -> Unit = {},
     navigationActions: NavigationActions? = null,
     enableNotificationPermissionRequest: Boolean = true,
 ) {
@@ -260,10 +262,7 @@ fun OverviewScreen(
                             SerieCard(
                                 modifier = Modifier.padding(vertical = 6.dp),
                                 serie = item.serie,
-                                onClick = {
-                                  Toast.makeText(context, "Not Implemented", Toast.LENGTH_SHORT)
-                                      .show()
-                                },
+                                onClick = { onSelectedSerie(item.serie) },
                                 testTag = OverviewScreenTestTags.getTestTagForSerie(item.serie))
                           }
                         }
@@ -300,10 +299,7 @@ fun OverviewScreen(
                             SerieCard(
                                 modifier = Modifier.padding(vertical = 6.dp),
                                 serie = item.serie,
-                                onClick = {
-                                  Toast.makeText(context, "Not Implemented", Toast.LENGTH_SHORT)
-                                      .show()
-                                },
+                                onClick = { onSelectedSerie(item.serie) },
                                 testTag = OverviewScreenTestTags.getTestTagForSerie(item.serie))
                           }
                         }
