@@ -18,7 +18,7 @@ object MathUtils {
     return a + b
   }
 
-  fun operation(): Int{
+  fun operation(): Int {
     return 1
   }
 
