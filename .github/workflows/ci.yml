@@ -28,9 +28,7 @@ jobs:
           submodules: recursive
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of Sonar analysis (if we use Sonar Later)
 
-      # This step removes the current gradle cache to avoid any caching issues
-      - name: Remove current gradle cache
-        run: rm -rf ~/.gradle
+      # Removed: We now use proper cache restoration instead of clearing gradle cache
 
       # Kernel-based Virtual Machine (KVM) is an open source virtualization technology built into Linux. Enabling it allows the Android emulator to run faster.
       - name: Enable KVM group perms
@@ -56,7 +54,10 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+            ~/.android/build-cache
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
 
       # Load google-services.json from the secrets
       - name: Decode secrets
@@ -79,11 +80,35 @@ jobs:
         run: |
           chmod +x ./gradlew
 
+      # Cache Kotlin compiler daemon for faster compilation
+      - name: Cache Kotlin compiler
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.kotlin
+            .gradle/kotlin
+          key: kotlin-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', '**/*.kt') }}
+          restore-keys: |
+            kotlin-${{ runner.os }}-
+
       # Install NodeJS
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      # Cache Node modules for Firebase CLI and firestore tests
+      - name: Cache Node modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.npm
+            firebase/firestore/test/node_modules
+          key: node-${{ runner.os }}-${{ hashFiles('firebase/firestore/test/package-lock.json') }}
+          restore-keys: |
+            node-${{ runner.os }}-
 
       # Install Firebase CLI
       - name: Install Firebase CLI
@@ -132,6 +157,16 @@ jobs:
           # To run the CI with debug information, add --info
           ./gradlew check --parallel --build-cache
 
+      # Cache AVD to speed up emulator boot (saves 5-10 minutes)
+      - name: AVD cache
+        uses: actions/cache@v3
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-34-${{ runner.os }}-google_apis-x86_64
+
       # Start Firebase emulators for instrumentation tests
       - name: Start Firebase emulators
         run: |
@@ -151,8 +186,8 @@ jobs:
           target: google_apis
           arch: x86_64
           avd-name: github
-          force-avd-creation: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -skin 1080x2400
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -skin 1080x2400
           disable-animations: true
           script: ./gradlew connectedCheck --parallel --build-cache
 
