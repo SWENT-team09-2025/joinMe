@@ -41,6 +41,7 @@ JoinMe relies on **Google Firebase** as its cloud backend:
 |---------|---------|
 | **Firestore** | Store events and user profiles |
 | **Firebase Authentication** | Account management with Google Sign-In |
+| **Firestore storage** | Store profile or group pictures |
 | **Firebase Cloud Messaging** | Push notifications for event updates |
 
 These services ensure real-time synchronization and a seamless experience across devices.
