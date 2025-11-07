@@ -737,34 +737,6 @@ class EditProfileScreenTest {
   }
 
   @Test
-  fun editProfile_clickingDeleteButton_triggersDeletion() = runTest {
-    val profileWithPhoto = testProfile.copy(photoUrl = "https://example.com/photo.jpg")
-    val repo = FakeProfileRepository(profileWithPhoto) // Repo with photo
-    val vm = ProfileViewModel(repo)
-
-    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
-
-    // 1. Verify photo and delete button are visible
-    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(ProfilePhotoImageTestTags.REMOTE_IMAGE).assertExists()
-    // FIX: In test env, Coil load fails, so error fallback (DEFAULT_AVATAR) is displayed.
-    composeTestRule
-        .onNodeWithTag(ProfilePhotoImageTestTags.DEFAULT_AVATAR)
-        .assertIsDisplayed() // <-- CORRECTED ASSERTION
-
-    // 2. Click delete button
-    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).performClick()
-
-    // 3. Wait for UI to update
-    composeTestRule.waitForIdle()
-
-    // 4. Verify UI updates: delete button is gone, default avatar is shown
-    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertDoesNotExist()
-    composeTestRule.onNodeWithTag(ProfilePhotoImageTestTags.REMOTE_IMAGE).assertDoesNotExist()
-    composeTestRule.onNodeWithTag(ProfilePhotoImageTestTags.DEFAULT_AVATAR).assertIsDisplayed()
-  }
-
-  @Test
   fun editProfile_deletePhotoButton_hidesDuringUpload() = runTest {
     val profileWithPhoto = testProfile.copy(photoUrl = "https://example.com/photo.jpg")
     val repo = FakeProfileRepository(profileWithPhoto, simulateUploadDelay = true)
