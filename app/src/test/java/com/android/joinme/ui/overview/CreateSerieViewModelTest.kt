@@ -329,10 +329,10 @@ class CreateSerieViewModelTest {
   @Test
   fun createSerie_withInvalidForm_returnsFalse_andDoesNotAdd() = runTest {
     // leave blank => invalid
-    val ok = vm.createSerie()
+    val serieId = vm.createSerie()
     advanceUntilIdle()
 
-    assertFalse(ok)
+    assertNull(serieId)
     assertTrue(repo.added.isEmpty())
     assertNotNull(vm.uiState.value.errorMsg) // some error is surfaced
     assertFalse(vm.uiState.value.isLoading) // loading should be false after failure
@@ -347,10 +347,10 @@ class CreateSerieViewModelTest {
     vm.setDate("not a date")
     vm.setTime("19:00")
 
-    val ok = vm.createSerie()
+    val serieId = vm.createSerie()
     advanceUntilIdle()
 
-    assertFalse(ok)
+    assertNull(serieId)
     assertTrue(repo.added.isEmpty())
     assertNotNull(vm.uiState.value.errorMsg)
     assertFalse(vm.uiState.value.isLoading)
@@ -369,10 +369,10 @@ class CreateSerieViewModelTest {
     vm.setTime("14:00")
 
     // This might pass field validation but should fail in createSerie
-    val ok = vm.createSerie()
+    val serieId = vm.createSerie()
     advanceUntilIdle()
 
-    assertFalse(ok)
+    assertNull(serieId)
     assertTrue(repo.added.isEmpty())
     assertFalse(vm.uiState.value.isLoading)
   }
@@ -389,10 +389,10 @@ class CreateSerieViewModelTest {
     // Date validation happens in setDate, so form should be invalid
     assertFalse(vm.uiState.value.isValid)
 
-    val ok = vm.createSerie()
+    val serieId = vm.createSerie()
     advanceUntilIdle()
 
-    assertFalse(ok)
+    assertNull(serieId)
     assertTrue(repo.added.isEmpty())
   }
 
@@ -409,11 +409,11 @@ class CreateSerieViewModelTest {
     assertFalse(vm.uiState.value.isLoading)
 
     // Create serie and verify loading state after completion
-    val ok = vm.createSerie()
+    val serieId = vm.createSerie()
     advanceUntilIdle()
 
     // After completion, loading should be false
-    assertTrue(ok)
+    assertNotNull(serieId)
     assertFalse(vm.uiState.value.isLoading)
   }
 
@@ -422,10 +422,10 @@ class CreateSerieViewModelTest {
   @Test
   fun clearErrorMsg_resetsErrorField() = runTest {
     // trigger an error
-    val ok = vm.createSerie()
+    val serieId = vm.createSerie()
     advanceUntilIdle()
 
-    assertFalse(ok)
+    assertNull(serieId)
     assertNotNull(vm.uiState.value.errorMsg)
 
     vm.clearErrorMsg()
@@ -474,10 +474,10 @@ class CreateSerieViewModelTest {
 
     assertTrue(unauthVm.uiState.value.isValid)
 
-    val ok = unauthVm.createSerie()
+    val serieId = unauthVm.createSerie()
     advanceUntilIdle()
 
-    assertFalse(ok)
+    assertNull(serieId)
     assertTrue(unauthRepo.added.isEmpty())
     assertNotNull(unauthVm.uiState.value.errorMsg)
   }
@@ -518,10 +518,10 @@ class CreateSerieViewModelTest {
 
     assertTrue(errorVm.uiState.value.isValid)
 
-    val ok = errorVm.createSerie()
+    val serieId = errorVm.createSerie()
     advanceUntilIdle()
 
-    assertFalse(ok)
+    assertNull(serieId)
     assertNotNull(errorVm.uiState.value.errorMsg)
     assertFalse(errorVm.uiState.value.isLoading)
   }
@@ -539,10 +539,11 @@ class CreateSerieViewModelTest {
 
     assertTrue(vm.uiState.value.isValid)
 
-    val ok = vm.createSerie()
+    val serieId = vm.createSerie()
     advanceUntilIdle()
 
-    assertTrue(ok)
+    assertNotNull(serieId)
+    assertEquals("fake-serie-id-1", serieId)
     assertEquals(1, repo.added.size)
 
     val serie = repo.added.first()
