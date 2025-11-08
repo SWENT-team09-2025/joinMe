@@ -43,7 +43,7 @@ class ProfileRepositoryLocalTest {
     testImageUri.path?.let { File(it).delete() }
   }
 
-  // ==================== EXISTING TESTS ====================
+  // ==================== PROFILE MANAGEMENT TESTS ====================
 
   @Test
   fun testDefaultTestProfileExists() = runTest {
