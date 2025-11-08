@@ -8,12 +8,17 @@ import com.google.firebase.Timestamp
 import java.util.Calendar
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
- * Instrumented tests for the SerieCard component.
+ * Unit tests with Robolectric for the SerieCard component.
  *
  * Tests the UI behavior, display, and interactions of the SerieCard component.
  */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28], qualifiers = "w360dp-h640dp-normal-long-notround-any-420dpi-keyshidden-nonav")
 class SerieCardTest {
 
   @get:Rule val composeTestRule = createComposeRule()

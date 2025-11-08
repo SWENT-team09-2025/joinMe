@@ -1,5 +1,9 @@
 package com.android.joinme.ui.groups
 
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.groups.Group
@@ -8,6 +12,10 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
+
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28], qualifiers = "w360dp-h640dp-normal-long-notround-any-420dpi-keyshidden-nonav")
 class CreateGroupScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
