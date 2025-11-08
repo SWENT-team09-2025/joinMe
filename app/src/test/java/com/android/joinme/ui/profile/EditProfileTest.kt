@@ -35,6 +35,7 @@ class EditProfileScreenTest {
 
   // --- Test data ---
   private val testUid = "test-uid"
+
   private fun createTestProfile() =
       Profile(
           uid = testUid,
@@ -152,7 +153,8 @@ class EditProfileScreenTest {
   @Test
   fun editProfile_populatesEmptyFieldsCorrectly() = runTest {
     val emptyProfile =
-        createTestProfile().copy(dateOfBirth = null, country = null, interests = emptyList(), bio = null)
+        createTestProfile()
+            .copy(dateOfBirth = null, country = null, interests = emptyList(), bio = null)
     val vm = ProfileViewModel(FakeProfileRepository(emptyProfile))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 

@@ -1,20 +1,17 @@
 package com.android.joinme.ui.groups
 
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.test.core.app.ApplicationProvider
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
+import com.google.firebase.FirebaseApp
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import androidx.test.core.app.ApplicationProvider
-import com.google.firebase.FirebaseApp
-
-
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], qualifiers = "w360dp-h640dp-normal-long-notround-any-420dpi-keyshidden-nonav")
@@ -30,7 +27,6 @@ class CreateGroupScreenTest {
       FirebaseApp.initializeApp(context)
     }
   }
-
 
   private lateinit var fakeRepository: FakeGroupRepository
   private lateinit var viewModel: CreateGroupViewModel

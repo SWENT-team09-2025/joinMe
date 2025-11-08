@@ -1,9 +1,5 @@
 package com.android.joinme.ui.groups
 
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
@@ -13,23 +9,25 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.test.core.app.ApplicationProvider
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.ui.components.FloatingActionBubblesTestTags
-import androidx.test.core.app.ApplicationProvider
 import com.google.firebase.FirebaseApp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
  * Fake implementation of GroupRepository for testing purposes.
  *
  * This implementation stores groups in memory and allows tests to inject specific test data.
  */
-
 private class FakeGroupRepository : GroupRepository {
   private val groups = mutableListOf<Group>()
   private var counter = 0
@@ -64,7 +62,6 @@ private class FakeGroupRepository : GroupRepository {
     groups.removeIf { it.id == groupId }
   }
 }
-
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], qualifiers = "w360dp-h640dp-normal-long-notround-any-420dpi-keyshidden-nonav")

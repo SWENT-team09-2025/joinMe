@@ -35,6 +35,7 @@ class ViewProfileScreenTest {
   }
 
   private val testUid = "test-uid"
+
   private fun createTestProfile() =
       Profile(
           uid = testUid,
@@ -436,8 +437,8 @@ class ViewProfileScreenTest {
   @Test
   fun viewProfileScreen_handlesMultipleInterests() = runTest {
     val profileWithManyInterests =
-        createTestProfile().copy(
-            interests = listOf("Racing", "Cars", "Technology", "Gaming", "Travel", "Music"))
+        createTestProfile()
+            .copy(interests = listOf("Racing", "Cars", "Technology", "Gaming", "Travel", "Music"))
     val repo = FakeProfileRepository(profileWithManyInterests)
     val viewModel = ProfileViewModel(repo)
 

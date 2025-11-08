@@ -525,7 +525,9 @@ class HistoryScreenTest {
 
   @Test
   fun historyScreen_displaysLoadingIndicator_whenLoading() {
-    val eventRepo = FakeHistoryEventsRepository(delayMillis = 5000) // Longer delay to keep loading state visible
+    val eventRepo =
+        FakeHistoryEventsRepository(
+            delayMillis = 5000) // Longer delay to keep loading state visible
     val serieRepo = FakeHistorySeriesRepository()
     val viewModel = HistoryViewModel(eventRepository = eventRepo, serieRepository = serieRepo)
 

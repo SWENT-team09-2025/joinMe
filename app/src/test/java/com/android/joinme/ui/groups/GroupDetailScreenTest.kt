@@ -1,9 +1,5 @@
 package com.android.joinme.ui.groups
 
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.EventType
@@ -14,9 +10,11 @@ import com.android.joinme.model.profile.ProfileRepository
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /** Fake GroupRepository for testing GroupDetailScreen. */
-
 private class FakeGroupDetailRepository : GroupRepository {
   private val groups = mutableMapOf<String, Group>()
   var shouldThrowError = false
@@ -75,7 +73,6 @@ private class FakeProfileDetailRepository : ProfileRepository {
     profiles.remove(uid)
   }
 }
-
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], qualifiers = "w360dp-h640dp-normal-long-notround-any-420dpi-keyshidden-nonav")

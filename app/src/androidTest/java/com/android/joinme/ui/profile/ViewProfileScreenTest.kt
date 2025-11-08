@@ -15,6 +15,7 @@ class ViewProfileScreenTest {
   @get:Rule val composeTestRule = createComposeRule()
 
   private val testUid = "test-uid"
+
   private fun createTestProfile() =
       Profile(
           uid = testUid,
@@ -121,7 +122,8 @@ class ViewProfileScreenTest {
   @Test
   fun viewProfileScreen_displaysAllNotSpecified_forAllNullFields() = runTest {
     val profileWithNulls =
-        createTestProfile().copy(dateOfBirth = null, country = null, bio = null, interests = emptyList())
+        createTestProfile()
+            .copy(dateOfBirth = null, country = null, bio = null, interests = emptyList())
     val repo = FakeProfileRepository(profileWithNulls)
     val viewModel = ProfileViewModel(repo)
 

@@ -62,9 +62,7 @@ class EditSerieScreenTest {
     composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_DATE).assertIsDisplayed()
     composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TIME).assertIsDisplayed()
     // Elements below the fold need to be checked with assertExists()
-    composeTestRule
-        .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_VISIBILITY)
-        .assertExists()
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_VISIBILITY).assertExists()
     composeTestRule.onNodeWithTag(EditSerieScreenTestTags.SERIE_SAVE).assertExists()
   }
 
@@ -303,7 +301,10 @@ class EditSerieScreenTest {
     }
 
     // Click save (scroll to it first as it may be below the fold)
-    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.SERIE_SAVE).performScrollTo().performClick()
+    composeTestRule
+        .onNodeWithTag(EditSerieScreenTestTags.SERIE_SAVE)
+        .performScrollTo()
+        .performClick()
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(1000)
@@ -344,7 +345,10 @@ class EditSerieScreenTest {
     }
 
     // Save (scroll to button first as it may be below the fold)
-    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.SERIE_SAVE).performScrollTo().performClick()
+    composeTestRule
+        .onNodeWithTag(EditSerieScreenTestTags.SERIE_SAVE)
+        .performScrollTo()
+        .performClick()
 
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)

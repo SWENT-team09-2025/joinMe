@@ -599,7 +599,10 @@ class EditEventScreenTest {
         .assertTextContains("PUBLIC")
 
     // Change visibility
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_VISIBILITY).performScrollTo().performClick()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_VISIBILITY)
+        .performScrollTo()
+        .performClick()
     composeTestRule.onNodeWithText("PRIVATE").performClick()
 
     // Verify changed value

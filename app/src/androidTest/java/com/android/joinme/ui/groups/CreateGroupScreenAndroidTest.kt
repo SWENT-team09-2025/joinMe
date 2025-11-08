@@ -30,16 +30,21 @@ class CreateGroupScreenAndroidTest {
     private var idCounter = 0
 
     override fun getNewGroupId(): String = "test-group-${idCounter++}"
+
     override suspend fun getAllGroups(): List<Group> = groups.toList()
+
     override suspend fun getGroup(groupId: String): Group =
         groups.find { it.id == groupId } ?: throw Exception("Group not found")
+
     override suspend fun addGroup(group: Group) {
       groups.add(group)
     }
+
     override suspend fun editGroup(groupId: String, newValue: Group) {
       val index = groups.indexOfFirst { it.id == groupId }
       if (index != -1) groups[index] = newValue else throw Exception("Group not found")
     }
+
     override suspend fun deleteGroup(groupId: String) {
       if (!groups.removeIf { it.id == groupId }) throw Exception("Group not found")
     }
