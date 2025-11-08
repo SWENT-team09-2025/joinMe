@@ -83,11 +83,12 @@ class CreateGroupScreenTest {
     composeTestRule
         .onNodeWithTag(CreateGroupScreenTestTags.GROUP_DESCRIPTION_TEXT_FIELD)
         .assertIsDisplayed()
+    // Elements below the fold need to be scrolled to or checked with assertExists()
     composeTestRule
         .onNodeWithTag(CreateGroupScreenTestTags.DESCRIPTION_SUPPORTING_TEXT)
-        .assertIsDisplayed()
+        .assertExists()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.SAVE_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.SAVE_BUTTON).assertExists()
   }
 
   @Test

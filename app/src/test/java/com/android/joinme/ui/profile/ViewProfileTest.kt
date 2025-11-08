@@ -139,7 +139,8 @@ class ViewProfileScreenTest {
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
 
-    composeTestRule.onNodeWithText("speed@f1.com").assertIsDisplayed()
+    // Email may be below the fold, use scrollAndAssertText
+    scrollAndAssertText("speed@f1.com")
   }
 
   @Test
