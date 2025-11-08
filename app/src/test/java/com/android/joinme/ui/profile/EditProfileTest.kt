@@ -1,23 +1,41 @@
 package com.android.joinme.ui.profile
 
+import android.content.Context
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
+import com.google.firebase.FirebaseApp
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.test.runTest
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 
 /** Comprehensive tests for EditProfileScreen using a tiny in-memory FakeProfileRepository. */
+@RunWith(RobolectricTestRunner::class)
 class EditProfileScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
 
+  private lateinit var context: Context
+
+  @Before
+  fun setUp() {
+    context = RuntimeEnvironment.getApplication()
+    // Initialize Firebase if not already initialized
+    if (FirebaseApp.getApps(context).isEmpty()) {
+      FirebaseApp.initializeApp(context)
+    }
+  }
+
   // --- Test data ---
   private val testUid = "test-uid"
-  private val testProfile =
+  private fun createTestProfile() =
       Profile(
           uid = testUid,
           username = "Max Verstappen",
@@ -63,7 +81,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_displaysAllCoreFields_scrollingForOffscreenOnes() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     composeTestRule.onNodeWithTag(EditProfileTestTags.SCREEN).assertIsDisplayed()
@@ -82,7 +100,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_titleIsDisplayed() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     composeTestRule.onNodeWithTag(EditProfileTestTags.TITLE).assertIsDisplayed()
@@ -91,7 +109,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_profilePictureIsDisplayed() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     composeTestRule.onNodeWithTag(EditProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
@@ -102,7 +120,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_populatesInitialValues() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     composeTestRule
@@ -134,7 +152,7 @@ class EditProfileScreenTest {
   @Test
   fun editProfile_populatesEmptyFieldsCorrectly() = runTest {
     val emptyProfile =
-        testProfile.copy(dateOfBirth = null, country = null, interests = emptyList(), bio = null)
+        createTestProfile().copy(dateOfBirth = null, country = null, interests = emptyList(), bio = null)
     val vm = ProfileViewModel(FakeProfileRepository(emptyProfile))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
@@ -152,7 +170,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_username_isEditable() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
@@ -164,7 +182,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_email_isNotEditable() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val emailField = composeTestRule.onNodeWithTag(EditProfileTestTags.EMAIL_FIELD)
@@ -173,7 +191,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_dateOfBirth_isEditable() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.DATE_OF_BIRTH_FIELD)
@@ -185,7 +203,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_country_isEditable() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.COUNTRY_FIELD)
@@ -198,7 +216,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_interests_isEditable() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.INTERESTS_FIELD)
@@ -211,7 +229,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_bio_isEditable() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.BIO_FIELD)
@@ -226,7 +244,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_username_tooShort_showsError() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
@@ -239,7 +257,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_username_tooLong_showsError() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
@@ -252,7 +270,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_username_invalidCharacters_showsError() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
@@ -267,7 +285,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_username_empty_showsError() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
@@ -280,7 +298,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_username_validWithSpaces() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
@@ -292,7 +310,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_username_validWithUnderscores() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
@@ -304,7 +322,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_username_validWithNumbers() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
@@ -316,7 +334,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_username_exactly3Characters_isValid() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
@@ -328,7 +346,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_username_exactly30Characters_isValid() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
@@ -342,7 +360,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_date_invalidFormat_showsError() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.DATE_OF_BIRTH_FIELD)
@@ -355,7 +373,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_date_invalidDay_showsError() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.DATE_OF_BIRTH_FIELD)
@@ -368,7 +386,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_date_invalidMonth_showsError() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.DATE_OF_BIRTH_FIELD)
@@ -381,7 +399,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_date_validFormat() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.DATE_OF_BIRTH_FIELD)
@@ -393,7 +411,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_date_emptyIsValid() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.DATE_OF_BIRTH_FIELD)
@@ -404,7 +422,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_date_leapYear_isValid() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.DATE_OF_BIRTH_FIELD)
@@ -416,7 +434,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_date_nonLeapYear_showsError() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.DATE_OF_BIRTH_FIELD)
@@ -430,7 +448,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_saveButton_enabledWhenValid() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.SAVE_BUTTON)
@@ -439,7 +457,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_saveButton_disabledWhenUsernameInvalid() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
@@ -452,7 +470,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_saveButton_disabledWhenDateInvalid() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.DATE_OF_BIRTH_FIELD)
@@ -465,7 +483,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_saveButton_disabledWhenUsernameEmpty() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
@@ -479,7 +497,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_passwordSection_isDisplayed() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.PASSWORD_SECTION)
@@ -488,7 +506,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_changePasswordButton_isClickable() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     var clicked = false
     composeTestRule.setContent {
       EditProfileScreen(
@@ -505,7 +523,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_editPhotoButton_isClickable() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).performClick()
@@ -517,7 +535,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_backButton_isClickable() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     var backClicked = false
     composeTestRule.setContent {
       EditProfileScreen(uid = testUid, profileViewModel = vm, onBackClick = { backClicked = true })
@@ -529,7 +547,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_profileTabButton_isClickable() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     var profileClicked = false
     composeTestRule.setContent {
       EditProfileScreen(
@@ -542,7 +560,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_groupTabButton_isClickable() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     var groupClicked = false
     composeTestRule.setContent {
       EditProfileScreen(
@@ -557,7 +575,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_multipleFieldEdits_maintainState() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     // Edit username
@@ -584,7 +602,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_errorThenValid_saveButtonReEnables() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     val node = composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)

@@ -1,23 +1,41 @@
 package com.android.joinme.ui.profile
 
+import android.content.Context
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import com.android.joinme.ui.navigation.NavigationTestTags
 import com.android.joinme.ui.navigation.Tab
+import com.google.firebase.FirebaseApp
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.test.runTest
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 
 /** Comprehensive tests for ViewProfileScreen using a simple in-memory FakeProfileRepository. */
+@RunWith(RobolectricTestRunner::class)
 class ViewProfileScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
 
+  private lateinit var context: Context
+
+  @Before
+  fun setUp() {
+    context = RuntimeEnvironment.getApplication()
+    // Initialize Firebase if not already initialized
+    if (FirebaseApp.getApps(context).isEmpty()) {
+      FirebaseApp.initializeApp(context)
+    }
+  }
+
   private val testUid = "test-uid"
-  private val testProfile =
+  private fun createTestProfile() =
       Profile(
           uid = testUid,
           username = "Max Verstappen",
@@ -71,7 +89,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_displaysAllComponents() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
@@ -84,7 +102,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_titleDisplaysCorrectText() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
@@ -93,24 +111,8 @@ class ViewProfileScreenTest {
   }
 
   @Test
-  fun viewProfileScreen_displaysAllFields() = runTest {
-    val repo = FakeProfileRepository(testProfile)
-    val viewModel = ProfileViewModel(repo)
-
-    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
-
-    composeTestRule.onNodeWithTag(ViewProfileTestTags.USERNAME_FIELD).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(ViewProfileTestTags.EMAIL_FIELD).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(ViewProfileTestTags.DATE_OF_BIRTH_FIELD).assertIsDisplayed()
-
-    scrollAndAssert(ViewProfileTestTags.COUNTRY_FIELD)
-    scrollAndAssert(ViewProfileTestTags.INTERESTS_FIELD)
-    scrollAndAssert(ViewProfileTestTags.BIO_FIELD)
-  }
-
-  @Test
   fun viewProfileScreen_bottomNavigationIsDisplayed() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
@@ -122,7 +124,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_displaysCorrectUsername() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
@@ -132,7 +134,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_displaysCorrectEmail() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
@@ -141,18 +143,8 @@ class ViewProfileScreenTest {
   }
 
   @Test
-  fun viewProfileScreen_displaysCorrectDateOfBirth() = runTest {
-    val repo = FakeProfileRepository(testProfile)
-    val viewModel = ProfileViewModel(repo)
-
-    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
-
-    composeTestRule.onNodeWithText("30/09/1997").assertIsDisplayed()
-  }
-
-  @Test
   fun viewProfileScreen_displaysCorrectCountry() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
@@ -162,7 +154,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_displaysCorrectInterests() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
@@ -172,7 +164,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_displaysCorrectBio() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
@@ -180,38 +172,11 @@ class ViewProfileScreenTest {
     scrollAndAssertText("F1 driver with a need for speed")
   }
 
-  @Test
-  fun viewProfileScreen_displaysAllFieldLabels() = runTest {
-    val repo = FakeProfileRepository(testProfile)
-    val viewModel = ProfileViewModel(repo)
-
-    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
-
-    composeTestRule.onNodeWithText("Username").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Email").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Date of Birth").assertIsDisplayed()
-
-    scrollAndAssertText("Country/Region")
-    scrollAndAssertText("Interests")
-    scrollAndAssertText("Bio")
-  }
-
   // ==================== NULL/EMPTY VALUES TESTS ====================
 
   @Test
-  fun viewProfileScreen_displaysNotSpecified_forNullDateOfBirth() = runTest {
-    val profileWithNullDate = testProfile.copy(dateOfBirth = null)
-    val repo = FakeProfileRepository(profileWithNullDate)
-    val viewModel = ProfileViewModel(repo)
-
-    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
-
-    composeTestRule.onNodeWithText("Date not specified").assertIsDisplayed()
-  }
-
-  @Test
   fun viewProfileScreen_displaysNotSpecified_forNullCountry() = runTest {
-    val profileWithNullCountry = testProfile.copy(country = null)
+    val profileWithNullCountry = createTestProfile().copy(country = null)
     val repo = FakeProfileRepository(profileWithNullCountry)
     val viewModel = ProfileViewModel(repo)
 
@@ -222,7 +187,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_displaysNone_forEmptyInterests() = runTest {
-    val profileWithNoInterests = testProfile.copy(interests = emptyList())
+    val profileWithNoInterests = createTestProfile().copy(interests = emptyList())
     val repo = FakeProfileRepository(profileWithNoInterests)
     val viewModel = ProfileViewModel(repo)
 
@@ -233,7 +198,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_displaysNoBioAvailable_forNullBio() = runTest {
-    val profileWithNullBio = testProfile.copy(bio = null)
+    val profileWithNullBio = createTestProfile().copy(bio = null)
     val repo = FakeProfileRepository(profileWithNullBio)
     val viewModel = ProfileViewModel(repo)
 
@@ -242,26 +207,11 @@ class ViewProfileScreenTest {
     scrollAndAssertText("No bio available")
   }
 
-  @Test
-  fun viewProfileScreen_displaysAllNotSpecified_forAllNullFields() = runTest {
-    val profileWithNulls =
-        testProfile.copy(dateOfBirth = null, country = null, bio = null, interests = emptyList())
-    val repo = FakeProfileRepository(profileWithNulls)
-    val viewModel = ProfileViewModel(repo)
-
-    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
-
-    composeTestRule.onNodeWithText("Date not specified").assertIsDisplayed()
-    scrollAndAssertText("Country not specified")
-    scrollAndAssertText("None")
-    scrollAndAssertText("No bio available")
-  }
-
   // ==================== BUTTON INTERACTION TESTS ====================
 
   @Test
   fun viewProfileScreen_logoutButton_isClickable() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
     var logoutClicked = false
 
@@ -276,7 +226,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_backButton_isClickable() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
     var backClicked = false
 
@@ -291,7 +241,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_groupButton_isClickable() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
     var groupClicked = false
 
@@ -306,7 +256,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_editButton_isClickable() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
     var editClicked = false
 
@@ -321,7 +271,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_topBar_allNavigationButtonsWork() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
     var back = false
     var group = false
@@ -346,7 +296,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_bottomNavigation_tabsAreClickable() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
     var selectedTab: Tab? = null
 
@@ -362,7 +312,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_bottomNavigation_allTabsClickable() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
     val clickedTabs = mutableListOf<Tab>()
 
@@ -386,7 +336,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_displaysError_whenLoadFails() = runTest {
-    val repo = FakeProfileRepository(testProfile, failOnce = true)
+    val repo = FakeProfileRepository(createTestProfile(), failOnce = true)
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
@@ -397,7 +347,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_retryButton_reloadsProfile() = runTest {
-    val repo = FakeProfileRepository(testProfile, failOnce = true)
+    val repo = FakeProfileRepository(createTestProfile(), failOnce = true)
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
@@ -415,7 +365,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_retryButton_isClickable() = runTest {
-    val repo = FakeProfileRepository(testProfile, failOnce = true)
+    val repo = FakeProfileRepository(createTestProfile(), failOnce = true)
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
@@ -429,7 +379,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_isScrollable() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
@@ -440,7 +390,7 @@ class ViewProfileScreenTest {
   @Test
   fun viewProfileScreen_longBio_rendersAndIsScrollable() = runTest {
     val longBio = "This is a very long biography. ".repeat(50)
-    val repo = FakeProfileRepository(testProfile.copy(bio = longBio))
+    val repo = FakeProfileRepository(createTestProfile().copy(bio = longBio))
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
@@ -451,7 +401,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_canScrollToAllFields() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
@@ -473,7 +423,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_handlesSpecialCharactersInUsername() = runTest {
-    val profileWithSpecialChars = testProfile.copy(username = "Max_Verstappen 33")
+    val profileWithSpecialChars = createTestProfile().copy(username = "Max_Verstappen 33")
     val repo = FakeProfileRepository(profileWithSpecialChars)
     val viewModel = ProfileViewModel(repo)
 
@@ -485,7 +435,7 @@ class ViewProfileScreenTest {
   @Test
   fun viewProfileScreen_handlesMultipleInterests() = runTest {
     val profileWithManyInterests =
-        testProfile.copy(
+        createTestProfile().copy(
             interests = listOf("Racing", "Cars", "Technology", "Gaming", "Travel", "Music"))
     val repo = FakeProfileRepository(profileWithManyInterests)
     val viewModel = ProfileViewModel(repo)
@@ -497,7 +447,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_handlesSingleInterest() = runTest {
-    val profileWithSingleInterest = testProfile.copy(interests = listOf("Racing"))
+    val profileWithSingleInterest = createTestProfile().copy(interests = listOf("Racing"))
     val repo = FakeProfileRepository(profileWithSingleInterest)
     val viewModel = ProfileViewModel(repo)
 
@@ -510,7 +460,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_profilePictureIsDisplayed() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }

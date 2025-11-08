@@ -17,12 +17,15 @@ import java.util.Calendar
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
 /**
  * Instrumented tests for the History screen.
  *
  * Tests the UI behavior, event display, and user interactions in the History screen.
  */
+@RunWith(RobolectricTestRunner::class)
 class HistoryScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()

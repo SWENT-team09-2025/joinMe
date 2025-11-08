@@ -7,7 +7,10 @@ import com.android.joinme.model.filter.FilterRepository
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class SearchScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
