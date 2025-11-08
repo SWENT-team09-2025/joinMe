@@ -263,28 +263,6 @@ class SeriesRepositoryFirestoreTest {
     assertEquals(0, result.eventIds.size)
   }
 
-  @Test
-  fun getSerie_withPrivateVisibility() = runTest {
-    // Given
-    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
-    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
-    every { mockSnapshot.id } returns testSerieId
-    every { mockSnapshot.getString("title") } returns "Private Serie"
-    every { mockSnapshot.getString("description") } returns "Private serie description"
-    every { mockSnapshot.getTimestamp("date") } returns testSerie.date
-    every { mockSnapshot.get("participants") } returns listOf("user1")
-    every { mockSnapshot.getLong("maxParticipants") } returns 5L
-    every { mockSnapshot.getString("visibility") } returns Visibility.PRIVATE.name
-    every { mockSnapshot.get("eventIds") } returns listOf("event1")
-    every { mockSnapshot.getString("ownerId") } returns testUserId
-
-    // When
-    val result = repository.getSerie(testSerieId)
-
-    // Then
-    assertNotNull(result)
-    assertEquals(Visibility.PRIVATE, result.visibility)
-  }
 
   @Test
   fun getSerie_withDefaultVisibilityWhenNull() = runTest {

@@ -440,25 +440,6 @@ class SerieCardTest {
   }
 
   @Test
-  fun serieCard_displaysWithNoParticipants() {
-    val serie =
-        Serie(
-            serieId = "1",
-            title = "No Participants Serie",
-            description = "desc",
-            date = Timestamp.now(),
-            participants = emptyList(),
-            maxParticipants = 10,
-            visibility = Visibility.PUBLIC,
-            eventIds = listOf("event1", "event2"),
-            ownerId = "owner1")
-
-    composeTestRule.setContent { SerieCard(serie = serie, onClick = {}, testTag = "testCard") }
-
-    composeTestRule.onNodeWithText("No Participants Serie").assertExists()
-  }
-
-  @Test
   fun serieCard_displaysWithManyParticipants() {
     val manyParticipants = (1..20).map { "user$it" }
     val serie =

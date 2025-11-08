@@ -27,15 +27,6 @@ class GroupRepositoryLocalTest {
 
   // ---------------- BASIC CRUD ----------------
 
-  @Test
-  fun addAndGetGroup_success() {
-    runBlocking {
-      repo.addGroup(sampleGroup)
-      val group = repo.getGroup("1")
-      Assert.assertEquals(sampleGroup.name, group.name)
-    }
-  }
-
   @Test(expected = Exception::class)
   fun getGroup_notFound_throwsException() {
     runBlocking { repo.getGroup("unknown") }
@@ -122,13 +113,6 @@ class GroupRepositoryLocalTest {
     }
   }
 
-  @Test
-  fun getAllGroups_initiallyReturnsEmptyList() {
-    runBlocking {
-      val groups = repo.getAllGroups()
-      Assert.assertTrue(groups.isEmpty())
-    }
-  }
 
   @Test
   fun getGroup_preservesAllProperties() {

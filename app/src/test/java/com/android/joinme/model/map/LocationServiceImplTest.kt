@@ -160,16 +160,12 @@ class LocationServiceImplTest {
   }
 
   @Test
-  fun `startLocationUpdates does nothing`() {
+  fun `start and stop LocationUpdates does nothing`() {
     locationService.startLocationUpdates()
-    // Just check it doesn't crash
-  }
-
-  @Test
-  fun `stopLocationUpdates does nothing`() {
     locationService.stopLocationUpdates()
     // Just check it doesn't crash
   }
+
 
   @OptIn(ExperimentalCoroutinesApi::class)
   @Test

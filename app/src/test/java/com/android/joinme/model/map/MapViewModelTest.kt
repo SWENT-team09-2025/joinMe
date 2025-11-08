@@ -87,18 +87,19 @@ class MapViewModelTest {
     assertFalse(initialState.isLoading)
   }
 
-  @Test
-  fun `clearErrorMsg clears error message`() = runTest {
-    val stateField = viewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(viewModel) as MutableStateFlow<MapUIState>
-    mutableState.value = MapUIState(errorMsg = "Test error")
+    @Test
+    fun `clearErrorMsg is tested with initial error`() = runTest {
+        val stateField = viewModel.javaClass.getDeclaredField("_uiState")
+        stateField.isAccessible = true
+        val mutableState = stateField.get(viewModel) as MutableStateFlow<MapUIState>
+        mutableState.value = MapUIState(errorMsg = "Some error")
 
-    viewModel.clearErrorMsg()
+        assertEquals("Some error", viewModel.uiState.value.errorMsg)
 
-    assertNull(viewModel.uiState.value.errorMsg)
-  }
+        viewModel.clearErrorMsg()
 
+        assertNull(viewModel.uiState.value.errorMsg)
+    }
   @Test
   fun `initLocationService starts location updates`() = runTest {
     val testLocation = UserLocation(latitude = 46.5187, longitude = 6.5629, accuracy = 5.0f)
@@ -135,19 +136,6 @@ class MapViewModelTest {
     verify(mockLocationService).stopLocationUpdates()
   }
 
-  @Test
-  fun `clearErrorMsg is tested with initial error`() = runTest {
-    val stateField = viewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(viewModel) as MutableStateFlow<MapUIState>
-    mutableState.value = MapUIState(errorMsg = "Some error")
-
-    assertEquals("Some error", viewModel.uiState.value.errorMsg)
-
-    viewModel.clearErrorMsg()
-
-    assertNull(viewModel.uiState.value.errorMsg)
-  }
 
   @Test
   fun `fetchLocalizableEvents loads events successfully`() =

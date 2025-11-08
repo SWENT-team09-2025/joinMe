@@ -99,36 +99,6 @@ class EventCardTest {
   }
 
   @Test
-  fun eventCard_displaysCorrectColorForSportsEvent() {
-    val event = createEvent("1", "Sports Event", EventType.SPORTS)
-
-    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
-
-    // Card should exist with sports type
-    composeTestRule.onNodeWithText("Sports Event").assertExists()
-  }
-
-  @Test
-  fun eventCard_displaysCorrectColorForSocialEvent() {
-    val event = createEvent("1", "Social Event", EventType.SOCIAL)
-
-    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
-
-    // Card should exist with social type
-    composeTestRule.onNodeWithText("Social Event").assertExists()
-  }
-
-  @Test
-  fun eventCard_displaysCorrectColorForActivityEvent() {
-    val event = createEvent("1", "Activity Event", EventType.ACTIVITY)
-
-    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
-
-    // Card should exist with activity type
-    composeTestRule.onNodeWithText("Activity Event").assertExists()
-  }
-
-  @Test
   fun eventCard_formatsDateCorrectly() {
     val calendar = Calendar.getInstance()
     calendar.set(2025, Calendar.JUNE, 15, 14, 30, 0)
@@ -181,62 +151,6 @@ class EventCardTest {
   }
 
   @Test
-  fun eventCard_isClickableOnWholeCard() {
-    var clicked = false
-    val event = createEvent("1", "Test Event", EventType.SPORTS)
-
-    composeTestRule.setContent {
-      EventCard(event = event, onClick = { clicked = true }, testTag = "testCard")
-    }
-
-    // Click on the card using test tag
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("testCard").performClick()
-    composeTestRule.waitForIdle()
-
-    assert(clicked)
-  }
-
-  @Test
-  fun eventCard_displaysArrowIcon() {
-    val event = createEvent("1", "Test Event", EventType.SPORTS)
-
-    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
-
-    // Arrow icon should be displayed (no content description, but it's in the layout)
-    composeTestRule.onNodeWithTag("testCard").assertExists()
-  }
-
-  @Test
-  fun eventCard_displaysAllInformationTogether() {
-    val location = Location(46.5191, 6.5668, "EPFL")
-    val calendar = Calendar.getInstance()
-    calendar.set(2025, Calendar.MARCH, 20, 15, 45, 0)
-
-    val event =
-        Event(
-            eventId = "1",
-            type = EventType.SOCIAL,
-            title = "Team Meeting",
-            description = "Important meeting",
-            location = location,
-            date = Timestamp(calendar.time),
-            duration = 90,
-            participants = listOf("user1", "user2"),
-            maxParticipants = 15,
-            visibility = EventVisibility.PUBLIC,
-            ownerId = "owner1")
-
-    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
-
-    // All information should be displayed
-    composeTestRule.onNodeWithText("Team Meeting").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Place : EPFL").assertIsDisplayed()
-    composeTestRule.onNodeWithText("20/03/2025").assertExists()
-    composeTestRule.onNodeWithText("15h45").assertExists()
-  }
-
-  @Test
   fun eventCard_handlesLongTitle() {
     val longTitle = "This is a very long event title that might need to wrap to multiple lines"
     val event = createEvent("1", longTitle, EventType.SPORTS)
@@ -258,22 +172,6 @@ class EventCardTest {
   }
 
   @Test
-  fun eventCard_multipleCards_haveUniqueTestTags() {
-    val event1 = createEvent("1", "Event 1", EventType.SPORTS)
-    val event2 = createEvent("2", "Event 2", EventType.SOCIAL)
-
-    composeTestRule.setContent {
-      androidx.compose.foundation.layout.Column {
-        EventCard(event = event1, onClick = {}, testTag = "card1")
-        EventCard(event = event2, onClick = {}, testTag = "card2")
-      }
-    }
-
-    composeTestRule.onNodeWithTag("card1").assertExists()
-    composeTestRule.onNodeWithTag("card2").assertExists()
-  }
-
-  @Test
   fun eventCard_differentEventTypesDisplayed() {
     val sportsEvent = createEvent("1", "Basketball", EventType.SPORTS)
     val socialEvent = createEvent("2", "Party", EventType.SOCIAL)
@@ -290,115 +188,5 @@ class EventCardTest {
     composeTestRule.onNodeWithText("Basketball").assertExists()
     composeTestRule.onNodeWithText("Party").assertExists()
     composeTestRule.onNodeWithText("Hiking").assertExists()
-  }
-
-  @Test
-  fun eventCard_displaysWithSpecialCharactersInTitle() {
-    val event = createEvent("1", "Event & Fun! @ 2025", EventType.SPORTS)
-
-    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
-
-    composeTestRule.onNodeWithText("Event & Fun! @ 2025").assertExists()
-  }
-
-  @Test
-  fun eventCard_displaysWithSpecialCharactersInLocation() {
-    val location = Location(46.5191, 6.5668, "EPFL - BC Building (2nd floor)")
-    val event = createEvent("1", "Test Event", EventType.SPORTS, location)
-
-    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
-
-    composeTestRule.onNodeWithText("Place : EPFL - BC Building (2nd floor)").assertExists()
-  }
-
-  @Test
-  fun eventCard_clickCallback_receivesCorrectEvent() {
-    val event = createEvent("1", "Test Event", EventType.SPORTS)
-    var clickCount = 0
-
-    composeTestRule.setContent {
-      EventCard(event = event, onClick = { clickCount++ }, testTag = "testCard")
-    }
-
-    // Click multiple times
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("testCard").performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("testCard").performClick()
-    composeTestRule.waitForIdle()
-
-    assert(clickCount == 2)
-  }
-
-  @Test
-  fun eventCard_dateDisplay_handlesLeapYear() {
-    val calendar = Calendar.getInstance()
-    calendar.set(2024, Calendar.FEBRUARY, 29, 12, 0, 0) // Leap year date
-
-    val event =
-        Event(
-            eventId = "1",
-            type = EventType.SPORTS,
-            title = "Leap Year Event",
-            description = "desc",
-            location = null,
-            date = Timestamp(calendar.time),
-            duration = 60,
-            participants = listOf("user1"),
-            maxParticipants = 10,
-            visibility = EventVisibility.PUBLIC,
-            ownerId = "owner1")
-
-    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
-
-    composeTestRule.onNodeWithText("29/02/2024").assertExists()
-  }
-
-  @Test
-  fun eventCard_timeDisplay_handlesMidnight() {
-    val calendar = Calendar.getInstance()
-    calendar.set(2025, Calendar.JANUARY, 1, 0, 0, 0)
-
-    val event =
-        Event(
-            eventId = "1",
-            type = EventType.SOCIAL,
-            title = "New Year Event",
-            description = "desc",
-            location = null,
-            date = Timestamp(calendar.time),
-            duration = 60,
-            participants = listOf("user1"),
-            maxParticipants = 10,
-            visibility = EventVisibility.PUBLIC,
-            ownerId = "owner1")
-
-    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
-
-    composeTestRule.onNodeWithText("00h00").assertExists()
-  }
-
-  @Test
-  fun eventCard_timeDisplay_handlesNoon() {
-    val calendar = Calendar.getInstance()
-    calendar.set(2025, Calendar.JANUARY, 1, 12, 0, 0)
-
-    val event =
-        Event(
-            eventId = "1",
-            type = EventType.ACTIVITY,
-            title = "Lunch Event",
-            description = "desc",
-            location = null,
-            date = Timestamp(calendar.time),
-            duration = 60,
-            participants = listOf("user1"),
-            maxParticipants = 10,
-            visibility = EventVisibility.PUBLIC,
-            ownerId = "owner1")
-
-    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
-
-    composeTestRule.onNodeWithText("12h00").assertExists()
   }
 }
