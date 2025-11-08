@@ -1,16 +1,17 @@
 package com.android.joinme.model.chat
 
+// Implemented with help of Claude AI
+
 enum class MessageType {
   TEXT,
   SYSTEM, // For "User joined," "User left," etc.
-  // IMAGE, Implement this later if possible
+  IMAGE
   // VIDEO, Implement this later if possible
   // AUDIO, Implement this later if possible
 }
 
 data class Message(
     val id: String = "",
-    val chatId: String = "",
     val senderId: String = "",
     val senderName: String = "",
     val content: String = "",

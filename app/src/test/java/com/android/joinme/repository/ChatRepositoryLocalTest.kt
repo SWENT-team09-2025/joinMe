@@ -1,9 +1,10 @@
 package com.android.joinme.repository
 
+// Implemented with help of Claude AI
+
 import com.android.joinme.model.chat.ChatRepositoryLocal
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert
 import org.junit.Before
@@ -12,10 +13,7 @@ import org.junit.Test
 /**
  * Comprehensive tests for ChatRepositoryLocal.
  *
- * Tests all CRUD operations, Flow-based real-time updates, message read tracking, and multi-chat
- * isolation.
- *
- * Note: This test suite was implemented with the help of Claude AI.
+ * Tests all CRUD operations, message read tracking, and thread-safety.
  */
 class ChatRepositoryLocalTest {
 
@@ -28,7 +26,6 @@ class ChatRepositoryLocalTest {
     sampleMessage =
         Message(
             id = "1",
-            chatId = "chat1",
             senderId = "user1",
             senderName = "Alice",
             content = "Hello, world!",
@@ -37,6 +34,8 @@ class ChatRepositoryLocalTest {
             readBy = emptyList(),
             isPinned = false)
   }
+
+  // ---------------- BASIC CRUD ----------------
 
   @Test
   fun addAndGetMessage_success() = runTest {
@@ -62,55 +61,16 @@ class ChatRepositoryLocalTest {
     repo.addMessage(sampleMessage)
     repo.deleteMessage("1")
 
-    val messages = repo.observeMessages("chat1").first()
-    Assert.assertTrue(messages.isEmpty())
+    // Verify message is actually deleted by trying to get it
+    try {
+      repo.getMessage("1")
+      Assert.fail("Expected exception for deleted message")
+    } catch (e: Exception) {
+      Assert.assertTrue(e.message?.contains("not found") == true)
+    }
   }
 
-  @Test
-  fun observeMessages_emitsInitialEmptyList() = runTest {
-    val messages = repo.observeMessages("chat1").first()
-    Assert.assertTrue(messages.isEmpty())
-  }
-
-  @Test
-  fun observeMessages_returnsAddedMessages() = runTest {
-    repo.addMessage(sampleMessage)
-
-    val messages = repo.observeMessages("chat1").first()
-    Assert.assertEquals(1, messages.size)
-    Assert.assertEquals("Hello, world!", messages[0].content)
-  }
-
-  @Test
-  fun observeMessages_filtersCorrectChatId() = runTest {
-    val chat1Message = sampleMessage.copy(id = "1", chatId = "chat1")
-    val chat2Message = sampleMessage.copy(id = "2", chatId = "chat2", content = "Different chat")
-
-    repo.addMessage(chat1Message)
-    repo.addMessage(chat2Message)
-
-    val messages = repo.observeMessages("chat1").first()
-    Assert.assertEquals(1, messages.size)
-    Assert.assertEquals("chat1", messages[0].chatId)
-    Assert.assertEquals("Hello, world!", messages[0].content)
-  }
-
-  @Test
-  fun observeMessages_sortsByTimestamp() = runTest {
-    val msg1 = sampleMessage.copy(id = "1", timestamp = 3000L, content = "Third")
-    val msg2 = sampleMessage.copy(id = "2", timestamp = 1000L, content = "First")
-    val msg3 = sampleMessage.copy(id = "3", timestamp = 2000L, content = "Second")
-
-    repo.addMessage(msg1)
-    repo.addMessage(msg2)
-    repo.addMessage(msg3)
-
-    val messages = repo.observeMessages("chat1").first()
-    Assert.assertEquals(3, messages.size)
-    Assert.assertEquals("First", messages[0].content)
-    Assert.assertEquals("Second", messages[1].content)
-    Assert.assertEquals("Third", messages[2].content)
-  }
+  // ---------------- MARK AS READ ----------------
 
   @Test
   fun markMessageAsRead_addsUserToReadByList() = runTest {
@@ -150,14 +110,7 @@ class ChatRepositoryLocalTest {
     repo.markMessageAsRead("unknown", "user1")
   }
 
-  @Test
-  fun markMessageAsRead_updatesObservableFlow() = runTest {
-    repo.addMessage(sampleMessage)
-    repo.markMessageAsRead("1", "user2")
-
-    val messages = repo.observeMessages("chat1").first()
-    Assert.assertTrue(messages[0].readBy.contains("user2"))
-  }
+  // ---------------- MESSAGE ID GENERATION ----------------
 
   @Test
   fun getNewMessageId_incrementsSequentially() {
@@ -168,17 +121,25 @@ class ChatRepositoryLocalTest {
     Assert.assertEquals((id2.toInt() + 1).toString(), id3)
   }
 
+  // ---------------- ADDITIONAL TESTS ----------------
+
   @Test
-  fun addMultipleMessages_storesAll() = runTest {
+  fun addMultipleMessages_canRetrieveEach() = runTest {
     val msg1 = sampleMessage.copy(id = "1")
     val msg2 = sampleMessage.copy(id = "2", content = "Message 2")
     val msg3 = sampleMessage.copy(id = "3", content = "Message 3")
+
     repo.addMessage(msg1)
     repo.addMessage(msg2)
     repo.addMessage(msg3)
 
-    val messages = repo.observeMessages("chat1").first()
-    Assert.assertEquals(3, messages.size)
+    val retrieved1 = repo.getMessage("1")
+    val retrieved2 = repo.getMessage("2")
+    val retrieved3 = repo.getMessage("3")
+
+    Assert.assertEquals("Hello, world!", retrieved1.content)
+    Assert.assertEquals("Message 2", retrieved2.content)
+    Assert.assertEquals("Message 3", retrieved3.content)
   }
 
   @Test
@@ -186,7 +147,6 @@ class ChatRepositoryLocalTest {
     repo.addMessage(sampleMessage)
     val retrieved = repo.getMessage("1")
     Assert.assertEquals(sampleMessage.id, retrieved.id)
-    Assert.assertEquals(sampleMessage.chatId, retrieved.chatId)
     Assert.assertEquals(sampleMessage.senderId, retrieved.senderId)
     Assert.assertEquals(sampleMessage.senderName, retrieved.senderName)
     Assert.assertEquals(sampleMessage.content, retrieved.content)
@@ -216,46 +176,67 @@ class ChatRepositoryLocalTest {
   fun deleteMessage_notFound_throwsException() = runTest { repo.deleteMessage("nonexistent") }
 
   @Test
-  fun editMessage_updatesObservableFlow() = runTest {
-    repo.addMessage(sampleMessage)
-    val updated = sampleMessage.copy(content = "Edited content")
+  fun editMessage_preservesOtherMessages() = runTest {
+    val msg1 = sampleMessage.copy(id = "1", content = "Message 1")
+    val msg2 = sampleMessage.copy(id = "2", content = "Message 2")
+
+    repo.addMessage(msg1)
+    repo.addMessage(msg2)
+
+    // Edit only message 1
+    val updated = msg1.copy(content = "Edited Message 1")
     repo.editMessage("1", updated)
 
-    val messages = repo.observeMessages("chat1").first()
-    Assert.assertEquals("Edited content", messages[0].content)
+    // Verify message 1 is updated
+    val retrieved1 = repo.getMessage("1")
+    Assert.assertEquals("Edited Message 1", retrieved1.content)
+
+    // Verify message 2 is unchanged
+    val retrieved2 = repo.getMessage("2")
+    Assert.assertEquals("Message 2", retrieved2.content)
   }
 
   @Test
-  fun deleteMessage_updatesObservableFlow() = runTest {
-    repo.addMessage(sampleMessage)
+  fun deleteMessage_preservesOtherMessages() = runTest {
+    val msg1 = sampleMessage.copy(id = "1", content = "Message 1")
+    val msg2 = sampleMessage.copy(id = "2", content = "Message 2")
+
+    repo.addMessage(msg1)
+    repo.addMessage(msg2)
+
+    // Delete message 1
     repo.deleteMessage("1")
 
-    val messages = repo.observeMessages("chat1").first()
-    Assert.assertTrue(messages.isEmpty())
+    // Verify message 1 is deleted
+    try {
+      repo.getMessage("1")
+      Assert.fail("Expected exception for deleted message")
+    } catch (e: Exception) {
+      // Expected
+    }
+
+    // Verify message 2 still exists
+    val retrieved2 = repo.getMessage("2")
+    Assert.assertEquals("Message 2", retrieved2.content)
   }
 
   @Test
-  fun observeMessages_emptyForNonExistentChat() = runTest {
-    repo.addMessage(sampleMessage.copy(chatId = "chat1"))
+  fun markMessageAsRead_preservesOtherFields() = runTest {
+    repo.addMessage(sampleMessage)
+    repo.markMessageAsRead("1", "user2")
 
-    val messages = repo.observeMessages("nonexistent_chat").first()
-    Assert.assertTrue(messages.isEmpty())
-  }
+    val message = repo.getMessage("1")
 
-  @Test
-  fun observeMessages_multipleChatsIndependent() = runTest {
-    val chat1Msg = sampleMessage.copy(id = "1", chatId = "chat1", content = "Chat 1")
-    val chat2Msg = sampleMessage.copy(id = "2", chatId = "chat2", content = "Chat 2")
+    // Verify readBy is updated
+    Assert.assertTrue(message.readBy.contains("user2"))
 
-    repo.addMessage(chat1Msg)
-    repo.addMessage(chat2Msg)
-
-    val chat1Messages = repo.observeMessages("chat1").first()
-    val chat2Messages = repo.observeMessages("chat2").first()
-
-    Assert.assertEquals(1, chat1Messages.size)
-    Assert.assertEquals(1, chat2Messages.size)
-    Assert.assertEquals("Chat 1", chat1Messages[0].content)
-    Assert.assertEquals("Chat 2", chat2Messages[0].content)
+    // Verify other fields are preserved
+    Assert.assertEquals("1", message.id)
+    Assert.assertEquals("user1", message.senderId)
+    Assert.assertEquals("Alice", message.senderName)
+    Assert.assertEquals("Hello, world!", message.content)
+    Assert.assertEquals(1000L, message.timestamp)
+    Assert.assertEquals(MessageType.TEXT, message.type)
+    Assert.assertEquals(false, message.isPinned)
   }
 }

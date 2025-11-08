@@ -1,6 +1,6 @@
 package com.android.joinme.model.chat
 
-import kotlinx.coroutines.flow.Flow
+// Implemented with help of Claude AI
 
 interface ChatRepository {
 
@@ -10,14 +10,6 @@ interface ChatRepository {
    * @return A new unique Message identifier.
    */
   fun getNewMessageId(): String
-
-  /**
-   * Observes all Message items for a specific chat with real-time updates.
-   *
-   * @param chatId The unique identifier of the chat.
-   * @return A Flow emitting lists of Message items in the specified chat.
-   */
-  fun observeMessages(chatId: String): Flow<List<Message>>
 
   /**
    * Retrieves a specific Message item by its unique identifier.
