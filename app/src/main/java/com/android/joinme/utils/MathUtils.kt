@@ -1,8 +1,8 @@
 package com.android.joinme.utils
 
 /**
- * Utility class for mathematical operations.
- * This class is used to test SonarCloud code coverage reporting.
+ * Utility class for mathematical operations. This class is used to test SonarCloud code coverage
+ * reporting.
  */
 object MathUtils {
 
