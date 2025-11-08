@@ -16,8 +16,11 @@ import androidx.compose.ui.test.performScrollToNode
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.ui.components.FloatingActionBubblesTestTags
+import androidx.test.core.app.ApplicationProvider
+import com.google.firebase.FirebaseApp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
@@ -68,6 +71,15 @@ private class FakeGroupRepository : GroupRepository {
 class GroupListScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
+
+  @Before
+  fun setUp() {
+    // Initialize Firebase for Robolectric tests
+    val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+    if (FirebaseApp.getApps(context).isEmpty()) {
+      FirebaseApp.initializeApp(context)
+    }
+  }
 
   private fun createViewModel(groups: List<Group> = emptyList()): GroupListViewModel {
     val fakeRepo = FakeGroupRepository()

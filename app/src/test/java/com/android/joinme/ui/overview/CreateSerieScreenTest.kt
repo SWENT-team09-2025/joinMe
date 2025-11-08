@@ -6,8 +6,11 @@ import org.robolectric.annotation.Config
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import androidx.test.core.app.ApplicationProvider
+import com.google.firebase.FirebaseApp
 
 
 
@@ -16,6 +19,16 @@ import org.junit.Test
 class CreateSerieScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
+
+  @Before
+  fun setUp() {
+    // Initialize Firebase for Robolectric tests
+    val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+    if (FirebaseApp.getApps(context).isEmpty()) {
+      FirebaseApp.initializeApp(context)
+    }
+  }
+
 
   /** --- BASIC RENDERING --- */
   @Test

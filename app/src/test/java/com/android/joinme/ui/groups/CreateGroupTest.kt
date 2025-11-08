@@ -11,6 +11,8 @@ import com.android.joinme.model.groups.GroupRepository
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import androidx.test.core.app.ApplicationProvider
+import com.google.firebase.FirebaseApp
 
 
 
@@ -19,6 +21,16 @@ import org.junit.Test
 class CreateGroupScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
+
+  @Before
+  fun setUp() {
+    // Initialize Firebase for Robolectric tests
+    val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+    if (FirebaseApp.getApps(context).isEmpty()) {
+      FirebaseApp.initializeApp(context)
+    }
+  }
+
 
   private lateinit var fakeRepository: FakeGroupRepository
   private lateinit var viewModel: CreateGroupViewModel
@@ -74,6 +86,7 @@ class CreateGroupScreenTest {
     composeTestRule
         .onNodeWithTag(CreateGroupScreenTestTags.DESCRIPTION_SUPPORTING_TEXT)
         .assertIsDisplayed()
+    composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.SAVE_BUTTON).assertIsDisplayed()
   }
 
