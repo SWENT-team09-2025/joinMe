@@ -113,7 +113,6 @@ class GroupRepositoryLocalTest {
     }
   }
 
-
   @Test
   fun getGroup_preservesAllProperties() {
     runBlocking {

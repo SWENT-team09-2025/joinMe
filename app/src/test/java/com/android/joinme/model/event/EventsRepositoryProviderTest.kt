@@ -42,7 +42,6 @@ class EventsRepositoryProviderTest {
     assertTrue(repo is EventsRepositoryLocal)
   }
 
-
   @Test
   fun getRepository_returnsLocalRepo_whenIsTestEnvPropertySet() {
     System.setProperty("IS_TEST_ENV", "true")

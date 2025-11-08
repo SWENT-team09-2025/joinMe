@@ -241,16 +241,17 @@ class CreateGroupScreenTest {
         .assertTextContains("A great group")
   }
 
-    @Test
-    fun descriptionInput_showsErrorForTooLongText() {
-        composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
-        composeTestRule
-            .onNodeWithTag(CreateGroupScreenTestTags.GROUP_DESCRIPTION_TEXT_FIELD)
-            .performTextInput("a".repeat(301))
-        composeTestRule
-            .onNodeWithTag(CreateGroupScreenTestTags.DESCRIPTION_SUPPORTING_TEXT)
-            .assertTextEquals("Description must not exceed 300 characters")
-    }
+  @Test
+  fun descriptionInput_showsErrorForTooLongText() {
+    composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_DESCRIPTION_TEXT_FIELD)
+        .performTextInput("a".repeat(301))
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.DESCRIPTION_SUPPORTING_TEXT)
+        .assertTextEquals("Description must not exceed 300 characters")
+  }
+
   @Test
   fun descriptionInput_accepts300Characters() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }

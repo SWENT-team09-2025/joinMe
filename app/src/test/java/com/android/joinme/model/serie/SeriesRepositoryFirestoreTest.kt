@@ -263,7 +263,6 @@ class SeriesRepositoryFirestoreTest {
     assertEquals(0, result.eventIds.size)
   }
 
-
   @Test
   fun getSerie_withDefaultVisibilityWhenNull() = runTest {
     // Given

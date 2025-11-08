@@ -111,10 +111,7 @@ class NotificationWorkerTest {
   fun `doWork handles long event titles`() = runBlocking {
     val longTitle = "A".repeat(200) // Very long title
     val inputData =
-        Data.Builder()
-          .putString("eventId", "event123")
-          .putString("eventTitle", longTitle)
-          .build()
+        Data.Builder().putString("eventId", "event123").putString("eventTitle", longTitle).build()
 
     val worker = createWorker(inputData)
     val result = worker.doWork()
@@ -135,7 +132,6 @@ class NotificationWorkerTest {
 
     assertEquals(ListenableWorker.Result.success(), result)
   }
-
 
   @Test
   fun `NotificationWorker class exists and extends CoroutineWorker`() {

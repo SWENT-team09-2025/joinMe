@@ -1,7 +1,6 @@
 package com.android.joinme.model.utils
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 class VisibilityTest {

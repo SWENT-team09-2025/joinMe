@@ -193,8 +193,6 @@ class EventItemTest {
     assertTrue(items[2] is EventItem.SingleEvent)
   }
 
-
-
   @Test
   fun `mixed EventItems can be sorted by date`() {
     val olderDate = Timestamp(Date(System.currentTimeMillis() - 100000))
@@ -224,8 +222,6 @@ class EventItemTest {
 
     assertEquals("single", result)
   }
-
-
 
   @Test
   fun `SingleEvent with different titles are not equal`() {
@@ -299,5 +295,4 @@ class EventItemTest {
       }
     }
   }
-
 }

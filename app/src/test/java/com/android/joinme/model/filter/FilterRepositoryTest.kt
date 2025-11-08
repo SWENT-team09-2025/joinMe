@@ -78,7 +78,6 @@ class FilterRepositoryTest {
     assertTrue(state.sportCategories.all { it.isChecked })
   }
 
-
   @Test
   fun `toggleSocial twice returns to initial state`() = runTest {
     FilterRepository.toggleSocial()

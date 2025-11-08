@@ -166,7 +166,6 @@ class LocationServiceImplTest {
     // Just check it doesn't crash
   }
 
-
   @OptIn(ExperimentalCoroutinesApi::class)
   @Test
   fun `getUserLocationFlow handles null lastLocation in result`() = runTest {
