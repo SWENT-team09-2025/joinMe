@@ -38,13 +38,4 @@ class SignInViewModelTest {
     assertNull(state.errorMsg)
     assertFalse(state.signedOut)
   }
-
-  /*@Test
-  fun clearErrorMsg_resetsError() = runTest {
-      viewModel.signIn(context = mockContext, credentialManager = mockCredentialManager) // simulate error
-      viewModel.clearErrorMsg()
-      assertThat(viewModel.uiState.value.errorMsg).isNull()
-  }*/
-
-  // TODO: You need to mock CredentialManager and AuthRepository to test signIn properly
 }

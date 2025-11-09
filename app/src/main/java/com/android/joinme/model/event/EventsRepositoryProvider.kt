@@ -24,7 +24,6 @@ object EventsRepositoryProvider {
    * @param context required for initializing Firebase if needed
    */
   fun getRepository(isOnline: Boolean, context: Context? = null): EventsRepository {
-    // ✅ detect instrumented test environment
     val isTestEnv =
         android.os.Build.FINGERPRINT == "robolectric" ||
             android.os.Debug.isDebuggerConnected() ||

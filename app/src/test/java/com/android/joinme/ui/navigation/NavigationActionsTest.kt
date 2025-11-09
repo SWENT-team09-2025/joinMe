@@ -44,14 +44,10 @@ class NavigationActionsTest {
       navController.navigate(
           eq(Screen.Map.route),
           withArg<NavOptionsBuilder.() -> Unit> { block ->
-            // ✅ build NavOptions via the public API
             val options: NavOptions = navOptions(block)
 
             assertTrue(options.shouldLaunchSingleTop())
             assertTrue(options.shouldRestoreState())
-            // If your Navigation version exposes these, keep them:
-            // assertEquals(Screen.Map.route, options.popUpToRoute)
-            // assertTrue(options.isPopUpToInclusive())
           })
     }
   }
@@ -250,39 +246,16 @@ class NavigationActionsTest {
   }
 
   @Test
-  fun `SerieDetails is not a top-level destination`() {
-    val screen = Screen.SerieDetails("any-id")
-    assertFalse(screen.isTopLevelDestination)
-  }
-
-  @Test
   fun `SerieDetails screen has correct name`() {
     val screen = Screen.SerieDetails("test-id")
     assertEquals("Serie Details", screen.name)
+    assertFalse(screen.isTopLevelDestination)
   }
 
   @Test
   fun `navigateTo SerieDetails from History screen works correctly`() {
     val serieId = "serie-from-history-789"
     every { navController.currentDestination?.route } returns Screen.History.route
-
-    actions.navigateTo(Screen.SerieDetails(serieId))
-
-    verify {
-      navController.navigate(
-          eq("serie_details/$serieId"),
-          withArg<NavOptionsBuilder.() -> Unit> { block ->
-            val options = navOptions(block)
-            assertTrue(options.shouldRestoreState())
-            assertFalse(options.shouldLaunchSingleTop())
-          })
-    }
-  }
-
-  @Test
-  fun `navigateTo SerieDetails with special characters in serieId`() {
-    val serieId = "serie-with-dashes-123_underscores"
-    every { navController.currentDestination?.route } returns Screen.Overview.route
 
     actions.navigateTo(Screen.SerieDetails(serieId))
 

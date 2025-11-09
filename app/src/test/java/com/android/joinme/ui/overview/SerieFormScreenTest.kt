@@ -4,7 +4,10 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class SerieFormScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
@@ -156,8 +159,9 @@ class SerieFormScreenTest {
     composeTestRule.onNodeWithTag(testTags.inputSerieMaxParticipants).assertIsDisplayed()
     composeTestRule.onNodeWithTag(testTags.inputSerieDate).assertIsDisplayed()
     composeTestRule.onNodeWithTag(testTags.inputSerieTime).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(testTags.inputSerieVisibility).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(testTags.buttonSaveSerie).assertIsDisplayed()
+    // Elements below the fold need to be checked with assertExists()
+    composeTestRule.onNodeWithTag(testTags.inputSerieVisibility).assertExists()
+    composeTestRule.onNodeWithTag(testTags.buttonSaveSerie).assertExists()
   }
 
   @Test
@@ -181,7 +185,8 @@ class SerieFormScreenTest {
           saveButtonText = "Custom Save Text")
     }
 
-    composeTestRule.onNodeWithText("Custom Save Text").assertIsDisplayed()
+    // Button may be below the fold, use assertExists()
+    composeTestRule.onNodeWithText("Custom Save Text").assertExists()
   }
 
   @Test
@@ -204,7 +209,8 @@ class SerieFormScreenTest {
           onGoBack = {})
     }
 
-    composeTestRule.onNodeWithText("Next").assertIsDisplayed()
+    // Button may be below the fold, use assertExists()
+    composeTestRule.onNodeWithText("Next").assertExists()
   }
 
   /** --- LOADING STATE --- */
@@ -407,7 +413,8 @@ class SerieFormScreenTest {
           saveButtonText = "Save")
     }
 
-    composeTestRule.onNodeWithTag(testTags.buttonSaveSerie).performClick()
+    // Button may be below the fold, scroll to it first
+    composeTestRule.onNodeWithTag(testTags.buttonSaveSerie).performScrollTo().performClick()
     assert(saveCalled)
   }
 

@@ -88,6 +88,10 @@ android {
         unitTests {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
+            // Disable release unit tests - Robolectric doesn't work with minified code
+            all {
+                it.enabled = !it.name.contains("Release")
+            }
         }
         packagingOptions {
             jniLibs {

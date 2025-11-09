@@ -2,12 +2,29 @@ package com.android.joinme.ui.overview
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.test.core.app.ApplicationProvider
+import com.google.firebase.FirebaseApp
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28], qualifiers = "w360dp-h640dp-normal-long-notround-any-420dpi-keyshidden-nonav")
 class CreateEventScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
+
+  @Before
+  fun setUp() {
+    // Initialize Firebase for Robolectric tests
+    val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+    if (FirebaseApp.getApps(context).isEmpty()) {
+      FirebaseApp.initializeApp(context)
+    }
+  }
 
   /** --- BASIC RENDERING --- */
   @Test
@@ -23,16 +40,13 @@ class CreateEventScreenTest {
         .assertIsDisplayed()
     composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_DATE).assertIsDisplayed()
     composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_TYPE).assertIsDisplayed()
-    composeTestRule
-        .onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_VISIBILITY)
-        .assertIsDisplayed()
+    // Elements below the fold need to be checked with assertExists()
+    composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_VISIBILITY).assertExists()
     composeTestRule
         .onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
-        .assertIsDisplayed()
-    composeTestRule
-        .onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_DURATION)
-        .assertIsDisplayed()
-    composeTestRule.onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT).assertIsDisplayed()
+        .assertExists()
+    composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_DURATION).assertExists()
+    composeTestRule.onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT).assertExists()
   }
 
   /** --- INPUT BEHAVIOR --- */
@@ -65,8 +79,11 @@ class CreateEventScreenTest {
   fun visibilityDropdownWorks() {
     composeTestRule.setContent { CreateEventScreen(onDone = {}) }
 
-    // Click on visibility dropdown
-    composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_VISIBILITY).performClick()
+    // Scroll to visibility dropdown and click
+    composeTestRule
+        .onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_VISIBILITY)
+        .performScrollTo()
+        .performClick()
 
     // Select PUBLIC
     composeTestRule.onNodeWithText("PUBLIC").assertIsDisplayed()
@@ -177,13 +194,19 @@ class CreateEventScreenTest {
   fun switchingVisibilityUpdatesStateCorrectly() {
     composeTestRule.setContent { CreateEventScreen(onDone = {}) }
 
-    composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_VISIBILITY).performClick()
+    composeTestRule
+        .onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_VISIBILITY)
+        .performScrollTo()
+        .performClick()
     composeTestRule.onNodeWithText("PRIVATE").performClick()
     composeTestRule
         .onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_VISIBILITY)
         .assertTextContains("PRIVATE")
 
-    composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_VISIBILITY).performClick()
+    composeTestRule
+        .onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_VISIBILITY)
+        .performScrollTo()
+        .performClick()
     composeTestRule.onNodeWithText("PUBLIC").performClick()
     composeTestRule
         .onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_VISIBILITY)
