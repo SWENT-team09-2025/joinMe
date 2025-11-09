@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
  * - `TouchTarget`: Accessibility-compliant touch targets
  * - `Elevation`: Shadow and depth values
  * - `SerieCard`: Dimensions specific to the SerieCard component
+ * - `SerieForm`: Dimensions specific to the Serie form component
  *
  * Usage example:
  * ```
@@ -490,7 +491,7 @@ object Dimens {
     val topRowSpacing: Dp = 6.dp
   }
 
-  object Serie {
+  object SerieForm {
     /** 120dp - height for description field */
     val descriptionField: Dp = 120.dp
     /** 180.dp - height for maxParticipants field */

@@ -49,90 +49,91 @@ import java.util.Locale
  */
 @Composable
 fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, testTag: String) {
-    Box(modifier = modifier.fillMaxWidth().padding(bottom = Dimens.SerieCard.bottomPadding)) {
-        // Third layer (furthest back)
-        Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(horizontal = Dimens.SerieCard.thirdLayerHorizontalPadding)
-                    .offset(y = Dimens.SerieCard.thirdLayerOffset)
-                    .height(Dimens.SerieCard.cardHeight)
-                    .clip(RoundedCornerShape(Dimens.CornerRadius.large))
-                    .background(MaterialTheme.customColors.activity)
-                    .border(
-                        Dimens.SerieCard.layerBorderWidth,
-                        MaterialTheme.customColors.activity,
-                        RoundedCornerShape(Dimens.CornerRadius.large)))
+  Box(modifier = modifier.fillMaxWidth().padding(bottom = Dimens.SerieCard.bottomPadding)) {
+    // Third layer (furthest back)
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(horizontal = Dimens.SerieCard.thirdLayerHorizontalPadding)
+                .offset(y = Dimens.SerieCard.thirdLayerOffset)
+                .height(Dimens.SerieCard.cardHeight)
+                .clip(RoundedCornerShape(Dimens.CornerRadius.large))
+                .background(MaterialTheme.customColors.activity)
+                .border(
+                    Dimens.SerieCard.layerBorderWidth,
+                    MaterialTheme.customColors.activity,
+                    RoundedCornerShape(Dimens.CornerRadius.large)))
 
-        // Second layer (middle)
-        Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(horizontal = Dimens.SerieCard.secondLayerHorizontalPadding)
-                    .offset(y = Dimens.SerieCard.secondLayerOffset)
-                    .height(Dimens.SerieCard.cardHeight)
-                    .clip(RoundedCornerShape(Dimens.CornerRadius.large))
-                    .background(MaterialTheme.customColors.sports)
-                    .border(
-                        Dimens.SerieCard.layerBorderWidth,
-                        MaterialTheme.customColors.sports,
-                        RoundedCornerShape(Dimens.CornerRadius.large)))
+    // Second layer (middle)
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(horizontal = Dimens.SerieCard.secondLayerHorizontalPadding)
+                .offset(y = Dimens.SerieCard.secondLayerOffset)
+                .height(Dimens.SerieCard.cardHeight)
+                .clip(RoundedCornerShape(Dimens.CornerRadius.large))
+                .background(MaterialTheme.customColors.sports)
+                .border(
+                    Dimens.SerieCard.layerBorderWidth,
+                    MaterialTheme.customColors.sports,
+                    RoundedCornerShape(Dimens.CornerRadius.large)))
 
-        // Main card (front)
-        Card(
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).testTag(testTag),
-            shape = RoundedCornerShape(Dimens.CornerRadius.large),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.customColors.serieContainer),
-            elevation = CardDefaults.cardElevation(defaultElevation = Dimens.Elevation.large)) {
-            Column(modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.medium)) {
-                // Top row: date, Serie badge, time
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text =
-                            SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                                .format(serie.date.toDate()),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.customColors.onSerieContainer)
+    // Main card (front)
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).testTag(testTag),
+        shape = RoundedCornerShape(Dimens.CornerRadius.large),
+        colors =
+            CardDefaults.cardColors(containerColor = MaterialTheme.customColors.serieContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = Dimens.Elevation.large)) {
+          Column(modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.medium)) {
+            // Top row: date, Serie badge, time
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically) {
+                  Text(
+                      text =
+                          SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                              .format(serie.date.toDate()),
+                      style = MaterialTheme.typography.bodySmall,
+                      color = MaterialTheme.customColors.onSerieContainer)
 
-                    Text(
-                        text = "Serie 🔥",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.customColors.onSerieContainer)
+                  Text(
+                      text = "Serie 🔥",
+                      style = MaterialTheme.typography.bodySmall,
+                      fontWeight = FontWeight.Medium,
+                      color = MaterialTheme.customColors.onSerieContainer)
 
-                    Text(
-                        text =
-                            SimpleDateFormat("H'h'mm", Locale.getDefault())
-                                .format(serie.date.toDate()),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.customColors.onSerieContainer)
+                  Text(
+                      text =
+                          SimpleDateFormat("H'h'mm", Locale.getDefault())
+                              .format(serie.date.toDate()),
+                      style = MaterialTheme.typography.bodySmall,
+                      color = MaterialTheme.customColors.onSerieContainer)
                 }
 
-                Spacer(modifier = Modifier.height(Dimens.Spacing.small))
+            Spacer(modifier = Modifier.height(Dimens.Spacing.small))
 
-                // Title
-                Text(
-                    text = serie.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.customColors.onSerieContainer)
+            // Title
+            Text(
+                text = serie.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.customColors.onSerieContainer)
 
-                Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
+            Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
 
-                // Bottom row: arrow
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "View serie details",
-                        tint = MaterialTheme.colorScheme.onSurface)
+            // Bottom row: arrow
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically) {
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                      contentDescription = "View serie details",
+                      tint = MaterialTheme.colorScheme.onSurface)
                 }
-            }
+          }
         }
-    }
+  }
 }

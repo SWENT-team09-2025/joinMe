@@ -181,7 +181,7 @@ fun SerieFormScreen(
                   label = { Text("Description") },
                   modifier =
                       Modifier.fillMaxWidth()
-                          .height(Dimens.Serie.descriptionField)
+                          .height(Dimens.SerieForm.descriptionField)
                           .testTag(testTags.inputSerieDescription),
                   isError = formState.invalidDescriptionMsg != null,
                   supportingText = {
@@ -202,7 +202,7 @@ fun SerieFormScreen(
 
               Box(
                   modifier =
-                      Modifier.width(Dimens.Serie.maxParticipantsField).clickable {
+                      Modifier.width(Dimens.SerieForm.maxParticipantsField).clickable {
                         showMaxParticipantsPicker = true
                       }) {
                     OutlinedTextField(
