@@ -11,13 +11,21 @@ import com.google.android.gms.tasks.Tasks
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.QuerySnapshot
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
 
@@ -304,5 +312,89 @@ class ChatRepositoryFirestoreTest {
 
     // Then - if no exception is thrown, the message was parsed with TEXT as default
     verify { mockMessageDocument.get() }
+  }
+
+  // ---------------- OBSERVE MESSAGES FOR CONVERSATION ----------------
+
+  @Test
+  fun observeMessagesForConversation_returnsFlowWithMessages() = runTest {
+    // Given
+    val mockQuery = mockk<Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockDocumentSnapshot1 = mockk<DocumentSnapshot>(relaxed = true)
+    val mockDocumentSnapshot2 = mockk<DocumentSnapshot>(relaxed = true)
+    val mockListenerRegistration = mockk<ListenerRegistration>(relaxed = true)
+
+    // Setup message 1
+    every { mockDocumentSnapshot1.id } returns "msg1"
+    every { mockDocumentSnapshot1.getString("senderId") } returns "user1"
+    every { mockDocumentSnapshot1.getString("senderName") } returns "Alice"
+    every { mockDocumentSnapshot1.getString("content") } returns "Hello"
+    every { mockDocumentSnapshot1.getLong("timestamp") } returns 1000L
+    every { mockDocumentSnapshot1.getString("type") } returns "TEXT"
+    every { mockDocumentSnapshot1.get("readBy") } returns emptyList<String>()
+    every { mockDocumentSnapshot1.getBoolean("isPinned") } returns false
+
+    // Setup message 2
+    every { mockDocumentSnapshot2.id } returns "msg2"
+    every { mockDocumentSnapshot2.getString("senderId") } returns "user2"
+    every { mockDocumentSnapshot2.getString("senderName") } returns "Bob"
+    every { mockDocumentSnapshot2.getString("content") } returns "Hi there"
+    every { mockDocumentSnapshot2.getLong("timestamp") } returns 2000L
+    every { mockDocumentSnapshot2.getString("type") } returns "TEXT"
+    every { mockDocumentSnapshot2.get("readBy") } returns emptyList<String>()
+    every { mockDocumentSnapshot2.getBoolean("isPinned") } returns false
+
+    every { mockQuerySnapshot.documents } returns
+        listOf(mockDocumentSnapshot1, mockDocumentSnapshot2)
+
+    // Setup query and listener
+    every { mockMessagesCollection.orderBy("timestamp") } returns mockQuery
+    every { mockQuery.addSnapshotListener(any<EventListener<QuerySnapshot>>()) } answers
+        {
+          val listener = firstArg<EventListener<QuerySnapshot>>()
+          listener.onEvent(mockQuerySnapshot, null)
+          mockListenerRegistration
+        }
+
+    // When
+    val flow = repository.observeMessagesForConversation(testConversationId)
+    val messages = withTimeout(1000) { flow.first() }
+
+    // Then
+    assertNotNull(messages)
+    assertEquals(2, messages.size)
+    assertEquals("msg1", messages[0].id)
+    assertEquals("Hello", messages[0].content)
+    assertEquals("msg2", messages[1].id)
+    assertEquals("Hi there", messages[1].content)
+    verify { mockMessagesCollection.orderBy("timestamp") }
+    verify { mockQuery.addSnapshotListener(any<EventListener<QuerySnapshot>>()) }
+  }
+
+  @Test
+  fun observeMessagesForConversation_returnsEmptyListWhenNoMessages() = runTest {
+    // Given
+    val mockQuery = mockk<Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockListenerRegistration = mockk<ListenerRegistration>(relaxed = true)
+
+    every { mockQuerySnapshot.documents } returns emptyList()
+
+    every { mockMessagesCollection.orderBy("timestamp") } returns mockQuery
+    every { mockQuery.addSnapshotListener(any<EventListener<QuerySnapshot>>()) } answers
+        {
+          val listener = firstArg<EventListener<QuerySnapshot>>()
+          listener.onEvent(mockQuerySnapshot, null)
+          mockListenerRegistration
+        }
+
+    // When
+    val flow = repository.observeMessagesForConversation(testConversationId)
+    val messages = withTimeout(1000) { flow.first() }
+
+    // Then
+    assertNotNull(messages)
+    assertEquals(0, messages.size)
   }
 }
