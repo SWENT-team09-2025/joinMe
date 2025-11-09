@@ -18,8 +18,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.android.joinme.ui.theme.ScrimOverlayColorDarkTheme
-import com.android.joinme.ui.theme.ScrimOverlayColorLightTheme
+import com.android.joinme.ui.theme.scrimDark
+import com.android.joinme.ui.theme.scrimLight
 
 /**
  * Data class representing a single action bubble option
@@ -146,7 +146,7 @@ fun FloatingActionBubbles(
 
   // Use semantic scrim colors from Color.kt for consistency
   val isDarkTheme = isSystemInDarkTheme()
-  val scrimBaseColor = if (isDarkTheme) ScrimOverlayColorDarkTheme else ScrimOverlayColorLightTheme
+  val scrimBaseColor = if (isDarkTheme) scrimDark else scrimLight
   val scrimColor = scrimBaseColor.copy(alpha = scrimBaseColor.alpha * scrimAlpha)
 
   // Animated visibility for bubbles

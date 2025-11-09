@@ -199,19 +199,19 @@ class EventTest {
   @Test
   fun `getColor returns correct color for SPORTS event type`() {
     val color = EventType.SPORTS.getColor()
-    assertEquals(Color(0xFF7E57C2), color)
+    assertEquals(Color(0xFF7242E4), color)
   }
 
   @Test
   fun `getColor returns correct color for ACTIVITY event type`() {
     val color = EventType.ACTIVITY.getColor()
-    assertEquals(Color(0xFF81C784), color)
+    assertEquals(Color(0xFF42E465), color)
   }
 
   @Test
   fun `getColor returns correct color for SOCIAL event type`() {
     val color = EventType.SOCIAL.getColor()
-    assertEquals(Color(0xFFE57373), color)
+    assertEquals(Color(0xFFD33E3B), color)
   }
 
   @Test

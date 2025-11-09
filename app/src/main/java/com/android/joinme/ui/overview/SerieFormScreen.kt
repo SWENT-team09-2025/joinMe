@@ -15,8 +15,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.android.joinme.ui.theme.ButtonSaveColor
-import com.android.joinme.ui.theme.DarkButtonColor
 import java.util.*
 
 /** Data class representing the test tags for serie form fields. */
@@ -401,7 +399,8 @@ fun SerieFormScreen(
                       Modifier.fillMaxWidth().height(56.dp).testTag(testTags.buttonSaveSerie),
                   colors =
                       ButtonDefaults.buttonColors(
-                          containerColor = DarkButtonColor, contentColor = ButtonSaveColor),
+                          containerColor = MaterialTheme.colorScheme.onBackground,
+                          contentColor = MaterialTheme.colorScheme.onPrimary),
                   enabled = formState.isValid && !formState.isLoading) {
                     if (formState.isLoading) {
                       CircularProgressIndicator(

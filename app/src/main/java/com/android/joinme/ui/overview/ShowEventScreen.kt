@@ -19,7 +19,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.android.joinme.ui.theme.*
+import com.android.joinme.ui.theme.errorLight
+import com.android.joinme.ui.theme.onBackgroundLight
+import com.android.joinme.ui.theme.onPrimaryLight
+import com.android.joinme.ui.theme.onSecondaryContainerLight
+import com.android.joinme.ui.theme.outlineVariantLight
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
@@ -108,7 +112,7 @@ fun ShowEventScreen(
                   onGoBack()
                 }
               }) {
-                Text("Delete", color = DeleteButtonColor)
+                Text("Delete", color = errorLight)
               }
         },
         dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } })
@@ -140,7 +144,7 @@ fun ShowEventScreen(
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
-          HorizontalDivider(color = DividerColor, thickness = 1.dp)
+          HorizontalDivider(color = outlineVariantLight, thickness = 1.dp)
         }
       }) { paddingValues ->
         Column(
@@ -183,11 +187,11 @@ fun ShowEventScreen(
                         text = eventUIState.type,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Purple40, // Purple color for event type
+                        color = onSecondaryContainerLight, // Purple color for event type
                         modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_TYPE))
                   }
 
-              HorizontalDivider(thickness = 1.dp, color = DividerColor)
+              HorizontalDivider(thickness = 1.dp, color = outlineVariantLight)
 
               // Description
               Text(
@@ -199,7 +203,7 @@ fun ShowEventScreen(
                           .heightIn(min = 80.dp)
                           .testTag(ShowEventScreenTestTags.EVENT_DESCRIPTION))
 
-              HorizontalDivider(thickness = 1.dp, color = DividerColor)
+              HorizontalDivider(thickness = 1.dp, color = outlineVariantLight)
 
               // Location
               Text(
@@ -209,7 +213,7 @@ fun ShowEventScreen(
                   modifier =
                       Modifier.fillMaxWidth().testTag(ShowEventScreenTestTags.EVENT_LOCATION))
 
-              HorizontalDivider(thickness = 1.dp, color = DividerColor)
+              HorizontalDivider(thickness = 1.dp, color = outlineVariantLight)
 
               // Members and Duration row
               Row(
@@ -231,7 +235,7 @@ fun ShowEventScreen(
                         modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_DURATION))
                   }
 
-              HorizontalDivider(thickness = 1.dp, color = DividerColor)
+              HorizontalDivider(thickness = 1.dp, color = outlineVariantLight)
 
               // Owner display
               Text(
@@ -261,7 +265,7 @@ fun ShowEventScreen(
                       shape = RoundedCornerShape(8.dp),
                       colors =
                           ButtonDefaults.buttonColors(
-                              containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
+                              containerColor = onBackgroundLight, contentColor = onPrimaryLight)) {
                         Text(text = "EDIT EVENT", fontSize = 16.sp, fontWeight = FontWeight.Medium)
                       }
 
@@ -274,12 +278,12 @@ fun ShowEventScreen(
                       shape = RoundedCornerShape(8.dp),
                       colors =
                           ButtonDefaults.outlinedButtonColors(
-                              contentColor = DeleteButtonColor,
+                              contentColor = errorLight,
                               containerColor = MaterialTheme.colorScheme.surface)) {
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "Delete",
-                            tint = DeleteButtonColor)
+                            tint = errorLight)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "DELETE EVENT", fontSize = 16.sp, fontWeight = FontWeight.Medium)
@@ -299,7 +303,7 @@ fun ShowEventScreen(
                       shape = RoundedCornerShape(8.dp),
                       colors =
                           ButtonDefaults.buttonColors(
-                              containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
+                              containerColor = onBackgroundLight, contentColor = onPrimaryLight)) {
                         Text(
                             text =
                                 if (eventUIState.isParticipant(currentUserId)) "QUIT EVENT"

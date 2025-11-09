@@ -22,7 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.theme.Dimens
-import com.android.joinme.ui.theme.ScrimOverlayColorLightTheme
+import com.android.joinme.ui.theme.scrimLight
 
 /** Test tags for EditProfileScreen components to enable UI testing. */
 object EditProfileTestTags {
@@ -307,14 +307,14 @@ private fun EditProfileContent(
             enabled = isFormValid,
             colors =
                 ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
                     disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant),
             shape = RoundedCornerShape(Dimens.Button.cornerRadius)) {
               Text(
                   "SAVE",
                   fontSize = Dimens.FontSize.bodyLarge,
                   fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.onPrimary)
+                  color = MaterialTheme.colorScheme.onPrimaryContainer)
             }
 
         Spacer(modifier = Modifier.height(Dimens.Padding.extraLarge))
@@ -359,7 +359,7 @@ private fun ProfilePictureSection(
                     modifier =
                         Modifier.size(Dimens.Profile.photoLarge)
                             .clip(CircleShape)
-                            .background(ScrimOverlayColorLightTheme))
+                            .background(scrimLight))
 
                 // Edit button
                 Button(

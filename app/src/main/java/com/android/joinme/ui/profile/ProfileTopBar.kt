@@ -11,9 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.android.joinme.ui.theme.ActiveTabColor
-import com.android.joinme.ui.theme.DividerColor
-import com.android.joinme.ui.theme.InactiveTabColor
 
 /**
  * ProfileScreen enum defines the different profile-related screens in the application. Used to
@@ -70,8 +67,9 @@ fun ProfileTopBar(
                       Modifier.size(
                           if (currentScreen == ProfileScreen.VIEW_PROFILE) 32.dp else 24.dp),
                   tint =
-                      if (currentScreen == ProfileScreen.VIEW_PROFILE) ActiveTabColor
-                      else InactiveTabColor)
+                      if (currentScreen == ProfileScreen.VIEW_PROFILE)
+                          MaterialTheme.colorScheme.primary
+                      else MaterialTheme.colorScheme.outlineVariant)
             }
 
             // Group Icon
@@ -82,8 +80,8 @@ fun ProfileTopBar(
                   modifier =
                       Modifier.size(if (currentScreen == ProfileScreen.GROUPS) 32.dp else 24.dp),
                   tint =
-                      if (currentScreen == ProfileScreen.GROUPS) ActiveTabColor
-                      else InactiveTabColor)
+                      if (currentScreen == ProfileScreen.GROUPS) MaterialTheme.colorScheme.primary
+                      else MaterialTheme.colorScheme.outlineVariant)
             }
 
             // Edit Icon
@@ -95,12 +93,13 @@ fun ProfileTopBar(
                       Modifier.size(
                           if (currentScreen == ProfileScreen.EDIT_PROFILE) 32.dp else 24.dp),
                   tint =
-                      if (currentScreen == ProfileScreen.EDIT_PROFILE) ActiveTabColor
-                      else InactiveTabColor)
+                      if (currentScreen == ProfileScreen.EDIT_PROFILE)
+                          MaterialTheme.colorScheme.primary
+                      else MaterialTheme.colorScheme.outlineVariant)
             }
           }
         }
 
-    HorizontalDivider(color = DividerColor, thickness = 1.dp)
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
   }
 }

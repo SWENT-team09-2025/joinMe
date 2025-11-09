@@ -17,9 +17,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.ui.components.EventCard
-import com.android.joinme.ui.theme.ButtonSaveColor
-import com.android.joinme.ui.theme.DarkButtonColor
-import com.android.joinme.ui.theme.DividerColor
+import com.android.joinme.ui.theme.onBackgroundLight
+import com.android.joinme.ui.theme.onPrimaryLight
+import com.android.joinme.ui.theme.outlineVariantLight
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
@@ -141,7 +141,7 @@ fun SerieDetailsScreen(
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
-          HorizontalDivider(color = DividerColor, thickness = 1.dp)
+          HorizontalDivider(color = outlineVariantLight, thickness = 1.dp)
         }
       }) { paddingValues ->
         if (uiState.isLoading) {
@@ -204,7 +204,7 @@ fun SerieDetailsScreen(
                           modifier = Modifier.testTag(SerieDetailsScreenTestTags.DURATION))
                     }
 
-                HorizontalDivider(thickness = 1.dp, color = DividerColor)
+                HorizontalDivider(thickness = 1.dp, color = outlineVariantLight)
 
                 // Description
                 Text(
@@ -216,7 +216,7 @@ fun SerieDetailsScreen(
                             .heightIn(min = 80.dp)
                             .testTag(SerieDetailsScreenTestTags.DESCRIPTION))
 
-                HorizontalDivider(thickness = 1.dp, color = DividerColor)
+                HorizontalDivider(thickness = 1.dp, color = outlineVariantLight)
 
                 // Events list in LazyColumn with fixed size
                 if (uiState.events.isNotEmpty()) {
@@ -250,7 +250,7 @@ fun SerieDetailsScreen(
                       }
                 }
 
-                HorizontalDivider(thickness = 1.dp, color = DividerColor)
+                HorizontalDivider(thickness = 1.dp, color = outlineVariantLight)
 
                 // Owner information
                 Text(
@@ -275,7 +275,7 @@ fun SerieDetailsScreen(
                       shape = RoundedCornerShape(8.dp),
                       colors =
                           ButtonDefaults.buttonColors(
-                              containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
+                              containerColor = onBackgroundLight, contentColor = onPrimaryLight)) {
                         Text(text = "ADD EVENT", fontSize = 16.sp, fontWeight = FontWeight.Medium)
                       }
                   Button(
@@ -288,7 +288,7 @@ fun SerieDetailsScreen(
                       enabled = uiState.isOwner(currentUserId),
                       colors =
                           ButtonDefaults.buttonColors(
-                              containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
+                              containerColor = onBackgroundLight, contentColor = onPrimaryLight)) {
                         Text(text = "EDIT SERIE", fontSize = 16.sp, fontWeight = FontWeight.Medium)
                       }
                 }
@@ -319,7 +319,7 @@ fun SerieDetailsScreen(
                           uiState.isParticipant(currentUserId) || uiState.canJoin(currentUserId),
                       colors =
                           ButtonDefaults.buttonColors(
-                              containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
+                              containerColor = onBackgroundLight, contentColor = onPrimaryLight)) {
                         Text(
                             text =
                                 if (uiState.isParticipant(currentUserId)) "QUIT SERIE"

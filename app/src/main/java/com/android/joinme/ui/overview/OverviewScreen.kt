@@ -56,9 +56,6 @@ import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.NavigationTestTags
 import com.android.joinme.ui.navigation.Tab
-import com.android.joinme.ui.theme.DividerColor
-import com.android.joinme.ui.theme.IconColor
-import com.android.joinme.ui.theme.OverviewScreenButtonColor
 
 /**
  * Test tags for UI testing of the Overview screen components.
@@ -190,7 +187,7 @@ fun OverviewScreen(
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
-          HorizontalDivider(color = DividerColor, thickness = 1.dp)
+          HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
         }
       },
       bottomBar = {
@@ -202,9 +199,12 @@ fun OverviewScreen(
       floatingActionButton = {
         FloatingActionButton(
             onClick = { showFloatingBubbles = true },
-            containerColor = OverviewScreenButtonColor,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
             modifier = Modifier.testTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON)) {
-              Icon(Icons.Default.Add, contentDescription = "Add Event", tint = IconColor)
+              Icon(
+                  Icons.Default.Add,
+                  contentDescription = "Add Event",
+                  tint = MaterialTheme.colorScheme.onSurface)
             }
       }) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
@@ -312,12 +312,15 @@ fun OverviewScreen(
           // FAB History on bottom left
           FloatingActionButton(
               onClick = onGoToHistory,
-              containerColor = OverviewScreenButtonColor,
+              containerColor = MaterialTheme.colorScheme.surfaceContainer,
               modifier =
                   Modifier.align(Alignment.BottomStart)
                       .padding(start = 16.dp, bottom = 16.dp)
                       .testTag(OverviewScreenTestTags.HISTORY_BUTTON)) {
-                Icon(Icons.Default.History, contentDescription = "View History", tint = IconColor)
+                Icon(
+                    Icons.Default.History,
+                    contentDescription = "View History",
+                    tint = MaterialTheme.colorScheme.onSurface)
               }
         }
 

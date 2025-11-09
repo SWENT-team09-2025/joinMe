@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -61,8 +62,7 @@ import com.android.joinme.ui.components.BubbleAlignment
 import com.android.joinme.ui.components.FloatingActionBubbles
 import com.android.joinme.ui.profile.ProfileScreen
 import com.android.joinme.ui.profile.ProfileTopBar
-import com.android.joinme.ui.theme.ScrimOverlayColorDarkTheme
-import com.android.joinme.ui.theme.ScrimOverlayColorLightTheme
+import com.android.joinme.ui.theme.scrimLight
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 
@@ -349,8 +349,7 @@ fun GroupListScreen(
                     tween(durationMillis = GroupListScreenDimensions.scrimAnimationDuration),
                 label = "cardMenuScrimAlpha")
         val isDarkTheme = isSystemInDarkTheme()
-        val scrimBaseColor =
-            if (isDarkTheme) ScrimOverlayColorDarkTheme else ScrimOverlayColorLightTheme
+        val scrimBaseColor = if (isDarkTheme) scrimLight else scrimLight
         val scrimColor = scrimBaseColor.copy(alpha = scrimBaseColor.alpha * scrimAlpha)
 
         // Full-screen scrim overlay with menu bubbles
@@ -385,7 +384,7 @@ fun GroupListScreen(
                     // Leave Group
                     MenuBubble(
                         text = "Leave Group",
-                        icon = Icons.Default.ExitToApp,
+                        icon = Icons.AutoMirrored.Filled.ExitToApp,
                         onClick = {
                           onLeaveGroup(group)
                           openMenuGroupId = null
@@ -437,8 +436,8 @@ fun GroupListScreen(
         onDismiss = { showJoinBubbles = false },
         actions = groupJoinBubbleActions,
         bubbleAlignment = BubbleAlignment.BOTTOM_END,
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface)
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
   } // Close outer Box
 }
 
@@ -515,7 +514,8 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: (Float) 
 private fun MenuBubble(text: String, icon: ImageVector, onClick: () -> Unit, testTag: String = "") {
   FloatingActionButton(
       onClick = onClick,
-      containerColor = MaterialTheme.colorScheme.surface,
+      containerColor = MaterialTheme.colorScheme.primaryContainer,
+      contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
       shape = RoundedCornerShape(GroupListScreenDimensions.bubbleCornerRadius),
       modifier = Modifier.height(GroupListScreenDimensions.bubbleHeight).testTag(testTag)) {
         Row(

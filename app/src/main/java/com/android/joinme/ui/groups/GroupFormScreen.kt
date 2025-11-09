@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.sp
 import com.android.joinme.R
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.displayString
-import com.android.joinme.ui.theme.ErrorBorderColor
 import com.android.joinme.ui.theme.TransparentColor
 
 /** Data class representing the test tags for group form fields. */
@@ -254,17 +253,17 @@ private fun GroupNameInput(
         singleLine = true,
         colors =
             OutlinedTextFieldDefaults.colors(
-                focusedBorderColor =
-                    if (error != null) ErrorBorderColor else MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor =
-                    if (error != null) ErrorBorderColor else MaterialTheme.colorScheme.outline,
-                errorBorderColor = ErrorBorderColor,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                errorBorderColor = MaterialTheme.colorScheme.error,
                 cursorColor = MaterialTheme.colorScheme.primary))
 
     Text(
         text = error ?: "3-30 characters. Letters, numbers, spaces, or underscores only",
         fontSize = 12.sp,
-        color = if (error != null) ErrorBorderColor else MaterialTheme.colorScheme.onSurfaceVariant,
+        color =
+            if (error != null) MaterialTheme.colorScheme.error
+            else MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(start = 16.dp, top = 4.dp).testTag(testTags.nameSupportingText))
   }
 }
@@ -381,17 +380,17 @@ private fun DescriptionInput(
         maxLines = 4,
         colors =
             OutlinedTextFieldDefaults.colors(
-                focusedBorderColor =
-                    if (error != null) ErrorBorderColor else MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor =
-                    if (error != null) ErrorBorderColor else MaterialTheme.colorScheme.outline,
-                errorBorderColor = ErrorBorderColor,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                errorBorderColor = MaterialTheme.colorScheme.error,
                 cursorColor = MaterialTheme.colorScheme.primary))
 
     Text(
         text = error ?: "0-300 characters. Letters, numbers, spaces, or underscores only",
         fontSize = 12.sp,
-        color = if (error != null) ErrorBorderColor else MaterialTheme.colorScheme.onSurfaceVariant,
+        color =
+            if (error != null) MaterialTheme.colorScheme.error
+            else MaterialTheme.colorScheme.onSurfaceVariant,
         modifier =
             Modifier.padding(start = 16.dp, top = 4.dp).testTag(testTags.descriptionSupportingText))
   }

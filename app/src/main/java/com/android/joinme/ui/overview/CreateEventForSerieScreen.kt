@@ -18,9 +18,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.EventType
-import com.android.joinme.ui.theme.ButtonSaveColor
-import com.android.joinme.ui.theme.DarkButtonColor
-import com.android.joinme.ui.theme.DividerColor
+import com.android.joinme.ui.theme.onBackgroundLight
+import com.android.joinme.ui.theme.onPrimaryLight
+import com.android.joinme.ui.theme.outlineVariantLight
 import java.util.Locale
 import kotlinx.coroutines.launch
 
@@ -93,7 +93,7 @@ fun CreateEventForSerieScreen(
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
-          HorizontalDivider(color = DividerColor, thickness = 1.dp)
+          HorizontalDivider(color = outlineVariantLight, thickness = 1.dp)
         }
       }) { paddingValues ->
         Column(
@@ -291,7 +291,7 @@ fun CreateEventForSerieScreen(
                   enabled = uiState.isValid,
                   colors =
                       ButtonDefaults.buttonColors(
-                          containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
+                          containerColor = onBackgroundLight, contentColor = onPrimaryLight)) {
                     Text("Create Event")
                   }
             }

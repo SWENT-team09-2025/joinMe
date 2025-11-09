@@ -33,11 +33,10 @@ import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
-import com.android.joinme.ui.theme.GoogleSignInButtonColor
+import com.android.joinme.ui.theme.surfaceLight
 
 object SignInScreenTestTags {
   const val APP_LOGO = "appLogo"
-  const val LOGIN_TITLE = "loginTitle"
   const val LOGIN_BUTTON = "loginButton"
 }
 
@@ -99,8 +98,7 @@ fun SignInScreen(
 fun GoogleSignInButton(onSignInClick: () -> Unit) {
   Button(
       onClick = onSignInClick,
-      colors =
-          ButtonDefaults.buttonColors(containerColor = GoogleSignInButtonColor), // Button color
+      colors = ButtonDefaults.buttonColors(containerColor = surfaceLight), // Button color
       shape = RoundedCornerShape(50), // Circular edges for the button
       modifier =
           Modifier.padding(8.dp)

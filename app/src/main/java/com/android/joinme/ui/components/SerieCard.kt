@@ -28,13 +28,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.android.joinme.model.serie.Serie
-import com.android.joinme.ui.theme.IconColor
-import com.android.joinme.ui.theme.OnEventCardTextColor
-import com.android.joinme.ui.theme.SerieCardBackgroundColor
-import com.android.joinme.ui.theme.SerieCardLayer2BorderColor
-import com.android.joinme.ui.theme.SerieCardLayer2Color
-import com.android.joinme.ui.theme.SerieCardLayer3BorderColor
-import com.android.joinme.ui.theme.SerieCardLayer3Color
+import com.android.joinme.ui.theme.inverseSurfaceLight
+import com.android.joinme.ui.theme.onBackgroundLight
+import com.android.joinme.ui.theme.onPrimaryLight
+import com.android.joinme.ui.theme.onSurfaceLight
+import com.android.joinme.ui.theme.sportsContainerLight
+import com.android.joinme.ui.theme.sportsLight
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -64,8 +63,8 @@ fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, 
                 .offset(y = 12.dp)
                 .height(100.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(SerieCardLayer3Color)
-                .border(2.dp, SerieCardLayer3BorderColor, RoundedCornerShape(12.dp)))
+                .background(onBackgroundLight)
+                .border(2.dp, sportsLight, RoundedCornerShape(12.dp)))
 
     // Second layer (middle)
     Box(
@@ -75,14 +74,14 @@ fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, 
                 .offset(y = 6.dp)
                 .height(100.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(SerieCardLayer2Color)
-                .border(2.dp, SerieCardLayer2BorderColor, RoundedCornerShape(12.dp)))
+                .background(inverseSurfaceLight)
+                .border(2.dp, sportsContainerLight, RoundedCornerShape(12.dp)))
 
     // Main card (front)
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).testTag(testTag),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = SerieCardBackgroundColor),
+        colors = CardDefaults.cardColors(containerColor = inverseSurfaceLight),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)) {
           Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
             // Top row: date, Serie badge, time
@@ -95,20 +94,20 @@ fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, 
                           SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
                               .format(serie.date.toDate()),
                       style = MaterialTheme.typography.bodySmall,
-                      color = OnEventCardTextColor)
+                      color = onPrimaryLight)
 
                   Text(
                       text = "Serie 🔥",
                       style = MaterialTheme.typography.bodySmall,
                       fontWeight = FontWeight.Medium,
-                      color = OnEventCardTextColor)
+                      color = onPrimaryLight)
 
                   Text(
                       text =
                           SimpleDateFormat("HH'h'mm", Locale.getDefault())
                               .format(serie.date.toDate()),
                       style = MaterialTheme.typography.bodySmall,
-                      color = OnEventCardTextColor)
+                      color = onPrimaryLight)
                 }
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -118,7 +117,7 @@ fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, 
                 text = serie.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = OnEventCardTextColor)
+                color = onPrimaryLight)
 
             Spacer(modifier = Modifier.height(4.dp))
 
@@ -130,7 +129,7 @@ fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, 
                   Icon(
                       imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                       contentDescription = "View serie details",
-                      tint = IconColor)
+                      tint = onSurfaceLight)
                 }
           }
         }

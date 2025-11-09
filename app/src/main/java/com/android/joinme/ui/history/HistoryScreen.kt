@@ -38,7 +38,6 @@ import com.android.joinme.model.eventItem.EventItem
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.ui.components.EventCard
 import com.android.joinme.ui.components.SerieCard
-import com.android.joinme.ui.theme.DividerColor
 
 object HistoryScreenTestTags {
   const val SCREEN = "historyScreen"
@@ -114,7 +113,7 @@ fun HistoryScreen(
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
-          HorizontalDivider(color = DividerColor, thickness = 1.dp)
+          HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
         }
       }) { innerPadding ->
         when {

@@ -31,8 +31,6 @@ import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.Screen
 import com.android.joinme.ui.navigation.Tab
-import com.android.joinme.ui.theme.IconColor
-import com.android.joinme.ui.theme.MapControlBackgroundColor
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -172,12 +170,12 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
                           .padding(16.dp)
                           .testTag(MapScreenTestTags.FILTER_BUTTON)
                           .background(
-                              color = MapControlBackgroundColor,
+                              color = MaterialTheme.colorScheme.surface,
                               shape = MaterialTheme.shapes.medium)) {
                     Icon(
                         imageVector = Icons.Filled.Tune,
                         contentDescription = "Filter",
-                        tint = IconColor)
+                        tint = MaterialTheme.colorScheme.onSurface)
                   }
             }
       }
