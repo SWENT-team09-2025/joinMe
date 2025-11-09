@@ -314,13 +314,6 @@ class BaseEventFormViewModelTest {
 
   // ==================== Time Tests ====================
 
-  @Test
-  fun `setTime updates time in state`() {
-    vm.setTime("14:30")
-    val state = vm.uiState.value
-
-    assertEquals("14:30", state.time)
-  }
 
   @Test
   fun `setTime with different times updates correctly`() {

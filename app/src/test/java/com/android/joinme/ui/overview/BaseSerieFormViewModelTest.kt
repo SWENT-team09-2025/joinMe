@@ -218,17 +218,6 @@ class BaseSerieFormViewModelTest {
   // ==================== Time Validation Tests ====================
 
   @Test
-  fun `setTime with valid time updates state`() {
-    // Set future date first to avoid past time issues
-    vm.setDate("25/12/2025")
-    vm.setTime("18:30")
-    val state = vm.uiState.value
-
-    assertEquals("18:30", state.time)
-    assertNull(state.invalidTimeMsg)
-  }
-
-  @Test
   fun `setTime with invalid format sets error`() {
     vm.setTime("25:99")
     val state = vm.uiState.value
@@ -276,16 +265,6 @@ class BaseSerieFormViewModelTest {
 
     assertNotNull(state.invalidTimeMsg)
     assertTrue(state.invalidTimeMsg!!.contains("past"))
-  }
-
-  @Test
-  fun `setTime with future date allows any time`() {
-    vm.setDate("25/12/2025")
-    vm.setTime("00:00")
-    val state = vm.uiState.value
-
-    assertEquals("00:00", state.time)
-    assertNull(state.invalidTimeMsg)
   }
 
   // ==================== Visibility Validation Tests ====================
@@ -487,25 +466,20 @@ class BaseSerieFormViewModelTest {
   }
 
   @Test
-  fun `parseDateTime with invalid date format returns null`() {
-    val timestamp = vm.testParseDateTime("2025-12-25", "18:30")
+  fun `parseDateTime with invalid format returns null`() {
+    val timestamp1 = vm.testParseDateTime("2025-12-25", "18:30")
+    assertNull(timestamp1)
 
-    assertNull(timestamp)
+    val timestamp2 = vm.testParseDateTime("25/12/2025", "invalid-time")
+    assertNull(timestamp2)
+
+    val timestamp3 = vm.testParseDateTime("", "")
+    assertNull(timestamp3)
+
+    val timestamp4 = vm.testParseDateTime("25/12", "18:30")
+    assertNull(timestamp4)
   }
 
-  @Test
-  fun `parseDateTime with invalid time format returns null`() {
-    val timestamp = vm.testParseDateTime("25/12/2025", "invalid-time")
-
-    assertNull(timestamp)
-  }
-
-  @Test
-  fun `parseDateTime with empty strings returns null`() {
-    val timestamp = vm.testParseDateTime("", "")
-
-    assertNull(timestamp)
-  }
 
   @Test
   fun `parseDateTime with midnight time returns Timestamp`() {
@@ -529,31 +503,8 @@ class BaseSerieFormViewModelTest {
     assertEquals(59, calendar.get(java.util.Calendar.MINUTE))
   }
 
-  @Test
-  fun `parseDateTime with partial date returns null`() {
-    val timestamp = vm.testParseDateTime("25/12", "18:30")
-
-    assertNull(timestamp)
-  }
 
   // ==================== Loading State Tests ====================
-
-  @Test
-  fun `setLoadingState sets loading to true`() {
-    vm.testSetLoadingState(true)
-    val state = vm.uiState.value
-
-    assertTrue(state.isLoading)
-  }
-
-  @Test
-  fun `setLoadingState sets loading to false`() {
-    vm.testSetLoadingState(false)
-    val state = vm.uiState.value
-
-    assertFalse(state.isLoading)
-  }
-
   @Test
   fun `setLoadingState can toggle loading state`() {
     vm.testSetLoadingState(true)

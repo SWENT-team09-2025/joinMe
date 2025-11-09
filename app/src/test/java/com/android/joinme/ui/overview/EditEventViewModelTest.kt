@@ -131,21 +131,24 @@ class EditEventViewModelTest {
   }
 
   @Test
-  fun setType_blankType_setsErrorMessage() = runBlocking {
-    viewModel.setType("")
-
+  fun setType_invalid_errorMessageDisplayed() = runTest {
+    viewModel.setType("INVALID")
     val state = viewModel.uiState.first()
-    assertEquals("", state.type)
-    assertEquals("Type cannot be empty", state.invalidTypeMsg)
+    assertEquals("INVALID", state.type)
+    assertNotNull(state.invalidTypeMsg)
+    assertEquals("Type must be one of: SPORTS, ACTIVITY, SOCIAL", state.invalidTypeMsg)
+    assertFalse(state.isValid)
   }
 
   @Test
-  fun setType_invalidType_setsErrorMessage() = runBlocking {
-    viewModel.setType("INVALID")
+  fun setType_blank_errorMessageDisplayed() = runTest {
+    viewModel.setType("")
 
     val state = viewModel.uiState.first()
-    assertEquals("INVALID", state.type)
-    assertEquals("Type must be one of: SPORTS, ACTIVITY, SOCIAL", state.invalidTypeMsg)
+    assertNotNull(state.invalidTypeMsg)
+    assertEquals("", state.type)
+    assertEquals("Type cannot be empty", state.invalidTypeMsg)
+    assertFalse(state.isValid)
   }
 
   /** --- SET TITLE TESTS --- */
@@ -301,21 +304,25 @@ class EditEventViewModelTest {
   }
 
   @Test
-  fun setDuration_zero_setsErrorMessage() = runBlocking {
+  fun setDuration_zero_errorMessageDisplayed() = runTest {
     viewModel.setDuration("0")
 
     val state = viewModel.uiState.first()
     assertEquals("0", state.duration)
+    assertNotNull(state.invalidDurationMsg)
     assertEquals("Must be a positive number", state.invalidDurationMsg)
+    assertFalse(state.isValid)
   }
 
   @Test
-  fun setDuration_negativeNumber_setsErrorMessage() = runBlocking {
+  fun setDuration_negative_errorMessageDisplayed() = runTest {
     viewModel.setDuration("-10")
 
     val state = viewModel.uiState.first()
     assertEquals("-10", state.duration)
+    assertNotNull(state.invalidDurationMsg)
     assertEquals("Must be a positive number", state.invalidDurationMsg)
+    assertFalse(state.isValid)
   }
 
   @Test
@@ -327,23 +334,23 @@ class EditEventViewModelTest {
     assertEquals("Must be a positive number", state.invalidDurationMsg)
   }
 
+  @Test
+  fun setDuration_valid_noErrorMessage() = runTest {
+    viewModel.setDuration("60")
+
+    val state = viewModel.uiState.first()
+    assertNull(state.invalidDurationMsg)
+    assertEquals("60", state.duration)
+  }
+
   /** --- SET DATE TESTS --- */
   @Test
-  fun setDate_validDate_updatesStateWithoutError() = runBlocking {
+  fun setDate_valid_noErrorMessage() = runTest {
     viewModel.setDate("25/12/2024")
 
     val state = viewModel.uiState.first()
-    assertEquals("25/12/2024", state.date)
     assertNull(state.invalidDateMsg)
-  }
-
-  @Test
-  fun setDate_invalidFormat_setsErrorMessage() = runBlocking {
-    viewModel.setDate("2024-12-25")
-
-    val state = viewModel.uiState.first()
-    assertEquals("2024-12-25", state.date)
-    assertEquals("Invalid format (must be dd/MM/yyyy)", state.invalidDateMsg)
+    assertEquals("25/12/2024", state.date)
   }
 
   @Test
@@ -354,6 +361,16 @@ class EditEventViewModelTest {
     assertEquals("not-a-date", state.date)
     assertEquals("Invalid format (must be dd/MM/yyyy)", state.invalidDateMsg)
   }
+  @Test
+  fun setDate_invalidFormat_errorMessageDisplayed() = runTest {
+    viewModel.setDate("2024-12-25")
+
+    val state = viewModel.uiState.first()
+    assertNotNull(state.invalidDateMsg)
+    assertEquals("Invalid format (must be dd/MM/yyyy)", state.invalidDateMsg)
+    assertFalse(state.isValid)
+  }
+
 
   /** --- SET VISIBILITY TESTS --- */
   @Test
@@ -375,21 +392,25 @@ class EditEventViewModelTest {
   }
 
   @Test
-  fun setVisibility_blankVisibility_setsErrorMessage() = runBlocking {
+  fun setVisibility_blank_errorMessageDisplayed() = runTest {
     viewModel.setVisibility("")
 
     val state = viewModel.uiState.first()
     assertEquals("", state.visibility)
+    assertNotNull(state.invalidVisibilityMsg)
     assertEquals("Event visibility cannot be empty", state.invalidVisibilityMsg)
+    assertFalse(state.isValid)
   }
 
   @Test
-  fun setVisibility_invalidVisibility_setsErrorMessage() = runBlocking {
+  fun setVisibility_invalid_errorMessageDisplayed() = runTest {
     viewModel.setVisibility("INVALID")
 
     val state = viewModel.uiState.first()
+    assertNotNull(state.invalidVisibilityMsg)
     assertEquals("INVALID", state.visibility)
     assertEquals("Visibility must be PUBLIC or PRIVATE", state.invalidVisibilityMsg)
+    assertFalse(state.isValid)
   }
 
   /** --- IS VALID TESTS --- */
@@ -552,112 +573,6 @@ class EditEventViewModelTest {
     // Verify no error message
     assertNull(state.invalidMaxParticipantsMsg)
     assertEquals("2", state.maxParticipants)
-  }
-
-  @Test
-  fun setType_invalid_errorMessageDisplayed() = runTest {
-    viewModel.setType("INVALID_TYPE")
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state.invalidTypeMsg)
-    assertEquals("Type must be one of: SPORTS, ACTIVITY, SOCIAL", state.invalidTypeMsg)
-    assertFalse(state.isValid)
-  }
-
-  @Test
-  fun setType_blank_errorMessageDisplayed() = runTest {
-    viewModel.setType("")
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state.invalidTypeMsg)
-    assertEquals("Type cannot be empty", state.invalidTypeMsg)
-    assertFalse(state.isValid)
-  }
-
-  @Test
-  fun setType_valid_noErrorMessage() = runTest {
-    viewModel.setType("SPORTS")
-
-    val state = viewModel.uiState.first()
-    assertNull(state.invalidTypeMsg)
-    assertEquals("SPORTS", state.type)
-  }
-
-  @Test
-  fun setDuration_zero_errorMessageDisplayed() = runTest {
-    viewModel.setDuration("0")
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state.invalidDurationMsg)
-    assertEquals("Must be a positive number", state.invalidDurationMsg)
-    assertFalse(state.isValid)
-  }
-
-  @Test
-  fun setDuration_negative_errorMessageDisplayed() = runTest {
-    viewModel.setDuration("-10")
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state.invalidDurationMsg)
-    assertEquals("Must be a positive number", state.invalidDurationMsg)
-    assertFalse(state.isValid)
-  }
-
-  @Test
-  fun setDuration_valid_noErrorMessage() = runTest {
-    viewModel.setDuration("60")
-
-    val state = viewModel.uiState.first()
-    assertNull(state.invalidDurationMsg)
-    assertEquals("60", state.duration)
-  }
-
-  @Test
-  fun setDate_invalidFormat_errorMessageDisplayed() = runTest {
-    viewModel.setDate("2024-12-25")
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state.invalidDateMsg)
-    assertEquals("Invalid format (must be dd/MM/yyyy)", state.invalidDateMsg)
-    assertFalse(state.isValid)
-  }
-
-  @Test
-  fun setDate_valid_noErrorMessage() = runTest {
-    viewModel.setDate("25/12/2024")
-
-    val state = viewModel.uiState.first()
-    assertNull(state.invalidDateMsg)
-    assertEquals("25/12/2024", state.date)
-  }
-
-  @Test
-  fun setVisibility_invalid_errorMessageDisplayed() = runTest {
-    viewModel.setVisibility("INVALID")
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state.invalidVisibilityMsg)
-    assertEquals("Visibility must be PUBLIC or PRIVATE", state.invalidVisibilityMsg)
-    assertFalse(state.isValid)
-  }
-
-  @Test
-  fun setVisibility_blank_errorMessageDisplayed() = runTest {
-    viewModel.setVisibility("")
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state.invalidVisibilityMsg)
-    assertEquals("Event visibility cannot be empty", state.invalidVisibilityMsg)
-    assertFalse(state.isValid)
-  }
-
-  @Test
-  fun setVisibility_valid_noErrorMessage() = runTest {
-    viewModel.setVisibility("PUBLIC")
-
-    val state = viewModel.uiState.first()
-    assertNull(state.invalidVisibilityMsg)
-    assertEquals("PUBLIC", state.visibility)
   }
 
   @Test

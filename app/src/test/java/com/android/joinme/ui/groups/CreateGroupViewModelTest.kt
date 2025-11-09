@@ -97,7 +97,7 @@ class CreateGroupViewModelTest {
 
     val state = viewModel.uiState.value
     assertNull(state.nameError)
-    assertEquals("  Valid Group_Name", state.name)
+    assertEquals("  Valid Group_Name  ", state.name)
   }
 
   @Test

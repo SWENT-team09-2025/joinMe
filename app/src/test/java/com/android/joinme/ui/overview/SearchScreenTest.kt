@@ -27,66 +27,18 @@ class SearchScreenTest {
   }
 
   @Test
-  fun searchScreen_displaysTopBar() {
+  fun searchScreen_Components_display() {
     setupScreen()
 
     composeTestRule.onNodeWithText("Search").assertIsDisplayed()
-  }
-
-  @Test
-  fun searchScreen_displaysSearchTextField() {
-    setupScreen()
-
     composeTestRule.onNodeWithText("Search an event").assertIsDisplayed()
-  }
-
-  @Test
-  fun searchScreen_searchTextFieldHasSearchIcon() {
-    setupScreen()
-
     composeTestRule.onNodeWithContentDescription("Search").assertIsDisplayed()
-  }
-
-  @Test
-  fun searchScreen_displaysAllFilterChip() {
-    setupScreen()
-
     composeTestRule.onNodeWithText("All").assertIsDisplayed()
-  }
-
-  @Test
-  fun searchScreen_displaysSocialFilterChip() {
-    setupScreen()
-
     composeTestRule.onNodeWithText("Social").assertIsDisplayed()
-  }
-
-  @Test
-  fun searchScreen_displaysActivityFilterChip() {
-    setupScreen()
-
     composeTestRule.onNodeWithText("Activity").assertIsDisplayed()
-  }
-
-  @Test
-  fun searchScreen_displaysSportFilterChip() {
-    setupScreen()
-
     composeTestRule.onNodeWithText("Sport").assertIsDisplayed()
   }
 
-  //  @Test
-  //  fun searchScreen_sportFilterHasDropdownIcon() {
-  //    setupScreen()
-  //
-  //    // Wait for composition and filter state to settle
-  //    composeTestRule.waitForIdle()
-  //
-  //    // Ensure Sport filter chip is displayed first
-  //    composeTestRule.onNodeWithText("Sport").assertIsDisplayed()
-  //
-  //    composeTestRule.onNodeWithContentDescription("Dropdown").assertIsDisplayed()
-  //  }
 
   @Test
   fun searchScreen_canEnterSearchQuery() {
@@ -683,28 +635,6 @@ class SearchScreenTest {
     // Search text field should have proper test tag
     composeTestRule.onNodeWithTag(SearchScreenTestTags.SEARCH_TEXT_FIELD).assertIsDisplayed()
   }
-
-  //  @Test
-  //  fun searchScreen_dropdownDismisses_onOutsideClick() {
-  //    setupScreen()
-  //
-  //    // Open dropdown
-  //    composeTestRule.onNodeWithText("Sport").performClick()
-  //    composeTestRule.waitForIdle()
-  //
-  //    // Verify dropdown is open
-  //    composeTestRule.onNodeWithText("Select all").assertIsDisplayed()
-  //
-  //    // Click on a different filter chip (clearly outside the dropdown)
-  //    composeTestRule.onNodeWithText("All").performClick()
-  //    composeTestRule.waitForIdle()
-  //
-  //    // Dropdown should be closed
-  //    composeTestRule.onNodeWithText("Basket").assertDoesNotExist()
-  //    Thread.sleep(5000)
-  //    composeTestRule.waitForIdle()
-  //
-  //  }
 
   @Test
   fun searchScreen_dropdownClosesAfterSelectingSport() {
