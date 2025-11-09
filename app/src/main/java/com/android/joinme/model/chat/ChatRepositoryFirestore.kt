@@ -3,7 +3,9 @@ package com.android.joinme.model.chat
 // Implemented with help of Claude AI
 
 import android.util.Log
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -36,7 +38,7 @@ class ChatRepositoryFirestore(private val db: FirebaseFirestore) : ChatRepositor
                 .addSnapshotListener { snapshot, error ->
                   if (error != null) {
                     Log.e("ChatRepositoryFirestore", "Error observing messages", error)
-                    close(error)
+                    trySend(emptyList())
                     return@addSnapshotListener
                   }
 
@@ -66,7 +68,8 @@ class ChatRepositoryFirestore(private val db: FirebaseFirestore) : ChatRepositor
         .document(conversationId)
         .collection(MESSAGES_SUBCOLLECTION_PATH)
         .document(messageId)
-        .set(newValue)
+        // Use merge to avoid overwriting fields not included in newValue
+        .set(newValue, SetOptions.merge())
         .await()
   }
 
@@ -84,32 +87,18 @@ class ChatRepositoryFirestore(private val db: FirebaseFirestore) : ChatRepositor
       messageId: String,
       userId: String
   ) {
-    val document =
-        db.collection(CONVERSATIONS_COLLECTION_PATH)
-            .document(conversationId)
-            .collection(MESSAGES_SUBCOLLECTION_PATH)
-            .document(messageId)
-            .get()
-            .await()
-
-    val message =
-        documentToMessage(document, conversationId)
-            ?: throw Exception("ChatRepositoryFirestore: Message not found ($messageId)")
-
-    // Add userId to readBy list if not already present
-    if (userId !in message.readBy) {
-      val updatedReadBy = message.readBy + userId
-      db.collection(CONVERSATIONS_COLLECTION_PATH)
-          .document(conversationId)
-          .collection(MESSAGES_SUBCOLLECTION_PATH)
-          .document(messageId)
-          .update("readBy", updatedReadBy)
-          .await()
-    }
+    db.collection(CONVERSATIONS_COLLECTION_PATH)
+        .document(conversationId)
+        .collection(MESSAGES_SUBCOLLECTION_PATH)
+        .document(messageId)
+        .update("readBy", FieldValue.arrayUnion(userId))
+        .await()
   }
 
   /**
    * Converts a Firestore document snapshot to a [Message] object.
+   *
+   * Supports both Long timestamps and Firestore Timestamp objects.
    *
    * @param document The Firestore document to convert.
    * @param conversationId The conversation ID this message belongs to.
@@ -124,7 +113,12 @@ class ChatRepositoryFirestore(private val db: FirebaseFirestore) : ChatRepositor
       val senderId = document.getString("senderId") ?: return null
       val senderName = document.getString("senderName") ?: return null
       val content = document.getString("content") ?: return null
-      val timestamp = document.getLong("timestamp") ?: return null
+
+      val timestamp =
+          document.getLong("timestamp")
+              ?: document.getTimestamp("timestamp")?.toDate()?.time
+              ?: return null
+
       val typeString = document.getString("type") ?: "TEXT"
       val type =
           try {

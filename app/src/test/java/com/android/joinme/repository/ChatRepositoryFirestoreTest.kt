@@ -8,14 +8,18 @@ import com.android.joinme.model.chat.MESSAGES_SUBCOLLECTION_PATH
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
 import com.google.android.gms.tasks.Tasks
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.EventListener
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
+import java.util.Date
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -101,11 +105,11 @@ class ChatRepositoryFirestoreTest {
   // ---------------- EDIT MESSAGE ----------------
 
   @Test
-  fun editMessage_callsFirestoreSetWithUpdatedData() = runTest {
+  fun editMessage_callsFirestoreSetWithMerge() = runTest {
     // Given
     val updatedMessage = testMessage.copy(content = "Updated content")
     val mockTask = Tasks.forResult<Void>(null)
-    every { mockMessageDocument.set(any()) } returns mockTask
+    every { mockMessageDocument.set(any(), any()) } returns mockTask
 
     // When
     repository.editMessage(testConversationId, testMessageId, updatedMessage)
@@ -114,7 +118,7 @@ class ChatRepositoryFirestoreTest {
     verify { mockConversationCollection.document(testConversationId) }
     verify { mockConversationDocument.collection(MESSAGES_SUBCOLLECTION_PATH) }
     verify { mockMessagesCollection.document(testMessageId) }
-    verify { mockMessageDocument.set(updatedMessage) }
+    verify { mockMessageDocument.set(updatedMessage, any()) } // Verify merge option is used
   }
 
   // ---------------- DELETE MESSAGE ----------------
@@ -138,23 +142,11 @@ class ChatRepositoryFirestoreTest {
   // ---------------- MARK MESSAGE AS READ ----------------
 
   @Test
-  fun markMessageAsRead_addsUserToReadByList() = runTest {
+  fun markMessageAsRead_usesAtomicArrayUnion() = runTest {
     // Given
     val userId = "user2"
-    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
-    every { mockSnapshot.id } returns testMessageId
-    every { mockSnapshot.getString("senderId") } returns testMessage.senderId
-    every { mockSnapshot.getString("senderName") } returns testMessage.senderName
-    every { mockSnapshot.getString("content") } returns testMessage.content
-    every { mockSnapshot.getLong("timestamp") } returns testMessage.timestamp
-    every { mockSnapshot.getString("type") } returns "TEXT"
-    every { mockSnapshot.get("readBy") } returns emptyList<String>()
-    every { mockSnapshot.getBoolean("isPinned") } returns false
-
-    val mockGetTask = Tasks.forResult(mockSnapshot)
     val mockUpdateTask = Tasks.forResult<Void>(null)
-    every { mockMessageDocument.get() } returns mockGetTask
-    every { mockMessageDocument.update("readBy", listOf(userId)) } returns mockUpdateTask
+    every { mockMessageDocument.update("readBy", any<FieldValue>()) } returns mockUpdateTask
 
     // When
     repository.markMessageAsRead(testConversationId, testMessageId, userId)
@@ -163,155 +155,8 @@ class ChatRepositoryFirestoreTest {
     verify { mockConversationCollection.document(testConversationId) }
     verify { mockConversationDocument.collection(MESSAGES_SUBCOLLECTION_PATH) }
     verify { mockMessagesCollection.document(testMessageId) }
-    verify { mockMessageDocument.get() }
-    verify { mockMessageDocument.update("readBy", listOf(userId)) }
-  }
-
-  @Test
-  fun markMessageAsRead_doesNotUpdateIfUserAlreadyRead() = runTest {
-    // Given
-    val userId = "user2"
-    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
-    every { mockSnapshot.id } returns testMessageId
-    every { mockSnapshot.getString("senderId") } returns testMessage.senderId
-    every { mockSnapshot.getString("senderName") } returns testMessage.senderName
-    every { mockSnapshot.getString("content") } returns testMessage.content
-    every { mockSnapshot.getLong("timestamp") } returns testMessage.timestamp
-    every { mockSnapshot.getString("type") } returns "TEXT"
-    every { mockSnapshot.get("readBy") } returns listOf(userId) // User already in readBy
-    every { mockSnapshot.getBoolean("isPinned") } returns false
-
-    val mockGetTask = Tasks.forResult(mockSnapshot)
-    every { mockMessageDocument.get() } returns mockGetTask
-
-    // When
-    repository.markMessageAsRead(testConversationId, testMessageId, userId)
-
-    // Then
-    verify { mockMessageDocument.get() }
-    verify(exactly = 0) { mockMessageDocument.update(any<String>(), any<List<String>>()) }
-  }
-
-  @Test(expected = Exception::class)
-  fun markMessageAsRead_throwsExceptionWhenMessageNotFound() = runTest {
-    // Given
-    val userId = "user2"
-    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
-    every { mockSnapshot.id } returns testMessageId
-    every { mockSnapshot.getString("senderId") } returns null // Missing required field
-
-    val mockGetTask = Tasks.forResult(mockSnapshot)
-    every { mockMessageDocument.get() } returns mockGetTask
-
-    // When
-    repository.markMessageAsRead(testConversationId, testMessageId, userId)
-
-    // Then - exception is thrown
-  }
-
-  @Test
-  fun markMessageAsRead_appendsToExistingReadByList() = runTest {
-    // Given
-    val userId = "user3"
-    val existingReadBy = listOf("user1", "user2")
-    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
-    every { mockSnapshot.id } returns testMessageId
-    every { mockSnapshot.getString("senderId") } returns testMessage.senderId
-    every { mockSnapshot.getString("senderName") } returns testMessage.senderName
-    every { mockSnapshot.getString("content") } returns testMessage.content
-    every { mockSnapshot.getLong("timestamp") } returns testMessage.timestamp
-    every { mockSnapshot.getString("type") } returns "TEXT"
-    every { mockSnapshot.get("readBy") } returns existingReadBy
-    every { mockSnapshot.getBoolean("isPinned") } returns false
-
-    val mockGetTask = Tasks.forResult(mockSnapshot)
-    val mockUpdateTask = Tasks.forResult<Void>(null)
-    every { mockMessageDocument.get() } returns mockGetTask
-    every { mockMessageDocument.update("readBy", existingReadBy + userId) } returns mockUpdateTask
-
-    // When
-    repository.markMessageAsRead(testConversationId, testMessageId, userId)
-
-    // Then
-    verify { mockMessageDocument.update("readBy", listOf("user1", "user2", "user3")) }
-  }
-
-  // ---------------- MESSAGE TYPE HANDLING ----------------
-
-  @Test
-  fun documentToMessage_handlesSystemMessageType() = runTest {
-    // Given
-    val systemMessage = testMessage.copy(type = MessageType.SYSTEM, content = "User joined")
-    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
-    every { mockSnapshot.id } returns testMessageId
-    every { mockSnapshot.getString("senderId") } returns systemMessage.senderId
-    every { mockSnapshot.getString("senderName") } returns systemMessage.senderName
-    every { mockSnapshot.getString("content") } returns "User joined"
-    every { mockSnapshot.getLong("timestamp") } returns systemMessage.timestamp
-    every { mockSnapshot.getString("type") } returns "SYSTEM"
-    every { mockSnapshot.get("readBy") } returns emptyList<String>()
-    every { mockSnapshot.getBoolean("isPinned") } returns false
-
-    val mockGetTask = Tasks.forResult(mockSnapshot)
-    val mockUpdateTask = Tasks.forResult<Void>(null)
-    every { mockMessageDocument.get() } returns mockGetTask
-    every { mockMessageDocument.update(any<String>(), any<List<String>>()) } returns mockUpdateTask
-
-    // When - we use markMessageAsRead to trigger documentToMessage internally
-    repository.markMessageAsRead(testConversationId, testMessageId, "user2")
-
-    // Then - if no exception is thrown, the message was parsed correctly
-    verify { mockMessageDocument.get() }
-  }
-
-  @Test
-  fun documentToMessage_handlesImageMessageType() = runTest {
-    // Given
-    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
-    every { mockSnapshot.id } returns testMessageId
-    every { mockSnapshot.getString("senderId") } returns testMessage.senderId
-    every { mockSnapshot.getString("senderName") } returns testMessage.senderName
-    every { mockSnapshot.getString("content") } returns "https://example.com/image.jpg"
-    every { mockSnapshot.getLong("timestamp") } returns testMessage.timestamp
-    every { mockSnapshot.getString("type") } returns "IMAGE"
-    every { mockSnapshot.get("readBy") } returns emptyList<String>()
-    every { mockSnapshot.getBoolean("isPinned") } returns false
-
-    val mockGetTask = Tasks.forResult(mockSnapshot)
-    val mockUpdateTask = Tasks.forResult<Void>(null)
-    every { mockMessageDocument.get() } returns mockGetTask
-    every { mockMessageDocument.update(any<String>(), any<List<String>>()) } returns mockUpdateTask
-
-    // When
-    repository.markMessageAsRead(testConversationId, testMessageId, "user2")
-
-    // Then - if no exception is thrown, the message was parsed correctly
-    verify { mockMessageDocument.get() }
-  }
-
-  @Test
-  fun documentToMessage_defaultsToTextTypeWhenInvalid() = runTest {
-    // Given
-    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
-    every { mockSnapshot.id } returns testMessageId
-    every { mockSnapshot.getString("senderId") } returns testMessage.senderId
-    every { mockSnapshot.getString("senderName") } returns testMessage.senderName
-    every { mockSnapshot.getString("content") } returns testMessage.content
-    every { mockSnapshot.getLong("timestamp") } returns testMessage.timestamp
-    every { mockSnapshot.getString("type") } returns "INVALID_TYPE"
-    every { mockSnapshot.get("readBy") } returns emptyList<String>()
-    every { mockSnapshot.getBoolean("isPinned") } returns false
-
-    val mockGetTask = Tasks.forResult(mockSnapshot)
-    val mockUpdateTask = Tasks.forResult<Void>(null)
-    every { mockMessageDocument.get() } returns mockGetTask
-    every { mockMessageDocument.update(any<String>(), any<List<String>>()) } returns mockUpdateTask
-
-    // When
-    repository.markMessageAsRead(testConversationId, testMessageId, "user2")
-
-    // Then - if no exception is thrown, the message was parsed with TEXT as default
-    verify { mockMessageDocument.get() }
+    verify { mockMessageDocument.update("readBy", any<FieldValue>()) }
+    verify(exactly = 0) { mockMessageDocument.get() } // No read operation
   }
 
   // ---------------- OBSERVE MESSAGES FOR CONVERSATION ----------------
@@ -396,5 +241,243 @@ class ChatRepositoryFirestoreTest {
     // Then
     assertNotNull(messages)
     assertEquals(0, messages.size)
+  }
+
+  @Test
+  fun observeMessagesForConversation_handlesFirestoreError() = runTest {
+    // Given
+    val mockQuery = mockk<Query>(relaxed = true)
+    val mockListenerRegistration = mockk<ListenerRegistration>(relaxed = true)
+    val mockException = mockk<FirebaseFirestoreException>(relaxed = true)
+
+    every { mockMessagesCollection.orderBy("timestamp") } returns mockQuery
+    every { mockQuery.addSnapshotListener(any<EventListener<QuerySnapshot>>()) } answers
+        {
+          val listener = firstArg<EventListener<QuerySnapshot>>()
+          listener.onEvent(null, mockException)
+          mockListenerRegistration
+        }
+
+    // When
+    val flow = repository.observeMessagesForConversation(testConversationId)
+    val messages = withTimeout(1000) { flow.first() }
+
+    // Then - should return empty list on error
+    assertNotNull(messages)
+    assertEquals(0, messages.size)
+  }
+
+  @Test
+  fun observeMessagesForConversation_filtersOutInvalidDocuments() = runTest {
+    // Given
+    val mockQuery = mockk<Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockListenerRegistration = mockk<ListenerRegistration>(relaxed = true)
+
+    // Valid document
+    val mockValidDoc = mockk<DocumentSnapshot>(relaxed = true)
+    every { mockValidDoc.id } returns "msg1"
+    every { mockValidDoc.getString("senderId") } returns "user1"
+    every { mockValidDoc.getString("senderName") } returns "Alice"
+    every { mockValidDoc.getString("content") } returns "Valid message"
+    every { mockValidDoc.getLong("timestamp") } returns 1000L
+    every { mockValidDoc.getString("type") } returns "TEXT"
+    every { mockValidDoc.get("readBy") } returns emptyList<String>()
+    every { mockValidDoc.getBoolean("isPinned") } returns false
+
+    // Invalid document (missing senderId)
+    val mockInvalidDoc = mockk<DocumentSnapshot>(relaxed = true)
+    every { mockInvalidDoc.id } returns "msg2"
+    every { mockInvalidDoc.getString("senderId") } returns null
+    every { mockInvalidDoc.getString("senderName") } returns "Bob"
+    every { mockInvalidDoc.getString("content") } returns "Invalid message"
+    every { mockInvalidDoc.getLong("timestamp") } returns 2000L
+
+    every { mockQuerySnapshot.documents } returns listOf(mockValidDoc, mockInvalidDoc)
+
+    every { mockMessagesCollection.orderBy("timestamp") } returns mockQuery
+    every { mockQuery.addSnapshotListener(any<EventListener<QuerySnapshot>>()) } answers
+        {
+          val listener = firstArg<EventListener<QuerySnapshot>>()
+          listener.onEvent(mockQuerySnapshot, null)
+          mockListenerRegistration
+        }
+
+    // When
+    val flow = repository.observeMessagesForConversation(testConversationId)
+    val messages = withTimeout(1000) { flow.first() }
+
+    // Then - should only return valid message
+    assertNotNull(messages)
+    assertEquals(1, messages.size)
+    assertEquals("msg1", messages[0].id)
+  }
+
+  @Test
+  fun observeMessagesForConversation_handlesFirestoreTimestamp() = runTest {
+    // Given
+    val mockQuery = mockk<Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockDocumentSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    val mockListenerRegistration = mockk<ListenerRegistration>(relaxed = true)
+    val testDate = Date(5000L)
+    val testTimestamp = Timestamp(testDate)
+
+    // Setup document with Firestore Timestamp instead of Long
+    every { mockDocumentSnapshot.id } returns "msg1"
+    every { mockDocumentSnapshot.getString("senderId") } returns "user1"
+    every { mockDocumentSnapshot.getString("senderName") } returns "Alice"
+    every { mockDocumentSnapshot.getString("content") } returns "Message with Timestamp"
+    every { mockDocumentSnapshot.getLong("timestamp") } returns null
+    every { mockDocumentSnapshot.getTimestamp("timestamp") } returns testTimestamp
+    every { mockDocumentSnapshot.getString("type") } returns "TEXT"
+    every { mockDocumentSnapshot.get("readBy") } returns emptyList<String>()
+    every { mockDocumentSnapshot.getBoolean("isPinned") } returns false
+
+    every { mockQuerySnapshot.documents } returns listOf(mockDocumentSnapshot)
+
+    every { mockMessagesCollection.orderBy("timestamp") } returns mockQuery
+    every { mockQuery.addSnapshotListener(any<EventListener<QuerySnapshot>>()) } answers
+        {
+          val listener = firstArg<EventListener<QuerySnapshot>>()
+          listener.onEvent(mockQuerySnapshot, null)
+          mockListenerRegistration
+        }
+
+    // When
+    val flow = repository.observeMessagesForConversation(testConversationId)
+    val messages = withTimeout(1000) { flow.first() }
+
+    // Then
+    assertNotNull(messages)
+    assertEquals(1, messages.size)
+    assertEquals(5000L, messages[0].timestamp)
+  }
+
+  @Test
+  fun observeMessagesForConversation_handlesInvalidMessageType() = runTest {
+    // Given
+    val mockQuery = mockk<Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockDocumentSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    val mockListenerRegistration = mockk<ListenerRegistration>(relaxed = true)
+
+    // Setup document with invalid MessageType
+    every { mockDocumentSnapshot.id } returns "msg1"
+    every { mockDocumentSnapshot.getString("senderId") } returns "user1"
+    every { mockDocumentSnapshot.getString("senderName") } returns "Alice"
+    every { mockDocumentSnapshot.getString("content") } returns "Message with invalid type"
+    every { mockDocumentSnapshot.getLong("timestamp") } returns 1000L
+    every { mockDocumentSnapshot.getString("type") } returns "INVALID_TYPE"
+    every { mockDocumentSnapshot.get("readBy") } returns emptyList<String>()
+    every { mockDocumentSnapshot.getBoolean("isPinned") } returns false
+
+    every { mockQuerySnapshot.documents } returns listOf(mockDocumentSnapshot)
+
+    every { mockMessagesCollection.orderBy("timestamp") } returns mockQuery
+    every { mockQuery.addSnapshotListener(any<EventListener<QuerySnapshot>>()) } answers
+        {
+          val listener = firstArg<EventListener<QuerySnapshot>>()
+          listener.onEvent(mockQuerySnapshot, null)
+          mockListenerRegistration
+        }
+
+    // When
+    val flow = repository.observeMessagesForConversation(testConversationId)
+    val messages = withTimeout(1000) { flow.first() }
+
+    // Then - should default to TEXT type
+    assertNotNull(messages)
+    assertEquals(1, messages.size)
+    assertEquals(MessageType.TEXT, messages[0].type)
+  }
+
+  @Test
+  fun observeMessagesForConversation_handlesNullTimestamp() = runTest {
+    // Given
+    val mockQuery = mockk<Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockDocumentSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    val mockListenerRegistration = mockk<ListenerRegistration>(relaxed = true)
+
+    // Setup document with null timestamp
+    every { mockDocumentSnapshot.id } returns "msg1"
+    every { mockDocumentSnapshot.getString("senderId") } returns "user1"
+    every { mockDocumentSnapshot.getString("senderName") } returns "Alice"
+    every { mockDocumentSnapshot.getString("content") } returns "Message"
+    every { mockDocumentSnapshot.getLong("timestamp") } returns null
+    every { mockDocumentSnapshot.getTimestamp("timestamp") } returns null
+    every { mockDocumentSnapshot.getString("type") } returns "TEXT"
+
+    every { mockQuerySnapshot.documents } returns listOf(mockDocumentSnapshot)
+
+    every { mockMessagesCollection.orderBy("timestamp") } returns mockQuery
+    every { mockQuery.addSnapshotListener(any<EventListener<QuerySnapshot>>()) } answers
+        {
+          val listener = firstArg<EventListener<QuerySnapshot>>()
+          listener.onEvent(mockQuerySnapshot, null)
+          mockListenerRegistration
+        }
+
+    // When
+    val flow = repository.observeMessagesForConversation(testConversationId)
+    val messages = withTimeout(1000) { flow.first() }
+
+    // Then - document with null timestamp should be filtered out
+    assertNotNull(messages)
+    assertEquals(0, messages.size)
+  }
+
+  @Test
+  fun observeMessagesForConversation_handlesDocumentConversionException() = runTest {
+    // Given
+    val mockQuery = mockk<Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockDocumentSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    val mockListenerRegistration = mockk<ListenerRegistration>(relaxed = true)
+
+    // Setup document that throws exception during conversion
+    every { mockDocumentSnapshot.id } returns "msg1"
+    every { mockDocumentSnapshot.getString("senderId") } throws RuntimeException("Test exception")
+
+    every { mockQuerySnapshot.documents } returns listOf(mockDocumentSnapshot)
+
+    every { mockMessagesCollection.orderBy("timestamp") } returns mockQuery
+    every { mockQuery.addSnapshotListener(any<EventListener<QuerySnapshot>>()) } answers
+        {
+          val listener = firstArg<EventListener<QuerySnapshot>>()
+          listener.onEvent(mockQuerySnapshot, null)
+          mockListenerRegistration
+        }
+
+    // When
+    val flow = repository.observeMessagesForConversation(testConversationId)
+    val messages = withTimeout(1000) { flow.first() }
+
+    // Then - should return empty list when exception occurs
+    assertNotNull(messages)
+    assertEquals(0, messages.size)
+  }
+
+  // ---------------- GET NEW MESSAGE ID ----------------
+
+  @Test
+  fun getNewMessageId_returnsUniqueId() {
+    // Given
+    val mockTempCollection = mockk<CollectionReference>(relaxed = true)
+    val mockTempDocument = mockk<DocumentReference>(relaxed = true)
+    val expectedId = "generated-unique-id-123"
+
+    every { mockFirestore.collection("temp") } returns mockTempCollection
+    every { mockTempCollection.document() } returns mockTempDocument
+    every { mockTempDocument.id } returns expectedId
+
+    // When
+    val generatedId = repository.getNewMessageId()
+
+    // Then
+    assertEquals(expectedId, generatedId)
+    verify { mockFirestore.collection("temp") }
+    verify { mockTempCollection.document() }
   }
 }
