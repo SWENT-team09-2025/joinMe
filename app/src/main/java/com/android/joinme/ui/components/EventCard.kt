@@ -23,13 +23,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.getColor
 import com.android.joinme.model.event.getOnColor
 import com.android.joinme.ui.theme.Dimens
-import com.android.joinme.ui.theme.onPrimaryLight
-import com.android.joinme.ui.theme.onSurfaceLight
 import java.text.SimpleDateFormat
 import java.util.Locale
 
