@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
  * - `LoadingIndicator`: Loading spinner dimensions
  * - `TouchTarget`: Accessibility-compliant touch targets
  * - `Elevation`: Shadow and depth values
+ * - `SerieCard`: Dimensions specific to the SerieCard component
  *
  * Usage example:
  * ```
