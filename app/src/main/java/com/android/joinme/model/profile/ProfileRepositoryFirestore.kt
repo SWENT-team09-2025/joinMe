@@ -103,31 +103,28 @@ class ProfileRepositoryFirestore(db: FirebaseFirestore, private val storage: Fir
    */
   override suspend fun uploadProfilePhoto(context: Context, uid: String, imageUri: Uri): String {
     try {
-      Log.d(TAG, "Starting photo upload for user $uid from URI: $imageUri")
 
       // Step 1: Process the image (compress, fix orientation)
       // Create ImageProcessor on-demand with the provided context
       val imageProcessor = ImageProcessor(context)
       val processedBytes = imageProcessor.processImage(imageUri)
-      Log.d(TAG, "Image processed, size: ${processedBytes.size} bytes")
 
       // Step 2: Upload to Firebase Storage
       val storageRef =
           storage.reference.child(USERS_STORAGE_PATH).child(uid).child(PROFILE_PHOTO_NAME)
 
-      val uploadTask = storageRef.putBytes(processedBytes).await()
-      Log.d(TAG, "Upload completed: ${uploadTask.metadata?.path}")
+      storageRef.putBytes(processedBytes).await()
 
       // Step 3: Get the download URL
       val downloadUrl = storageRef.downloadUrl.await().toString()
-      Log.d(TAG, "Download URL retrieved: $downloadUrl")
 
       // Step 4: Update Firestore profile with new photoUrl
       val docRef = profilesCollection.document(uid)
       docRef
-          .update(mapOf(F_PHOTO_URL to downloadUrl, F_UPDATED_AT to FieldValue.serverTimestamp()))
+          .set(
+              mapOf(F_PHOTO_URL to downloadUrl, F_UPDATED_AT to FieldValue.serverTimestamp()),
+              SetOptions.merge())
           .await()
-      Log.d(TAG, "Profile updated with new photo URL")
 
       return downloadUrl
     } catch (e: Exception) {
@@ -142,7 +139,6 @@ class ProfileRepositoryFirestore(db: FirebaseFirestore, private val storage: Fir
    */
   override suspend fun deleteProfilePhoto(uid: String) {
     try {
-      Log.d(TAG, "Deleting profile photo for user $uid")
 
       // Step 1: Delete from Storage
       val storageRef =
@@ -150,7 +146,6 @@ class ProfileRepositoryFirestore(db: FirebaseFirestore, private val storage: Fir
 
       try {
         storageRef.delete().await()
-        Log.d(TAG, "Profile photo deleted from Storage")
       } catch (e: Exception) {
         // File might not exist, log but continue
         Log.w(TAG, "Photo file not found in Storage, continuing to clear Firestore field", e)
@@ -159,9 +154,10 @@ class ProfileRepositoryFirestore(db: FirebaseFirestore, private val storage: Fir
       // Step 2: Clear photoUrl in Firestore
       val docRef = profilesCollection.document(uid)
       docRef
-          .update(mapOf(F_PHOTO_URL to null, F_UPDATED_AT to FieldValue.serverTimestamp()))
+          .set(
+              mapOf(F_PHOTO_URL to null, F_UPDATED_AT to FieldValue.serverTimestamp()),
+              SetOptions.merge())
           .await()
-      Log.d(TAG, "Profile photoUrl cleared in Firestore")
     } catch (e: Exception) {
       Log.e(TAG, "Error deleting profile photo for user $uid", e)
       throw Exception("Failed to delete profile photo: ${e.message}", e)
