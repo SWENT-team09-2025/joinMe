@@ -450,6 +450,44 @@ object Dimens {
     val extraLarge: Dp = 16.dp
   }
 
+  /**
+   * SerieCard dimensions.
+   *
+   * Dimensions specific to the SerieCard component including card height, layer offsets, and
+   * stacking effects.
+   */
+  object SerieCard {
+    /** 100dp - Height of the serie card */
+    val cardHeight: Dp = 100.dp
+
+    /** 12dp - Corner radius for serie cards */
+    val cornerRadius: Dp = 12.dp
+
+    /** 12dp - Bottom padding for card container */
+    val bottomPadding: Dp = 12.dp
+
+    /** 6dp - Horizontal padding for second layer */
+    val secondLayerHorizontalPadding: Dp = 6.dp
+
+    /** 12dp - Horizontal padding for third layer */
+    val thirdLayerHorizontalPadding: Dp = 12.dp
+
+    /** 6dp - Vertical offset for second layer */
+    val secondLayerOffset: Dp = 6.dp
+
+    /** 12dp - Vertical offset for third layer */
+    val thirdLayerOffset: Dp = 12.dp
+
+    /** 2dp - Border width for layers */
+    val layerBorderWidth: Dp = 2.dp
+
+    /** 12dp - Internal padding for card content */
+    val contentPadding: Dp = 12.dp
+
+    /** 6dp - Spacing after top row */
+    val topRowSpacing: Dp = 6.dp
+  }
+
   object Serie {
     /** 120dp - height for description field */
     val descriptionField: Dp = 120.dp
