@@ -1,5 +1,7 @@
 package com.android.joinme.ui.profile
 
+import android.content.Context
+import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.profile.Profile
@@ -48,6 +50,14 @@ class ViewProfileScreenTest {
 
     override suspend fun deleteProfile(uid: String) {
       if (stored?.uid == uid) stored = null
+    }
+
+    override suspend fun uploadProfilePhoto(context: Context, uid: String, imageUri: Uri): String {
+      TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteProfilePhoto(uid: String) {
+      TODO("Not yet implemented")
     }
   }
 

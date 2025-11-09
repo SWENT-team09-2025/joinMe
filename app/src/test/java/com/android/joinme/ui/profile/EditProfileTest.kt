@@ -334,7 +334,6 @@ class EditProfileScreenTest {
     node.performTextClearance()
     node.performTextInput("Max Verstappen")
 
-
     composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_ERROR).assertDoesNotExist()
   }
 
@@ -401,7 +400,6 @@ class EditProfileScreenTest {
   }
 
   @Test
-
   fun editProfile_date_invalidDay_showsError() = runTest {
     val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
 
@@ -525,32 +523,6 @@ class EditProfileScreenTest {
     composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).assertIsNotEnabled()
   }
 
-  // ==================== PASSWORD SECTION TESTS ====================
-
-  @Test
-  fun editProfile_passwordSection_isDisplayed() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
-    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
-
-    composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.PASSWORD_SECTION)
-    composeTestRule.onNodeWithTag(EditProfileTestTags.CHANGE_PASSWORD_BUTTON).assertIsDisplayed()
-  }
-
-  @Test
-  fun editProfile_changePasswordButton_isClickable() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
-    var clicked = false
-    composeTestRule.setContent {
-      EditProfileScreen(
-          uid = testUid, profileViewModel = vm, onChangePasswordClick = { clicked = true })
-    }
-
-    composeTestRule.scrollIntoViewAndAssert(EditProfileTestTags.CHANGE_PASSWORD_BUTTON)
-    composeTestRule.onNodeWithTag(EditProfileTestTags.CHANGE_PASSWORD_BUTTON).performClick()
-
-    assert(clicked)
-  }
-
   // ==================== PHOTO EDIT BUTTON TESTS ====================
 
   @Test
@@ -563,7 +535,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_editPhotoButton_isEnabled() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     // Verify button is enabled (can't click as it launches system picker)
@@ -573,7 +545,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_editPhotoButton_hasClickAction() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertHasClickAction()
@@ -583,7 +555,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_photoUploadIndicator_notShownInitially() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     // Upload indicator should not be visible initially
@@ -594,7 +566,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_editPhotoButton_hidesDuringUpload() = runTest {
-    val repo = FakeProfileRepository(testProfile, simulateUploadDelay = true)
+    val repo = FakeProfileRepository(createTestProfile(), simulateUploadDelay = true)
     val vm = ProfileViewModel(repo)
 
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
@@ -615,7 +587,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_photoUploadIndicator_showsDuringUpload() = runTest {
-    val repo = FakeProfileRepository(testProfile, simulateUploadDelay = true)
+    val repo = FakeProfileRepository(createTestProfile(), simulateUploadDelay = true)
     val vm = ProfileViewModel(repo)
 
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
@@ -638,7 +610,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_profilePicture_displaysWithExistingPhoto() = runTest {
-    val profileWithPhoto = testProfile.copy(photoUrl = "https://example.com/photo.jpg")
+    val profileWithPhoto = createTestProfile().copy(photoUrl = "https://example.com/photo.jpg")
     val vm = ProfileViewModel(FakeProfileRepository(profileWithPhoto))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
@@ -650,7 +622,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_profilePicture_displaysWithoutPhoto() = runTest {
-    val profileWithoutPhoto = testProfile.copy(photoUrl = null)
+    val profileWithoutPhoto = createTestProfile().copy(photoUrl = null)
     val vm = ProfileViewModel(FakeProfileRepository(profileWithoutPhoto))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
@@ -661,7 +633,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_profilePicture_handlesEmptyPhotoUrl() = runTest {
-    val profileWithEmptyUrl = testProfile.copy(photoUrl = "")
+    val profileWithEmptyUrl = createTestProfile().copy(photoUrl = "")
     val vm = ProfileViewModel(FakeProfileRepository(profileWithEmptyUrl))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
@@ -671,7 +643,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_profilePicture_overlayVisible() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     // The profile picture section includes a scrim overlay for the edit UI
@@ -682,7 +654,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_profilePicture_maintainsStateAfterScroll() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     // Initially visible
@@ -701,7 +673,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_saveButton_worksIndependentlyOfPhotoState() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     var saveClicked = false
 
     composeTestRule.setContent {
@@ -797,7 +769,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_photoButton_doesNotDisableSaveButton() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     // Verify photo button exists and save button is enabled
@@ -813,7 +785,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_editingFields_doesNotAffectPhotoButton() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(testProfile))
+    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     // Photo button is enabled initially
@@ -832,7 +804,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_deletePhotoButton_notShown_whenNoPhoto() = runTest {
-    val profileWithoutPhoto = testProfile.copy(photoUrl = null)
+    val profileWithoutPhoto = createTestProfile().copy(photoUrl = null)
     val repo = FakeProfileRepository(profileWithoutPhoto) // Repo with no photo
     val vm = ProfileViewModel(repo)
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
@@ -843,7 +815,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_deletePhotoButton_isShown_whenPhotoExists() = runTest {
-    val profileWithPhoto = testProfile.copy(photoUrl = "https://example.com/photo.jpg")
+    val profileWithPhoto = createTestProfile().copy(photoUrl = "https://example.com/photo.jpg")
     val repo = FakeProfileRepository(profileWithPhoto) // Repo with photo
     val vm = ProfileViewModel(repo)
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
@@ -854,7 +826,7 @@ class EditProfileScreenTest {
 
   @Test
   fun editProfile_deletePhotoButton_hidesDuringUpload() = runTest {
-    val profileWithPhoto = testProfile.copy(photoUrl = "https://example.com/photo.jpg")
+    val profileWithPhoto = createTestProfile().copy(photoUrl = "https://example.com/photo.jpg")
     val repo = FakeProfileRepository(profileWithPhoto, simulateUploadDelay = true)
     val vm = ProfileViewModel(repo)
 

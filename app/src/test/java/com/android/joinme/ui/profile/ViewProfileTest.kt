@@ -359,7 +359,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_profilePictureContainer_isDisplayed() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
@@ -369,7 +369,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_profilePicture_displaysDefaultAvatar_whenNoPhotoUrl() = runTest {
-    val profileWithoutPhoto = testProfile.copy(photoUrl = null)
+    val profileWithoutPhoto = createTestProfile().copy(photoUrl = null)
     val repo = FakeProfileRepository(profileWithoutPhoto)
     val viewModel = ProfileViewModel(repo)
 
@@ -383,7 +383,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_profilePicture_isNotClickable() = runTest {
-    val repo = FakeProfileRepository(testProfile)
+    val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
@@ -394,7 +394,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_profilePicture_persistsAcrossScreenRefresh() = runTest {
-    val profileWithPhoto = testProfile.copy(photoUrl = "https://example.com/photo.jpg")
+    val profileWithPhoto = createTestProfile().copy(photoUrl = "https://example.com/photo.jpg")
     val repo = FakeProfileRepository(profileWithPhoto)
     val viewModel = ProfileViewModel(repo)
 
@@ -416,7 +416,7 @@ class ViewProfileScreenTest {
 
   @Test
   fun viewProfileScreen_profilePicture_handlesEmptyPhotoUrl() = runTest {
-    val profileWithEmptyUrl = testProfile.copy(photoUrl = "")
+    val profileWithEmptyUrl = createTestProfile().copy(photoUrl = "")
     val repo = FakeProfileRepository(profileWithEmptyUrl)
     val viewModel = ProfileViewModel(repo)
 
@@ -430,7 +430,7 @@ class ViewProfileScreenTest {
   @Test
   fun viewProfileScreen_profilePicture_withLongPhotoUrl_doesNotCrash() = runTest {
     val longUrl = "https://example.com/" + "a".repeat(500) + ".jpg"
-    val profileWithLongUrl = testProfile.copy(photoUrl = longUrl)
+    val profileWithLongUrl = createTestProfile().copy(photoUrl = longUrl)
     val repo = FakeProfileRepository(profileWithLongUrl)
     val viewModel = ProfileViewModel(repo)
 
