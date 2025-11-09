@@ -100,4 +100,10 @@ val onSocialDark = Color(0xFF680009)
 val socialContainerDark = Color(0xFFFA5A53)
 val onSocialContainerDark = Color(0xFFFFFFFF)
 
+val serieContainerLight = Color(0xFF292437)
+val onSerieContainerLight = Color(0xFFFFFFFF)
+
+val serieContainerDark = Color(0xFF444444)
+val onSerieContainerDark = Color(0xFFFFFFFF)
+
 val TransparentColor = Color.Transparent

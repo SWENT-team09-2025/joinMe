@@ -465,10 +465,6 @@ object Dimens {
   object SerieCard {
     /** 100dp - Height of the serie card */
     val cardHeight: Dp = 100.dp
-
-    /** 12dp - Corner radius for serie cards */
-    val cornerRadius: Dp = 12.dp
-
     /** 12dp - Bottom padding for card container */
     val bottomPadding: Dp = 12.dp
 
@@ -479,10 +475,10 @@ object Dimens {
     val thirdLayerHorizontalPadding: Dp = 12.dp
 
     /** 6dp - Vertical offset for second layer */
-    val secondLayerOffset: Dp = 6.dp
+    val secondLayerOffset: Dp = 14.dp
 
     /** 12dp - Vertical offset for third layer */
-    val thirdLayerOffset: Dp = 12.dp
+    val thirdLayerOffset: Dp = 20.dp
 
     /** 2dp - Border width for layers */
     val layerBorderWidth: Dp = 2.dp

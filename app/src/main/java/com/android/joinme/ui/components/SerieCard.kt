@@ -57,12 +57,12 @@ fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, 
                     .padding(horizontal = Dimens.SerieCard.thirdLayerHorizontalPadding)
                     .offset(y = Dimens.SerieCard.thirdLayerOffset)
                     .height(Dimens.SerieCard.cardHeight)
-                    .clip(RoundedCornerShape(Dimens.SerieCard.cornerRadius))
-                    .background(MaterialTheme.colorScheme.onBackground)
+                    .clip(RoundedCornerShape(Dimens.CornerRadius.large))
+                    .background(MaterialTheme.customColors.activity)
                     .border(
                         Dimens.SerieCard.layerBorderWidth,
                         MaterialTheme.customColors.activity,
-                        RoundedCornerShape(Dimens.SerieCard.cornerRadius)))
+                        RoundedCornerShape(Dimens.CornerRadius.large)))
 
         // Second layer (middle)
         Box(
@@ -71,20 +71,20 @@ fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, 
                     .padding(horizontal = Dimens.SerieCard.secondLayerHorizontalPadding)
                     .offset(y = Dimens.SerieCard.secondLayerOffset)
                     .height(Dimens.SerieCard.cardHeight)
-                    .clip(RoundedCornerShape(Dimens.SerieCard.cornerRadius))
-                    .background(MaterialTheme.colorScheme.inverseSurface)
+                    .clip(RoundedCornerShape(Dimens.CornerRadius.large))
+                    .background(MaterialTheme.customColors.sports)
                     .border(
                         Dimens.SerieCard.layerBorderWidth,
                         MaterialTheme.customColors.sports,
-                        RoundedCornerShape(Dimens.SerieCard.cornerRadius)))
+                        RoundedCornerShape(Dimens.CornerRadius.large)))
 
         // Main card (front)
         Card(
             modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).testTag(testTag),
-            shape = RoundedCornerShape(Dimens.SerieCard.cornerRadius),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.inverseSurface),
+            shape = RoundedCornerShape(Dimens.CornerRadius.large),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.customColors.serieContainer),
             elevation = CardDefaults.cardElevation(defaultElevation = Dimens.Elevation.large)) {
-            Column(modifier = Modifier.fillMaxWidth().padding(Dimens.SerieCard.contentPadding)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.medium)) {
                 // Top row: date, Serie badge, time
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -95,32 +95,32 @@ fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, 
                             SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
                                 .format(serie.date.toDate()),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimary)
+                        color = MaterialTheme.customColors.onSerieContainer)
 
                     Text(
                         text = "Serie 🔥",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onPrimary)
+                        color = MaterialTheme.customColors.onSerieContainer)
 
                     Text(
                         text =
-                            SimpleDateFormat("HH'h'mm", Locale.getDefault())
+                            SimpleDateFormat("H'h'mm", Locale.getDefault())
                                 .format(serie.date.toDate()),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimary)
+                        color = MaterialTheme.customColors.onSerieContainer)
                 }
 
-                Spacer(modifier = Modifier.height(Dimens.SerieCard.topRowSpacing))
+                Spacer(modifier = Modifier.height(Dimens.Spacing.small))
 
                 // Title
                 Text(
                     text = serie.title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary)
+                    color = MaterialTheme.customColors.onSerieContainer)
 
-                Spacer(modifier = Modifier.height(Dimens.SerieCard.titleSpacing))
+                Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
 
                 // Bottom row: arrow
                 Row(
