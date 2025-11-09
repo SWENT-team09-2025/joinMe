@@ -53,6 +53,7 @@ abstract class BaseEventForSerieViewModel(protected val locationRepository: Loca
     updateState { state ->
       when (state) {
         is CreateEventForSerieUIState -> state.copy(errorMsg = null)
+        is EditEventForSerieUIState -> state.copy(errorMsg = null)
         else -> state
       }
     }
@@ -63,6 +64,7 @@ abstract class BaseEventForSerieViewModel(protected val locationRepository: Loca
     updateState { state ->
       when (state) {
         is CreateEventForSerieUIState -> state.copy(errorMsg = msg)
+        is EditEventForSerieUIState -> state.copy(errorMsg = msg)
         else -> state
       }
     }
@@ -75,16 +77,15 @@ abstract class BaseEventForSerieViewModel(protected val locationRepository: Loca
    */
   fun setType(type: String) {
     val validTypes = EventType.values().map { it.name.uppercase(Locale.ROOT) }
+    val invalidMsg =
+        if (type.isBlank()) "Event type cannot be empty"
+        else if (type.uppercase(Locale.ROOT) !in validTypes)
+            "Type must be one of: SPORTS, ACTIVITY, SOCIAL, etc."
+        else null
     updateState { state ->
       when (state) {
-        is CreateEventForSerieUIState ->
-            state.copy(
-                type = type,
-                invalidTypeMsg =
-                    if (type.isBlank()) "Event type cannot be empty"
-                    else if (type.uppercase(Locale.ROOT) !in validTypes)
-                        "Type must be one of: SPORTS, ACTIVITY, SOCIAL, etc."
-                    else null)
+        is CreateEventForSerieUIState -> state.copy(type = type, invalidTypeMsg = invalidMsg)
+        is EditEventForSerieUIState -> state.copy(type = type, invalidTypeMsg = invalidMsg)
         else -> state
       }
     }
@@ -96,12 +97,11 @@ abstract class BaseEventForSerieViewModel(protected val locationRepository: Loca
    * @param title The new title value
    */
   fun setTitle(title: String) {
+    val invalidMsg = if (title.isBlank()) "Title cannot be empty" else null
     updateState { state ->
       when (state) {
-        is CreateEventForSerieUIState ->
-            state.copy(
-                title = title,
-                invalidTitleMsg = if (title.isBlank()) "Title cannot be empty" else null)
+        is CreateEventForSerieUIState -> state.copy(title = title, invalidTitleMsg = invalidMsg)
+        is EditEventForSerieUIState -> state.copy(title = title, invalidTitleMsg = invalidMsg)
         else -> state
       }
     }
@@ -113,13 +113,13 @@ abstract class BaseEventForSerieViewModel(protected val locationRepository: Loca
    * @param description The new description value
    */
   fun setDescription(description: String) {
+    val invalidMsg = if (description.isBlank()) "Description cannot be empty" else null
     updateState { state ->
       when (state) {
         is CreateEventForSerieUIState ->
-            state.copy(
-                description = description,
-                invalidDescriptionMsg =
-                    if (description.isBlank()) "Description cannot be empty" else null)
+            state.copy(description = description, invalidDescriptionMsg = invalidMsg)
+        is EditEventForSerieUIState ->
+            state.copy(description = description, invalidDescriptionMsg = invalidMsg)
         else -> state
       }
     }
@@ -132,13 +132,12 @@ abstract class BaseEventForSerieViewModel(protected val locationRepository: Loca
    */
   fun setDuration(value: String) {
     val num = value.toIntOrNull()
+    val invalidMsg = if (num == null || num <= 0) "Must be a positive number" else null
     updateState { state ->
       when (state) {
         is CreateEventForSerieUIState ->
-            state.copy(
-                duration = value,
-                invalidDurationMsg =
-                    if (num == null || num <= 0) "Must be a positive number" else null)
+            state.copy(duration = value, invalidDurationMsg = invalidMsg)
+        is EditEventForSerieUIState -> state.copy(duration = value, invalidDurationMsg = invalidMsg)
         else -> state
       }
     }
@@ -153,6 +152,7 @@ abstract class BaseEventForSerieViewModel(protected val locationRepository: Loca
     updateState { state ->
       when (state) {
         is CreateEventForSerieUIState -> state.copy(locationQuery = query)
+        is EditEventForSerieUIState -> state.copy(locationQuery = query)
         else -> state
       }
     }
@@ -173,6 +173,13 @@ abstract class BaseEventForSerieViewModel(protected val locationRepository: Loca
                 locationQuery = location.name,
                 locationSuggestions = emptyList(),
                 invalidLocationMsg = null)
+        is EditEventForSerieUIState ->
+            state.copy(
+                selectedLocation = location,
+                location = location.name,
+                locationQuery = location.name,
+                locationSuggestions = emptyList(),
+                invalidLocationMsg = null)
         else -> state
       }
     }
@@ -183,6 +190,12 @@ abstract class BaseEventForSerieViewModel(protected val locationRepository: Loca
     updateState { state ->
       when (state) {
         is CreateEventForSerieUIState ->
+            state.copy(
+                selectedLocation = null,
+                location = "",
+                locationQuery = "",
+                invalidLocationMsg = "Must be a valid Location")
+        is EditEventForSerieUIState ->
             state.copy(
                 selectedLocation = null,
                 location = "",
@@ -206,6 +219,11 @@ abstract class BaseEventForSerieViewModel(protected val locationRepository: Loca
                 location = location,
                 selectedLocation = if (location.isBlank()) null else state.selectedLocation,
                 invalidLocationMsg = if (location.isBlank()) "Must be a valid Location" else null)
+        is EditEventForSerieUIState ->
+            state.copy(
+                location = location,
+                selectedLocation = if (location.isBlank()) null else state.selectedLocation,
+                invalidLocationMsg = if (location.isBlank()) "Must be a valid Location" else null)
         else -> state
       }
     }
@@ -221,6 +239,7 @@ abstract class BaseEventForSerieViewModel(protected val locationRepository: Loca
       updateState { state ->
         when (state) {
           is CreateEventForSerieUIState -> state.copy(locationSuggestions = emptyList())
+          is EditEventForSerieUIState -> state.copy(locationSuggestions = emptyList())
           else -> state
         }
       }
@@ -232,6 +251,7 @@ abstract class BaseEventForSerieViewModel(protected val locationRepository: Loca
       updateState { state ->
         when (state) {
           is CreateEventForSerieUIState -> state.copy(locationSuggestions = suggestions)
+          is EditEventForSerieUIState -> state.copy(locationSuggestions = suggestions)
           else -> state
         }
       }
@@ -239,6 +259,7 @@ abstract class BaseEventForSerieViewModel(protected val locationRepository: Loca
       updateState { state ->
         when (state) {
           is CreateEventForSerieUIState -> state.copy(locationSuggestions = emptyList())
+          is EditEventForSerieUIState -> state.copy(locationSuggestions = emptyList())
           else -> state
         }
       }
