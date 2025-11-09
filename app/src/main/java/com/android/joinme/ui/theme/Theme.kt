@@ -9,6 +9,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -105,6 +106,8 @@ fun SampleAppTheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
       }
+  val customColors = if (darkTheme) darkCustomColors else lightCustomColors
+
   val view = LocalView.current
   if (!view.isInEditMode) {
     SideEffect {
@@ -114,5 +117,7 @@ fun SampleAppTheme(
     }
   }
 
-  MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+  CompositionLocalProvider(LocalCustomColors provides customColors) {
+    MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+  }
 }

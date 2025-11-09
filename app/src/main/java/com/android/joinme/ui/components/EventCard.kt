@@ -5,9 +5,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -24,6 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.getColor
+import com.android.joinme.model.event.getOnColor
+import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.onPrimaryLight
 import com.android.joinme.ui.theme.onSurfaceLight
 import java.text.SimpleDateFormat
@@ -45,52 +49,68 @@ import java.util.Locale
  */
 @Composable
 fun EventCard(modifier: Modifier = Modifier, event: Event, onClick: () -> Unit, testTag: String) {
-  Card(
-      modifier = modifier.fillMaxWidth().clickable(onClick = onClick).testTag(testTag),
-      shape = RoundedCornerShape(12.dp),
-      colors = CardDefaults.cardColors(containerColor = event.type.getColor()),
-      elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)) {
-        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-          Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .testTag(testTag),
+        shape = RoundedCornerShape(Dimens.CornerRadius.large),
+        colors = CardDefaults.cardColors(containerColor = event.type.getColor()),
+        elevation = CardDefaults.cardElevation(defaultElevation = Dimens.Elevation.medium)
+    ) {
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .padding(Dimens.Padding.medium)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Text(
                     text =
                         SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
                             .format(event.date.toDate()),
                     style = MaterialTheme.typography.bodySmall,
-                    color = onPrimaryLight)
+                    color = event.type.getOnColor()
+                )
 
                 Text(
                     text =
                         SimpleDateFormat("H'h'mm", Locale.getDefault()).format(event.date.toDate()),
                     style = MaterialTheme.typography.bodySmall,
-                    color = onPrimaryLight)
-              }
+                    color = event.type.getOnColor()
+                )
+            }
 
-          Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(Dimens.Spacing.small))
 
-          Text(
-              text = event.title,
-              style = MaterialTheme.typography.titleMedium,
-              fontWeight = FontWeight.Bold,
-              color = onPrimaryLight)
+            Text(
+                text = event.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = event.type.getOnColor()
+            )
 
-          Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
 
-          Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = "Place : ${event.location?.name ?: "Unknown"}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = onPrimaryLight.copy(alpha = 0.9f))
+                    color = event.type.getOnColor().copy(alpha = 0.9f),
+                    maxLines = 3,
+                    modifier = Modifier.fillMaxSize(0.6f)
+                )
                 Icon(
+                    modifier = Modifier.size(Dimens.IconSize.medium),
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "View event details",
-                    tint = onSurfaceLight)
-              }
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
-      }
+    }
 }

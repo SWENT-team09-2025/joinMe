@@ -1,9 +1,22 @@
 package com.android.joinme.model.event
 
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.android.joinme.model.map.Location
+import com.android.joinme.ui.theme.activityContainerDark
 import com.android.joinme.ui.theme.activityContainerLight
+import com.android.joinme.ui.theme.customColors
+import com.android.joinme.ui.theme.onActivityContainerDark
+import com.android.joinme.ui.theme.onActivityContainerLight
+import com.android.joinme.ui.theme.onSocialContainerDark
+import com.android.joinme.ui.theme.onSocialContainerLight
+import com.android.joinme.ui.theme.onSportsContainerDark
+import com.android.joinme.ui.theme.onSportsContainerLight
+import com.android.joinme.ui.theme.socialContainerDark
 import com.android.joinme.ui.theme.socialContainerLight
+import com.android.joinme.ui.theme.sportsContainerDark
 import com.android.joinme.ui.theme.sportsContainerLight
 import com.google.firebase.Timestamp
 import java.util.Locale
@@ -74,12 +87,27 @@ fun Event.isUpcoming(): Boolean {
  *
  * @return A Color object corresponding to the EventType.
  */
+@Composable
 fun EventType.getColor(): Color {
-  return when (this) {
-    EventType.SPORTS -> sportsContainerLight // Purple
-    EventType.ACTIVITY -> activityContainerLight // Green
-    EventType.SOCIAL -> socialContainerLight // Red
-  }
+    return when (this) {
+        EventType.SPORTS -> MaterialTheme.customColors.sportsContainer
+        EventType.ACTIVITY -> MaterialTheme.customColors.activityContainer
+        EventType.SOCIAL -> MaterialTheme.customColors.socialContainer
+    }
+}
+
+/**
+ * Maps each EventType to a specific "on" color for UI representation.
+ *
+ * @return A Color object corresponding to the EventType.
+ */
+@Composable
+fun EventType.getOnColor(): Color {
+    return when (this) {
+        EventType.SPORTS -> MaterialTheme.customColors.onSportsContainer
+        EventType.ACTIVITY -> MaterialTheme.customColors.onActivityContainer
+        EventType.SOCIAL -> MaterialTheme.customColors.onSocialContainer
+    }
 }
 
 /**
