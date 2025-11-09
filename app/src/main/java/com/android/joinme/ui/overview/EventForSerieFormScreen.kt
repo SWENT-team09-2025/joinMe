@@ -1,8 +1,6 @@
 package com.android.joinme.ui.overview
 
 import android.annotation.SuppressLint
-import android.widget.NumberPicker
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -13,13 +11,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import com.android.joinme.model.event.EventType
 import com.android.joinme.model.map.Location
 import com.android.joinme.ui.theme.ButtonSaveColor
 import com.android.joinme.ui.theme.DarkButtonColor
 import com.android.joinme.ui.theme.DividerColor
-import java.util.Locale
 import kotlinx.coroutines.launch
 
 /** Note: This file was created with the help of IA (Claude) */
@@ -89,14 +84,6 @@ fun EventForSerieFormScreen(
     onGoBack: () -> Unit,
     saveButtonText: String = "Save"
 ) {
-  val eventTypes = EventType.values().map { it.name.uppercase(Locale.ROOT) }
-  var showTypeDropdown by remember { mutableStateOf(false) }
-  var showDurationDialog by remember { mutableStateOf(false) }
-  var tempDuration by remember { mutableIntStateOf(formState.duration.toIntOrNull() ?: 10) }
-
-  // Update tempDuration when formState.duration changes
-  LaunchedEffect(formState.duration) { formState.duration.toIntOrNull()?.let { tempDuration = it } }
-
   // Trigger location search when query changes
   LaunchedEffect(formState.locationQuery) {
     if (formState.locationQuery.isNotBlank()) {
@@ -130,135 +117,38 @@ fun EventForSerieFormScreen(
                     .padding(paddingValues),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
               // Type dropdown
-              ExposedDropdownMenuBox(
-                  expanded = showTypeDropdown,
-                  onExpandedChange = { showTypeDropdown = !showTypeDropdown }) {
-                    OutlinedTextField(
-                        value = formState.type,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Event Type") },
-                        placeholder = { Text("Select event type") },
-                        isError = formState.invalidTypeMsg != null,
-                        supportingText = {
-                          formState.invalidTypeMsg?.let {
-                            Text(text = it, color = MaterialTheme.colorScheme.error)
-                          }
-                        },
-                        trailingIcon = {
-                          ExposedDropdownMenuDefaults.TrailingIcon(expanded = showTypeDropdown)
-                        },
-                        modifier =
-                            Modifier.menuAnchor().fillMaxWidth().testTag(testTags.inputEventType))
-                    ExposedDropdownMenu(
-                        expanded = showTypeDropdown,
-                        onDismissRequest = { showTypeDropdown = false }) {
-                          eventTypes.forEach { type ->
-                            DropdownMenuItem(
-                                text = { Text(type) },
-                                onClick = {
-                                  onTypeChange(type)
-                                  showTypeDropdown = false
-                                })
-                          }
-                        }
-                  }
+              EventTypeField(
+                  value = formState.type,
+                  onValueChange = onTypeChange,
+                  isError = formState.invalidTypeMsg != null,
+                  errorMessage = formState.invalidTypeMsg,
+                  testTag = testTags.inputEventType)
 
               // Title
-              OutlinedTextField(
+              EventTitleField(
                   value = formState.title,
                   onValueChange = onTitleChange,
-                  label = { Text("Title") },
-                  placeholder = { Text("Enter event title") },
                   isError = formState.invalidTitleMsg != null,
-                  supportingText = {
-                    formState.invalidTitleMsg?.let {
-                      Text(
-                          it,
-                          color = MaterialTheme.colorScheme.error,
-                          modifier = Modifier.testTag(testTags.errorMessage))
-                    }
-                  },
-                  modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventTitle))
+                  errorMessage = formState.invalidTitleMsg,
+                  testTag = testTags.inputEventTitle,
+                  errorTestTag = testTags.errorMessage)
 
               // Description
-              OutlinedTextField(
+              EventDescriptionField(
                   value = formState.description,
                   onValueChange = onDescriptionChange,
-                  label = { Text("Description") },
-                  placeholder = { Text("Describe your event") },
                   isError = formState.invalidDescriptionMsg != null,
-                  supportingText = {
-                    formState.invalidDescriptionMsg?.let {
-                      Text(
-                          it,
-                          color = MaterialTheme.colorScheme.error,
-                          modifier = Modifier.testTag(testTags.errorMessage))
-                    }
-                  },
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .height(150.dp)
-                          .testTag(testTags.inputEventDescription))
+                  errorMessage = formState.invalidDescriptionMsg,
+                  testTag = testTags.inputEventDescription,
+                  errorTestTag = testTags.errorMessage)
 
               // Duration picker
-              Box(modifier = Modifier.fillMaxWidth().clickable { showDurationDialog = true }) {
-                OutlinedTextField(
-                    value = formState.duration,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Duration (min)") },
-                    placeholder = { Text("Select duration") },
-                    isError = formState.invalidDurationMsg != null,
-                    supportingText = {
-                      formState.invalidDurationMsg?.let {
-                        Text(text = it, color = MaterialTheme.colorScheme.error)
-                      }
-                    },
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            disabledTextColor =
-                                LocalContentColor.current.copy(LocalContentColor.current.alpha),
-                            disabledBorderColor = MaterialTheme.colorScheme.outline,
-                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant),
-                    enabled = false,
-                    modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventDuration))
-              }
-
-              if (showDurationDialog) {
-                AlertDialog(
-                    onDismissRequest = { showDurationDialog = false },
-                    title = { Text("Select Duration (min)") },
-                    text = {
-                      AndroidView(
-                          factory = { context ->
-                            NumberPicker(context).apply {
-                              minValue = 10
-                              maxValue = 300
-                              value = tempDuration
-                              wrapSelectorWheel = true
-                              setOnValueChangedListener { _, _, newVal -> tempDuration = newVal }
-                            }
-                          },
-                          update = { picker -> picker.value = tempDuration },
-                          modifier = Modifier.fillMaxWidth())
-                    },
-                    confirmButton = {
-                      TextButton(
-                          onClick = {
-                            onDurationChange(tempDuration.toString())
-                            showDurationDialog = false
-                          }) {
-                            Text("OK")
-                          }
-                    },
-                    dismissButton = {
-                      TextButton(onClick = { showDurationDialog = false }) { Text("Cancel") }
-                    })
-              }
+              EventDurationField(
+                  durationValue = formState.duration,
+                  onValueChange = onDurationChange,
+                  isError = formState.invalidDurationMsg != null,
+                  errorMessage = formState.invalidDurationMsg,
+                  testTag = testTags.inputEventDuration)
 
               // Location field with search functionality
               val eventFormTestTags =
