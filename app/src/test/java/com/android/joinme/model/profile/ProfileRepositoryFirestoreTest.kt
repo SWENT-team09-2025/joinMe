@@ -317,7 +317,7 @@ class ProfileRepositoryFirestoreTest {
     every { mockStorageRef.downloadUrl } returns Tasks.forResult(mockDownloadUri)
 
     // Mock Firestore update failure
-    every { mockDocument.update(any<Map<String, Any?>>()) } returns
+    every { mockDocument.set(any<Map<String, Any?>>(), any<SetOptions>()) } returns
         Tasks.forException(Exception("Firestore error"))
 
     // When
@@ -335,7 +335,8 @@ class ProfileRepositoryFirestoreTest {
     // Mock Storage Delete failure
     every { mockStorageRef.delete() } returns Tasks.forException(Exception("File not found"))
     // Mock Firestore Update success
-    every { mockDocument.update(any<Map<String, Any?>>()) } returns Tasks.forResult(null)
+    every { mockDocument.set(any<Map<String, Any?>>(), any<SetOptions>()) } returns
+        Tasks.forResult(null)
 
     // When
     repository.deleteProfilePhoto(testUid) // Should not throw an exception
@@ -345,11 +346,12 @@ class ProfileRepositoryFirestoreTest {
     verify { mockStorageRef.delete() }
     // Verify Firestore update was *still* called
     verify {
-      mockDocument.update(
+      mockDocument.set(
           match<Map<String, Any?>> {
             it["photoUrl"] == null && // Verify photoUrl is set to null
                 it.containsKey("updatedAt") // Verify updatedAt is present
-          })
+          },
+          any<SetOptions>())
     }
   }
 
@@ -362,7 +364,7 @@ class ProfileRepositoryFirestoreTest {
     // Mock Storage Delete success
     every { mockStorageRef.delete() } returns Tasks.forResult(null)
     // Mock Firestore Update failure
-    every { mockDocument.update(any<Map<String, Any?>>()) } returns
+    every { mockDocument.set(any<Map<String, Any?>>(), any<SetOptions>()) } returns
         Tasks.forException(Exception("Firestore error"))
 
     // When
@@ -372,6 +374,6 @@ class ProfileRepositoryFirestoreTest {
     // Verify storage delete was called
     verify { mockStorageRef.delete() }
     // Verify Firestore update was attempted
-    verify { mockDocument.update(any()) }
+    verify { mockDocument.set(any(), any<SetOptions>()) }
   }
 }
