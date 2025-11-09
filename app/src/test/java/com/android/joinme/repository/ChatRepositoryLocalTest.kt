@@ -5,6 +5,7 @@ package com.android.joinme.repository
 import com.android.joinme.model.chat.ChatRepositoryLocal
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert
 import org.junit.Before
@@ -13,12 +14,14 @@ import org.junit.Test
 /**
  * Comprehensive tests for ChatRepositoryLocal.
  *
- * Tests all CRUD operations, message read tracking, and thread-safety.
+ * Tests all CRUD operations, Flow-based real-time updates, message read tracking, and
+ * multi-conversation isolation.
  */
 class ChatRepositoryLocalTest {
 
   private lateinit var repo: ChatRepositoryLocal
   private lateinit var sampleMessage: Message
+  private val testConversationId = "conversation1"
 
   @Before
   fun setup() {
@@ -26,6 +29,7 @@ class ChatRepositoryLocalTest {
     sampleMessage =
         Message(
             id = "1",
+            conversationId = testConversationId,
             senderId = "user1",
             senderName = "Alice",
             content = "Hello, world!",
@@ -38,36 +42,100 @@ class ChatRepositoryLocalTest {
   // ---------------- BASIC CRUD ----------------
 
   @Test
-  fun addAndGetMessage_success() = runTest {
+  fun addMessage_appearsInObservedFlow() = runTest {
     repo.addMessage(sampleMessage)
-    val message = repo.getMessage("1")
-    Assert.assertEquals(sampleMessage.content, message.content)
-  }
 
-  @Test(expected = Exception::class)
-  fun getMessage_notFound_throwsException() = runTest { repo.getMessage("unknown") }
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    Assert.assertEquals(1, messages.size)
+    Assert.assertEquals(sampleMessage.content, messages[0].content)
+  }
 
   @Test
   fun editMessage_updatesSuccessfully() = runTest {
     repo.addMessage(sampleMessage)
     val updated = sampleMessage.copy(content = "Updated content")
-    repo.editMessage("1", updated)
-    val message = repo.getMessage("1")
-    Assert.assertEquals("Updated content", message.content)
+    repo.editMessage(testConversationId, "1", updated)
+
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    Assert.assertEquals("Updated content", messages[0].content)
+  }
+
+  @Test(expected = Exception::class)
+  fun editMessage_wrongConversation_throwsException() = runTest {
+    repo.addMessage(sampleMessage)
+    val updated = sampleMessage.copy(content = "Updated content")
+    repo.editMessage("wrongConversation", "1", updated)
   }
 
   @Test
   fun deleteMessage_removesSuccessfully() = runTest {
     repo.addMessage(sampleMessage)
-    repo.deleteMessage("1")
+    repo.deleteMessage(testConversationId, "1")
 
-    // Verify message is actually deleted by trying to get it
-    try {
-      repo.getMessage("1")
-      Assert.fail("Expected exception for deleted message")
-    } catch (e: Exception) {
-      Assert.assertTrue(e.message?.contains("not found") == true)
-    }
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    Assert.assertTrue(messages.isEmpty())
+  }
+
+  @Test(expected = Exception::class)
+  fun deleteMessage_wrongConversation_throwsException() = runTest {
+    repo.addMessage(sampleMessage)
+    repo.deleteMessage("wrongConversation", "1")
+  }
+
+  // ---------------- OBSERVE MESSAGES ----------------
+
+  @Test
+  fun observeMessages_emitsInitialEmptyList() = runTest {
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    Assert.assertTrue(messages.isEmpty())
+  }
+
+  @Test
+  fun observeMessages_returnsAddedMessages() = runTest {
+    repo.addMessage(sampleMessage)
+
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    Assert.assertEquals(1, messages.size)
+    Assert.assertEquals("Hello, world!", messages[0].content)
+  }
+
+  @Test
+  fun observeMessages_filtersCorrectConversation() = runTest {
+    val conv1Message = sampleMessage.copy(id = "1", conversationId = "conversation1")
+    val conv2Message =
+        sampleMessage.copy(
+            id = "2", conversationId = "conversation2", content = "Different conversation")
+
+    repo.addMessage(conv1Message)
+    repo.addMessage(conv2Message)
+
+    val messages = repo.observeMessagesForConversation("conversation1").first()
+    Assert.assertEquals(1, messages.size)
+    Assert.assertEquals("conversation1", messages[0].conversationId)
+    Assert.assertEquals("Hello, world!", messages[0].content)
+  }
+
+  @Test
+  fun observeMessages_sortsByTimestamp() = runTest {
+    val msg1 =
+        sampleMessage.copy(
+            id = "1", conversationId = testConversationId, timestamp = 3000L, content = "Third")
+    val msg2 =
+        sampleMessage.copy(
+            id = "2", conversationId = testConversationId, timestamp = 1000L, content = "First")
+    val msg3 =
+        sampleMessage.copy(
+            id = "3", conversationId = testConversationId, timestamp = 2000L, content = "Second")
+
+    repo.addMessage(msg1)
+    repo.addMessage(msg2)
+    repo.addMessage(msg3)
+
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    Assert.assertEquals(3, messages.size)
+    Assert.assertEquals("First", messages[0].content)
+    Assert.assertEquals("Second", messages[1].content)
+    Assert.assertEquals("Third", messages[2].content)
   }
 
   // ---------------- MARK AS READ ----------------
@@ -75,10 +143,10 @@ class ChatRepositoryLocalTest {
   @Test
   fun markMessageAsRead_addsUserToReadByList() = runTest {
     repo.addMessage(sampleMessage)
-    repo.markMessageAsRead("1", "user2")
+    repo.markMessageAsRead(testConversationId, "1", "user2")
 
-    val message = repo.getMessage("1")
-    Assert.assertTrue(message.readBy.contains("user2"))
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    Assert.assertTrue(messages[0].readBy.contains("user2"))
   }
 
   @Test
@@ -86,28 +154,43 @@ class ChatRepositoryLocalTest {
     val messageWithReader = sampleMessage.copy(readBy = listOf("user2"))
     repo.addMessage(messageWithReader)
 
-    repo.markMessageAsRead("1", "user2")
+    repo.markMessageAsRead(testConversationId, "1", "user2")
 
-    val message = repo.getMessage("1")
-    Assert.assertEquals(1, message.readBy.size)
-    Assert.assertEquals("user2", message.readBy[0])
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    Assert.assertEquals(1, messages[0].readBy.size)
+    Assert.assertEquals("user2", messages[0].readBy[0])
   }
 
   @Test
   fun markMessageAsRead_multipleUsers() = runTest {
     repo.addMessage(sampleMessage)
-    repo.markMessageAsRead("1", "user2")
-    repo.markMessageAsRead("1", "user3")
-    repo.markMessageAsRead("1", "user4")
+    repo.markMessageAsRead(testConversationId, "1", "user2")
+    repo.markMessageAsRead(testConversationId, "1", "user3")
+    repo.markMessageAsRead(testConversationId, "1", "user4")
 
-    val message = repo.getMessage("1")
-    Assert.assertEquals(3, message.readBy.size)
-    Assert.assertTrue(message.readBy.containsAll(listOf("user2", "user3", "user4")))
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    Assert.assertEquals(3, messages[0].readBy.size)
+    Assert.assertTrue(messages[0].readBy.containsAll(listOf("user2", "user3", "user4")))
   }
 
   @Test(expected = Exception::class)
   fun markMessageAsRead_notFound_throwsException() = runTest {
-    repo.markMessageAsRead("unknown", "user1")
+    repo.markMessageAsRead(testConversationId, "unknown", "user1")
+  }
+
+  @Test(expected = Exception::class)
+  fun markMessageAsRead_wrongConversation_throwsException() = runTest {
+    repo.addMessage(sampleMessage)
+    repo.markMessageAsRead("wrongConversation", "1", "user2")
+  }
+
+  @Test
+  fun markMessageAsRead_updatesObservableFlow() = runTest {
+    repo.addMessage(sampleMessage)
+    repo.markMessageAsRead(testConversationId, "1", "user2")
+
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    Assert.assertTrue(messages[0].readBy.contains("user2"))
   }
 
   // ---------------- MESSAGE ID GENERATION ----------------
@@ -124,29 +207,28 @@ class ChatRepositoryLocalTest {
   // ---------------- ADDITIONAL TESTS ----------------
 
   @Test
-  fun addMultipleMessages_canRetrieveEach() = runTest {
-    val msg1 = sampleMessage.copy(id = "1")
-    val msg2 = sampleMessage.copy(id = "2", content = "Message 2")
-    val msg3 = sampleMessage.copy(id = "3", content = "Message 3")
-
+  fun addMultipleMessages_storesAll() = runTest {
+    val msg1 = sampleMessage.copy(id = "1", conversationId = testConversationId)
+    val msg2 =
+        sampleMessage.copy(id = "2", conversationId = testConversationId, content = "Message 2")
+    val msg3 =
+        sampleMessage.copy(id = "3", conversationId = testConversationId, content = "Message 3")
     repo.addMessage(msg1)
     repo.addMessage(msg2)
     repo.addMessage(msg3)
 
-    val retrieved1 = repo.getMessage("1")
-    val retrieved2 = repo.getMessage("2")
-    val retrieved3 = repo.getMessage("3")
-
-    Assert.assertEquals("Hello, world!", retrieved1.content)
-    Assert.assertEquals("Message 2", retrieved2.content)
-    Assert.assertEquals("Message 3", retrieved3.content)
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    Assert.assertEquals(3, messages.size)
   }
 
   @Test
   fun getMessage_preservesAllProperties() = runTest {
     repo.addMessage(sampleMessage)
-    val retrieved = repo.getMessage("1")
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    val retrieved = messages[0]
+
     Assert.assertEquals(sampleMessage.id, retrieved.id)
+    Assert.assertEquals(sampleMessage.conversationId, retrieved.conversationId)
     Assert.assertEquals(sampleMessage.senderId, retrieved.senderId)
     Assert.assertEquals(sampleMessage.senderName, retrieved.senderName)
     Assert.assertEquals(sampleMessage.content, retrieved.content)
@@ -159,79 +241,89 @@ class ChatRepositoryLocalTest {
   @Test
   fun messageType_systemMessage_handledCorrectly() = runTest {
     val systemMessage =
-        sampleMessage.copy(id = "2", type = MessageType.SYSTEM, content = "User joined")
+        sampleMessage.copy(
+            id = "2",
+            conversationId = testConversationId,
+            type = MessageType.SYSTEM,
+            content = "User joined")
     repo.addMessage(systemMessage)
 
-    val retrieved = repo.getMessage("2")
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    val retrieved = messages.find { it.id == "2" }!!
     Assert.assertEquals(MessageType.SYSTEM, retrieved.type)
   }
 
   @Test(expected = Exception::class)
   fun editMessage_notFound_throwsException() = runTest {
-    val fake = sampleMessage.copy(id = "999")
-    repo.editMessage(fake.id, fake)
+    val fake = sampleMessage.copy(id = "999", conversationId = testConversationId)
+    repo.editMessage(testConversationId, fake.id, fake)
   }
 
   @Test(expected = Exception::class)
-  fun deleteMessage_notFound_throwsException() = runTest { repo.deleteMessage("nonexistent") }
-
-  @Test
-  fun editMessage_preservesOtherMessages() = runTest {
-    val msg1 = sampleMessage.copy(id = "1", content = "Message 1")
-    val msg2 = sampleMessage.copy(id = "2", content = "Message 2")
-
-    repo.addMessage(msg1)
-    repo.addMessage(msg2)
-
-    // Edit only message 1
-    val updated = msg1.copy(content = "Edited Message 1")
-    repo.editMessage("1", updated)
-
-    // Verify message 1 is updated
-    val retrieved1 = repo.getMessage("1")
-    Assert.assertEquals("Edited Message 1", retrieved1.content)
-
-    // Verify message 2 is unchanged
-    val retrieved2 = repo.getMessage("2")
-    Assert.assertEquals("Message 2", retrieved2.content)
+  fun deleteMessage_notFound_throwsException() = runTest {
+    repo.deleteMessage(testConversationId, "nonexistent")
   }
 
   @Test
-  fun deleteMessage_preservesOtherMessages() = runTest {
-    val msg1 = sampleMessage.copy(id = "1", content = "Message 1")
-    val msg2 = sampleMessage.copy(id = "2", content = "Message 2")
+  fun editMessage_updatesObservableFlow() = runTest {
+    repo.addMessage(sampleMessage)
+    val updated = sampleMessage.copy(content = "Edited content")
+    repo.editMessage(testConversationId, "1", updated)
 
-    repo.addMessage(msg1)
-    repo.addMessage(msg2)
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    Assert.assertEquals("Edited content", messages[0].content)
+  }
 
-    // Delete message 1
-    repo.deleteMessage("1")
+  @Test
+  fun deleteMessage_updatesObservableFlow() = runTest {
+    repo.addMessage(sampleMessage)
+    repo.deleteMessage(testConversationId, "1")
 
-    // Verify message 1 is deleted
-    try {
-      repo.getMessage("1")
-      Assert.fail("Expected exception for deleted message")
-    } catch (e: Exception) {
-      // Expected
-    }
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    Assert.assertTrue(messages.isEmpty())
+  }
 
-    // Verify message 2 still exists
-    val retrieved2 = repo.getMessage("2")
-    Assert.assertEquals("Message 2", retrieved2.content)
+  @Test
+  fun observeMessages_emptyForNonExistentConversation() = runTest {
+    repo.addMessage(sampleMessage.copy(conversationId = "conversation1"))
+
+    val messages = repo.observeMessagesForConversation("nonexistent_conversation").first()
+    Assert.assertTrue(messages.isEmpty())
+  }
+
+  @Test
+  fun observeMessages_multipleConversationsIndependent() = runTest {
+    val conv1Msg =
+        sampleMessage.copy(id = "1", conversationId = "conversation1", content = "Conversation 1")
+    val conv2Msg =
+        sampleMessage.copy(id = "2", conversationId = "conversation2", content = "Conversation 2")
+
+    repo.addMessage(conv1Msg)
+    repo.addMessage(conv2Msg)
+
+    val conv1Messages = repo.observeMessagesForConversation("conversation1").first()
+    val conv2Messages = repo.observeMessagesForConversation("conversation2").first()
+
+    Assert.assertEquals(1, conv1Messages.size)
+    Assert.assertEquals(1, conv2Messages.size)
+    Assert.assertEquals("Conversation 1", conv1Messages[0].content)
+    Assert.assertEquals("Conversation 2", conv2Messages[0].content)
   }
 
   @Test
   fun markMessageAsRead_preservesOtherFields() = runTest {
     repo.addMessage(sampleMessage)
-    repo.markMessageAsRead("1", "user2")
+    repo.markMessageAsRead(testConversationId, "1", "user2")
 
-    val message = repo.getMessage("1")
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    val message = messages[0]
 
     // Verify readBy is updated
     Assert.assertTrue(message.readBy.contains("user2"))
 
     // Verify other fields are preserved
     Assert.assertEquals("1", message.id)
+    Assert.assertEquals(testConversationId, message.conversationId)
     Assert.assertEquals("user1", message.senderId)
     Assert.assertEquals("Alice", message.senderName)
     Assert.assertEquals("Hello, world!", message.content)
