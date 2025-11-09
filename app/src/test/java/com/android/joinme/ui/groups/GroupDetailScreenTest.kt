@@ -1,5 +1,7 @@
 package com.android.joinme.ui.groups
 
+import android.content.Context
+import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.EventType
@@ -71,6 +73,14 @@ private class FakeProfileDetailRepository : ProfileRepository {
 
   override suspend fun deleteProfile(uid: String) {
     profiles.remove(uid)
+  }
+
+  override suspend fun uploadProfilePhoto(context: Context, uid: String, imageUri: Uri): String {
+    return "https://fakeurl.com/$uid/profilephoto.jpg"
+  }
+
+  override suspend fun deleteProfilePhoto(uid: String) {
+    // No-op for fake
   }
 }
 

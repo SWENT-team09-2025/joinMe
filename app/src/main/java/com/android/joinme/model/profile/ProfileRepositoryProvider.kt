@@ -2,6 +2,7 @@ package com.android.joinme.model.profile
 
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
+import com.google.firebase.storage.FirebaseStorage
 
 /**
  * Provides a singleton instance of [ProfileRepository]. Uses local repository in test environment,
@@ -11,9 +12,8 @@ object ProfileRepositoryProvider {
   // Local repository (in-memory)
   private val localRepo: ProfileRepository by lazy { ProfileRepositoryLocal() }
 
-  // Firestore repository (initialized lazily)
   private val firestoreRepo: ProfileRepository by lazy {
-    ProfileRepositoryFirestore(Firebase.firestore)
+    ProfileRepositoryFirestore(db = Firebase.firestore, storage = FirebaseStorage.getInstance())
   }
 
   // For backward compatibility and explicit test injection
