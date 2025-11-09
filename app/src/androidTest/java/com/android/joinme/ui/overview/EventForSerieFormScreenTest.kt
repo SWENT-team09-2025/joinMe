@@ -186,9 +186,7 @@ class EventForSerieFormScreenTest {
 
     composeTestRule.onNodeWithTag(testTags.inputEventType).assertTextContains("SPORTS")
     composeTestRule.onNodeWithTag(testTags.inputEventTitle).assertTextContains("Weekly Match")
-    composeTestRule
-        .onNodeWithTag(testTags.inputEventDescription)
-        .assertTextContains("Regular game")
+    composeTestRule.onNodeWithTag(testTags.inputEventDescription).assertTextContains("Regular game")
     composeTestRule.onNodeWithTag(testTags.inputEventDuration).assertTextContains("90")
     composeTestRule.onNodeWithTag(testTags.inputEventLocation).assertTextContains("EPFL")
   }
@@ -479,7 +477,7 @@ class EventForSerieFormScreenTest {
   }
 
   @Test
-  fun  locationSuggestionsAreDisplayed() {
+  fun locationSuggestionsAreDisplayed() {
     val suggestions =
         listOf(
             Location(1.0, 1.0, "Rolex Learning Center"),
