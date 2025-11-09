@@ -451,6 +451,11 @@ object Dimens {
     val extraLarge: Dp = 16.dp
   }
 
+  object NavigationBar {
+    /** 56dp - Standard height for bottom navigation bar */
+    val height: Dp = 56.dp
+  }
+
   /**
    * SerieCard dimensions.
    *
