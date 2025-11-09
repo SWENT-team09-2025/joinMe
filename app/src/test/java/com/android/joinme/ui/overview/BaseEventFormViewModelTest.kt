@@ -314,7 +314,6 @@ class BaseEventFormViewModelTest {
 
   // ==================== Time Tests ====================
 
-
   @Test
   fun `setTime with different times updates correctly`() {
     vm.setTime("09:00")

@@ -161,6 +161,7 @@ class EditSerieViewModelTest {
     assertEquals("   ", state.title)
     assertEquals("Title cannot be empty", state.invalidTitleMsg)
   }
+
   @Test
   fun setTitle_blank_errorMessageDisplayed() = runTest {
     viewModel.setTitle("")
@@ -288,7 +289,6 @@ class EditSerieViewModelTest {
     assertEquals("not-a-time", state.time)
     assertEquals("Invalid format (must be HH:mm)", state.invalidTimeMsg)
   }
-
 
   /** --- SET VISIBILITY TESTS --- */
   @Test

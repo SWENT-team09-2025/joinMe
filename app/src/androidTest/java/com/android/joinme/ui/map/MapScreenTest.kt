@@ -48,21 +48,18 @@ class MapScreenTest {
         .assertIsDisplayed()
   }
 
-
-
   @Test
   fun mapScreen_correct_Components() {
     composeTestRule.setContent { MapScreen(viewModel = MapViewModel(), navigationActions = null) }
     composeTestRule.onNodeWithContentDescription("Filter").assertExists().assertIsDisplayed()
-      composeTestRule
-          .onNodeWithTag(MapScreenTestTags.FILTER_BUTTON)
-          .assertExists()
-          .assertHasClickAction()
-          .performClick()
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.FILTER_BUTTON)
+        .assertExists()
+        .assertHasClickAction()
+        .performClick()
 
-      composeTestRule.onNodeWithTag("navigation_bottom_menu").assertExists()
+    composeTestRule.onNodeWithTag("navigation_bottom_menu").assertExists()
   }
-
 
   @Test
   fun mapScreen_displaysMarkersForEvents() {

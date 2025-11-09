@@ -39,7 +39,6 @@ class SearchScreenTest {
     composeTestRule.onNodeWithText("Sport").assertIsDisplayed()
   }
 
-
   @Test
   fun searchScreen_canEnterSearchQuery() {
     setupScreen()

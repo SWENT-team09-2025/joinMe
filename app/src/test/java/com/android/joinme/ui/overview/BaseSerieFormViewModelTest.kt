@@ -480,7 +480,6 @@ class BaseSerieFormViewModelTest {
     assertNull(timestamp4)
   }
 
-
   @Test
   fun `parseDateTime with midnight time returns Timestamp`() {
     val timestamp = vm.testParseDateTime("01/01/2026", "00:00")
@@ -502,7 +501,6 @@ class BaseSerieFormViewModelTest {
     assertEquals(23, calendar.get(java.util.Calendar.HOUR_OF_DAY))
     assertEquals(59, calendar.get(java.util.Calendar.MINUTE))
   }
-
 
   // ==================== Loading State Tests ====================
   @Test

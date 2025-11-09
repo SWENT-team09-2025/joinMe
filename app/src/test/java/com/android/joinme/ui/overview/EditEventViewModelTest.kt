@@ -361,6 +361,7 @@ class EditEventViewModelTest {
     assertEquals("not-a-date", state.date)
     assertEquals("Invalid format (must be dd/MM/yyyy)", state.invalidDateMsg)
   }
+
   @Test
   fun setDate_invalidFormat_errorMessageDisplayed() = runTest {
     viewModel.setDate("2024-12-25")
@@ -370,7 +371,6 @@ class EditEventViewModelTest {
     assertEquals("Invalid format (must be dd/MM/yyyy)", state.invalidDateMsg)
     assertFalse(state.isValid)
   }
-
 
   /** --- SET VISIBILITY TESTS --- */
   @Test
