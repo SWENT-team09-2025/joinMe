@@ -15,31 +15,18 @@ class BottomNavigationMenuTest {
   @get:Rule val composeTestRule = createComposeRule()
 
   @Test
-  fun bottomNavigationMenu_displaysAllTabs() {
+  fun allTabs_haveIconsDisplayed() {
     composeTestRule.setContent {
       BottomNavigationMenu(
           selectedTab = Tab.Overview,
           onTabSelected = {},
       )
     }
-
     composeTestRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertExists()
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Overview")).assertExists()
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Search")).assertExists()
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Map")).assertExists()
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).assertExists()
-  }
-
-  @Test
-  fun selectedTab_isMarkedAsSelected() {
-    composeTestRule.setContent {
-      BottomNavigationMenu(
-          selectedTab = Tab.Search,
-          onTabSelected = {},
-      )
-    }
-
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Search")).assertIsSelected()
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Overview")).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Search")).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Map")).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).assertIsDisplayed()
   }
 
   @Test
@@ -116,6 +103,18 @@ class BottomNavigationMenuTest {
   }
 
   @Test
+  fun selectedTab_isMarkedAsSelected() {
+    composeTestRule.setContent {
+      BottomNavigationMenu(
+          selectedTab = Tab.Search,
+          onTabSelected = {},
+      )
+    }
+
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Search")).assertIsSelected()
+  }
+
+  @Test
   fun mapTab_isSelectedWhenSet() {
     composeTestRule.setContent {
       BottomNavigationMenu(
@@ -168,42 +167,15 @@ class BottomNavigationMenuTest {
   }
 
   @Test
-  fun tab_overviewHasCorrectProperties() {
+  fun tab_optionHasCorrectProperties() {
     assert(Tab.Overview.name == "Overview")
     assert(Tab.Overview.destination == Screen.Overview)
-  }
-
-  @Test
-  fun tab_searchHasCorrectProperties() {
     assert(Tab.Search.name == "Search")
     assert(Tab.Search.destination == Screen.Search)
-  }
-
-  @Test
-  fun tab_mapHasCorrectProperties() {
     assert(Tab.Map.name == "Map")
     assert(Tab.Map.destination == Screen.Map)
-  }
-
-  @Test
-  fun tab_profileHasCorrectProperties() {
     assert(Tab.Profile.name == "Profile")
     assert(Tab.Profile.destination == Screen.Profile)
-  }
-
-  @Test
-  fun allTabs_haveIconsDisplayed() {
-    composeTestRule.setContent {
-      BottomNavigationMenu(
-          selectedTab = Tab.Overview,
-          onTabSelected = {},
-      )
-    }
-
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Overview")).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Search")).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Map")).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).assertIsDisplayed()
   }
 
   @Test

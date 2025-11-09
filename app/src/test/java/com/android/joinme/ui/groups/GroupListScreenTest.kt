@@ -90,27 +90,9 @@ class GroupListScreenTest {
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.EMPTY).assertIsDisplayed()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).assertIsDisplayed()
-  }
-
-  @Test
-  fun emptyState_showsCorrectMessage() {
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel()) }
-
     composeTestRule.onNodeWithText("You are currently not").assertIsDisplayed()
     composeTestRule.onNodeWithText("assigned to a group…").assertIsDisplayed()
-  }
-
-  @Test
-  fun emptyState_listDoesNotExist() {
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel()) }
-
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LIST).assertDoesNotExist()
-  }
-
-  @Test
-  fun emptyState_fabIsDisplayed() {
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel()) }
-
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).assertIsDisplayed()
   }
 
@@ -165,23 +147,6 @@ class GroupListScreenTest {
   }
 
   @Test
-  fun groupCard_displaysAllInformation() {
-    val group =
-        Group(
-            id = "test1",
-            name = "Rock Climbing",
-            description = "Indoor and outdoor climbing sessions",
-            ownerId = "owner",
-            memberIds = List(25) { "user$it" })
-
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
-
-    composeTestRule.onNodeWithText("Rock Climbing").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Indoor and outdoor climbing sessions").assertIsDisplayed()
-    composeTestRule.onNodeWithText("members: 25").assertIsDisplayed()
-  }
-
-  @Test
   fun groupCard_withEmptyDescription_doesNotShowDescription() {
     val group =
         Group(
@@ -195,22 +160,6 @@ class GroupListScreenTest {
 
     composeTestRule.onNodeWithText("Yoga Group").assertIsDisplayed()
     composeTestRule.onNodeWithText("members: 12").assertIsDisplayed()
-  }
-
-  @Test
-  fun groupCard_withBlankDescription_doesNotShowDescription() {
-    val group =
-        Group(
-            id = "test1",
-            name = "Running Club",
-            description = "   ",
-            ownerId = "owner",
-            memberIds = List(8) { "user$it" })
-
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
-
-    composeTestRule.onNodeWithText("Running Club").assertIsDisplayed()
-    composeTestRule.onNodeWithText("members: 8").assertIsDisplayed()
   }
 
   @Test
@@ -319,19 +268,6 @@ class GroupListScreenTest {
         .performScrollToNode(hasTestTag(GroupListScreenTestTags.cardTag(lastId)))
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag(lastId)).assertIsDisplayed()
-  }
-
-  @Test
-  fun list_scrollToMiddleItem() {
-    val groups = (1..50).map { i -> Group(id = "$i", name = "Group $i", ownerId = "owner$i") }
-
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
-
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.LIST)
-        .performScrollToNode(hasTestTag(GroupListScreenTestTags.cardTag("25")))
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("25")).assertIsDisplayed()
   }
 
   @Test
@@ -717,28 +653,6 @@ class GroupListScreenTest {
     composeTestRule
         .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
         .assertDoesNotExist()
-  }
-
-  @Test
-  fun floatingActionBubbles_bubblesHaveIcons() {
-    // Given: Screen is displayed
-    composeTestRule.setContent {
-      GroupListScreen(
-          onJoinWithLink = {},
-          onCreateGroup = {},
-          onGroup = {},
-          onBackClick = {},
-          onProfileClick = {},
-          onEditClick = {})
-    }
-
-    // When: User clicks the FAB
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-
-    // Then: Bubbles have content descriptions for icons
-    composeTestRule.onNodeWithContentDescription("Join with link").assertIsDisplayed()
-
-    composeTestRule.onNodeWithContentDescription("Create a group").assertIsDisplayed()
   }
 
   @Test

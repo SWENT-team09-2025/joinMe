@@ -539,36 +539,21 @@ class EditProfileScreenTest {
   fun editProfile_backButton_isClickable() = runTest {
     val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
     var backClicked = false
+    var profileClicked = false
+    var groupClicked = false
     composeTestRule.setContent {
-      EditProfileScreen(uid = testUid, profileViewModel = vm, onBackClick = { backClicked = true })
+      EditProfileScreen(
+          uid = testUid,
+          profileViewModel = vm,
+          onBackClick = { backClicked = true },
+          onProfileClick = { profileClicked = true },
+          onGroupClick = { groupClicked = true })
     }
 
     composeTestRule.onNodeWithContentDescription("Back").performClick()
     assert(backClicked)
-  }
-
-  @Test
-  fun editProfile_profileTabButton_isClickable() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
-    var profileClicked = false
-    composeTestRule.setContent {
-      EditProfileScreen(
-          uid = testUid, profileViewModel = vm, onProfileClick = { profileClicked = true })
-    }
-
     composeTestRule.onNodeWithContentDescription("Profile").performClick()
     assert(profileClicked)
-  }
-
-  @Test
-  fun editProfile_groupTabButton_isClickable() = runTest {
-    val vm = ProfileViewModel(FakeProfileRepository(createTestProfile()))
-    var groupClicked = false
-    composeTestRule.setContent {
-      EditProfileScreen(
-          uid = testUid, profileViewModel = vm, onGroupClick = { groupClicked = true })
-    }
-
     composeTestRule.onNodeWithContentDescription("Group").performClick()
     assert(groupClicked)
   }

@@ -99,6 +99,8 @@ class ViewProfileScreenTest {
     composeTestRule.onNodeWithTag(ViewProfileTestTags.PROFILE_TITLE).assertIsDisplayed()
     composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_BUTTON).assertIsDisplayed()
     composeTestRule.onNodeWithTag(ViewProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
+    composeTestRule.onNodeWithContentDescription("Profile Picture").assertIsDisplayed()
   }
 
   @Test
@@ -124,44 +126,17 @@ class ViewProfileScreenTest {
   // ==================== PROFILE DATA DISPLAY TESTS ====================
 
   @Test
-  fun viewProfileScreen_displaysCorrectUsername() = runTest {
+  fun viewProfileScreen_displaysValues() = runTest {
     val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
 
     composeTestRule.onNodeWithText("Max Verstappen").assertIsDisplayed()
-  }
-
-  @Test
-  fun viewProfileScreen_displaysCorrectEmail() = runTest {
-    val repo = FakeProfileRepository(createTestProfile())
-    val viewModel = ProfileViewModel(repo)
-
-    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
-
-    // Email may be below the fold, use scrollAndAssertText
     scrollAndAssertText("speed@f1.com")
-  }
-
-  @Test
-  fun viewProfileScreen_displaysCorrectCountry() = runTest {
-    val repo = FakeProfileRepository(createTestProfile())
-    val viewModel = ProfileViewModel(repo)
-
-    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
-
     scrollAndAssertText("Netherlands")
-  }
-
-  @Test
-  fun viewProfileScreen_displaysCorrectInterests() = runTest {
-    val repo = FakeProfileRepository(createTestProfile())
-    val viewModel = ProfileViewModel(repo)
-
-    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
-
     scrollAndAssertText("Racing, Cars, Technology")
+    scrollAndAssertText("F1 driver with a need for speed")
   }
 
   @Test
@@ -170,8 +145,6 @@ class ViewProfileScreenTest {
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
-
-    scrollAndAssertText("F1 driver with a need for speed")
   }
 
   // ==================== NULL/EMPTY VALUES TESTS ====================
@@ -212,72 +185,13 @@ class ViewProfileScreenTest {
   // ==================== BUTTON INTERACTION TESTS ====================
 
   @Test
-  fun viewProfileScreen_logoutButton_isClickable() = runTest {
-    val repo = FakeProfileRepository(createTestProfile())
-    val viewModel = ProfileViewModel(repo)
-    var logoutClicked = false
-
-    composeTestRule.setContent {
-      ViewProfileScreen(
-          uid = testUid, profileViewModel = viewModel, onSignOutComplete = { logoutClicked = true })
-    }
-
-    composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_BUTTON).performClick()
-    assert(logoutClicked)
-  }
-
-  @Test
-  fun viewProfileScreen_backButton_isClickable() = runTest {
-    val repo = FakeProfileRepository(createTestProfile())
-    val viewModel = ProfileViewModel(repo)
-    var backClicked = false
-
-    composeTestRule.setContent {
-      ViewProfileScreen(
-          uid = testUid, profileViewModel = viewModel, onBackClick = { backClicked = true })
-    }
-
-    composeTestRule.onNodeWithContentDescription("Back").performClick()
-    assert(backClicked)
-  }
-
-  @Test
-  fun viewProfileScreen_groupButton_isClickable() = runTest {
-    val repo = FakeProfileRepository(createTestProfile())
-    val viewModel = ProfileViewModel(repo)
-    var groupClicked = false
-
-    composeTestRule.setContent {
-      ViewProfileScreen(
-          uid = testUid, profileViewModel = viewModel, onGroupClick = { groupClicked = true })
-    }
-
-    composeTestRule.onNodeWithContentDescription("Group").performClick()
-    assert(groupClicked)
-  }
-
-  @Test
-  fun viewProfileScreen_editButton_isClickable() = runTest {
-    val repo = FakeProfileRepository(createTestProfile())
-    val viewModel = ProfileViewModel(repo)
-    var editClicked = false
-
-    composeTestRule.setContent {
-      ViewProfileScreen(
-          uid = testUid, profileViewModel = viewModel, onEditClick = { editClicked = true })
-    }
-
-    composeTestRule.onNodeWithContentDescription("Edit").performClick()
-    assert(editClicked)
-  }
-
-  @Test
   fun viewProfileScreen_topBar_allNavigationButtonsWork() = runTest {
     val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
     var back = false
     var group = false
     var edit = false
+    var logoutClicked = false
 
     composeTestRule.setContent {
       ViewProfileScreen(
@@ -285,7 +199,8 @@ class ViewProfileScreenTest {
           profileViewModel = viewModel,
           onBackClick = { back = true },
           onGroupClick = { group = true },
-          onEditClick = { edit = true })
+          onEditClick = { edit = true },
+          onSignOutComplete = { logoutClicked = true })
     }
 
     composeTestRule.onNodeWithContentDescription("Back").performClick()
@@ -294,22 +209,8 @@ class ViewProfileScreenTest {
     assert(group)
     composeTestRule.onNodeWithContentDescription("Edit").performClick()
     assert(edit)
-  }
-
-  @Test
-  fun viewProfileScreen_bottomNavigation_tabsAreClickable() = runTest {
-    val repo = FakeProfileRepository(createTestProfile())
-    val viewModel = ProfileViewModel(repo)
-    var selectedTab: Tab? = null
-
-    composeTestRule.setContent {
-      ViewProfileScreen(
-          uid = testUid, profileViewModel = viewModel, onTabSelected = { selectedTab = it })
-    }
-
-    composeTestRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Overview")).performClick()
-    assert(selectedTab == Tab.Overview)
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_BUTTON).performClick()
+    assert(logoutClicked)
   }
 
   @Test
@@ -322,6 +223,7 @@ class ViewProfileScreenTest {
       ViewProfileScreen(
           uid = testUid, profileViewModel = viewModel, onTabSelected = { clickedTabs.add(it) })
     }
+    composeTestRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertIsDisplayed()
 
     composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Overview")).performClick()
     composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Search")).performClick()
@@ -380,16 +282,6 @@ class ViewProfileScreenTest {
   // ==================== SCROLLING TESTS ====================
 
   @Test
-  fun viewProfileScreen_isScrollable() = runTest {
-    val repo = FakeProfileRepository(createTestProfile())
-    val viewModel = ProfileViewModel(repo)
-
-    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
-
-    composeTestRule.onNodeWithTag(ViewProfileTestTags.SCROLL_CONTAINER).assertExists()
-  }
-
-  @Test
   fun viewProfileScreen_longBio_rendersAndIsScrollable() = runTest {
     val longBio = "This is a very long biography. ".repeat(50)
     val repo = FakeProfileRepository(createTestProfile().copy(bio = longBio))
@@ -397,18 +289,8 @@ class ViewProfileScreenTest {
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
 
-    scrollAndAssert(ViewProfileTestTags.BIO_FIELD)
-    composeTestRule.onNodeWithTag(ViewProfileTestTags.BIO_FIELD).assertIsDisplayed()
-  }
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.SCROLL_CONTAINER).assertExists()
 
-  @Test
-  fun viewProfileScreen_canScrollToAllFields() = runTest {
-    val repo = FakeProfileRepository(createTestProfile())
-    val viewModel = ProfileViewModel(repo)
-
-    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
-
-    // Test that we can scroll to each field
     val fieldsToScroll =
         listOf(
             ViewProfileTestTags.USERNAME_FIELD,
@@ -456,18 +338,5 @@ class ViewProfileScreenTest {
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
 
     scrollAndAssertText("Racing")
-  }
-
-  // ==================== PROFILE PICTURE TESTS ====================
-
-  @Test
-  fun viewProfileScreen_profilePictureIsDisplayed() = runTest {
-    val repo = FakeProfileRepository(createTestProfile())
-    val viewModel = ProfileViewModel(repo)
-
-    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
-
-    composeTestRule.onNodeWithTag(ViewProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
-    composeTestRule.onNodeWithContentDescription("Profile Picture").assertIsDisplayed()
   }
 }
