@@ -13,8 +13,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.android.joinme.ui.theme.Dimens
 import java.util.*
 
 /** Data class representing the test tags for serie form fields. */
@@ -152,10 +152,10 @@ fun SerieFormScreen(
             modifier =
                 Modifier.fillMaxSize()
                     .padding(paddingValues)
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = Dimens.Padding.medium)
                     .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)) {
-              Spacer(modifier = Modifier.height(8.dp))
+            verticalArrangement = Arrangement.spacedBy(Dimens.Padding.medium)) {
+              Spacer(modifier = Modifier.height(Dimens.Padding.small))
 
               // Title field
               OutlinedTextField(
@@ -181,7 +181,7 @@ fun SerieFormScreen(
                   label = { Text("Description") },
                   modifier =
                       Modifier.fillMaxWidth()
-                          .height(120.dp)
+                          .height(Dimens.Serie.descriptionField)
                           .testTag(testTags.inputSerieDescription),
                   isError = formState.invalidDescriptionMsg != null,
                   supportingText = {
@@ -202,7 +202,9 @@ fun SerieFormScreen(
 
               Box(
                   modifier =
-                      Modifier.width(180.dp).clickable { showMaxParticipantsPicker = true }) {
+                      Modifier.width(Dimens.Serie.maxParticipantsField).clickable {
+                        showMaxParticipantsPicker = true
+                      }) {
                     OutlinedTextField(
                         value = formState.maxParticipants,
                         onValueChange = {},
@@ -262,7 +264,7 @@ fun SerieFormScreen(
               // Date and Time row
               Row(
                   modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                  horizontalArrangement = Arrangement.spacedBy(Dimens.Padding.medium)) {
                     val context = LocalContext.current
                     val calendar = remember { Calendar.getInstance() }
                     val (year, month, day) =
@@ -390,13 +392,15 @@ fun SerieFormScreen(
                         }
                   }
 
-              Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(Dimens.Padding.medium))
 
               // Save button
               Button(
-                  onClick = { if (onSave()) {} },
+                  onClick = { onSave() },
                   modifier =
-                      Modifier.fillMaxWidth().height(56.dp).testTag(testTags.buttonSaveSerie),
+                      Modifier.fillMaxWidth()
+                          .height(Dimens.Button.standardHeight)
+                          .testTag(testTags.buttonSaveSerie),
                   colors =
                       ButtonDefaults.buttonColors(
                           containerColor = MaterialTheme.colorScheme.onBackground,
@@ -404,14 +408,14 @@ fun SerieFormScreen(
                   enabled = formState.isValid && !formState.isLoading) {
                     if (formState.isLoading) {
                       CircularProgressIndicator(
-                          modifier = Modifier.size(24.dp),
+                          modifier = Modifier.size(Dimens.IconSize.medium),
                           color = MaterialTheme.colorScheme.onPrimary)
                     } else {
                       Text(saveButtonText)
                     }
                   }
 
-              Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
             }
       }
 }

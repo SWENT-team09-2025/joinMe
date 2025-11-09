@@ -27,5 +27,3 @@ data class Group(
     val membersCount: Int = memberIds.size,
     val photoUrl: String? = null
 )
-
-

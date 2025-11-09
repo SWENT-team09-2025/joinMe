@@ -41,7 +41,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.Event
@@ -56,6 +55,7 @@ import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.NavigationTestTags
 import com.android.joinme.ui.navigation.Tab
+import com.android.joinme.ui.theme.Dimens
 
 /**
  * Test tags for UI testing of the Overview screen components.
@@ -187,7 +187,8 @@ fun OverviewScreen(
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
-          HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+          HorizontalDivider(
+              color = MaterialTheme.colorScheme.outlineVariant, thickness = Dimens.BorderWidth.thin)
         }
       },
       bottomBar = {
@@ -199,12 +200,12 @@ fun OverviewScreen(
       floatingActionButton = {
         FloatingActionButton(
             onClick = { showFloatingBubbles = true },
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            containerColor = MaterialTheme.colorScheme.primary,
             modifier = Modifier.testTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON)) {
               Icon(
                   Icons.Default.Add,
                   contentDescription = "Add Event",
-                  tint = MaterialTheme.colorScheme.onSurface)
+                  tint = MaterialTheme.colorScheme.onPrimary)
             }
       }) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
@@ -232,7 +233,9 @@ fun OverviewScreen(
             else -> {
               // Content state: Display ongoing and upcoming activities
               LazyColumn(
-                  contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
+                  contentPadding =
+                      PaddingValues(
+                          vertical = Dimens.Padding.small, horizontal = Dimens.Padding.medium),
                   modifier = Modifier.fillMaxWidth().testTag(OverviewScreenTestTags.EVENT_LIST)) {
                     // Ongoing activities section
                     if (ongoingItems.isNotEmpty()) {
@@ -244,7 +247,7 @@ fun OverviewScreen(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             modifier =
-                                Modifier.padding(vertical = 8.dp, horizontal = 8.dp)
+                                Modifier.padding(Dimens.Padding.small)
                                     .testTag(OverviewScreenTestTags.ONGOING_EVENTS_TITLE))
                       }
 
@@ -253,14 +256,14 @@ fun OverviewScreen(
                         when (val item = ongoingItems[index]) {
                           is EventItem.SingleEvent -> {
                             EventCard(
-                                modifier = Modifier.padding(vertical = 6.dp),
+                                modifier = Modifier.padding(vertical = Dimens.Padding.small),
                                 event = item.event,
                                 onClick = { onSelectEvent(item.event) },
                                 testTag = OverviewScreenTestTags.getTestTagForEvent(item.event))
                           }
                           is EventItem.EventSerie -> {
                             SerieCard(
-                                modifier = Modifier.padding(vertical = 6.dp),
+                                modifier = Modifier.padding(vertical = Dimens.Padding.small),
                                 serie = item.serie,
                                 onClick = { onSelectedSerie(item.serie) },
                                 testTag = OverviewScreenTestTags.getTestTagForSerie(item.serie))
@@ -268,7 +271,7 @@ fun OverviewScreen(
                         }
                       }
 
-                      item { Spacer(modifier = Modifier.height(16.dp)) }
+                      item { Spacer(modifier = Modifier.height(Dimens.Padding.medium)) }
                     }
 
                     // Upcoming activities section
@@ -281,7 +284,7 @@ fun OverviewScreen(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             modifier =
-                                Modifier.padding(vertical = 8.dp, horizontal = 8.dp)
+                                Modifier.padding(Dimens.Padding.small)
                                     .testTag(OverviewScreenTestTags.UPCOMING_EVENTS_TITLE))
                       }
 
@@ -290,14 +293,14 @@ fun OverviewScreen(
                         when (val item = upcomingItems[index]) {
                           is EventItem.SingleEvent -> {
                             EventCard(
-                                modifier = Modifier.padding(vertical = 6.dp),
+                                modifier = Modifier.padding(vertical = Dimens.Padding.small),
                                 event = item.event,
                                 onClick = { onSelectEvent(item.event) },
                                 testTag = OverviewScreenTestTags.getTestTagForEvent(item.event))
                           }
                           is EventItem.EventSerie -> {
                             SerieCard(
-                                modifier = Modifier.padding(vertical = 6.dp),
+                                modifier = Modifier.padding(vertical = Dimens.Padding.small),
                                 serie = item.serie,
                                 onClick = { onSelectedSerie(item.serie) },
                                 testTag = OverviewScreenTestTags.getTestTagForSerie(item.serie))
@@ -312,15 +315,15 @@ fun OverviewScreen(
           // FAB History on bottom left
           FloatingActionButton(
               onClick = onGoToHistory,
-              containerColor = MaterialTheme.colorScheme.surfaceContainer,
+              containerColor = MaterialTheme.colorScheme.primary,
               modifier =
                   Modifier.align(Alignment.BottomStart)
-                      .padding(start = 16.dp, bottom = 16.dp)
+                      .padding(start = Dimens.Padding.medium, bottom = Dimens.Padding.medium)
                       .testTag(OverviewScreenTestTags.HISTORY_BUTTON)) {
                 Icon(
                     Icons.Default.History,
                     contentDescription = "View History",
-                    tint = MaterialTheme.colorScheme.onSurface)
+                    tint = MaterialTheme.colorScheme.onPrimary)
               }
         }
 
@@ -340,7 +343,7 @@ fun OverviewScreen(
                         onClick = { onAddSerie() },
                         testTag = OverviewScreenTestTags.ADD_SERIE_BUBBLE)),
             bubbleAlignment = BubbleAlignment.BOTTOM_END,
-            bottomPadding = 80.dp,
-            horizontalPadding = 80.dp)
+            bottomPadding = Dimens.Padding.extraLargeBubble,
+            horizontalPadding = Dimens.Padding.extraLargeBubble)
       }
 }

@@ -46,68 +46,55 @@ import java.util.Locale
  */
 @Composable
 fun EventCard(modifier: Modifier = Modifier, event: Event, onClick: () -> Unit, testTag: String) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .testTag(testTag),
-        shape = RoundedCornerShape(Dimens.CornerRadius.large),
-        colors = CardDefaults.cardColors(containerColor = event.type.getColor()),
-        elevation = CardDefaults.cardElevation(defaultElevation = Dimens.Elevation.medium)
-    ) {
-        Column(modifier = Modifier
-            .fillMaxWidth()
-            .padding(Dimens.Padding.medium)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+  Card(
+      modifier = modifier.fillMaxWidth().clickable(onClick = onClick).testTag(testTag),
+      shape = RoundedCornerShape(Dimens.CornerRadius.large),
+      colors = CardDefaults.cardColors(containerColor = event.type.getColor()),
+      elevation = CardDefaults.cardElevation(defaultElevation = Dimens.Elevation.medium)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.medium)) {
+          Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
                     text =
                         SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
                             .format(event.date.toDate()),
                     style = MaterialTheme.typography.bodySmall,
-                    color = event.type.getOnColor()
-                )
+                    color = event.type.getOnColor())
 
                 Text(
                     text =
                         SimpleDateFormat("H'h'mm", Locale.getDefault()).format(event.date.toDate()),
                     style = MaterialTheme.typography.bodySmall,
-                    color = event.type.getOnColor()
-                )
-            }
+                    color = event.type.getOnColor())
+              }
 
-            Spacer(modifier = Modifier.height(Dimens.Spacing.small))
+          Spacer(modifier = Modifier.height(Dimens.Spacing.small))
 
-            Text(
-                text = event.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = event.type.getOnColor()
-            )
+          Text(
+              text = event.title,
+              style = MaterialTheme.typography.titleMedium,
+              fontWeight = FontWeight.Bold,
+              color = event.type.getOnColor())
 
-            Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
+          Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+          Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "Place : ${event.location?.name ?: "Unknown"}",
                     style = MaterialTheme.typography.bodySmall,
                     color = event.type.getOnColor().copy(alpha = 0.9f),
                     maxLines = 3,
-                    modifier = Modifier.fillMaxSize(0.6f)
-                )
+                    modifier = Modifier.fillMaxSize(0.6f))
                 Icon(
                     modifier = Modifier.size(Dimens.IconSize.medium),
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "View event details",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
+                    tint = MaterialTheme.colorScheme.onSurface)
+              }
         }
-    }
+      }
 }

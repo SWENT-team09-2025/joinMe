@@ -141,6 +141,19 @@ object Dimens {
 
     /** 16dp - Standard vertical padding for screen edges */
     val screenVertical: Dp = 16.dp
+
+    // FloatingActionBubbles padding
+    /** 6dp - Small bubble padding */
+    val smallBubble: Dp = 6.dp
+
+    /** 16dp - Medium bubble padding */
+    val mediumBubble: Dp = 16.dp
+
+    /** 32.dp - Large bubble padding */
+    val largeBubble: Dp = 32.dp
+
+    /** 80.dp - Extra large bubble padding */
+    val extraLargeBubble: Dp = 80.dp
   }
 
   /**
@@ -435,5 +448,12 @@ object Dimens {
 
     /** 16dp - Extra large elevation (modals) */
     val extraLarge: Dp = 16.dp
+  }
+
+  object Serie {
+    /** 120dp - height for description field */
+    val descriptionField: Dp = 120.dp
+    /** 180.dp - height for maxParticipants field */
+    val maxParticipantsField: Dp = 180.dp
   }
 }
