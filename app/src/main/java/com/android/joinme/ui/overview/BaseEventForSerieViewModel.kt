@@ -83,7 +83,7 @@ abstract class BaseEventForSerieViewModel(protected val locationRepository: Loca
                 invalidTypeMsg =
                     if (type.isBlank()) "Event type cannot be empty"
                     else if (type.uppercase(Locale.ROOT) !in validTypes)
-                        "Type must be one of: SPORT, ACTIVITY, SOCIAL, etc."
+                        "Type must be one of: SPORTS, ACTIVITY, SOCIAL, etc."
                     else null)
         else -> state
       }

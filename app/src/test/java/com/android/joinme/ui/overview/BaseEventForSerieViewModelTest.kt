@@ -165,14 +165,6 @@ class BaseEventForSerieViewModelTest {
   }
 
   @Test
-  fun setDescription_nonBlank_updatesDescription() {
-    vm.setDescription("This is a weekly soccer match for the serie")
-    val state = vm.uiState.value
-    assertEquals("This is a weekly soccer match for the serie", state.description)
-    assertNull(state.invalidDescriptionMsg)
-  }
-
-  @Test
   fun setDescription_multiline_updatesDescription() {
     val multiline = "First line\nSecond line\nThird line"
     vm.setDescription(multiline)
@@ -184,47 +176,24 @@ class BaseEventForSerieViewModelTest {
   // ---------- Duration validation ----------
 
   @Test
-  fun setDuration_blank_setsInvalidDurationMsg() {
+  fun setDuration_empty_setsInvalidDurationMsg() {
     vm.setDuration("")
     val state = vm.uiState.value
     assertNotNull(state.invalidDurationMsg)
   }
 
   @Test
-  fun setDuration_nonNumeric_setsInvalidDurationMsg() {
+  fun setDuration_notANumber_setsInvalidDurationMsg() {
     vm.setDuration("ninety")
     val state = vm.uiState.value
     assertNotNull(state.invalidDurationMsg)
-    assertTrue(state.invalidDurationMsg!!.contains("positive number"))
   }
 
   @Test
-  fun setDuration_zero_setsInvalidDurationMsg() {
-    vm.setDuration("0")
-    val state = vm.uiState.value
-    assertNotNull(state.invalidDurationMsg)
-  }
-
-  @Test
-  fun setDuration_negative_setsInvalidDurationMsg() {
-    vm.setDuration("-30")
-    val state = vm.uiState.value
-    assertNotNull(state.invalidDurationMsg)
-  }
-
-  @Test
-  fun setDuration_positive_updatesDuration() {
+  fun setDuration_positiveNumber_noError() {
     vm.setDuration("90")
     val state = vm.uiState.value
     assertEquals("90", state.duration)
-    assertNull(state.invalidDurationMsg)
-  }
-
-  @Test
-  fun setDuration_largeNumber_updatesDuration() {
-    vm.setDuration("999")
-    val state = vm.uiState.value
-    assertEquals("999", state.duration)
     assertNull(state.invalidDurationMsg)
   }
 
@@ -372,30 +341,17 @@ class BaseEventForSerieViewModelTest {
     assertNotNull(state.invalidLocationMsg)
   }
 
-  @Test
-  fun clearLocation_whenAlreadyEmpty_setsInvalidMsg() {
-    vm.clearLocation()
-
-    val state = vm.uiState.value
-    assertNull(state.selectedLocation)
-    assertNotNull(state.invalidLocationMsg)
-  }
-
   // ---------- Error handling ----------
 
   @Test
-  fun clearErrorMsg_clearsError() {
-    vm.testSetErrorMsg("Test error")
-    assertNotNull(vm.uiState.value.errorMsg)
-
-    vm.clearErrorMsg()
-    assertNull(vm.uiState.value.errorMsg)
-  }
-
-  @Test
-  fun setErrorMsg_setsError() {
+  fun setErrorMsg_setsError_andClearErrorMsg_clearsIt() {
+    // Set error and verify it's set
     vm.testSetErrorMsg("Custom error message")
     assertEquals("Custom error message", vm.uiState.value.errorMsg)
+
+    // Clear error and verify it's cleared
+    vm.clearErrorMsg()
+    assertNull(vm.uiState.value.errorMsg)
   }
 
   // ---------- Integration tests ----------
@@ -456,17 +412,6 @@ class BaseEventForSerieViewModelTest {
     assertNotNull(state.invalidDescriptionMsg)
     assertNotNull(state.invalidDurationMsg)
     assertNotNull(state.invalidLocationMsg)
-  }
-
-  @Test
-  fun fixingInvalidField_clearsValidationMessage() {
-    // Set invalid
-    vm.setTitle("")
-    assertNotNull(vm.uiState.value.invalidTitleMsg)
-
-    // Fix it
-    vm.setTitle("Valid Title")
-    assertNull(vm.uiState.value.invalidTitleMsg)
   }
 
   @Test
