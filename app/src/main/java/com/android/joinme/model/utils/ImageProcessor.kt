@@ -86,22 +86,18 @@ class ImageProcessor(private val context: Context) {
    */
   fun processImage(imageUri: Uri): ByteArray {
     return try {
-      Log.d(TAG, "Processing image from URI: $imageUri")
 
       // Step 1: Get EXIF orientation
       val orientation = getExifOrientation(imageUri)
-      Log.d(TAG, "EXIF orientation: $orientation")
 
       // Step 2: Decode bitmap
       val originalBitmap = decodeBitmap(imageUri)
-      Log.d(TAG, "Original bitmap size: ${originalBitmap.width}x${originalBitmap.height}")
 
       // Step 3: Apply orientation correction
       val rotatedBitmap = rotateBitmap(originalBitmap, orientation)
 
       // Step 4: Resize if needed
       val resizedBitmap = resizeBitmap(rotatedBitmap)
-      Log.d(TAG, "Final bitmap size: ${resizedBitmap.width}x${resizedBitmap.height}")
 
       // Step 5: Compress to byte array
       val outputStream = ByteArrayOutputStream()
@@ -116,8 +112,6 @@ class ImageProcessor(private val context: Context) {
         rotatedBitmap.recycle()
       }
       resizedBitmap.recycle()
-
-      Log.d(TAG, "Image processed successfully, final size: ${bytes.size} bytes")
       bytes
     } catch (e: Exception) {
       Log.e(TAG, "Error processing image", e)
@@ -148,23 +142,68 @@ class ImageProcessor(private val context: Context) {
   }
 
   /**
-   * Decodes a bitmap from a URI.
+   * Decodes a bitmap from a URI with intelligent downsampling to prevent OOM errors.
    *
-   * Opens an input stream to the URI and decodes the image data into a Bitmap object. The bitmap is
-   * loaded at full resolution (no subsampling).
+   * This method uses a two-pass decoding strategy:
+   * 1. First pass (inJustDecodeBounds=true): Reads image dimensions without loading pixels
+   * 2. Second pass (with inSampleSize): Decodes downsampled image to reduce memory usage
+   *
+   * For large camera photos (e.g., 4000×3000), decoding at full resolution can require ~48MB of
+   * RAM, which often causes OutOfMemory on constrained devices. By calculating an appropriate
+   * inSampleSize, we decode a smaller bitmap (e.g., 2000×1500 with inSampleSize=2) that still
+   * provides sufficient quality after the final resize to MAX_DIMENSION (1024px).
+   *
+   * The inSampleSize is always a power of 2 (1, 2, 4, 8, ...) as required by BitmapFactory for
+   * optimal performance.
    *
    * @param imageUri URI of the image to decode.
-   * @return Decoded Bitmap object.
+   * @return Decoded Bitmap object, downsampled if the original image is large.
    * @throws Exception if the URI cannot be opened or the image cannot be decoded.
    */
   private fun decodeBitmap(imageUri: Uri): Bitmap {
-    val inputStream =
-        context.contentResolver.openInputStream(imageUri)
-            ?: throw Exception("Failed to open input stream")
+    // First pass: Get image dimensions without loading the full bitmap
+    val options =
+        BitmapFactory.Options().apply {
+          inJustDecodeBounds = true
+          context.contentResolver.openInputStream(imageUri)?.use { inputStream ->
+            BitmapFactory.decodeStream(inputStream, null, this)
+          }
+        }
 
-    return inputStream.use {
-      BitmapFactory.decodeStream(it) ?: throw Exception("Failed to decode bitmap")
+    val imageWidth = options.outWidth
+    val imageHeight = options.outHeight
+
+    if (imageWidth <= 0 || imageHeight <= 0) {
+      throw Exception("Failed to decode bitmap dimensions")
     }
+
+    // Calculate inSampleSize to downsample large images
+    // Target: decode at ~2x MAX_DIMENSION to preserve quality for rotation/resize
+    val targetSize = MAX_DIMENSION * 2
+    var inSampleSize = 1
+
+    if (imageWidth > targetSize || imageHeight > targetSize) {
+      val halfWidth = imageWidth / 2
+      val halfHeight = imageHeight / 2
+
+      // Calculate the largest inSampleSize that keeps dimensions >= targetSize
+      while ((halfWidth / inSampleSize) >= targetSize &&
+          (halfHeight / inSampleSize) >= targetSize) {
+        inSampleSize *= 2
+      }
+    }
+
+    // Second pass: Decode with downsampling
+    val decodeOptions =
+        BitmapFactory.Options().apply {
+          this.inSampleSize = inSampleSize
+          inJustDecodeBounds = false
+        }
+
+    return context.contentResolver.openInputStream(imageUri)?.use { inputStream ->
+      BitmapFactory.decodeStream(inputStream, null, decodeOptions)
+          ?: throw Exception("Failed to decode bitmap")
+    } ?: throw Exception("Failed to open input stream")
   }
 
   /**
