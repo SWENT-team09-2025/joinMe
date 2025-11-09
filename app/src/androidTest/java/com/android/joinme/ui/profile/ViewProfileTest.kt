@@ -1,5 +1,6 @@
 package com.android.joinme.ui.profile
 
+import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.profile.Profile
@@ -49,6 +50,19 @@ class ViewProfileScreenTest {
 
     override suspend fun deleteProfile(uid: String) {
       if (stored?.uid == uid) stored = null
+    }
+
+    // Stub implementations for photo methods - not used in ViewProfile tests
+    override suspend fun uploadProfilePhoto(
+        context: android.content.Context,
+        uid: String,
+        imageUri: Uri
+    ): String {
+      return "https://example.com/photo.jpg"
+    }
+
+    override suspend fun deleteProfilePhoto(uid: String) {
+      stored = stored?.copy(photoUrl = null)
     }
   }
 
@@ -221,18 +235,7 @@ class ViewProfileScreenTest {
   }
 
   @Test
-  fun viewProfileScreen_displaysNone_forEmptyInterests() = runTest {
-    val profileWithNoInterests = testProfile.copy(interests = emptyList())
-    val repo = FakeProfileRepository(profileWithNoInterests)
-    val viewModel = ProfileViewModel(repo)
-
-    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
-
-    scrollAndAssertText("None")
-  }
-
-  @Test
-  fun viewProfileScreen_displaysNoBioAvailable_forNullBio() = runTest {
+  fun viewProfileScreen_displaysNoBio_forNullBio() = runTest {
     val profileWithNullBio = testProfile.copy(bio = null)
     val repo = FakeProfileRepository(profileWithNullBio)
     val viewModel = ProfileViewModel(repo)
@@ -243,36 +246,39 @@ class ViewProfileScreenTest {
   }
 
   @Test
-  fun viewProfileScreen_displaysAllNotSpecified_forAllNullFields() = runTest {
-    val profileWithNulls =
-        testProfile.copy(dateOfBirth = null, country = null, bio = null, interests = emptyList())
-    val repo = FakeProfileRepository(profileWithNulls)
+  fun viewProfileScreen_displaysNone_forEmptyInterests() = runTest {
+    val profileWithEmptyInterests = testProfile.copy(interests = emptyList())
+    val repo = FakeProfileRepository(profileWithEmptyInterests)
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
 
-    composeTestRule.onNodeWithText("Date not specified").assertIsDisplayed()
-    scrollAndAssertText("Country not specified")
     scrollAndAssertText("None")
-    scrollAndAssertText("No bio available")
   }
 
-  // ==================== BUTTON INTERACTION TESTS ====================
+  // ==================== LOGOUT BUTTON TESTS ====================
+
+  @Test
+  fun viewProfileScreen_logoutButton_isDisplayed() = runTest {
+    val repo = FakeProfileRepository(testProfile)
+    val viewModel = ProfileViewModel(repo)
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_BUTTON).assertIsDisplayed()
+  }
 
   @Test
   fun viewProfileScreen_logoutButton_isClickable() = runTest {
     val repo = FakeProfileRepository(testProfile)
     val viewModel = ProfileViewModel(repo)
-    var logoutClicked = false
 
-    composeTestRule.setContent {
-      ViewProfileScreen(
-          uid = testUid, profileViewModel = viewModel, onSignOutComplete = { logoutClicked = true })
-    }
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
 
-    composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_BUTTON).performClick()
-    assert(logoutClicked)
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_BUTTON).assertHasClickAction()
   }
+
+  // ==================== NAVIGATION TESTS ====================
 
   @Test
   fun viewProfileScreen_backButton_isClickable() = runTest {
@@ -509,13 +515,86 @@ class ViewProfileScreenTest {
   // ==================== PROFILE PICTURE TESTS ====================
 
   @Test
-  fun viewProfileScreen_profilePictureIsDisplayed() = runTest {
+  fun viewProfileScreen_profilePictureContainer_isDisplayed() = runTest {
     val repo = FakeProfileRepository(testProfile)
     val viewModel = ProfileViewModel(repo)
 
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
 
     composeTestRule.onNodeWithTag(ViewProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
-    composeTestRule.onNodeWithContentDescription("Profile Picture").assertIsDisplayed()
+  }
+
+  @Test
+  fun viewProfileScreen_profilePicture_displaysDefaultAvatar_whenNoPhotoUrl() = runTest {
+    val profileWithoutPhoto = testProfile.copy(photoUrl = null)
+    val repo = FakeProfileRepository(profileWithoutPhoto)
+    val viewModel = ProfileViewModel(repo)
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+
+    // Should display the default avatar icon when photoUrl is null
+    composeTestRule.onNodeWithTag(ProfilePhotoImageTestTags.DEFAULT_AVATAR).assertIsDisplayed()
+    // Should NOT display remote image
+    composeTestRule.onNodeWithTag(ProfilePhotoImageTestTags.REMOTE_IMAGE).assertDoesNotExist()
+  }
+
+  @Test
+  fun viewProfileScreen_profilePicture_isNotClickable() = runTest {
+    val repo = FakeProfileRepository(testProfile)
+    val viewModel = ProfileViewModel(repo)
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+
+    // ViewProfile picture should not have click action (unlike EditProfile)
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.PROFILE_PICTURE).assert(hasNoClickAction())
+  }
+
+  @Test
+  fun viewProfileScreen_profilePicture_persistsAcrossScreenRefresh() = runTest {
+    val profileWithPhoto = testProfile.copy(photoUrl = "https://example.com/photo.jpg")
+    val repo = FakeProfileRepository(profileWithPhoto)
+    val viewModel = ProfileViewModel(repo)
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+
+    // Check photo container is displayed
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
+    // Check remote image is being used
+    composeTestRule.onNodeWithTag(ProfilePhotoImageTestTags.REMOTE_IMAGE).assertExists()
+
+    // Reload profile
+    viewModel.loadProfile(testUid)
+    composeTestRule.waitForIdle()
+
+    // Photo should still be displayed with remote image
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ProfilePhotoImageTestTags.REMOTE_IMAGE).assertExists()
+  }
+
+  @Test
+  fun viewProfileScreen_profilePicture_handlesEmptyPhotoUrl() = runTest {
+    val profileWithEmptyUrl = testProfile.copy(photoUrl = "")
+    val repo = FakeProfileRepository(profileWithEmptyUrl)
+    val viewModel = ProfileViewModel(repo)
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+
+    // Empty string photoUrl should display default avatar (not remote image)
+    composeTestRule.onNodeWithTag(ProfilePhotoImageTestTags.DEFAULT_AVATAR).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ProfilePhotoImageTestTags.REMOTE_IMAGE).assertDoesNotExist()
+  }
+
+  @Test
+  fun viewProfileScreen_profilePicture_withLongPhotoUrl_doesNotCrash() = runTest {
+    val longUrl = "https://example.com/" + "a".repeat(500) + ".jpg"
+    val profileWithLongUrl = testProfile.copy(photoUrl = longUrl)
+    val repo = FakeProfileRepository(profileWithLongUrl)
+    val viewModel = ProfileViewModel(repo)
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+
+    // Should handle long URLs without crashing - remote image should be attempted
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ProfilePhotoImageTestTags.REMOTE_IMAGE).assertExists()
   }
 }

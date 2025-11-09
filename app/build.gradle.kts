@@ -200,6 +200,8 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx:23.0.0")
     implementation("com.firebaseui:firebase-ui-auth:8.0.0")
     implementation("com.google.protobuf:protobuf-javalite:3.25.1")
+    implementation("com.google.firebase:firebase-storage-ktx:21.0.1")
+    
     implementation("com.google.firebase:firebase-messaging-ktx:24.0.0")
 
     // Credential Manager (for Google Sign-In)
@@ -227,6 +229,10 @@ dependencies {
     // UI Tests
     globalTestImplementation(libs.compose.test.junit)
     debugImplementation(libs.compose.test.manifest)
+
+    // For image loading
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
+    implementation("io.coil-kt:coil-compose:2.5.0")
 
     // --------- Kaspresso test framework ----------
     globalTestImplementation(libs.kaspresso)
