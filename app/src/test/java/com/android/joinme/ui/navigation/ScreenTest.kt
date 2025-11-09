@@ -1,5 +1,8 @@
 package com.android.joinme.ui.navigation
 /* CO-WRITE with Claude AI*/
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Unit tests for Screen sealed class and its properties. */
@@ -8,74 +11,69 @@ class ScreenTest {
   @Test
   fun allScreens_haveValidRoutes() {
     // Verifies that all Screen objects have valid, non-empty routes
-    assert(Screen.Auth.route.isNotEmpty())
-    assert(Screen.Overview.route.isNotEmpty())
-    assert(Screen.Search.route.isNotEmpty())
-    assert(Screen.Map.route.isNotEmpty())
-    assert(Screen.Profile.route.isNotEmpty())
-    assert(Screen.CreateEvent.route.isNotEmpty())
-    assert(Screen.CreateSerie.route.isNotEmpty())
-    assert(Screen.History.route.isNotEmpty())
-    assert(Screen.Groups.route.isNotEmpty())
-    assert(Screen.CreateGroup.route.isNotEmpty())
-    assert(Screen.EditProfile.route.isNotEmpty())
-    assert(Screen.CreateEventForSerie.Companion.route.isNotEmpty())
-    assert(Screen.EditEvent.Companion.route.isNotEmpty())
-    assert(Screen.ShowEventScreen.Companion.route.isNotEmpty())
-    assert(Screen.EditGroup.Companion.route.isNotEmpty())
-    assert(Screen.GroupDetail.Companion.route.isNotEmpty())
+    assertTrue(Screen.Auth.route.isNotEmpty())
+    assertTrue(Screen.Overview.route.isNotEmpty())
+    assertTrue(Screen.Search.route.isNotEmpty())
+    assertTrue(Screen.Map.route.isNotEmpty())
+    assertTrue(Screen.Profile.route.isNotEmpty())
+    assertTrue(Screen.CreateEvent.route.isNotEmpty())
+    assertTrue(Screen.CreateSerie.route.isNotEmpty())
+    assertTrue(Screen.History.route.isNotEmpty())
+    assertTrue(Screen.Groups.route.isNotEmpty())
+    assertTrue(Screen.CreateGroup.route.isNotEmpty())
+    assertTrue(Screen.EditProfile.route.isNotEmpty())
   }
 
   @Test
   fun allScreens_haveValidNames() {
     // Verifies that all Screen objects have valid, non-empty names
-    assert(Screen.Auth.name.isNotEmpty())
-    assert(Screen.Overview.name.isNotEmpty())
-    assert(Screen.Search.name.isNotEmpty())
-    assert(Screen.Map.name.isNotEmpty())
-    assert(Screen.Profile.name.isNotEmpty())
-    assert(Screen.CreateEvent.name.isNotEmpty())
-    assert(Screen.CreateSerie.name.isNotEmpty())
-    assert(Screen.History.name.isNotEmpty())
-    assert(Screen.Groups.name.isNotEmpty())
-    assert(Screen.CreateGroup.name.isNotEmpty())
-    assert(Screen.EditProfile.name.isNotEmpty())
+    assertTrue(Screen.Auth.name.isNotEmpty())
+    assertTrue(Screen.Overview.name.isNotEmpty())
+    assertTrue(Screen.Search.name.isNotEmpty())
+    assertTrue(Screen.Map.name.isNotEmpty())
+    assertTrue(Screen.Profile.name.isNotEmpty())
+    assertTrue(Screen.CreateEvent.name.isNotEmpty())
+    assertTrue(Screen.CreateSerie.name.isNotEmpty())
+    assertTrue(Screen.History.name.isNotEmpty())
+    assertTrue(Screen.Groups.name.isNotEmpty())
+    assertTrue(Screen.CreateGroup.name.isNotEmpty())
+    assertTrue(Screen.EditProfile.name.isNotEmpty())
   }
 
   @Test
   fun topLevelDestinations_areFlaggedCorrectly() {
     // Verifies that top-level destinations (bottom nav items) are properly flagged
-    assert(Screen.Overview.isTopLevelDestination)
-    assert(Screen.Search.isTopLevelDestination)
-    assert(Screen.Map.isTopLevelDestination)
-    assert(Screen.Profile.isTopLevelDestination)
+    assertTrue(Screen.Overview.isTopLevelDestination)
+    assertTrue(Screen.Search.isTopLevelDestination)
+    assertTrue(Screen.Map.isTopLevelDestination)
+    assertTrue(Screen.Profile.isTopLevelDestination)
   }
 
   @Test
   fun nonTopLevelDestinations_areNotFlagged() {
     // Verifies that non-top-level destinations are not marked as top-level
-    assert(!Screen.Auth.isTopLevelDestination)
-    assert(!Screen.CreateEvent.isTopLevelDestination)
-    assert(!Screen.CreateSerie.isTopLevelDestination)
-    assert(!Screen.History.isTopLevelDestination)
-    assert(!Screen.CreateGroup.isTopLevelDestination)
-    assert(!Screen.Groups.isTopLevelDestination)
-    assert(!Screen.EditProfile.isTopLevelDestination)
-    assert(!Screen.ShowEventScreen("test-id").isTopLevelDestination)
-    assert(!Screen.EditEvent("test-id").isTopLevelDestination)
-    assert(!Screen.EditGroup("test-id").isTopLevelDestination)
-    assert(!Screen.GroupDetail("test-id").isTopLevelDestination)
-    assert(!Screen.CreateEventForSerie("test-id").isTopLevelDestination)
+    assertFalse(Screen.Auth.isTopLevelDestination)
+    assertFalse(Screen.CreateEvent.isTopLevelDestination)
+    assertFalse(Screen.CreateSerie.isTopLevelDestination)
+    assertFalse(Screen.History.isTopLevelDestination)
+    assertFalse(Screen.CreateGroup.isTopLevelDestination)
+    assertFalse(Screen.Groups.isTopLevelDestination)
+    assertFalse(Screen.EditProfile.isTopLevelDestination)
+    assertFalse(Screen.ShowEventScreen("test-id").isTopLevelDestination)
+    assertFalse(Screen.EditEvent("test-id").isTopLevelDestination)
+    assertFalse(Screen.EditGroup("test-id").isTopLevelDestination)
+    assertFalse(Screen.GroupDetail("test-id").isTopLevelDestination)
+    assertFalse(Screen.CreateEventForSerie("test-id").isTopLevelDestination)
   }
 
   @Test
   fun parametrizedScreens_haveCorrectRouteFormat() {
     // Verifies that routes with parameters follow the correct format
-    assert(Screen.EditEvent.Companion.route == "edit_event/{eventId}")
-    assert(Screen.ShowEventScreen.Companion.route == "show_event/{eventId}")
-    assert(Screen.EditGroup.Companion.route == "edit_group/{groupId}")
-    assert(Screen.GroupDetail.Companion.route == "group_detail/{groupId}")
-    assert(Screen.CreateEventForSerie.Companion.route == "create_event_for_serie/{serieId}")
+    assertEquals("edit_event/{eventId}", Screen.EditEvent.Companion.route)
+    assertEquals("show_event/{eventId}", Screen.ShowEventScreen.Companion.route)
+    assertEquals("edit_group/{groupId}", Screen.EditGroup.Companion.route)
+    assertEquals("groupId/{groupId}", Screen.GroupDetail.Companion.route)
+    assertEquals("create_event_for_serie/{serieId}", Screen.CreateEventForSerie.Companion.route)
   }
 
   @Test
@@ -91,42 +89,42 @@ class ScreenTest {
     val groupDetail = Screen.GroupDetail(testGroupId)
     val createEventForSerie = Screen.CreateEventForSerie(testSerieId)
 
-    assert(editEvent.route == "edit_event/$testEventId")
-    assert(showEvent.route == "show_event/$testEventId")
-    assert(editGroup.route == "edit_group/$testGroupId")
-    assert(groupDetail.route == "group_detail/$testGroupId")
-    assert(createEventForSerie.route == "create_event_for_serie/$testSerieId")
+    assertEquals("edit_event/$testEventId", editEvent.route)
+    assertEquals("show_event/$testEventId", showEvent.route)
+    assertEquals("edit_group/$testGroupId", editGroup.route)
+    assertEquals("groupId/$testGroupId", groupDetail.route)
+    assertEquals("create_event_for_serie/$testSerieId", createEventForSerie.route)
 
-    assert(editEvent.name.isNotEmpty())
-    assert(showEvent.name.isNotEmpty())
-    assert(editGroup.name.isNotEmpty())
-    assert(groupDetail.name.isNotEmpty())
-    assert(createEventForSerie.name.isNotEmpty())
+    assertTrue(editEvent.name.isNotEmpty())
+    assertTrue(showEvent.name.isNotEmpty())
+    assertTrue(editGroup.name.isNotEmpty())
+    assertTrue(groupDetail.name.isNotEmpty())
+    assertTrue(createEventForSerie.name.isNotEmpty())
   }
 
   @Test
   fun specificScreens_haveExpectedRoutes() {
     // Verifies specific route values for key screens
-    assert(Screen.Auth.route == "auth")
-    assert(Screen.Overview.route == "overview")
-    assert(Screen.Search.route == "search")
-    assert(Screen.Map.route == "map")
-    assert(Screen.Profile.route == "profile")
-    assert(Screen.CreateEvent.route == "create_event")
-    assert(Screen.CreateSerie.route == "create_serie")
-    assert(Screen.History.route == "history")
-    assert(Screen.Groups.route == "groups")
-    assert(Screen.CreateGroup.route == "create_group")
-    assert(Screen.EditProfile.route == "edit_profile")
+    assertEquals("auth", Screen.Auth.route)
+    assertEquals("overview", Screen.Overview.route)
+    assertEquals("search", Screen.Search.route)
+    assertEquals("map", Screen.Map.route)
+    assertEquals("profile", Screen.Profile.route)
+    assertEquals("create_event", Screen.CreateEvent.route)
+    assertEquals("create_serie", Screen.CreateSerie.route)
+    assertEquals("history", Screen.History.route)
+    assertEquals("groups", Screen.Groups.route)
+    assertEquals("create_group", Screen.CreateGroup.route)
+    assertEquals("edit_profile", Screen.EditProfile.route)
   }
 
   @Test
   fun specificScreens_haveExpectedNames() {
     // Verifies specific name values for key screens
-    assert(Screen.Overview.name == "Overview")
-    assert(Screen.Search.name == "Search")
-    assert(Screen.Map.name == "Map")
-    assert(Screen.Profile.name == "Profile")
+    assertEquals("Overview", Screen.Overview.name)
+    assertEquals("Search", Screen.Search.name)
+    assertEquals("Map", Screen.Map.name)
+    assertEquals("Profile", Screen.Profile.name)
   }
 
   @Test
@@ -147,6 +145,6 @@ class ScreenTest {
             Screen.EditProfile)
 
     val topLevelCount = allScreens.count { it.isTopLevelDestination }
-    assert(topLevelCount == 4)
+    assertEquals(4, topLevelCount)
   }
 }
