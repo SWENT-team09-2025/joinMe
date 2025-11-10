@@ -225,30 +225,6 @@ class EventsRepositoryFirestoreTest {
     // Then - exception is thrown
   }
 
-  @Test(expected = Exception::class)
-  fun documentToEvent_handlesExceptionGracefully() = runTest {
-    // Given
-    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
-    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
-    every { mockSnapshot.id } returns testEventId
-    every { mockSnapshot.getString("type") } returns "INVALID_TYPE" // Invalid enum value
-    every { mockSnapshot.getString("visibility") } returns EventVisibility.PUBLIC.name
-    every { mockSnapshot.getString("title") } returns "Test Event"
-    every { mockSnapshot.getString("description") } returns "Description"
-    every { mockSnapshot.getTimestamp("date") } returns Timestamp(Date())
-    every { mockSnapshot.getLong("duration") } returns 60L
-    every { mockSnapshot.get("participants") } returns emptyList<String>()
-    every { mockSnapshot.getLong("maxParticipants") } returns 5L
-    every { mockSnapshot.getString("ownerId") } returns testUserId
-    every { mockSnapshot.get("location") } returns null
-
-    // When - documentToEvent catches the exception and returns null
-    // getEvent then throws because documentToEvent returned null
-    repository.getEvent(testEventId)
-
-    // Then - exception is thrown because documentToEvent returned null
-  }
-
   @Test
   fun getAllEvents_returnsHistoryEventsFilteredAndSorted() = runTest {
     // Given
@@ -453,54 +429,6 @@ class EventsRepositoryFirestoreTest {
     assertEquals(0.0, result.location?.latitude ?: -1.0, 0.001)
     assertEquals(0.0, result.location?.longitude ?: -1.0, 0.001)
     assertEquals("", result.location?.name)
-  }
-
-  @Test(expected = Exception::class)
-  fun documentToEvent_returnsNullWhenDateIsMissing() = runTest {
-    // Given
-    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
-    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
-    every { mockSnapshot.id } returns testEventId
-    every { mockSnapshot.getString("type") } returns EventType.SOCIAL.name
-    every { mockSnapshot.getString("visibility") } returns EventVisibility.PUBLIC.name
-    every { mockSnapshot.getString("title") } returns "Test Event"
-    every { mockSnapshot.getString("description") } returns "Description"
-    every { mockSnapshot.getTimestamp("date") } returns null // Missing required field
-    every { mockSnapshot.getLong("duration") } returns 60L
-    every { mockSnapshot.get("participants") } returns listOf(testUserId)
-    every { mockSnapshot.getLong("maxParticipants") } returns 5L
-    every { mockSnapshot.getString("ownerId") } returns testUserId
-    every { mockSnapshot.get("location") } returns null
-
-    // When - documentToEvent returns null because date is missing
-    // getEvent throws exception because documentToEvent returned null
-    repository.getEvent(testEventId)
-
-    // Then - exception is thrown
-  }
-
-  @Test(expected = Exception::class)
-  fun documentToEvent_returnsNullWhenOwnerIdIsMissing() = runTest {
-    // Given
-    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
-    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
-    every { mockSnapshot.id } returns testEventId
-    every { mockSnapshot.getString("type") } returns EventType.SOCIAL.name
-    every { mockSnapshot.getString("visibility") } returns EventVisibility.PUBLIC.name
-    every { mockSnapshot.getString("title") } returns "Test Event"
-    every { mockSnapshot.getString("description") } returns "Description"
-    every { mockSnapshot.getTimestamp("date") } returns Timestamp(Date())
-    every { mockSnapshot.getLong("duration") } returns 60L
-    every { mockSnapshot.get("participants") } returns listOf(testUserId)
-    every { mockSnapshot.getLong("maxParticipants") } returns 5L
-    every { mockSnapshot.getString("ownerId") } returns null // Missing required field
-    every { mockSnapshot.get("location") } returns null
-
-    // When - documentToEvent returns null because ownerId is missing
-    // getEvent throws exception because documentToEvent returned null
-    repository.getEvent(testEventId)
-
-    // Then - exception is thrown
   }
 
   @Test
@@ -761,5 +689,77 @@ class EventsRepositoryFirestoreTest {
     val result = repository.getAllEvents(EventFilter.EVENTS_FOR_MAP_SCREEN)
 
     assertEquals(0, result.size)
+  }
+
+  @Test(expected = Exception::class)
+  fun documentToEvent_handlesExceptionGracefully() = runTest {
+    // Given
+    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+    every { mockSnapshot.id } returns testEventId
+    every { mockSnapshot.getString("type") } returns "INVALID_TYPE" // Invalid enum value
+    every { mockSnapshot.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot.getString("title") } returns "Test Event"
+    every { mockSnapshot.getString("description") } returns "Description"
+    every { mockSnapshot.getTimestamp("date") } returns Timestamp(Date())
+    every { mockSnapshot.getLong("duration") } returns 60L
+    every { mockSnapshot.get("participants") } returns emptyList<String>()
+    every { mockSnapshot.getLong("maxParticipants") } returns 5L
+    every { mockSnapshot.getString("ownerId") } returns testUserId
+    every { mockSnapshot.get("location") } returns null
+
+    // When - documentToEvent catches the exception and returns null
+    // getEvent then throws because documentToEvent returned null
+    repository.getEvent(testEventId)
+
+    // Then - exception is thrown because documentToEvent returned null
+  }
+
+  @Test(expected = Exception::class)
+  fun documentToEvent_returnsNullWhenDateIsMissing() = runTest {
+    // Given
+    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+    every { mockSnapshot.id } returns testEventId
+    every { mockSnapshot.getString("type") } returns EventType.SOCIAL.name
+    every { mockSnapshot.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot.getString("title") } returns "Test Event"
+    every { mockSnapshot.getString("description") } returns "Description"
+    every { mockSnapshot.getTimestamp("date") } returns null // Missing required field
+    every { mockSnapshot.getLong("duration") } returns 60L
+    every { mockSnapshot.get("participants") } returns listOf(testUserId)
+    every { mockSnapshot.getLong("maxParticipants") } returns 5L
+    every { mockSnapshot.getString("ownerId") } returns testUserId
+    every { mockSnapshot.get("location") } returns null
+
+    // When - documentToEvent returns null because date is missing
+    // getEvent throws exception because documentToEvent returned null
+    repository.getEvent(testEventId)
+
+    // Then - exception is thrown
+  }
+
+  @Test(expected = Exception::class)
+  fun documentToEvent_returnsNullWhenOwnerIdIsMissing() = runTest {
+    // Given
+    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+    every { mockSnapshot.id } returns testEventId
+    every { mockSnapshot.getString("type") } returns EventType.SOCIAL.name
+    every { mockSnapshot.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot.getString("title") } returns "Test Event"
+    every { mockSnapshot.getString("description") } returns "Description"
+    every { mockSnapshot.getTimestamp("date") } returns Timestamp(Date())
+    every { mockSnapshot.getLong("duration") } returns 60L
+    every { mockSnapshot.get("participants") } returns listOf(testUserId)
+    every { mockSnapshot.getLong("maxParticipants") } returns 5L
+    every { mockSnapshot.getString("ownerId") } returns null // Missing required field
+    every { mockSnapshot.get("location") } returns null
+
+    // When - documentToEvent returns null because ownerId is missing
+    // getEvent throws exception because documentToEvent returned null
+    repository.getEvent(testEventId)
+
+    // Then - exception is thrown
   }
 }

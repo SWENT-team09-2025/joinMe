@@ -1,6 +1,5 @@
 package com.android.joinme.ui.overview
 
-import androidx.lifecycle.ViewModel
 import com.android.joinme.HttpClientProvider
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventType
@@ -17,6 +16,8 @@ import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+
+/** Note: This file was refactored using IA (Claude) */
 
 /**
  * UI state for the CreateEventForSerie screen.
@@ -48,24 +49,24 @@ import kotlinx.coroutines.flow.asStateFlow
  * @property invalidLocationMsg Validation message for the location field
  */
 data class CreateEventForSerieUIState(
-    val type: String = "",
-    val title: String = "",
-    val description: String = "",
-    val duration: String = "",
-    val location: String = "",
-    val locationQuery: String = "",
-    val locationSuggestions: List<Location> = emptyList(),
-    val selectedLocation: Location? = null,
-    val isLoading: Boolean = false,
-    val errorMsg: String? = null,
+    override val type: String = "",
+    override val title: String = "",
+    override val description: String = "",
+    override val duration: String = "",
+    override val location: String = "",
+    override val locationQuery: String = "",
+    override val locationSuggestions: List<Location> = emptyList(),
+    override val selectedLocation: Location? = null,
+    override val isLoading: Boolean = false,
+    override val errorMsg: String? = null,
 
     // validation messages
-    val invalidTypeMsg: String? = null,
-    val invalidTitleMsg: String? = null,
-    val invalidDescriptionMsg: String? = null,
-    val invalidDurationMsg: String? = null,
-    val invalidLocationMsg: String? = null,
-) {
+    override val invalidTypeMsg: String? = null,
+    override val invalidTitleMsg: String? = null,
+    override val invalidDescriptionMsg: String? = null,
+    override val invalidDurationMsg: String? = null,
+    override val invalidLocationMsg: String? = null,
+) : EventForSerieFormUIState {
   /**
    * Checks if all form fields are valid and filled.
    *
@@ -104,78 +105,16 @@ class CreateEventForSerieViewModel(
     private val eventRepository: EventsRepository =
         EventsRepositoryProvider.getRepository(isOnline = true),
     private val serieRepository: SeriesRepository = SeriesRepositoryProvider.repository,
-    private val locationRepository: LocationRepository =
-        NominatimLocationRepository(HttpClientProvider.client)
-) : ViewModel() {
+    locationRepository: LocationRepository = NominatimLocationRepository(HttpClientProvider.client)
+) : BaseEventForSerieViewModel(locationRepository) {
 
-  private val _uiState = MutableStateFlow(CreateEventForSerieUIState())
+  override val _uiState = MutableStateFlow(CreateEventForSerieUIState())
   val uiState: StateFlow<CreateEventForSerieUIState> = _uiState.asStateFlow()
 
-  /** Clears the global error message from the UI state. */
-  fun clearErrorMsg() {
-    _uiState.value = _uiState.value.copy(errorMsg = null)
-  }
+  override fun getState(): EventForSerieFormUIState = _uiState.value
 
-  /**
-   * Sets a global error message in the UI state.
-   *
-   * @param msg The error message to display
-   */
-  private fun setErrorMsg(msg: String) {
-    _uiState.value = _uiState.value.copy(errorMsg = msg)
-  }
-
-  /**
-   * Searches for locations matching the given query.
-   *
-   * @param query The search query for location lookup
-   */
-  suspend fun searchLocations(query: String) {
-    if (query.isBlank()) {
-      _uiState.value = _uiState.value.copy(locationSuggestions = emptyList())
-      return
-    }
-
-    try {
-      val suggestions = locationRepository.search(query)
-      _uiState.value = _uiState.value.copy(locationSuggestions = suggestions)
-    } catch (e: Exception) {
-      _uiState.value = _uiState.value.copy(locationSuggestions = emptyList())
-    }
-  }
-
-  /**
-   * Updates the location query field.
-   *
-   * @param query The new location query value
-   */
-  fun setLocationQuery(query: String) {
-    _uiState.value = _uiState.value.copy(locationQuery = query)
-  }
-
-  /**
-   * Selects a location from the suggestions.
-   *
-   * @param location The selected location
-   */
-  fun selectLocation(location: Location) {
-    _uiState.value =
-        _uiState.value.copy(
-            selectedLocation = location,
-            location = location.name,
-            locationQuery = location.name,
-            locationSuggestions = emptyList(),
-            invalidLocationMsg = null)
-  }
-
-  /** Clears the currently selected location. */
-  fun clearLocation() {
-    _uiState.value =
-        _uiState.value.copy(
-            selectedLocation = null,
-            location = "",
-            locationQuery = "",
-            invalidLocationMsg = "Must be a valid Location")
+  override fun updateState(transform: (EventForSerieFormUIState) -> EventForSerieFormUIState) {
+    _uiState.value = transform(_uiState.value) as CreateEventForSerieUIState
   }
 
   /**
@@ -282,73 +221,5 @@ class CreateEventForSerieViewModel(
     val lastEventEndTime = lastEvent.date.toDate().time + (lastEvent.duration * 60 * 1000)
 
     return Timestamp(java.util.Date(lastEventEndTime))
-  }
-
-  // Update functions for all fields
-
-  /**
-   * Updates the event type and validates it.
-   *
-   * @param type The new type value (SPORTS, ACTIVITY, or SOCIAL)
-   */
-  fun setType(type: String) {
-    val validTypes = listOf("SPORTS", "ACTIVITY", "SOCIAL")
-    _uiState.value =
-        _uiState.value.copy(
-            type = type,
-            invalidTypeMsg =
-                if (type.isBlank()) "Event type cannot be empty"
-                else if (type.uppercase() !in validTypes) "Type must be SPORTS, ACTIVITY, or SOCIAL"
-                else null)
-  }
-
-  /**
-   * Updates the event title and validates it.
-   *
-   * @param title The new title value
-   */
-  fun setTitle(title: String) {
-    _uiState.value =
-        _uiState.value.copy(
-            title = title, invalidTitleMsg = if (title.isBlank()) "Title cannot be empty" else null)
-  }
-
-  /**
-   * Updates the event description and validates it.
-   *
-   * @param description The new description value
-   */
-  fun setDescription(description: String) {
-    _uiState.value =
-        _uiState.value.copy(
-            description = description,
-            invalidDescriptionMsg =
-                if (description.isBlank()) "Description cannot be empty" else null)
-  }
-
-  /**
-   * Updates the event duration and validates it.
-   *
-   * @param value The new duration value in minutes as a string
-   */
-  fun setDuration(value: String) {
-    val num = value.toIntOrNull()
-    _uiState.value =
-        _uiState.value.copy(
-            duration = value,
-            invalidDurationMsg = if (num == null || num <= 0) "Must be a positive number" else null)
-  }
-
-  /**
-   * Updates the event location and validates it.
-   *
-   * @param location The new location value
-   */
-  fun setLocation(location: String) {
-    _uiState.value =
-        _uiState.value.copy(
-            location = location,
-            selectedLocation = if (location.isBlank()) null else _uiState.value.selectedLocation,
-            invalidLocationMsg = if (location.isBlank()) "Must be a valid Location" else null)
   }
 }

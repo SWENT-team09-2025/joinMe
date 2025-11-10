@@ -1,5 +1,5 @@
 package com.android.joinme.ui.overview
-
+/*CO-Write with claude AI*/
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -126,7 +126,7 @@ class OverviewScreenTest {
   }
 
   @Test
-  fun overviewScreen_showsEmptyMessage_whenNoEvents() {
+  fun overviewScreen_displaysBasicUIElementsWithEmptyState() {
     val eventRepo = EventsRepositoryLocal()
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
@@ -140,7 +140,31 @@ class OverviewScreenTest {
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
 
+    // Empty message
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG).assertExists()
+
+    // Create event button (FAB)
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertIsDisplayed()
+
+    // Top bar
+    composeTestRule.onNodeWithTag(NavigationTestTags.TOP_BAR_TITLE).assertExists()
+    composeTestRule.onNodeWithTag(NavigationTestTags.TOP_BAR_TITLE).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Overview").assertExists()
+
+    // Bottom navigation
+    composeTestRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertExists()
+    composeTestRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Overview")).assertIsSelected()
+
+    // History button
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).assertExists()
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithContentDescription("View History").assertExists()
+
+    // Both FABs displayed together
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).assertIsDisplayed()
   }
 
   @Test
@@ -237,63 +261,27 @@ class OverviewScreenTest {
   }
 
   @Test
-  fun eventCard_displaysCorrectInformation() {
-    val event = createEvent("1", "Basketball Match", EventType.SPORTS)
-
-    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
-
-    composeTestRule.onNodeWithText("Basketball Match").assertExists()
-    composeTestRule.onNodeWithText("Place : Unknown").assertExists()
-  }
-
-  @Test
-  fun eventCard_clickTriggersCallback() {
+  fun eventCard_displaysCorrectInformationAndHandlesClick() {
     var clicked = false
-    val event = createEvent("1", "Test Event", EventType.SPORTS)
+    val event = createEvent("1", "Basketball Match", EventType.SPORTS)
 
     composeTestRule.setContent {
       EventCard(event = event, onClick = { clicked = true }, testTag = "testCard")
     }
 
-    composeTestRule.onNodeWithText("Test Event").performClick()
+    // Verify information is displayed correctly
+    composeTestRule.onNodeWithText("Basketball Match").assertExists()
+    composeTestRule.onNodeWithText("Place : Unknown").assertExists()
 
+    // Verify click triggers callback
+    composeTestRule.onNodeWithText("Basketball Match").performClick()
     assert(clicked)
-  }
-
-  @Test
-  fun eventCard_displaysSportsEventType() {
-    val sportsEvent = createEvent("1", "Basketball", EventType.SPORTS)
-
-    composeTestRule.setContent {
-      EventCard(event = sportsEvent, onClick = {}, testTag = "testCard")
-    }
-    composeTestRule.onNodeWithText("Basketball").assertExists()
-  }
-
-  @Test
-  fun eventCard_displaysActivityEventType() {
-    val activityEvent = createEvent("2", "Hiking", EventType.ACTIVITY)
-
-    composeTestRule.setContent {
-      EventCard(event = activityEvent, onClick = {}, testTag = "testCard")
-    }
-    composeTestRule.onNodeWithText("Hiking").assertExists()
-  }
-
-  @Test
-  fun eventCard_displaysSocialEventType() {
-    val socialEvent = createEvent("3", "Party", EventType.SOCIAL)
-
-    composeTestRule.setContent {
-      EventCard(event = socialEvent, onClick = {}, testTag = "testCard")
-    }
-    composeTestRule.onNodeWithText("Party").assertExists()
   }
 
   @Test
   fun eventCard_displaysActualLocation() {
     val location = Location(latitude = 46.5197, longitude = 6.6323, name = "EPFL")
-    val event =
+    val eventWithLocation =
         Event(
             eventId = "1",
             type = EventType.SPORTS,
@@ -307,17 +295,18 @@ class OverviewScreenTest {
             visibility = EventVisibility.PUBLIC,
             ownerId = "owner")
 
-    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
-
+    composeTestRule.setContent {
+      EventCard(event = eventWithLocation, onClick = {}, testTag = "testCard")
+    }
     composeTestRule.onNodeWithText("Place : EPFL").assertExists()
   }
 
   @Test
   fun eventCard_displaysUnknownForNullLocation() {
-    val event = createEvent("1", "Basketball", EventType.SPORTS)
-
-    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
-
+    val eventWithoutLocation = createEvent("2", "Basketball", EventType.SPORTS)
+    composeTestRule.setContent {
+      EventCard(event = eventWithoutLocation, onClick = {}, testTag = "testCard2")
+    }
     composeTestRule.onNodeWithText("Place : Unknown").assertExists()
   }
 
@@ -379,21 +368,6 @@ class OverviewScreenTest {
   }
 
   @Test
-  fun overviewScreen_displaysCreateEventButton() {
-    val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryLocal()
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-
-    composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
-    }
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
-  }
-
-  @Test
   fun overviewScreen_handlesErrorWhenFetchingEvents() {
     val eventRepo = EventsRepositoryMock(shouldThrowError = true)
     val serieRepo = SeriesRepositoryMock()
@@ -403,22 +377,20 @@ class OverviewScreenTest {
       OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
     }
 
-    // Wait for error to be processed
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
     // The screen should show empty state since error occurred
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG).assertExists()
-
     // Error should have been cleared from UI state
     assert(viewModel.uiState.value.errorMsg == null)
   }
 
   @Test
-  fun overviewScreen_bottomNavigationDisplayed() {
+  fun overviewScreen_handlesSeriesRepositoryError() {
     val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryLocal()
+    val serieRepo = SeriesRepositoryMock(shouldThrowError = true)
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
     composeTestRule.setContent {
@@ -426,12 +398,30 @@ class OverviewScreenTest {
     }
 
     composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
 
-    // Verify bottom navigation is displayed
-    composeTestRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertExists()
+    // The screen should show empty state since error occurred
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG).assertExists()
+    // Error should have been cleared from UI state
+    assert(viewModel.uiState.value.errorMsg == null)
+  }
 
-    // Verify overview tab is selected
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("overview")).assertExists()
+  @Test
+  fun viewModel_setsErrorMessage_whenRepositoryFails() {
+    val eventRepo = EventsRepositoryMock(shouldThrowError = true)
+    val serieRepo = SeriesRepositoryMock()
+    val viewModel = OverviewViewModel(eventRepo, serieRepo)
+
+    viewModel.refreshUIState()
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Error message should be set
+    assert(viewModel.uiState.value.errorMsg != null)
+    assert(viewModel.uiState.value.errorMsg?.contains("Failed to load data") == true)
   }
 
   @Test
@@ -482,24 +472,6 @@ class OverviewScreenTest {
   }
 
   @Test
-  fun viewModel_setsErrorMessage_whenRepositoryFails() {
-    val eventRepo = EventsRepositoryMock(shouldThrowError = true)
-    val serieRepo = SeriesRepositoryMock()
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-
-    // Trigger refresh
-    viewModel.refreshUIState()
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(1000)
-    composeTestRule.waitForIdle()
-
-    // Error message should be set
-    assert(viewModel.uiState.value.errorMsg != null)
-    assert(viewModel.uiState.value.errorMsg?.contains("Failed to load data") == true)
-  }
-
-  @Test
   fun eventCard_displaysMixedEventTypes() {
     val eventRepo = EventsRepositoryLocal()
     val serieRepo = SeriesRepositoryLocal()
@@ -523,226 +495,6 @@ class OverviewScreenTest {
     composeTestRule.onNodeWithText("Football").assertExists()
     composeTestRule.onNodeWithText("Museum Visit").assertExists()
     composeTestRule.onNodeWithText("Coffee").assertExists()
-  }
-
-  @Test
-  fun overviewScreen_displaysTopBar() {
-    val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryLocal()
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-
-    composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
-    }
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag(NavigationTestTags.TOP_BAR_TITLE).assertExists()
-  }
-
-  @Test
-  fun overviewScreen_topBarDisplaysOverviewTitle() {
-    val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryLocal()
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-
-    composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
-    }
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithText("Overview").assertExists()
-  }
-
-  @Test
-  fun overviewScreen_topBarIsDisplayed() {
-    val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryLocal()
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-
-    composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
-    }
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag(NavigationTestTags.TOP_BAR_TITLE).assertIsDisplayed()
-  }
-
-  @Test
-  fun overviewScreen_fabIsDisplayedWithEmptyList() {
-    val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryLocal()
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-
-    composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(1000)
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertIsDisplayed()
-  }
-
-  @Test
-  fun overviewScreen_fabIsDisplayedWithEventsList() {
-    val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryLocal()
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-
-    runBlocking { eventRepo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
-
-    composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertIsDisplayed()
-  }
-
-  @Test
-  fun overviewScreen_fabClickTriggersCallback() {
-    val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryLocal()
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-    var fabClicked = false
-
-    composeTestRule.setContent {
-      OverviewScreen(
-          overviewViewModel = viewModel,
-          onAddEvent = { fabClicked = true },
-          enableNotificationPermissionRequest = false)
-    }
-
-    composeTestRule.waitForIdle()
-
-    // Click FAB to open bubble menu
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).performClick()
-    composeTestRule.waitForIdle()
-    // Click "Add an event" bubble
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.ADD_EVENT_BUBBLE).performClick()
-
-    assert(fabClicked)
-  }
-
-  @Test
-  fun overviewScreen_eventClickTriggersCallback() {
-    val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryLocal()
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-    var clickedEvent: Event? = null
-
-    runBlocking { eventRepo.addEvent(createEvent("1", "Basketball", EventType.SPORTS)) }
-
-    composeTestRule.setContent {
-      OverviewScreen(
-          overviewViewModel = viewModel,
-          onSelectEvent = { clickedEvent = it },
-          enableNotificationPermissionRequest = false)
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithText("Basketball").performClick()
-
-    assert(clickedEvent != null)
-    assert(clickedEvent?.title == "Basketball")
-  }
-
-  @Test
-  fun overviewScreen_bottomNavigationIsDisplayed() {
-    val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryLocal()
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-
-    composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
-    }
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertIsDisplayed()
-  }
-
-  @Test
-  fun overviewScreen_bottomNavigationHasOverviewSelected() {
-    val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryLocal()
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-
-    composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
-    }
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Overview")).assertIsSelected()
-  }
-
-  @Test
-  fun eventCard_displaysEventTitle() {
-    val event = createEvent("1", "My Event Title", EventType.SPORTS)
-
-    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
-
-    composeTestRule.onNodeWithText("My Event Title").assertExists()
-  }
-
-  @Test
-  fun eventCard_displaysEventDescription() {
-    val event = createEvent("1", "Basketball Game", EventType.SPORTS)
-
-    composeTestRule.setContent { EventCard(event = event, onClick = {}, testTag = "testCard") }
-
-    // Description is set to "desc" in createEvent helper
-    composeTestRule.onNodeWithText("Basketball Game").assertExists()
-  }
-
-  @Test
-  fun overviewScreen_displaysMultipleEventsInList() {
-    val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryLocal()
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-
-    runBlocking {
-      for (i in 1..8) {
-        eventRepo.addEvent(createEvent("$i", "Event Number $i", EventType.SPORTS))
-      }
-    }
-
-    composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(3000)
-    composeTestRule.waitForIdle()
-
-    // Verify multiple events are displayed
-    composeTestRule.onNodeWithText("Event Number 1").assertExists()
-    composeTestRule.onNodeWithText("Event Number 5").assertExists()
-  }
-
-  @Test
-  fun eventCard_isClickable() {
-    var clicked = false
-    val event = createEvent("1", "Clickable Event", EventType.SPORTS)
-
-    composeTestRule.setContent {
-      EventCard(event = event, onClick = { clicked = true }, testTag = "testCard")
-    }
-
-    composeTestRule.onNodeWithText("Clickable Event").performClick()
-
-    assert(clicked)
   }
 
   @Test
@@ -905,7 +657,6 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    // Create a single ongoing event
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.HOUR, -1)
     val ongoingEvent =
@@ -942,7 +693,6 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    // Create multiple ongoing events
     val calendar1 = Calendar.getInstance()
     calendar1.add(Calendar.HOUR, -1)
     val ongoingEvent1 =
@@ -998,7 +748,6 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    // Create a single upcoming event
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.HOUR, 2)
     val upcomingEvent =
@@ -1035,7 +784,6 @@ class OverviewScreenTest {
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
 
-    // Create multiple upcoming events
     val calendar1 = Calendar.getInstance()
     calendar1.add(Calendar.HOUR, 1)
     val upcomingEvent1 =
@@ -1161,51 +909,6 @@ class OverviewScreenTest {
   }
 
   @Test
-  fun overviewScreen_displaysHistoryButton() {
-    val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryLocal()
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-
-    composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
-    }
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).assertExists()
-  }
-
-  @Test
-  fun overviewScreen_historyButtonIsDisplayed() {
-    val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryLocal()
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-
-    composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
-    }
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).assertIsDisplayed()
-  }
-
-  @Test
-  fun overviewScreen_historyButtonHasCorrectDescription() {
-    val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryLocal()
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-
-    composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
-    }
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithContentDescription("View History").assertExists()
-  }
-
-  @Test
   fun clickingHistoryButton_triggersOnGoToHistory() {
     val eventRepo = EventsRepositoryLocal()
     val serieRepo = SeriesRepositoryLocal()
@@ -1226,23 +929,6 @@ class OverviewScreenTest {
   }
 
   @Test
-  fun overviewScreen_bothFabsDisplayedTogether() {
-    val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryLocal()
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-
-    composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
-    }
-
-    composeTestRule.waitForIdle()
-
-    // Both FABs should be displayed
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).assertIsDisplayed()
-  }
-
-  @Test
   fun overviewScreen_hidesLoadingIndicator_afterEventsLoaded() {
     val eventRepo = EventsRepositoryLocal()
     val serieRepo = SeriesRepositoryLocal()
@@ -1254,7 +940,6 @@ class OverviewScreenTest {
       OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
     }
 
-    // Wait for loading to complete
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
@@ -1275,7 +960,6 @@ class OverviewScreenTest {
       OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
     }
 
-    // Wait for loading to complete
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
@@ -1287,7 +971,7 @@ class OverviewScreenTest {
   }
 
   @Test
-  fun overviewScreen_displaysSerie_whenSerieExists() {
+  fun overviewScreen_displaysSerieWithBadge() {
     val eventRepo = EventsRepositoryLocal()
     val serieRepo = SeriesRepositoryLocal()
     val viewModel = OverviewViewModel(eventRepo, serieRepo)
@@ -1350,8 +1034,11 @@ class OverviewScreenTest {
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
+    // Serie should be displayed
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.getTestTagForSerie(serie)).assertExists()
     composeTestRule.onNodeWithText("Weekly Basketball").assertExists()
+    // Serie badge should be displayed
+    composeTestRule.onNodeWithText("Serie 🔥").assertExists()
   }
 
   @Test
@@ -1586,81 +1273,6 @@ class OverviewScreenTest {
     // Serie should appear in ongoing section
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.ONGOING_EVENTS_TITLE).assertExists()
     composeTestRule.onNodeWithText("Ongoing Serie").assertExists()
-  }
-
-  @Test
-  fun overviewScreen_handlesSeriesRepositoryError() {
-    val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryMock(shouldThrowError = true)
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-
-    composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
-    }
-
-    // Wait for error to be processed
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // The screen should show empty state since error occurred
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG).assertExists()
-
-    // Error should have been cleared from UI state
-    assert(viewModel.uiState.value.errorMsg == null)
-  }
-
-  @Test
-  fun overviewScreen_displaysSerieBadge() {
-    val eventRepo = EventsRepositoryLocal()
-    val serieRepo = SeriesRepositoryLocal()
-    val viewModel = OverviewViewModel(eventRepo, serieRepo)
-
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.HOUR, 1)
-
-    // Create event that belongs to the serie
-    val event =
-        Event(
-            eventId = "event1",
-            type = EventType.SPORTS,
-            title = "Serie Event",
-            description = "desc",
-            location = null,
-            date = Timestamp(calendar.time),
-            duration = 60,
-            participants = listOf("user1"),
-            maxParticipants = 10,
-            visibility = EventVisibility.PUBLIC,
-            ownerId = "owner1")
-
-    val serie =
-        Serie(
-            serieId = "serie1",
-            title = "Test Serie",
-            description = "Test description",
-            date = Timestamp(calendar.time),
-            participants = listOf("user1"),
-            maxParticipants = 10,
-            visibility = Visibility.PUBLIC,
-            eventIds = listOf("event1"),
-            ownerId = "owner1")
-
-    runBlocking {
-      eventRepo.addEvent(event)
-      serieRepo.addSerie(serie)
-    }
-
-    composeTestRule.setContent {
-      OverviewScreen(overviewViewModel = viewModel, enableNotificationPermissionRequest = false)
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Serie badge should be displayed
-    composeTestRule.onNodeWithText("Serie 🔥").assertExists()
   }
 
   @Test

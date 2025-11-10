@@ -49,25 +49,14 @@ class MapScreenTest {
   }
 
   @Test
-  fun mapScreen_filterButton_isClickable() {
+  fun mapScreen_correct_Components() {
     composeTestRule.setContent { MapScreen(viewModel = MapViewModel(), navigationActions = null) }
-
+    composeTestRule.onNodeWithContentDescription("Filter").assertExists().assertIsDisplayed()
     composeTestRule
         .onNodeWithTag(MapScreenTestTags.FILTER_BUTTON)
         .assertExists()
         .assertHasClickAction()
         .performClick()
-  }
-
-  @Test
-  fun mapScreen_filterIcon_hasCorrectLabel() {
-    composeTestRule.setContent { MapScreen(viewModel = MapViewModel(), navigationActions = null) }
-    composeTestRule.onNodeWithContentDescription("Filter").assertExists().assertIsDisplayed()
-  }
-
-  @Test
-  fun mapScreen_bottomNavigationIsDisplayed() {
-    composeTestRule.setContent { MapScreen(viewModel = MapViewModel(), navigationActions = null) }
 
     composeTestRule.onNodeWithTag("navigation_bottom_menu").assertExists()
   }

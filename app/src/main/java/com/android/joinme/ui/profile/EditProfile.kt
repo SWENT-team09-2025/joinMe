@@ -1,5 +1,6 @@
 package com.android.joinme.ui.profile
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -8,31 +9,22 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.profile.Profile
-import com.android.joinme.ui.theme.BorderColor
-import com.android.joinme.ui.theme.ButtonSaveColor
-import com.android.joinme.ui.theme.DisabledBorderColor
-import com.android.joinme.ui.theme.DisabledTextColor
-import com.android.joinme.ui.theme.ErrorBorderColor
-import com.android.joinme.ui.theme.FocusedBorderColor
-import com.android.joinme.ui.theme.JoinMeColor
-import com.android.joinme.ui.theme.LabelTextColor
+import com.android.joinme.ui.theme.Dimens
+import com.android.joinme.ui.theme.ScrimOverlayColorLightTheme
 
+/** Test tags for EditProfileScreen components to enable UI testing. */
 object EditProfileTestTags {
   const val NO_LOADING_PROFILE_MESSAGE = "noLoadingProfileMessage"
   const val SCREEN = "editProfileScreen"
@@ -40,17 +32,17 @@ object EditProfileTestTags {
   const val TITLE = "editProfileTitle"
   const val PROFILE_PICTURE = "editProfilePicture"
   const val EDIT_PHOTO_BUTTON = "editProfilePhotoButton"
+  const val DELETE_PHOTO_BUTTON = "editProfileDeletePhotoButton"
   const val USERNAME_FIELD = "editProfileUsernameField"
   const val USERNAME_ERROR = "editProfileUsernameError"
   const val EMAIL_FIELD = "editProfileEmailField"
   const val DATE_OF_BIRTH_FIELD = "editProfileDateOfBirthField"
   const val DATE_OF_BIRTH_ERROR = "editProfileDateOfBirthError"
   const val INTERESTS_FIELD = "editProfileInterestsField"
-  const val PASSWORD_SECTION = "editProfilePasswordSection"
-  const val CHANGE_PASSWORD_BUTTON = "editProfileChangePasswordButton"
   const val COUNTRY_FIELD = "editProfileCountryField"
   const val BIO_FIELD = "editProfileBioField"
   const val SAVE_BUTTON = "editProfileSaveButton"
+  const val PHOTO_UPLOADING_INDICATOR = "editProfilePhotoUploadingIndicator"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,11 +53,13 @@ fun EditProfileScreen(
     onBackClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
     onGroupClick: () -> Unit = {},
-    onChangePasswordClick: () -> Unit = {},
     onSaveSuccess: () -> Unit = {}
 ) {
+  val context = LocalContext.current
   val profile by profileViewModel.profile.collectAsState()
   val isLoading by profileViewModel.isLoading.collectAsState()
+  val isUploadingPhoto by profileViewModel.isUploadingPhoto.collectAsState()
+  val photoUploadError by profileViewModel.photoUploadError.collectAsState()
 
   var username by remember { mutableStateOf("") }
   var dateOfBirth by remember { mutableStateOf("") }
@@ -76,6 +70,20 @@ fun EditProfileScreen(
   var usernameError by remember { mutableStateOf<String?>(null) }
   var dateOfBirthError by remember { mutableStateOf<String?>(null) }
   var hasInteracted by remember { mutableStateOf(false) }
+
+  // Set up the photo picker
+  val photoPicker =
+      rememberPhotoPickerLauncher(
+          onPhotoPicked = { uri ->
+            profileViewModel.uploadProfilePhoto(
+                context = context,
+                imageUri = uri,
+                onSuccess = {
+                  Toast.makeText(context, "Photo uploaded successfully", Toast.LENGTH_SHORT).show()
+                },
+                onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
+          },
+          onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
 
   LaunchedEffect(uid) { profileViewModel.loadProfile(uid) }
 
@@ -93,6 +101,14 @@ fun EditProfileScreen(
     if (hasInteracted) {
       usernameError = profileViewModel.getUsernameError(username)
       dateOfBirthError = profileViewModel.getDateOfBirthError(dateOfBirth)
+    }
+  }
+
+  // Show photo upload errors as toasts
+  LaunchedEffect(photoUploadError) {
+    photoUploadError?.let {
+      Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+      profileViewModel.clearPhotoUploadError()
     }
   }
 
@@ -120,7 +136,17 @@ fun EditProfileScreen(
             profile != null -> {
               EditProfileContent(
                   profile = profile!!,
-                  onPictureEditClick = {},
+                  isUploadingPhoto = isUploadingPhoto,
+                  onPictureEditClick = { photoPicker.launch() },
+                  onPictureDeleteClick = {
+                    profileViewModel.deleteProfilePhoto(
+                        onSuccess = {
+                          Toast.makeText(context, "Photo deleted", Toast.LENGTH_SHORT).show()
+                        },
+                        onError = { error ->
+                          Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                        })
+                  },
                   username = username,
                   onUsernameChange = {
                     username = it
@@ -140,7 +166,6 @@ fun EditProfileScreen(
                   bio = bio,
                   onBioChange = { bio = it },
                   isFormValid = isFormValid,
-                  onChangePasswordClick = onChangePasswordClick,
                   onSaveClick = {
                     if (isFormValid) {
                       val updatedProfile =
@@ -168,10 +193,13 @@ fun EditProfileScreen(
       }
 }
 
+/** Composable displaying the content of the Edit Profile screen. */
 @Composable
 private fun EditProfileContent(
     profile: Profile,
+    isUploadingPhoto: Boolean,
     onPictureEditClick: () -> Unit,
+    onPictureDeleteClick: () -> Unit,
     username: String,
     onUsernameChange: (String) -> Unit,
     usernameError: String?,
@@ -185,23 +213,29 @@ private fun EditProfileContent(
     bio: String,
     onBioChange: (String) -> Unit,
     isFormValid: Boolean,
-    onChangePasswordClick: () -> Unit,
     onSaveClick: () -> Unit
 ) {
   Column(
       modifier =
           Modifier.fillMaxSize()
               .verticalScroll(rememberScrollState())
-              .padding(horizontal = 24.dp)) {
+              .padding(horizontal = Dimens.Padding.large)) {
         Text(
             text = "Edit Profile",
-            fontSize = 24.sp,
+            fontSize = Dimens.FontSize.headlineMedium,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(vertical = 16.dp).testTag(EditProfileTestTags.TITLE))
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier =
+                Modifier.padding(vertical = Dimens.Spacing.medium)
+                    .testTag(EditProfileTestTags.TITLE))
 
-        ProfilePictureSection(onPictureEditClick)
+        ProfilePictureSection(
+            photoUrl = profile.photoUrl,
+            isUploadingPhoto = isUploadingPhoto,
+            onPictureEditClick = onPictureEditClick,
+            onPictureDeleteClick = onPictureDeleteClick)
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Dimens.Spacing.small))
 
         EditTextField(
             label = "Username",
@@ -213,7 +247,7 @@ private fun EditProfileContent(
             testTag = EditProfileTestTags.USERNAME_FIELD,
             errorTestTag = EditProfileTestTags.USERNAME_ERROR)
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
         EditTextField(
             label = "Email",
@@ -222,11 +256,11 @@ private fun EditProfileContent(
             enabled = false,
             testTag = EditProfileTestTags.EMAIL_FIELD)
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
               Column(modifier = Modifier.weight(1f)) {
                 EditTextField(
                     label = "Date of Birth",
@@ -249,11 +283,7 @@ private fun EditProfileContent(
               }
             }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        PasswordSection(onChangePasswordClick = onChangePasswordClick)
-
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
         EditTextField(
             label = "Country/Region",
@@ -262,128 +292,160 @@ private fun EditProfileContent(
             placeholder = "Nigeria",
             testTag = EditProfileTestTags.COUNTRY_FIELD)
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
         BioSection(bio = bio, onBioChange = onBioChange)
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(Dimens.Padding.extraLarge))
 
         Button(
             onClick = onSaveClick,
             modifier =
-                Modifier.fillMaxWidth().height(56.dp).testTag(EditProfileTestTags.SAVE_BUTTON),
+                Modifier.fillMaxWidth()
+                    .height(Dimens.Button.standardHeight)
+                    .testTag(EditProfileTestTags.SAVE_BUTTON),
             enabled = isFormValid,
             colors =
                 ButtonDefaults.buttonColors(
-                    containerColor = if (isFormValid) JoinMeColor else BorderColor,
-                    disabledContainerColor = BorderColor),
-            shape = RoundedCornerShape(12.dp)) {
-              Text("SAVE", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ButtonSaveColor)
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape = RoundedCornerShape(Dimens.Button.cornerRadius)) {
+              Text(
+                  "SAVE",
+                  fontSize = Dimens.FontSize.bodyLarge,
+                  fontWeight = FontWeight.Bold,
+                  color = MaterialTheme.colorScheme.onPrimary)
             }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(Dimens.Padding.extraLarge))
       }
 }
 
+/** Composable displaying the profile picture section with edit and delete options. */
 @Composable
-private fun ProfilePictureSection(onPictureEditClick: () -> Unit = {}) {
+private fun ProfilePictureSection(
+    photoUrl: String?,
+    isUploadingPhoto: Boolean,
+    onPictureEditClick: () -> Unit,
+    onPictureDeleteClick: () -> Unit
+) {
   Box(
       modifier =
           Modifier.fillMaxWidth()
-              .padding(vertical = 24.dp)
+              .padding(vertical = Dimens.Profile.photoPadding)
               .testTag(EditProfileTestTags.PROFILE_PICTURE),
       contentAlignment = Alignment.Center) {
-        Box(modifier = Modifier.size(140.dp), contentAlignment = Alignment.Center) {
-          Icon(
-              imageVector = Icons.Default.AccountCircle,
-              contentDescription = "Profile Picture",
-              modifier = Modifier.size(140.dp).blur(5.dp),
-              tint = MaterialTheme.colorScheme.onSurface)
-          Button(
-              onClick = { onPictureEditClick() },
-              colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-              shape = CircleShape,
-              modifier = Modifier.size(120.dp).testTag(EditProfileTestTags.EDIT_PHOTO_BUTTON)) {
+        Box(
+            modifier = Modifier.size(Dimens.Profile.photoLarge),
+            contentAlignment = Alignment.Center) {
+              // Show loading indicator while uploading OR deleting
+              if (isUploadingPhoto) {
+                CircularProgressIndicator(
+                    modifier =
+                        Modifier.size(Dimens.Profile.photoLarge)
+                            .testTag(EditProfileTestTags.PHOTO_UPLOADING_INDICATOR),
+                    color = MaterialTheme.colorScheme.primary,
+                    strokeWidth = Dimens.LoadingIndicator.strokeWidth)
+              } else {
+                // Display actual profile photo with blur effect
+                ProfilePhotoImage(
+                    photoUrl = photoUrl,
+                    contentDescription = "Profile Picture",
+                    size = Dimens.Profile.photoLarge,
+                    showLoadingIndicator = false) // Use our own indicator
+
+                // Blur overlay using a semi-transparent box
                 Box(
-                    modifier = Modifier.size(50.dp).clip(CircleShape).background(Color.Transparent),
-                    contentAlignment = Alignment.Center) {
-                      Icon(
-                          imageVector = Icons.Outlined.Edit,
-                          contentDescription = "Edit Photo",
-                          tint = ButtonSaveColor,
-                          modifier = Modifier.size(56.dp))
+                    modifier =
+                        Modifier.size(Dimens.Profile.photoLarge)
+                            .clip(CircleShape)
+                            .background(ScrimOverlayColorLightTheme))
+
+                // Edit button
+                Button(
+                    onClick = onPictureEditClick,
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
+                            disabledContainerColor =
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0f)),
+                    shape = CircleShape,
+                    modifier =
+                        Modifier.size(Dimens.Profile.editButtonSize)
+                            .testTag(EditProfileTestTags.EDIT_PHOTO_BUTTON)) {
+                      Box(
+                          modifier =
+                              Modifier.size(Dimens.Profile.editIconContainer)
+                                  .clip(CircleShape)
+                                  .background(MaterialTheme.colorScheme.surface.copy(alpha = 0f)),
+                          contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Outlined.Edit,
+                                contentDescription = "Edit Photo",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(Dimens.Profile.editIconSize))
+                          }
                     }
+
+                // Delete Icon Button (Bottom Right)
+                // Show only if a photo exists and we are not loading
+                if (photoUrl != null && photoUrl.isNotEmpty()) {
+                  IconButton(
+                      onClick = onPictureDeleteClick,
+                      modifier =
+                          Modifier.align(Alignment.BottomEnd)
+                              .size(Dimens.Profile.deleteButtonSize)
+                              .clip(CircleShape)
+                              .background(MaterialTheme.colorScheme.surface)
+                              .border(
+                                  Dimens.BorderWidth.thin,
+                                  MaterialTheme.colorScheme.outlineVariant,
+                                  CircleShape)
+                              .testTag(EditProfileTestTags.DELETE_PHOTO_BUTTON)) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete Photo",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(Dimens.Profile.deleteIconSize))
+                      }
+                }
               }
-        }
+            }
       }
 }
 
-@Composable
-private fun PasswordSection(onChangePasswordClick: () -> Unit) {
-  Column(modifier = Modifier.testTag(EditProfileTestTags.PASSWORD_SECTION)) {
-    Text(
-        text = "Password",
-        fontSize = 16.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(bottom = 8.dp))
-    Box(
-        modifier =
-            Modifier.fillMaxWidth()
-                .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
-                .padding(16.dp)) {
-          Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                  Text(text = "************", fontSize = 16.sp, color = LabelTextColor)
-                }
-
-                Button(
-                    onClick = onChangePasswordClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = JoinMeColor),
-                    shape = RoundedCornerShape(24.dp),
-                    modifier =
-                        Modifier.height(40.dp)
-                            .testTag(EditProfileTestTags.CHANGE_PASSWORD_BUTTON)) {
-                      Icon(
-                          imageVector = Icons.Default.Edit,
-                          contentDescription = null,
-                          modifier = Modifier.size(16.dp))
-                      Spacer(modifier = Modifier.width(4.dp))
-                      Text("Change password", fontSize = 12.sp)
-                    }
-              }
-        }
-  }
-}
-
+/** Composable for the Bio section with a multi-line text field. */
 @Composable
 private fun BioSection(bio: String, onBioChange: (String) -> Unit) {
   Column {
     Text(
         text = "Bio",
-        fontSize = 16.sp,
+        fontSize = Dimens.FontSize.bodyLarge,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(bottom = 8.dp))
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(bottom = Dimens.TextField.labelSpacing))
     OutlinedTextField(
         value = bio,
         onValueChange = onBioChange,
         modifier =
-            Modifier.fillMaxWidth().heightIn(min = 120.dp).testTag(EditProfileTestTags.BIO_FIELD),
+            Modifier.fillMaxWidth()
+                .heightIn(min = Dimens.Profile.bioMinHeight)
+                .testTag(EditProfileTestTags.BIO_FIELD),
         placeholder = {
           Text(
-              "Tell others a bit about yourself — your passions, what you enjoy doing, or what you're looking for on JoinMe.",
-              fontSize = 12.sp,
-              color = LabelTextColor)
+              "Tell others a bit about yourself – your passions, what you enjoy doing, or what you're looking for on JoinMe.",
+              fontSize = Dimens.FontSize.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant)
         },
         colors =
             OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = BorderColor, focusedBorderColor = JoinMeColor),
-        shape = RoundedCornerShape(12.dp))
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedBorderColor = MaterialTheme.colorScheme.primary),
+        shape = RoundedCornerShape(Dimens.TextField.cornerRadius))
   }
 }
 
+/** Composable for a labeled editable text field with error and supporting text. */
 @Composable
 private fun EditTextField(
     label: String,
@@ -401,9 +463,10 @@ private fun EditTextField(
   Column {
     Text(
         text = label,
-        fontSize = 16.sp,
+        fontSize = Dimens.FontSize.bodyLarge,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(bottom = 8.dp))
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(bottom = Dimens.TextField.labelSpacing))
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -412,14 +475,19 @@ private fun EditTextField(
             else modifier.fillMaxWidth(),
         enabled = enabled,
         isError = isError,
-        placeholder = placeholder?.let { { Text(it, color = BorderColor) } },
+        placeholder =
+            placeholder?.let { { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
         colors =
             OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = if (isError) ErrorBorderColor else BorderColor,
-                focusedBorderColor = if (isError) ErrorBorderColor else FocusedBorderColor,
-                disabledBorderColor = DisabledBorderColor,
-                disabledTextColor = DisabledTextColor),
-        shape = RoundedCornerShape(12.dp),
+                unfocusedBorderColor =
+                    if (isError) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.outline,
+                focusedBorderColor =
+                    if (isError) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary,
+                disabledBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant),
+        shape = RoundedCornerShape(Dimens.TextField.cornerRadius),
         singleLine = true)
 
     val textToShow = if (isError && errorMessage != null) errorMessage else supportingText
@@ -427,11 +495,20 @@ private fun EditTextField(
     if (textToShow != null) {
       Text(
           text = textToShow,
-          fontSize = 11.sp,
-          color = if (isError) ErrorBorderColor else LabelTextColor,
+          fontSize = Dimens.FontSize.labelSmall,
+          color =
+              if (isError) MaterialTheme.colorScheme.error
+              else MaterialTheme.colorScheme.onSurfaceVariant,
           modifier =
-              if (isError) Modifier.padding(start = 12.dp, top = 4.dp).testTag(errorTestTag)
-              else Modifier.padding(start = 12.dp, top = 4.dp))
+              if (isError)
+                  Modifier.padding(
+                          start = Dimens.TextField.supportingTextPadding,
+                          top = Dimens.TextField.supportingTextSpacing)
+                      .testTag(errorTestTag)
+              else
+                  Modifier.padding(
+                      start = Dimens.TextField.supportingTextPadding,
+                      top = Dimens.TextField.supportingTextSpacing))
     }
   }
 }

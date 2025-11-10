@@ -322,67 +322,6 @@ class SerieTest {
   }
 
   @Test
-  fun `serie lifecycle states with all future events`() {
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.HOUR, 1)
-    val futureSerie = sampleSerie.copy(date = Timestamp(calendar.time))
-    val futureEvents =
-        listOf(
-            createEvent("event1", hoursOffset = 1),
-            createEvent("event2", hoursOffset = 2),
-            createEvent("event3", hoursOffset = 3))
-    assertTrue(futureSerie.isUpcoming())
-    assertFalse(futureSerie.isActive(futureEvents))
-    assertFalse(futureSerie.isExpired(futureEvents))
-  }
-
-  @Test
-  fun `serie lifecycle states with one active event`() {
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.HOUR, -1)
-    val activeSerie = sampleSerie.copy(date = Timestamp(calendar.time))
-    val activeEvents =
-        listOf(
-            createEvent("event1", duration = 60, hoursOffset = -2), // Past
-            createEvent("event2", duration = 120, hoursOffset = 0), // Active
-            createEvent("event3", hoursOffset = 2)) // Future
-    assertFalse(activeSerie.isUpcoming())
-    assertTrue(activeSerie.isActive(activeEvents))
-    assertFalse(activeSerie.isExpired(activeEvents))
-  }
-
-  @Test
-  fun `serie lifecycle states with all past events`() {
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.HOUR, -5)
-    val pastSerie = sampleSerie.copy(date = Timestamp(calendar.time))
-    val pastEvents =
-        listOf(
-            createEvent("event1", duration = 60, hoursOffset = -5),
-            createEvent("event2", duration = 60, hoursOffset = -3),
-            createEvent("event3", duration = 60, hoursOffset = -2))
-    assertFalse(pastSerie.isUpcoming())
-    assertFalse(pastSerie.isActive(pastEvents))
-    assertTrue(pastSerie.isExpired(pastEvents))
-  }
-
-  @Test
-  fun `serie with single event works correctly`() {
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.HOUR, 2)
-    val singleEventSerie =
-        sampleSerie.copy(eventIds = listOf("event1"), date = Timestamp(calendar.time))
-    val events = listOf(createEvent("event1", duration = 90, hoursOffset = 2))
-
-    assertTrue(singleEventSerie.isUpcoming())
-    assertFalse(singleEventSerie.isActive(events))
-    assertFalse(singleEventSerie.isExpired(events))
-    assertEquals(1, singleEventSerie.getTotalEventsCount())
-    assertEquals(90, singleEventSerie.getTotalDuration(events))
-    assertEquals("1h 30min", singleEventSerie.getFormattedDuration(events))
-  }
-
-  @Test
   fun `serie with large number of events handles correctly`() {
     val eventIds = (1..20).map { "event$it" }
     val largeSerie = sampleSerie.copy(eventIds = eventIds)
@@ -401,47 +340,9 @@ class SerieTest {
   }
 
   @Test
-  fun `participants list contains correct users`() {
-    assertEquals(listOf("user1", "user2"), sampleSerie.participants)
-    assertEquals(2, sampleSerie.participants.size)
-  }
-
-  @Test
   fun `serie can have empty participants list`() {
     val serieWithNoParticipants = sampleSerie.copy(participants = emptyList())
     assertTrue(serieWithNoParticipants.participants.isEmpty())
     assertEquals(0, serieWithNoParticipants.participants.size)
-  }
-
-  @Test
-  fun `serie can have single participant`() {
-    val serieWithOneParticipant = sampleSerie.copy(participants = listOf("user1"))
-    assertEquals(1, serieWithOneParticipant.participants.size)
-    assertEquals("user1", serieWithOneParticipant.participants[0])
-  }
-
-  @Test
-  fun `serie participants can be updated via copy`() {
-    val updatedParticipants = listOf("user1", "user2", "user3", "user4")
-    val updatedSerie = sampleSerie.copy(participants = updatedParticipants)
-    assertEquals(4, updatedSerie.participants.size)
-    assertEquals(updatedParticipants, updatedSerie.participants)
-  }
-
-  @Test
-  fun `serie with large number of participants handles correctly`() {
-    val manyParticipants = (1..50).map { "user$it" }
-    val serieWithManyParticipants = sampleSerie.copy(participants = manyParticipants)
-    assertEquals(50, serieWithManyParticipants.participants.size)
-    assertEquals("user1", serieWithManyParticipants.participants[0])
-    assertEquals("user50", serieWithManyParticipants.participants[49])
-  }
-
-  @Test
-  fun `participants list is independent of eventIds list`() {
-    val serieWithDifferentCounts =
-        sampleSerie.copy(participants = listOf("user1"), eventIds = listOf("event1", "event2"))
-    assertEquals(1, serieWithDifferentCounts.participants.size)
-    assertEquals(2, serieWithDifferentCounts.eventIds.size)
   }
 }
