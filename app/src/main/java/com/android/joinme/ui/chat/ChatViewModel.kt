@@ -2,6 +2,7 @@ package com.android.joinme.ui.chat
 
 // Implemented with help of Claude AI, essentially rewritten for clarity, structure and
 // documentation
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.chat.ChatRepository
@@ -10,6 +11,7 @@ import com.android.joinme.model.chat.MessageType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 /**
@@ -42,6 +44,10 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
 
   private var currentConversationId: String = ""
 
+  companion object {
+    private const val TAG = "ChatViewModel"
+  }
+
   /**
    * Initializes the chat by loading messages for the specified chat ID.
    *
@@ -68,15 +74,16 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
   private fun observeMessages() {
     viewModelScope.launch {
       _uiState.value = _uiState.value.copy(isLoading = true)
-      try {
-        chatRepository.observeMessagesForConversation(currentConversationId).collect { messageList
-          ->
-          _uiState.value = _uiState.value.copy(messages = messageList, isLoading = false)
-        }
-      } catch (e: Exception) {
-        setErrorMsg("Failed to load messages: ${e.message}")
-        _uiState.value = _uiState.value.copy(isLoading = false)
-      }
+      chatRepository
+          .observeMessagesForConversation(currentConversationId)
+          .catch { e ->
+            Log.e(TAG, "Error observing messages", e)
+            setErrorMsg("Failed to load messages: ${e.message}")
+            _uiState.value = _uiState.value.copy(isLoading = false)
+          }
+          .collect { messageList ->
+            _uiState.value = _uiState.value.copy(messages = messageList, isLoading = false)
+          }
     }
   }
 
@@ -187,6 +194,7 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
         chatRepository.markMessageAsRead(
             currentConversationId, messageId, _uiState.value.currentUserId)
       } catch (e: Exception) {
+        Log.e(TAG, "Failed to mark message as read: messageId=$messageId", e)
         // Silently fail for read receipts to avoid disrupting user experience
       }
     }
@@ -203,6 +211,7 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
           }
         }
       } catch (e: Exception) {
+        Log.e(TAG, "Failed to mark all messages as read", e)
         // Silently fail for read receipts
       }
     }
