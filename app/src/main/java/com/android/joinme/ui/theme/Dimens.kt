@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
  * - `Elevation`: Shadow and depth values
  * - `SerieCard`: Dimensions specific to the SerieCard component
  * - `SerieForm`: Dimensions specific to the Serie form component
+ * - `SignIn`: Sign-in screen specific dimensions
  *
  * Usage example:
  * ```
@@ -500,5 +501,30 @@ object Dimens {
     val descriptionField: Dp = 120.dp
     /** 180.dp - height for maxParticipants field */
     val maxParticipantsField: Dp = 180.dp
+  }
+
+  /**
+   * Sign-in screen dimensions.
+   *
+   * Dimensions specific to the sign-in screen including logo size, button dimensions, and spacing.
+   */
+  object SignIn {
+    /** 350dp - Size of the app logo on sign-in screen */
+    val logoSize: Dp = 350.dp
+
+    /** 48dp - Height of Google sign-in button */
+    val buttonHeight: Dp = 48.dp
+
+    /** 200dp - Width of Google sign-in button content */
+    val buttonContentWidth: Dp = 200.dp
+
+    /** 30dp - Size of Google logo in button */
+    val googleLogoSize: Dp = 30.dp
+
+    /** 50 - Corner radius for sign-in button (pill shape) */
+    val buttonCornerRadius: Int = 50
+
+    /** 48dp - Size of loading indicator on sign-in screen */
+    val loadingIndicatorSize: Dp = 48.dp
   }
 }
