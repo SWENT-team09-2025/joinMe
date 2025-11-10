@@ -99,7 +99,7 @@ fun SerieDetailsScreen(
     onEventCardClick: (String) -> Unit = {},
     onAddEventClick: () -> Unit = {},
     onQuitSerieSuccess: () -> Unit = {},
-    onEditSerieClick: () -> Unit = {},
+    onEditSerieClick: (String) -> Unit = {},
     currentUserId: String = Firebase.auth.currentUser?.uid ?: "unknown"
 ) {
   val uiState by serieDetailsViewModel.uiState.collectAsState()
@@ -279,7 +279,7 @@ fun SerieDetailsScreen(
                         Text(text = "ADD EVENT", fontSize = 16.sp, fontWeight = FontWeight.Medium)
                       }
                   Button(
-                      onClick = onEditSerieClick,
+                      onClick = { onEditSerieClick(serieId) },
                       modifier =
                           Modifier.fillMaxWidth()
                               .height(56.dp)

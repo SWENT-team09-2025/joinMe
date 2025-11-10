@@ -33,6 +33,7 @@ import com.android.joinme.ui.overview.CreateEventForSerieScreen
 import com.android.joinme.ui.overview.CreateEventScreen
 import com.android.joinme.ui.overview.CreateSerieScreen
 import com.android.joinme.ui.overview.EditEventScreen
+import com.android.joinme.ui.overview.EditSerieScreen
 import com.android.joinme.ui.overview.OverviewScreen
 import com.android.joinme.ui.overview.SearchScreen
 import com.android.joinme.ui.overview.SerieDetailsScreen
@@ -234,12 +235,18 @@ fun JoinMe(
                         context, "Add event to serie - not yet implemented", Toast.LENGTH_SHORT)
                     .show()
               },
-              onEditSerieClick = {
-                Toast.makeText(context, "Edit serie - not yet implemented", Toast.LENGTH_SHORT)
-                    .show()
-              } // TODO: Implement navigation to Edit serie screen with serieId
-              ,
+              onEditSerieClick = { id -> navigationActions.navigateTo(Screen.EditSerie(id)) },
               onQuitSerieSuccess = { navigationActions.goBack() })
+        } ?: run { Toast.makeText(context, "Serie ID is null", Toast.LENGTH_SHORT).show() }
+      }
+      composable(Screen.EditSerie.route) { navBackStackEntry ->
+        val serieId = navBackStackEntry.arguments?.getString("serieId")
+
+        serieId?.let {
+          EditSerieScreen(
+              serieId = serieId,
+              onGoBack = { navigationActions.goBack() },
+              onDone = { navigationActions.navigateTo(Screen.Overview) })
         } ?: run { Toast.makeText(context, "Serie ID is null", Toast.LENGTH_SHORT).show() }
       }
     }
