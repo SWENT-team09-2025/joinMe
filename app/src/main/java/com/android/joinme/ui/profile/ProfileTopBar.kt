@@ -55,7 +55,8 @@ fun ProfileTopBar(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
-                modifier = Modifier.size(24.dp))
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.primary)
           }
           Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             // Profile Icon
@@ -100,6 +101,6 @@ fun ProfileTopBar(
           }
         }
 
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+    HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 1.dp)
   }
 }
