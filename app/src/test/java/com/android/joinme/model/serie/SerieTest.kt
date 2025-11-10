@@ -68,6 +68,36 @@ class SerieTest {
   }
 
   @Test
+  fun `test Serie invoke operator initializes lastEventEndTime correctly`() {
+    // Explicitly test the companion object's invoke operator function
+    val testDate = Timestamp(Date())
+    val serie =
+        Serie.invoke(
+            serieId = "test123",
+            title = "Test Title",
+            description = "Test Description",
+            date = testDate,
+            participants = listOf("user1", "user2"),
+            maxParticipants = 5,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner456")
+
+    // Verify all parameters are set correctly
+    assertEquals("test123", serie.serieId)
+    assertEquals("Test Title", serie.title)
+    assertEquals("Test Description", serie.description)
+    assertEquals(testDate, serie.date)
+    assertEquals(listOf("user1", "user2"), serie.participants)
+    assertEquals(5, serie.maxParticipants)
+    assertEquals(Visibility.PUBLIC, serie.visibility)
+    assertEquals(listOf("event1"), serie.eventIds)
+    assertEquals("owner456", serie.ownerId)
+    // Verify lastEventEndTime is initialized to date (compare timestamps)
+    assertEquals(testDate.toDate().time, serie.lastEventEndTime?.toDate()?.time)
+  }
+
+  @Test
   fun `test toString contains key fields`() {
     val result = sampleSerie.toString()
     assert(result.contains("Weekly Football"))
