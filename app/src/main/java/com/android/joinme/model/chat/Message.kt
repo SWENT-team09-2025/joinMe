@@ -21,6 +21,7 @@ enum class MessageType {
  * `conversations/{conversationId}/messages/{messageId}`
  *
  * @property id Unique identifier for the message
+ * @property conversationId ID of the conversation this message belongs to
  * @property senderId ID of the user who sent the message
  * @property senderName Display name of the sender
  * @property content Text content of the message
@@ -31,6 +32,7 @@ enum class MessageType {
  */
 data class Message(
     val id: String = "",
+    val conversationId: String = "",
     val senderId: String = "",
     val senderName: String = "",
     val content: String = "",
