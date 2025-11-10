@@ -92,107 +92,107 @@ fun GroupFormScreen(
     groupPictureUrl: String? = null,
     isUploadingPicture: Boolean = false
 ) {
-    Scaffold(
-        modifier = Modifier.fillMaxSize().testTag(testTags.screen),
-        topBar = {
-            Column {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Text(
-                            text = title,
-                            modifier = Modifier.testTag(testTags.title),
-                            style = MaterialTheme.typography.titleLarge)
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onGoBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                contentDescription = "Back",
-                                tint = MaterialTheme.colorScheme.primary)
-                        }
-                    },
-                    colors =
-                        TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface))
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.primary,
-                    thickness = Dimens.History.dividerThickness)
-            }
-        }) { paddingValues ->
-        when {
-            formState.isLoading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(paddingValues),
-                    contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.testTag(testTags.loadingIndicator))
+  Scaffold(
+      modifier = Modifier.fillMaxSize().testTag(testTags.screen),
+      topBar = {
+        Column {
+          CenterAlignedTopAppBar(
+              title = {
+                Text(
+                    text = title,
+                    modifier = Modifier.testTag(testTags.title),
+                    style = MaterialTheme.typography.titleLarge)
+              },
+              navigationIcon = {
+                IconButton(onClick = onGoBack) {
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                      contentDescription = "Back",
+                      tint = MaterialTheme.colorScheme.primary)
                 }
-            }
-            formState.errorMsg != null -> {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(paddingValues),
-                    contentAlignment = Alignment.Center) {
-                    Text(
-                        text = formState.errorMsg,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.testTag(testTags.errorMessage))
-                }
-            }
-            else -> {
-                Column(
-                    modifier =
-                        Modifier.fillMaxSize()
-                            .padding(paddingValues)
-                            .background(MaterialTheme.colorScheme.background)
-                            .verticalScroll(rememberScrollState())
-                            .padding(
-                                horizontal = Dimens.Padding.screenHorizontal,
-                                vertical = Dimens.Padding.screenVertical),
-                    horizontalAlignment = Alignment.CenterHorizontally) {
-                    GroupPictureSection(
-                        onPictureEditClick = onPictureEditClick,
-                        onPictureDeleteClick = onPictureDeleteClick,
-                        groupPictureUrl = groupPictureUrl,
-                        isUploadingPicture = isUploadingPicture,
-                        testTags = testTags)
-
-                    Spacer(modifier = Modifier.height(Dimens.Spacing.extraLarge))
-
-                    GroupNameInput(
-                        value = formState.name,
-                        onValueChange = onNameChange,
-                        error = formState.nameError,
-                        testTags = testTags)
-
-                    Spacer(modifier = Modifier.height(Dimens.Spacing.fieldSpacing))
-
-                    CategoryDropdown(
-                        selectedCategory = formState.category,
-                        onCategorySelected = onCategoryChange,
-                        testTags = testTags)
-
-                    Spacer(modifier = Modifier.height(Dimens.Spacing.fieldSpacing))
-
-                    DescriptionInput(
-                        value = formState.description,
-                        onValueChange = onDescriptionChange,
-                        error = formState.descriptionError,
-                        testTags = testTags)
-
-                    Spacer(modifier = Modifier.weight(1f))
-                    Spacer(modifier = Modifier.height(Dimens.Group.saveButtonTopSpacing))
-
-                    SaveButton(
-                        enabled = formState.isValid,
-                        onClick = onSave,
-                        text = saveButtonText,
-                        testTags = testTags)
-                    Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
-                }
-            }
+              },
+              colors =
+                  TopAppBarDefaults.topAppBarColors(
+                      containerColor = MaterialTheme.colorScheme.surface))
+          HorizontalDivider(
+              color = MaterialTheme.colorScheme.primary,
+              thickness = Dimens.History.dividerThickness)
         }
-    }
+      }) { paddingValues ->
+        when {
+          formState.isLoading -> {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                contentAlignment = Alignment.Center) {
+                  CircularProgressIndicator(
+                      color = MaterialTheme.colorScheme.primary,
+                      modifier = Modifier.testTag(testTags.loadingIndicator))
+                }
+          }
+          formState.errorMsg != null -> {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                contentAlignment = Alignment.Center) {
+                  Text(
+                      text = formState.errorMsg,
+                      color = MaterialTheme.colorScheme.error,
+                      modifier = Modifier.testTag(testTags.errorMessage))
+                }
+          }
+          else -> {
+            Column(
+                modifier =
+                    Modifier.fillMaxSize()
+                        .padding(paddingValues)
+                        .background(MaterialTheme.colorScheme.background)
+                        .verticalScroll(rememberScrollState())
+                        .padding(
+                            horizontal = Dimens.Padding.screenHorizontal,
+                            vertical = Dimens.Padding.screenVertical),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                  GroupPictureSection(
+                      onPictureEditClick = onPictureEditClick,
+                      onPictureDeleteClick = onPictureDeleteClick,
+                      groupPictureUrl = groupPictureUrl,
+                      isUploadingPicture = isUploadingPicture,
+                      testTags = testTags)
+
+                  Spacer(modifier = Modifier.height(Dimens.Spacing.extraLarge))
+
+                  GroupNameInput(
+                      value = formState.name,
+                      onValueChange = onNameChange,
+                      error = formState.nameError,
+                      testTags = testTags)
+
+                  Spacer(modifier = Modifier.height(Dimens.Spacing.fieldSpacing))
+
+                  CategoryDropdown(
+                      selectedCategory = formState.category,
+                      onCategorySelected = onCategoryChange,
+                      testTags = testTags)
+
+                  Spacer(modifier = Modifier.height(Dimens.Spacing.fieldSpacing))
+
+                  DescriptionInput(
+                      value = formState.description,
+                      onValueChange = onDescriptionChange,
+                      error = formState.descriptionError,
+                      testTags = testTags)
+
+                  Spacer(modifier = Modifier.weight(1f))
+                  Spacer(modifier = Modifier.height(Dimens.Group.saveButtonTopSpacing))
+
+                  SaveButton(
+                      enabled = formState.isValid,
+                      onClick = onSave,
+                      text = saveButtonText,
+                      testTags = testTags)
+                  Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
+                }
+          }
+        }
+      }
 }
 
 /**
@@ -219,35 +219,37 @@ private fun GroupPictureSection(
     isUploadingPicture: Boolean,
     testTags: GroupFormTestTags
 ) {
-    Box(
-        modifier =
-            Modifier.fillMaxWidth()
-                .padding(vertical = Dimens.Group.picturePadding)
-                .testTag(testTags.groupPicture),
-        contentAlignment = Alignment.Center) {
-        Box(modifier = Modifier.size(Dimens.Group.pictureLarge), contentAlignment = Alignment.Center) {
-            // Show loading indicator while uploading
-            if (isUploadingPicture) {
+  Box(
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(vertical = Dimens.Group.picturePadding)
+              .testTag(testTags.groupPicture),
+      contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier.size(Dimens.Group.pictureLarge),
+            contentAlignment = Alignment.Center) {
+              // Show loading indicator while uploading
+              if (isUploadingPicture) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(Dimens.Group.pictureLarge),
                     color = MaterialTheme.colorScheme.primary,
                     strokeWidth = Dimens.LoadingIndicator.strokeWidth)
-            } else {
+              } else {
                 Box(
                     modifier =
                         Modifier.size(Dimens.Group.pictureLarge)
                             .clip(CircleShape)
                             .blur(Dimens.Group.pictureBlurRadius),
                     contentAlignment = Alignment.Center) {
-                    // Tint scrim for a frosted glass look
-                    Box(modifier = Modifier.matchParentSize().background(TransparentColor)) {}
+                      // Tint scrim for a frosted glass look
+                      Box(modifier = Modifier.matchParentSize().background(TransparentColor)) {}
 
-                    // TODO: Replace with actual GroupPhotoImage component when available
-                    Image(
-                        painter = painterResource(id = R.drawable.group_default_picture),
-                        contentDescription = "Group picture",
-                        modifier = Modifier.matchParentSize().clip(CircleShape))
-                }
+                      // TODO: Replace with actual GroupPhotoImage component when available
+                      Image(
+                          painter = painterResource(id = R.drawable.group_default_picture),
+                          contentDescription = "Group picture",
+                          modifier = Modifier.matchParentSize().clip(CircleShape))
+                    }
 
                 // Edit button overlay
                 Button(
@@ -260,45 +262,45 @@ private fun GroupPictureSection(
                     modifier =
                         Modifier.size(Dimens.Group.editButtonSize)
                             .testTag(testTags.editPhotoButton)) {
-                    Box(
-                        modifier =
-                            Modifier.size(Dimens.Group.editIconContainer)
-                                .clip(CircleShape)
-                                .background(TransparentColor),
-                        contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Outlined.Edit,
-                            contentDescription = "Edit Picture",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(Dimens.Group.editIconSize))
+                      Box(
+                          modifier =
+                              Modifier.size(Dimens.Group.editIconContainer)
+                                  .clip(CircleShape)
+                                  .background(TransparentColor),
+                          contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Outlined.Edit,
+                                contentDescription = "Edit Picture",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(Dimens.Group.editIconSize))
+                          }
                     }
-                }
 
                 // Delete Icon Button (Bottom Right)
                 // Show only if a picture exists and we are not loading
                 if (groupPictureUrl != null && groupPictureUrl.isNotEmpty()) {
-                    IconButton(
-                        onClick = onPictureDeleteClick,
-                        modifier =
-                            Modifier.align(Alignment.BottomEnd)
-                                .size(Dimens.Group.deleteButtonSize)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surface)
-                                .border(
-                                    Dimens.BorderWidth.thin,
-                                    MaterialTheme.colorScheme.outlineVariant,
-                                    CircleShape)
-                                .testTag(testTags.deletePhotoButton)) {
+                  IconButton(
+                      onClick = onPictureDeleteClick,
+                      modifier =
+                          Modifier.align(Alignment.BottomEnd)
+                              .size(Dimens.Group.deleteButtonSize)
+                              .clip(CircleShape)
+                              .background(MaterialTheme.colorScheme.surface)
+                              .border(
+                                  Dimens.BorderWidth.thin,
+                                  MaterialTheme.colorScheme.outlineVariant,
+                                  CircleShape)
+                              .testTag(testTags.deletePhotoButton)) {
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "Delete Picture",
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(Dimens.Group.deleteIconSize))
-                    }
+                      }
                 }
+              }
             }
-        }
-    }
+      }
 }
 
 /**
@@ -321,35 +323,35 @@ private fun GroupNameInput(
     error: String?,
     testTags: GroupFormTestTags
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "Group name",
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = Dimens.TextField.labelSpacing))
+  Column(modifier = Modifier.fillMaxWidth()) {
+    Text(
+        text = "Group name",
+        style = MaterialTheme.typography.bodyLarge,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(bottom = Dimens.TextField.labelSpacing))
 
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth().testTag(testTags.groupNameTextField),
-            placeholder = { Text("Group name", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-            isError = error != null,
-            singleLine = true,
-            colors = MaterialTheme.customColors.outlinedTextField())
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth().testTag(testTags.groupNameTextField),
+        placeholder = { Text("Group name", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+        isError = error != null,
+        singleLine = true,
+        colors = MaterialTheme.customColors.outlinedTextField())
 
-        Text(
-            text = error ?: "3-30 characters. Letters, numbers, spaces, or underscores only",
-            style = MaterialTheme.typography.bodySmall,
-            color =
-                if (error != null) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier =
-                Modifier.padding(
+    Text(
+        text = error ?: "3-30 characters. Letters, numbers, spaces, or underscores only",
+        style = MaterialTheme.typography.bodySmall,
+        color =
+            if (error != null) MaterialTheme.colorScheme.error
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier =
+            Modifier.padding(
                     start = Dimens.TextField.supportingTextPadding,
                     top = Dimens.TextField.supportingTextSpacing)
-                    .testTag(testTags.nameSupportingText))
-    }
+                .testTag(testTags.nameSupportingText))
+  }
 }
 
 /**
@@ -372,53 +374,51 @@ private fun CategoryDropdown(
     onCategorySelected: (EventType) -> Unit,
     testTags: GroupFormTestTags
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val eventTypes = EventType.values()
+  var expanded by remember { mutableStateOf(false) }
+  val eventTypes = EventType.values()
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "Category",
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = Dimens.TextField.labelSpacing))
+  Column(modifier = Modifier.fillMaxWidth()) {
+    Text(
+        text = "Category",
+        style = MaterialTheme.typography.bodyLarge,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(bottom = Dimens.TextField.labelSpacing))
 
-        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-            OutlinedTextField(
-                value = selectedCategory.displayString(),
-                onValueChange = {},
-                modifier = Modifier.fillMaxWidth().menuAnchor().testTag(testTags.categoryDropdown),
-                readOnly = true,
-                placeholder = { Text("Group Type", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                },
-                colors = MaterialTheme.customColors.outlinedTextField())
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+      OutlinedTextField(
+          value = selectedCategory.displayString(),
+          onValueChange = {},
+          modifier = Modifier.fillMaxWidth().menuAnchor().testTag(testTags.categoryDropdown),
+          readOnly = true,
+          placeholder = { Text("Group Type", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+          trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+          colors = MaterialTheme.customColors.outlinedTextField())
 
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
-                eventTypes.forEachIndexed { index, type ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = type.displayString().uppercase(Locale.ROOT),
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                style = MaterialTheme.typography.headlineSmall)
-                        },
-                        onClick = {
-                            onCategorySelected(type)
-                            expanded = false
-                        },
-                        colors = MaterialTheme.customColors.dropdownMenu)
-                    if (index < eventTypes.lastIndex) {
-                        HorizontalDivider(thickness = Dimens.BorderWidth.thin)
-                    }
-                }
+      ExposedDropdownMenu(
+          expanded = expanded,
+          onDismissRequest = { expanded = false },
+          modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
+            eventTypes.forEachIndexed { index, type ->
+              DropdownMenuItem(
+                  text = {
+                    Text(
+                        text = type.displayString().uppercase(Locale.ROOT),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        style = MaterialTheme.typography.headlineSmall)
+                  },
+                  onClick = {
+                    onCategorySelected(type)
+                    expanded = false
+                  },
+                  colors = MaterialTheme.customColors.dropdownMenu)
+              if (index < eventTypes.lastIndex) {
+                HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+              }
             }
-        }
+          }
     }
+  }
 }
 
 /**
@@ -442,42 +442,42 @@ private fun DescriptionInput(
     error: String?,
     testTags: GroupFormTestTags
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "Description",
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = Dimens.TextField.labelSpacing))
+  Column(modifier = Modifier.fillMaxWidth()) {
+    Text(
+        text = "Description",
+        style = MaterialTheme.typography.bodyLarge,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(bottom = Dimens.TextField.labelSpacing))
 
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier =
-                Modifier.fillMaxWidth()
-                    .height(Dimens.Group.descriptionMinHeight)
-                    .testTag(testTags.groupDescriptionTextField),
-            placeholder = {
-                Text(
-                    "Tell us what your group is about",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            },
-            isError = error != null,
-            maxLines = 4,
-            colors = MaterialTheme.customColors.outlinedTextField())
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(Dimens.Group.descriptionMinHeight)
+                .testTag(testTags.groupDescriptionTextField),
+        placeholder = {
+          Text(
+              "Tell us what your group is about",
+              color = MaterialTheme.colorScheme.onSurfaceVariant)
+        },
+        isError = error != null,
+        maxLines = 4,
+        colors = MaterialTheme.customColors.outlinedTextField())
 
-        Text(
-            text = error ?: "0-300 characters. Letters, numbers, spaces, or underscores only",
-            style = MaterialTheme.typography.bodySmall,
-            color =
-                if (error != null) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier =
-                Modifier.padding(
+    Text(
+        text = error ?: "0-300 characters. Letters, numbers, spaces, or underscores only",
+        style = MaterialTheme.typography.bodySmall,
+        color =
+            if (error != null) MaterialTheme.colorScheme.error
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier =
+            Modifier.padding(
                     start = Dimens.TextField.supportingTextPadding,
                     top = Dimens.TextField.supportingTextSpacing)
-                    .testTag(testTags.descriptionSupportingText))
-    }
+                .testTag(testTags.descriptionSupportingText))
+  }
 }
 
 /**
@@ -501,18 +501,16 @@ private fun SaveButton(
     text: String,
     testTags: GroupFormTestTags
 ) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(Dimens.Button.standardHeight)
-                .testTag(testTags.saveButton),
-        colors = MaterialTheme.customColors.buttonColors(),
-        shape = MaterialTheme.shapes.medium) {
+  Button(
+      onClick = onClick,
+      enabled = enabled,
+      modifier =
+          Modifier.fillMaxWidth().height(Dimens.Button.standardHeight).testTag(testTags.saveButton),
+      colors = MaterialTheme.customColors.buttonColors(),
+      shape = MaterialTheme.shapes.medium) {
         Text(
             text = text.uppercase(),
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Bold)
-    }
+      }
 }

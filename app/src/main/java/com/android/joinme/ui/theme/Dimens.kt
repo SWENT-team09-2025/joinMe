@@ -610,4 +610,3 @@ object Dimens {
     val saveButtonTopSpacing: Dp = 32.dp
   }
 }
-
