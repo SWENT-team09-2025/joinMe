@@ -173,12 +173,12 @@ val darkCustomColors =
         // DROPDOWN MENU COLORS FOR SEARCH SCREEN
         dropdownMenu =
             MenuItemColors(
-                textColor = onSurfaceDark,
-                leadingIconColor = onSecondaryContainerDark,
-                trailingIconColor = onSecondaryContainerDark,
-                disabledTextColor = onSecondaryContainerDark,
-                disabledLeadingIconColor = onSecondaryContainerDark,
-                disabledTrailingIconColor = onSecondaryContainerDark,
+                textColor = surfaceLight,
+                leadingIconColor = onSecondaryContainerLight,
+                trailingIconColor = onSecondaryContainerLight,
+                disabledTextColor = onSecondaryContainerLight,
+                disabledLeadingIconColor = onSecondaryContainerLight,
+                disabledTrailingIconColor = onSecondaryContainerLight,
             ),
 
         // DROPDOWN MENU BACKGROUND FOR SEARCH SCREEN
