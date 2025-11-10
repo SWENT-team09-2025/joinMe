@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -334,11 +335,13 @@ fun SerieDetailsScreen(
                     Text(
                         modifier =
                             Modifier.fillMaxWidth()
-                                .height(56.dp)
+                                .padding(bottom = 50.dp)
                                 .testTag(SerieDetailsScreenTestTags.MESSAGE_FULL_SERIE),
-                        text = "Sorry the serie: ${uiState.getTitle()} is full",
+                        text = "Sorry the serie:\n ${uiState.getTitle()} \n is full",
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium)
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold)
                   }
                 }
               }
