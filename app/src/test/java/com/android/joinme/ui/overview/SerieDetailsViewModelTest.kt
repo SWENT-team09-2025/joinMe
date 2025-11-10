@@ -138,6 +138,18 @@ class SerieDetailsViewModelTest {
     Dispatchers.resetMain()
   }
 
+  /** --- getTitle() test function --- */
+  @Test
+  fun getTitleReturnCorrectly() {
+    val serie = createTestSerie(title = "Hello World !")
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    assertEquals("Hello World !", state.getTitle())
+
+    val state2 = SerieDetailsUIState(serie = null, isLoading = false)
+    assertEquals("", state2.getTitle())
+  }
+
   /** --- INITIAL STATE TESTS --- */
   @Test
   fun viewModel_initialState_hasCorrectDefaults() {

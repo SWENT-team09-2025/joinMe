@@ -63,8 +63,8 @@ class EventForSerieFormScreenTest {
       invalidDescriptionMsg: String? = null,
       invalidDurationMsg: String? = null,
       invalidLocationMsg: String? = null
-  ): CreateEventForSerieUIState {
-    return CreateEventForSerieUIState(
+  ): EventForSerieFormState {
+    return EventForSerieFormState(
         type = type,
         title = title,
         description = description,
