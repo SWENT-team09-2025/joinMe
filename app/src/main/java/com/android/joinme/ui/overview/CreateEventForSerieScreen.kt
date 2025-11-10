@@ -49,22 +49,6 @@ fun CreateEventForSerieScreen(
     }
   }
 
-  val formState =
-      EventForSerieFormState(
-          type = uiState.type,
-          title = uiState.title,
-          description = uiState.description,
-          duration = uiState.duration,
-          locationQuery = uiState.locationQuery,
-          locationSuggestions = uiState.locationSuggestions,
-          selectedLocation = uiState.selectedLocation,
-          isValid = uiState.isValid,
-          invalidTypeMsg = uiState.invalidTypeMsg,
-          invalidTitleMsg = uiState.invalidTitleMsg,
-          invalidDescriptionMsg = uiState.invalidDescriptionMsg,
-          invalidDurationMsg = uiState.invalidDurationMsg,
-          invalidLocationMsg = uiState.invalidLocationMsg)
-
   val testTags =
       EventForSerieFormTestTags(
           inputEventType = CreateEventForSerieScreenTestTags.INPUT_EVENT_TYPE,
@@ -79,7 +63,8 @@ fun CreateEventForSerieScreen(
 
   EventForSerieFormScreen(
       title = "Create Event for Serie",
-      formState = formState,
+      formState = uiState,
+      isFormValid = uiState.isValid,
       testTags = testTags,
       onTypeChange = { createEventForSerieViewModel.setType(it) },
       onTitleChange = { createEventForSerieViewModel.setTitle(it) },
