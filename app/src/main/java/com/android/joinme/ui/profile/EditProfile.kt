@@ -349,23 +349,20 @@ private fun ProfilePictureSection(
                     strokeWidth = Dimens.LoadingIndicator.strokeWidth)
               } else {
                 Box(
-                    modifier = Modifier
-                        .size(Dimens.Profile.photoLarge)
-                        .clip(CircleShape)
-                        .blur(Dimens.Profile.photoBlurRadius),
+                    modifier =
+                        Modifier.size(Dimens.Profile.photoLarge)
+                            .clip(CircleShape)
+                            .blur(Dimens.Profile.photoBlurRadius),
                     contentAlignment = Alignment.Center) {
                       // Tint scrim for a frosted glass look
-                      Box(
-                          modifier =
-                              Modifier.matchParentSize()
-                                  .background(TransparentColor)) {}
+                      Box(modifier = Modifier.matchParentSize().background(TransparentColor)) {}
 
                       ProfilePhotoImage(
                           photoUrl = photoUrl,
                           contentDescription = "Profile Picture",
                           size = Dimens.Profile.photoLarge,
                           showLoadingIndicator = false) // Use our own indicator
-                    }
+                }
 
                 // Edit button
                 Button(
