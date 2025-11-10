@@ -34,6 +34,13 @@ data class SerieDetailsUIState(
     val errorMsg: String? = null
 ) {
   /**
+   * Gets the title of the serie.
+   *
+   * @return The title of the serie, or an empty string if the serie is null
+   */
+  fun getTitle(): String = serie?.title ?: ""
+
+  /**
    * Checks if the current user is the owner of the serie.
    *
    * @param currentUserId The ID of the user to check.

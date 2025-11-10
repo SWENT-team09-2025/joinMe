@@ -61,6 +61,18 @@ sealed class Screen(
     }
   }
   /**
+   * Screen for editing an existing serie
+   *
+   * @param serieId The ID of the serie to edit
+   */
+  data class EditSerie(val serieId: String) :
+      Screen(route = "edit_serie/${serieId}", name = "Edit Serie") {
+    companion object {
+      const val route = "edit_serie/{serieId}"
+    }
+  }
+
+  /**
    * Screen for creating a new event for an existing serie
    *
    * @param serieId The ID of the serie to add the event to
