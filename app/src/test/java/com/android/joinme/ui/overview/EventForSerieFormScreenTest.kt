@@ -49,49 +49,7 @@ class EventForSerieFormScreenTest {
   // ---------- Basic Rendering ----------
 
   @Test
-  fun allFieldsAreDisplayed() {
-    val formState =
-        EventForSerieFormState(
-            type = "",
-            title = "",
-            description = "",
-            duration = "",
-            locationQuery = "",
-            locationSuggestions = emptyList(),
-            selectedLocation = null,
-            isValid = false,
-            invalidTypeMsg = null,
-            invalidTitleMsg = null,
-            invalidDescriptionMsg = null,
-            invalidDurationMsg = null,
-            invalidLocationMsg = null)
-
-    composeTestRule.setContent {
-      EventForSerieFormScreen(
-          title = "Test Form",
-          formState = formState,
-          testTags = testTags,
-          onTypeChange = {},
-          onTitleChange = {},
-          onDescriptionChange = {},
-          onDurationChange = {},
-          onLocationQueryChange = {},
-          onLocationSelected = {},
-          onSearchLocations = {},
-          onSave = { true },
-          onGoBack = {})
-    }
-
-    composeTestRule.onNodeWithTag(testTags.inputEventType).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(testTags.inputEventTitle).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(testTags.inputEventDescription).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(testTags.inputEventDuration).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(testTags.inputEventLocation).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(testTags.buttonSaveEvent).assertIsDisplayed()
-  }
-
-  @Test
-  fun titleIsDisplayedCorrectly() {
+  fun screenTitleAndAllFieldsAreDisplayed() {
     val formState =
         EventForSerieFormState(
             type = "",
@@ -124,7 +82,16 @@ class EventForSerieFormScreenTest {
           onGoBack = {})
     }
 
+    // Verify screen title
     composeTestRule.onNodeWithText("Custom Form Title").assertIsDisplayed()
+
+    // Verify all input fields
+    composeTestRule.onNodeWithTag(testTags.inputEventType).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(testTags.inputEventTitle).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(testTags.inputEventDescription).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(testTags.inputEventDuration).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(testTags.inputEventLocation).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(testTags.buttonSaveEvent).assertIsDisplayed()
   }
 
   @Test
