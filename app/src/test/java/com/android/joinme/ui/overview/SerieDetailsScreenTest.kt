@@ -484,18 +484,15 @@ class SerieDetailsScreenTest {
           serieId = serie.serieId, serieDetailsViewModel = viewModel, currentUserId = "user2")
     }
 
-    composeTestRule.waitUntil(timeoutMillis = 3000) {
-      composeTestRule
-          .onAllNodesWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.MESSAGE_FULL_SERIE)
 
     // Verify serie is full
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.MEMBERS_COUNT).assertIsDisplayed()
 
     // Join button should be disabled
-    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE).assertIsNotEnabled()
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE).assertDoesNotExist()
   }
 
   // ========== Navigation ==========
