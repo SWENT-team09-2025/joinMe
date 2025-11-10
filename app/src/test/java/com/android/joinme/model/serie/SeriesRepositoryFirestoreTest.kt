@@ -373,4 +373,256 @@ class SeriesRepositoryFirestoreTest {
     assertNotNull(result)
     assertEquals(testDate, result.lastEventEndTime) // Should default to serie date
   }
+
+  @Test
+  fun getAllSeries_withHistoryFilter_returnsOnlyExpiredSeriesSortedByDate() = runTest {
+    // Given
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns mockUser
+    every { mockUser.uid } returns testUserId
+
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot3 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+
+    // Mock whereArrayContains query
+    every { mockCollection.whereArrayContains("participants", testUserId) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot1, mockSnapshot2, mockSnapshot3).iterator()
+
+    // Setup expired serie 1 (older)
+    val expiredDate1 = Timestamp(Date(System.currentTimeMillis() - 10000000L))
+    val expiredEndTime1 = Timestamp(Date(System.currentTimeMillis() - 5000000L))
+    every { mockSnapshot1.id } returns "expiredSerie1"
+    every { mockSnapshot1.getString("title") } returns "Expired Serie 1"
+    every { mockSnapshot1.getString("description") } returns "Old series"
+    every { mockSnapshot1.getTimestamp("date") } returns expiredDate1
+    every { mockSnapshot1.get("participants") } returns listOf(testUserId)
+    every { mockSnapshot1.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot1.getString("visibility") } returns Visibility.PUBLIC.name
+    every { mockSnapshot1.get("eventIds") } returns listOf("event1")
+    every { mockSnapshot1.getString("ownerId") } returns testUserId
+    every { mockSnapshot1.getTimestamp("lastEventEndTime") } returns expiredEndTime1
+
+    // Setup expired serie 2 (newer)
+    val expiredDate2 = Timestamp(Date(System.currentTimeMillis() - 3000000L))
+    val expiredEndTime2 = Timestamp(Date(System.currentTimeMillis() - 1000000L))
+    every { mockSnapshot2.id } returns "expiredSerie2"
+    every { mockSnapshot2.getString("title") } returns "Expired Serie 2"
+    every { mockSnapshot2.getString("description") } returns "Recent old series"
+    every { mockSnapshot2.getTimestamp("date") } returns expiredDate2
+    every { mockSnapshot2.get("participants") } returns listOf(testUserId)
+    every { mockSnapshot2.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot2.getString("visibility") } returns Visibility.PUBLIC.name
+    every { mockSnapshot2.get("eventIds") } returns listOf("event2")
+    every { mockSnapshot2.getString("ownerId") } returns testUserId
+    every { mockSnapshot2.getTimestamp("lastEventEndTime") } returns expiredEndTime2
+
+    // Setup upcoming serie (should be filtered out)
+    val upcomingDate = Timestamp(Date(System.currentTimeMillis() + 5000000L))
+    every { mockSnapshot3.id } returns "upcomingSerie"
+    every { mockSnapshot3.getString("title") } returns "Upcoming Serie"
+    every { mockSnapshot3.getString("description") } returns "Future series"
+    every { mockSnapshot3.getTimestamp("date") } returns upcomingDate
+    every { mockSnapshot3.get("participants") } returns listOf(testUserId)
+    every { mockSnapshot3.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot3.getString("visibility") } returns Visibility.PUBLIC.name
+    every { mockSnapshot3.get("eventIds") } returns listOf("event3")
+    every { mockSnapshot3.getString("ownerId") } returns testUserId
+    every { mockSnapshot3.getTimestamp("lastEventEndTime") } returns upcomingDate
+
+    // When
+    val result = repository.getAllSeries(SerieFilter.SERIES_FOR_HISTORY_SCREEN)
+
+    // Then
+    assertEquals(2, result.size)
+    // Should be sorted by date descending (newest first)
+    assertEquals("Expired Serie 2", result[0].title)
+    assertEquals("Expired Serie 1", result[1].title)
+  }
+
+  @Test
+  fun getAllSeries_withSearchFilter_returnsOnlyPublicUpcomingSeriesExcludingUser() = runTest {
+    // Given
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns mockUser
+    every { mockUser.uid } returns testUserId
+
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot3 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot4 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+
+    // Mock whereEqualTo visibility query
+    every { mockCollection.whereEqualTo("visibility", any()) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot1, mockSnapshot2, mockSnapshot3, mockSnapshot4).iterator()
+
+    // Setup valid serie for search (public, upcoming, user not participant or owner)
+    val upcomingDate1 = Timestamp(Date(System.currentTimeMillis() + 5000000L))
+    every { mockSnapshot1.id } returns "searchSerie1"
+    every { mockSnapshot1.getString("title") } returns "Search Serie 1"
+    every { mockSnapshot1.getString("description") } returns "Public upcoming series"
+    every { mockSnapshot1.getTimestamp("date") } returns upcomingDate1
+    every { mockSnapshot1.get("participants") } returns listOf("otherUser1", "otherUser2")
+    every { mockSnapshot1.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot1.getString("visibility") } returns Visibility.PUBLIC.name
+    every { mockSnapshot1.get("eventIds") } returns listOf("event1")
+    every { mockSnapshot1.getString("ownerId") } returns "otherUser1"
+    every { mockSnapshot1.getTimestamp("lastEventEndTime") } returns upcomingDate1
+
+    // Setup serie where user is participant (should be filtered out)
+    val upcomingDate2 = Timestamp(Date(System.currentTimeMillis() + 6000000L))
+    every { mockSnapshot2.id } returns "searchSerie2"
+    every { mockSnapshot2.getString("title") } returns "Search Serie 2"
+    every { mockSnapshot2.getString("description") } returns "User is participant"
+    every { mockSnapshot2.getTimestamp("date") } returns upcomingDate2
+    every { mockSnapshot2.get("participants") } returns listOf(testUserId, "otherUser1")
+    every { mockSnapshot2.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot2.getString("visibility") } returns Visibility.PUBLIC.name
+    every { mockSnapshot2.get("eventIds") } returns listOf("event2")
+    every { mockSnapshot2.getString("ownerId") } returns "otherUser1"
+    every { mockSnapshot2.getTimestamp("lastEventEndTime") } returns upcomingDate2
+
+    // Setup serie where user is owner (should be filtered out)
+    val upcomingDate3 = Timestamp(Date(System.currentTimeMillis() + 7000000L))
+    every { mockSnapshot3.id } returns "searchSerie3"
+    every { mockSnapshot3.getString("title") } returns "Search Serie 3"
+    every { mockSnapshot3.getString("description") } returns "User is owner"
+    every { mockSnapshot3.getTimestamp("date") } returns upcomingDate3
+    every { mockSnapshot3.get("participants") } returns listOf("otherUser1")
+    every { mockSnapshot3.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot3.getString("visibility") } returns Visibility.PUBLIC.name
+    every { mockSnapshot3.get("eventIds") } returns listOf("event3")
+    every { mockSnapshot3.getString("ownerId") } returns testUserId
+    every { mockSnapshot3.getTimestamp("lastEventEndTime") } returns upcomingDate3
+
+    // Setup expired serie (should be filtered out)
+    val expiredDate = Timestamp(Date(System.currentTimeMillis() - 5000000L))
+    val expiredEndTime = Timestamp(Date(System.currentTimeMillis() - 1000000L))
+    every { mockSnapshot4.id } returns "searchSerie4"
+    every { mockSnapshot4.getString("title") } returns "Search Serie 4"
+    every { mockSnapshot4.getString("description") } returns "Expired series"
+    every { mockSnapshot4.getTimestamp("date") } returns expiredDate
+    every { mockSnapshot4.get("participants") } returns listOf("otherUser1")
+    every { mockSnapshot4.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot4.getString("visibility") } returns Visibility.PUBLIC.name
+    every { mockSnapshot4.get("eventIds") } returns listOf("event4")
+    every { mockSnapshot4.getString("ownerId") } returns "otherUser1"
+    every { mockSnapshot4.getTimestamp("lastEventEndTime") } returns expiredEndTime
+
+    // When
+    val result = repository.getAllSeries(SerieFilter.SERIES_FOR_SEARCH_SCREEN)
+
+    // Then
+    assertEquals(1, result.size)
+    assertEquals("Search Serie 1", result[0].title)
+  }
+
+  @Test
+  fun getAllSeries_withMapFilter_returnsUpcomingOrActiveSeriesForParticipants() = runTest {
+    // Given
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns mockUser
+    every { mockUser.uid } returns testUserId
+
+    val mockQuerySnapshot1 = mockk<QuerySnapshot>(relaxed = true)
+    val mockQuerySnapshot2 = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot3 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot4 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockQuery1 = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+    val mockQuery2 = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+
+    // Mock two parallel queries
+    every { mockCollection.whereArrayContains("participants", testUserId) } returns mockQuery1
+    every { mockCollection.whereEqualTo("visibility", any()) } returns mockQuery2
+    every { mockQuery1.get() } returns Tasks.forResult(mockQuerySnapshot1)
+    every { mockQuery2.get() } returns Tasks.forResult(mockQuerySnapshot2)
+
+    // First query results (user's series)
+    every { mockQuerySnapshot1.iterator() } returns
+        mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
+
+    // Second query results (public series)
+    every { mockQuerySnapshot2.iterator() } returns
+        mutableListOf(mockSnapshot3, mockSnapshot4).iterator()
+
+    // Setup active serie where user is participant (should be included)
+    val activeDate1 = Timestamp(Date(System.currentTimeMillis() - 1000000L))
+    val activeEndTime1 = Timestamp(Date(System.currentTimeMillis() + 5000000L))
+    every { mockSnapshot1.id } returns "activeSerie1"
+    every { mockSnapshot1.getString("title") } returns "Active Serie 1"
+    every { mockSnapshot1.getString("description") } returns "User is participant in active serie"
+    every { mockSnapshot1.getTimestamp("date") } returns activeDate1
+    every { mockSnapshot1.get("participants") } returns listOf(testUserId, "otherUser1")
+    every { mockSnapshot1.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot1.getString("visibility") } returns Visibility.PUBLIC.name
+    every { mockSnapshot1.get("eventIds") } returns listOf("event1")
+    every { mockSnapshot1.getString("ownerId") } returns "otherUser1"
+    every { mockSnapshot1.getTimestamp("lastEventEndTime") } returns activeEndTime1
+
+    // Setup expired serie where user is participant (should be filtered out)
+    val expiredDate1 = Timestamp(Date(System.currentTimeMillis() - 5000000L))
+    val expiredEndTime1 = Timestamp(Date(System.currentTimeMillis() - 1000000L))
+    every { mockSnapshot2.id } returns "expiredSerie1"
+    every { mockSnapshot2.getString("title") } returns "Expired Serie 1"
+    every { mockSnapshot2.getString("description") } returns "User is participant in expired serie"
+    every { mockSnapshot2.getTimestamp("date") } returns expiredDate1
+    every { mockSnapshot2.get("participants") } returns listOf(testUserId)
+    every { mockSnapshot2.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot2.getString("visibility") } returns Visibility.PUBLIC.name
+    every { mockSnapshot2.get("eventIds") } returns listOf("event2")
+    every { mockSnapshot2.getString("ownerId") } returns "otherUser1"
+    every { mockSnapshot2.getTimestamp("lastEventEndTime") } returns expiredEndTime1
+
+    // Setup upcoming public serie (should be included)
+    val upcomingDate1 = Timestamp(Date(System.currentTimeMillis() + 5000000L))
+    every { mockSnapshot3.id } returns "upcomingSerie1"
+    every { mockSnapshot3.getString("title") } returns "Upcoming Public Serie"
+    every { mockSnapshot3.getString("description") } returns "Public upcoming series"
+    every { mockSnapshot3.getTimestamp("date") } returns upcomingDate1
+    every { mockSnapshot3.get("participants") } returns listOf("otherUser1")
+    every { mockSnapshot3.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot3.getString("visibility") } returns Visibility.PUBLIC.name
+    every { mockSnapshot3.get("eventIds") } returns listOf("event3")
+    every { mockSnapshot3.getString("ownerId") } returns "otherUser1"
+    every { mockSnapshot3.getTimestamp("lastEventEndTime") } returns upcomingDate1
+
+    // Setup active public serie where user is NOT participant (should be filtered out)
+    val activeDate2 = Timestamp(Date(System.currentTimeMillis() - 1000000L))
+    val activeEndTime2 = Timestamp(Date(System.currentTimeMillis() + 5000000L))
+    every { mockSnapshot4.id } returns "activeSerie2"
+    every { mockSnapshot4.getString("title") } returns "Active Serie 2"
+    every { mockSnapshot4.getString("description") } returns
+        "User is NOT participant in active serie"
+    every { mockSnapshot4.getTimestamp("date") } returns activeDate2
+    every { mockSnapshot4.get("participants") } returns listOf("otherUser1", "otherUser2")
+    every { mockSnapshot4.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot4.getString("visibility") } returns Visibility.PUBLIC.name
+    every { mockSnapshot4.get("eventIds") } returns listOf("event4")
+    every { mockSnapshot4.getString("ownerId") } returns "otherUser1"
+    every { mockSnapshot4.getTimestamp("lastEventEndTime") } returns activeEndTime2
+
+    // When
+    val result = repository.getAllSeries(SerieFilter.SERIES_FOR_MAP_SCREEN)
+
+    // Then
+    assertEquals(2, result.size)
+    // Should include: Active Serie 1 (active + user is participant) and Upcoming Public Serie
+    // (upcoming)
+    val resultTitles = result.map { it.title }
+    assert(resultTitles.contains("Active Serie 1"))
+    assert(resultTitles.contains("Upcoming Public Serie"))
+  }
 }
