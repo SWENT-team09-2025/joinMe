@@ -24,6 +24,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.TransparentColor
+import com.android.joinme.ui.theme.buttonColors
+import com.android.joinme.ui.theme.customColors
+import com.android.joinme.ui.theme.outlinedTextField
 
 /** Test tags for EditProfileScreen components to enable UI testing. */
 object EditProfileTestTags {
@@ -306,16 +309,12 @@ private fun EditProfileContent(
                     .height(Dimens.Button.standardHeight)
                     .testTag(EditProfileTestTags.SAVE_BUTTON),
             enabled = isFormValid,
-            colors =
-                ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant),
+            colors = MaterialTheme.customColors.buttonColors(),
             shape = RoundedCornerShape(Dimens.Button.cornerRadius)) {
               Text(
                   "SAVE",
-                  fontSize = Dimens.FontSize.bodyLarge,
-                  fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.onPrimaryContainer)
+                  style = MaterialTheme.typography.headlineSmall,
+                  fontWeight = FontWeight.Bold)
             }
 
         Spacer(modifier = Modifier.height(Dimens.Padding.extraLarge))
@@ -384,7 +383,7 @@ private fun ProfilePictureSection(
                             Icon(
                                 imageVector = Icons.Outlined.Edit,
                                 contentDescription = "Edit Photo",
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = MaterialTheme.customColors.editIcon,
                                 modifier = Modifier.size(Dimens.Profile.editIconSize))
                           }
                     }
@@ -439,10 +438,7 @@ private fun BioSection(bio: String, onBioChange: (String) -> Unit) {
               fontSize = Dimens.FontSize.bodySmall,
               color = MaterialTheme.colorScheme.onSurfaceVariant)
         },
-        colors =
-            OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                focusedBorderColor = MaterialTheme.colorScheme.primary),
+        colors = MaterialTheme.customColors.outlinedTextField(),
         shape = RoundedCornerShape(Dimens.TextField.cornerRadius))
   }
 }
@@ -479,16 +475,7 @@ private fun EditTextField(
         isError = isError,
         placeholder =
             placeholder?.let { { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
-        colors =
-            OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor =
-                    if (isError) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.outline,
-                focusedBorderColor =
-                    if (isError) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.primary,
-                disabledBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant),
+        colors = MaterialTheme.customColors.outlinedTextField(),
         shape = RoundedCornerShape(Dimens.TextField.cornerRadius),
         singleLine = true)
 

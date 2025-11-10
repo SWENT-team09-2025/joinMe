@@ -48,7 +48,8 @@ data class CustomColors(
     val outlinedTextFieldDisabledPlaceholderColor: Color,
     val outlinedTextFieldDisabledLeadingIconColor: Color,
     val outlinedTextFieldDisabledTrailingIconColor: Color,
-    val deleteButton: Color
+    val deleteButton: Color,
+    val editIcon: Color,
 )
 
 /** Custom light color palette. */
@@ -119,7 +120,10 @@ val lightCustomColors =
         outlinedTextFieldDisabledPlaceholderColor = onSurfaceVariantLight,
         outlinedTextFieldDisabledLeadingIconColor = onSurfaceVariantLight,
         outlinedTextFieldDisabledTrailingIconColor = onSurfaceVariantLight,
-        deleteButton = errorLight)
+        deleteButton = errorLight,
+
+        // Edit icon color in group/profile pictures
+        editIcon = onPrimaryLight)
 
 /** Custom dark color palette. */
 val darkCustomColors =
@@ -192,7 +196,10 @@ val darkCustomColors =
         outlinedTextFieldDisabledPlaceholderColor = onSurfaceVariantDark,
         outlinedTextFieldDisabledLeadingIconColor = onSurfaceVariantDark,
         outlinedTextFieldDisabledTrailingIconColor = onSurfaceVariantDark,
-        deleteButton = errorContainerDark)
+        deleteButton = errorContainerDark,
+
+        // Edit icon color in group/profile pictures
+        editIcon = primaryDark)
 
 internal val LocalCustomColors = staticCompositionLocalOf { lightCustomColors }
 
