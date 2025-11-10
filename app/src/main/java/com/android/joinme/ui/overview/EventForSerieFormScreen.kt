@@ -12,9 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.android.joinme.model.map.Location
-import com.android.joinme.ui.theme.ButtonSaveColor
-import com.android.joinme.ui.theme.DarkButtonColor
-import com.android.joinme.ui.theme.DividerColor
+import com.android.joinme.ui.theme.buttonColors
+import com.android.joinme.ui.theme.customColors
 import kotlinx.coroutines.launch
 
 /** Note: This file was created with the help of IA (Claude) */
@@ -91,7 +90,7 @@ fun EventForSerieFormScreen(
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
-          HorizontalDivider(color = DividerColor, thickness = 1.dp)
+          HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 1.dp)
         }
       }) { paddingValues ->
         Column(
@@ -171,9 +170,7 @@ fun EventForSerieFormScreen(
                   },
                   modifier = Modifier.fillMaxWidth().testTag(testTags.buttonSaveEvent),
                   enabled = isFormValid,
-                  colors =
-                      ButtonDefaults.buttonColors(
-                          containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
+                  colors = MaterialTheme.customColors.buttonColors()) {
                     Text(saveButtonText)
                   }
             }
