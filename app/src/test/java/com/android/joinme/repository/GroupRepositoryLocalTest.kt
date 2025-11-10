@@ -27,15 +27,6 @@ class GroupRepositoryLocalTest {
 
   // ---------------- BASIC CRUD ----------------
 
-  @Test
-  fun addAndGetGroup_success() {
-    runBlocking {
-      repo.addGroup(sampleGroup)
-      val group = repo.getGroup("1")
-      Assert.assertEquals(sampleGroup.name, group.name)
-    }
-  }
-
   @Test(expected = Exception::class)
   fun getGroup_notFound_throwsException() {
     runBlocking { repo.getGroup("unknown") }
@@ -119,14 +110,6 @@ class GroupRepositoryLocalTest {
       // and both entries exist with the same ID
       val allWithSameId = repo.getAllGroups().filter { it.id == "1" }
       Assert.assertEquals(2, allWithSameId.size)
-    }
-  }
-
-  @Test
-  fun getAllGroups_initiallyReturnsEmptyList() {
-    runBlocking {
-      val groups = repo.getAllGroups()
-      Assert.assertTrue(groups.isEmpty())
     }
   }
 

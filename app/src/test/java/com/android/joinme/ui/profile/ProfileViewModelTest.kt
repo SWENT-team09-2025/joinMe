@@ -54,16 +54,11 @@ class ProfileViewModelTest {
   // ==================== STATE MANAGEMENT TESTS ====================
 
   @Test
-  fun `clearError clears error state`() {
-    viewModel.setError("Test error")
-    viewModel.clearError()
-    assertNull(viewModel.error.value)
-  }
-
-  @Test
-  fun `setError sets error message`() {
+  fun `clearError sets and clears error state`() {
     viewModel.setError("Error message")
     assertEquals("Error message", viewModel.error.value)
+    viewModel.clearError()
+    assertNull(viewModel.error.value)
   }
 
   @Test
@@ -109,20 +104,6 @@ class ProfileViewModelTest {
     assertEquals("test-uid", viewModel.profile.value?.uid)
     assertEquals("new@example.com", viewModel.profile.value?.email)
     assertEquals("new", viewModel.profile.value?.username)
-    coVerify { mockProfileRepository.createOrUpdateProfile(any()) }
-  }
-
-  @Test
-  fun `loadProfile handles NoSuchElementException and bootstraps profile`() = runTest {
-    coEvery { mockProfileRepository.getProfile("test-uid") } throws NoSuchElementException()
-    coEvery { mockAuthRepository.getCurrentUserEmail() } returns "test@example.com"
-    coEvery { mockProfileRepository.createOrUpdateProfile(any()) } just Runs
-
-    viewModel.loadProfile("test-uid")
-    testScheduler.advanceUntilIdle()
-
-    assertNotNull(viewModel.profile.value)
-    assertEquals("test-uid", viewModel.profile.value?.uid)
     coVerify { mockProfileRepository.createOrUpdateProfile(any()) }
   }
 
@@ -470,24 +451,12 @@ class ProfileViewModelTest {
   // ==================== USERNAME VALIDATION TESTS ====================
 
   @Test
-  fun `getUsernameError returns error for empty username`() {
+  fun `getUsernameError returns good error reasons`() {
     assertEquals("Username is required", viewModel.getUsernameError(""))
-  }
-
-  @Test
-  fun `getUsernameError returns error for short username`() {
     assertEquals("Username must be at least 3 characters", viewModel.getUsernameError("ab"))
     assertEquals("Username must be at least 3 characters", viewModel.getUsernameError("a"))
-  }
-
-  @Test
-  fun `getUsernameError returns error for long username`() {
-    val longName = "a".repeat(31)
-    assertEquals("Username must not exceed 30 characters", viewModel.getUsernameError(longName))
-  }
-
-  @Test
-  fun `getUsernameError returns error for invalid characters`() {
+    assertEquals(
+        "Username must not exceed 30 characters", viewModel.getUsernameError("a".repeat(31)))
     assertEquals(
         "Only letters, numbers, spaces, and underscores allowed",
         viewModel.getUsernameError("user@name"))

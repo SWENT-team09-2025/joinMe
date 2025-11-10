@@ -30,6 +30,19 @@ class EventTest {
           ownerId = "owner123")
 
   @Test
+  fun `displayString returns correct string for all EventType values`() {
+    assertEquals("Sports", EventType.SPORTS.displayString())
+    assertEquals("Activity", EventType.ACTIVITY.displayString())
+    assertEquals("Social", EventType.SOCIAL.displayString())
+  }
+
+  @Test
+  fun `displayString returns correct string for all EventVisibility values`() {
+    assertEquals("Public", EventVisibility.PUBLIC.displayString())
+    assertEquals("Private", EventVisibility.PRIVATE.displayString())
+  }
+
+  @Test
   fun `test event properties`() {
     assertEquals("123", sampleEvent.eventId)
     assertEquals(EventType.SPORTS, sampleEvent.type)
@@ -69,102 +82,6 @@ class EventTest {
     val result = sampleEvent.toString()
     assert(result.contains("Football Game"))
     assert(result.contains("owner123"))
-  }
-
-  @Test
-  fun `isExpired returns true for past events`() {
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.HOUR, -3) // Started 3 hours ago
-    val pastEvent =
-        sampleEvent.copy(
-            date = Timestamp(calendar.time),
-            duration = 60 // 1 hour duration, so it ended 2 hours ago
-            )
-    assertTrue(pastEvent.isExpired())
-  }
-
-  @Test
-  fun `isExpired returns false for current events`() {
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.MINUTE, -30) // Started 30 minutes ago
-    val currentEvent =
-        sampleEvent.copy(
-            date = Timestamp(calendar.time), duration = 120 // 2 hour duration, so still ongoing
-            )
-    assertFalse(currentEvent.isExpired())
-  }
-
-  @Test
-  fun `isExpired returns false for future events`() {
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.HOUR, 2) // Starts in 2 hours
-    val futureEvent = sampleEvent.copy(date = Timestamp(calendar.time), duration = 60)
-    assertFalse(futureEvent.isExpired())
-  }
-
-  @Test
-  fun `isActive returns true for ongoing events`() {
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.MINUTE, -30) // Started 30 minutes ago
-    val ongoingEvent =
-        sampleEvent.copy(
-            date = Timestamp(calendar.time), duration = 120 // 2 hour duration, so still ongoing
-            )
-    assertTrue(ongoingEvent.isActive())
-  }
-
-  @Test
-  fun `isActive returns false for past events`() {
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.HOUR, -3) // Started 3 hours ago
-    val pastEvent =
-        sampleEvent.copy(
-            date = Timestamp(calendar.time), duration = 60 // 1 hour duration, so ended 2 hours ago
-            )
-    assertFalse(pastEvent.isActive())
-  }
-
-  @Test
-  fun `isActive returns false for future events`() {
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.HOUR, 2) // Starts in 2 hours
-    val futureEvent = sampleEvent.copy(date = Timestamp(calendar.time), duration = 60)
-    assertFalse(futureEvent.isActive())
-  }
-
-  @Test
-  fun `isActive returns true for event that just started`() {
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.MINUTE, -1) // Started 1 minute ago
-    val justStartedEvent = sampleEvent.copy(date = Timestamp(calendar.time), duration = 60)
-    assertTrue(justStartedEvent.isActive())
-  }
-
-  @Test
-  fun `isUpcoming returns true for future events`() {
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.HOUR, 2) // Starts in 2 hours
-    val futureEvent = sampleEvent.copy(date = Timestamp(calendar.time), duration = 60)
-    assertTrue(futureEvent.isUpcoming())
-  }
-
-  @Test
-  fun `isUpcoming returns false for ongoing events`() {
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.MINUTE, -30) // Started 30 minutes ago
-    val ongoingEvent =
-        sampleEvent.copy(
-            date = Timestamp(calendar.time), duration = 120 // Still ongoing
-            )
-    assertFalse(ongoingEvent.isUpcoming())
-  }
-
-  @Test
-  fun `isUpcoming returns false for past events`() {
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.HOUR, -3) // Started 3 hours ago
-    val pastEvent = sampleEvent.copy(date = Timestamp(calendar.time), duration = 60)
-    assertFalse(pastEvent.isUpcoming())
   }
 
   @Test

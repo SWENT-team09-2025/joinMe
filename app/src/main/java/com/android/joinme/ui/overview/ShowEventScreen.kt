@@ -16,6 +16,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
@@ -44,6 +47,7 @@ object ShowEventScreenTestTags {
   const val JOIN_QUIT_BUTTON = "joinQuitButton"
   const val EDIT_BUTTON = "editButton"
   const val DELETE_BUTTON = "deleteButton"
+  const val FULL_EVENT_MESSAGE = "fullEventMessage"
 }
 
 /**
@@ -161,7 +165,7 @@ fun ShowEventScreen(
                       Modifier.fillMaxWidth()
                           .testTag(ShowEventScreenTestTags.EVENT_DATE)
                           .padding(vertical = Dimens.Padding.small),
-                  textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                  textAlign = TextAlign.Center)
 
               Spacer(modifier = Modifier.height(Dimens.Spacing.small))
 
@@ -245,7 +249,7 @@ fun ShowEventScreen(
                       Modifier.fillMaxWidth()
                           .testTag(ShowEventScreenTestTags.EVENT_OWNER)
                           .padding(vertical = Dimens.Padding.small),
-                  textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                  textAlign = TextAlign.Center)
 
               Spacer(modifier = Modifier.weight(1f))
 
@@ -287,26 +291,43 @@ fun ShowEventScreen(
                             fontWeight = FontWeight.Medium)
                       }
                 } else {
-                  // Non-owner sees: Join/Quit button
-                  Button(
-                      onClick = {
-                        coroutineScope.launch {
-                          showEventViewModel.toggleParticipation(eventId, currentUserId)
-                        }
-                      },
-                      modifier =
-                          Modifier.fillMaxWidth()
-                              .height(Dimens.Button.standardHeight)
-                              .testTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON),
-                      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+                  // if event is full, don't display join button
+                  val participantCount = eventUIState.participantsCount.toIntOrNull() ?: 0
+                  val maxParticipants = eventUIState.maxParticipants.toIntOrNull() ?: Int.MAX_VALUE
+                  if ((participantCount < maxParticipants) ||
+                      eventUIState.isParticipant(currentUserId)) {
+                    // Non-owner sees: Join/Quit button
+                    Button(
+                        onClick = {
+                          coroutineScope.launch {
+                            showEventViewModel.toggleParticipation(eventId, currentUserId)
+                          }
+                        },
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .height(Dimens.Button.standardHeight)
+                                .testTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON),
+                        shape = RoundedCornerShape(Dimens.CornerRadius.medium),
                       colors = MaterialTheme.customColors.buttonColors()) {
                         Text(
                             text =
                                 if (eventUIState.isParticipant(currentUserId)) "QUIT EVENT"
                                 else "JOIN EVENT",
                             style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Medium)
-                      }
+                              fontWeight = FontWeight.Medium)
+                        }
+                  } else {
+                    Text(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .padding(bottom = 50.dp)
+                                .testTag(ShowEventScreenTestTags.FULL_EVENT_MESSAGE),
+                        text = "Sorry the event:\n ${eventUIState.title} \n is full",
+                        fontSize = 16.sp,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold)
+                  }
                 }
               }
             }

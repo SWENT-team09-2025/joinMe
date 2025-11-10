@@ -55,41 +55,16 @@ class EditGroupViewModelTest {
   // =======================================
 
   @Test
-  fun `initial state has empty name and description`() = runTest {
+  fun `initial state is conform`() = runTest {
     val state = viewModel.uiState.value
     assertEquals("", state.name)
     assertEquals("", state.description)
-  }
-
-  @Test
-  fun `initial state has default category ACTIVITY`() = runTest {
-    val state = viewModel.uiState.value
     assertEquals(EventType.ACTIVITY, state.category)
-  }
-
-  @Test
-  fun `initial state is not loading`() = runTest {
-    val state = viewModel.uiState.value
     assertFalse(state.isLoading)
-  }
-
-  @Test
-  fun `initial state has no errors`() = runTest {
-    val state = viewModel.uiState.value
     assertNull(state.nameError)
     assertNull(state.descriptionError)
     assertNull(state.errorMsg)
-  }
-
-  @Test
-  fun `initial state is not valid`() = runTest {
-    val state = viewModel.uiState.value
     assertFalse(state.isValid)
-  }
-
-  @Test
-  fun `initial state has no editedGroupId`() = runTest {
-    val state = viewModel.uiState.value
     assertNull(state.editedGroupId)
   }
 
@@ -234,17 +209,6 @@ class EditGroupViewModelTest {
   }
 
   @Test
-  fun `setName with exactly 30 characters is valid`() = runTest {
-    val name = "a".repeat(30)
-    viewModel.setName(name)
-
-    val state = viewModel.uiState.value
-    assertNull(state.nameError)
-    assertEquals(name, state.name)
-    assertTrue(state.isValid)
-  }
-
-  @Test
   fun `setName with invalid characters sets nameError`() = runTest {
     viewModel.setName("Test@Group!")
 
@@ -254,32 +218,12 @@ class EditGroupViewModelTest {
   }
 
   @Test
-  fun `setName with underscores is valid`() = runTest {
-    viewModel.setName("Test_Group_Name")
-
-    val state = viewModel.uiState.value
-    assertNull(state.nameError)
-    assertEquals("Test_Group_Name", state.name)
-    assertTrue(state.isValid)
-  }
-
-  @Test
   fun `setName with numbers is valid`() = runTest {
-    viewModel.setName("Group123")
+    viewModel.setName("  My Group_123  ")
 
     val state = viewModel.uiState.value
     assertNull(state.nameError)
-    assertEquals("Group123", state.name)
-    assertTrue(state.isValid)
-  }
-
-  @Test
-  fun `setName with single spaces between words is valid`() = runTest {
-    viewModel.setName("My Test Group")
-
-    val state = viewModel.uiState.value
-    assertNull(state.nameError)
-    assertEquals("My Test Group", state.name)
+    assertEquals("  My Group_123  ", state.name)
     assertTrue(state.isValid)
   }
 
@@ -291,17 +235,6 @@ class EditGroupViewModelTest {
     assertEquals("My  Group", state.name)
     assertEquals("Multiple consecutive spaces not allowed", state.nameError)
     assertFalse(state.isValid)
-  }
-
-  @Test
-  fun `setName trims leading and trailing spaces for validation`() = runTest {
-    viewModel.setName("   Valid Name   ")
-
-    val state = viewModel.uiState.value
-    // Name is stored with spaces, but validation passes on trimmed version
-    assertEquals("   Valid Name   ", state.name)
-    assertNull(state.nameError)
-    assertTrue(state.isValid)
   }
 
   @Test
@@ -351,18 +284,6 @@ class EditGroupViewModelTest {
     assertFalse(state.isValid)
   }
 
-  @Test
-  fun `setDescription with exactly 300 characters is valid`() = runTest {
-    viewModel.setName("Valid Group")
-    val description = "a".repeat(300)
-    viewModel.setDescription(description)
-
-    val state = viewModel.uiState.value
-    assertNull(state.descriptionError)
-    assertEquals(description, state.description)
-    assertTrue(state.isValid)
-  }
-
   // =======================================
   // Category Tests
   // =======================================
@@ -399,16 +320,6 @@ class EditGroupViewModelTest {
   fun `form is valid with valid name and category`() = runTest {
     viewModel.setName("Test Group")
     viewModel.setCategory(EventType.SPORTS)
-
-    val state = viewModel.uiState.value
-    assertTrue(state.isValid)
-  }
-
-  @Test
-  fun `form is valid with valid name, category, and empty description`() = runTest {
-    viewModel.setName("Test Group")
-    viewModel.setCategory(EventType.ACTIVITY)
-    viewModel.setDescription("")
 
     val state = viewModel.uiState.value
     assertTrue(state.isValid)

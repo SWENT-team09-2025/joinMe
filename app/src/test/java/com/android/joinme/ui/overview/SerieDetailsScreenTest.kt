@@ -1,5 +1,6 @@
 package com.android.joinme.ui.overview
 
+import android.content.Context
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.Event
@@ -12,11 +13,16 @@ import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.utils.Visibility
+import com.google.firebase.FirebaseApp
 import com.google.firebase.Timestamp
 import java.util.*
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 
 /** Fake SeriesRepository for testing SerieDetailsScreen. */
 class FakeSerieDetailsSeriesRepository : SeriesRepository {
@@ -86,12 +92,23 @@ class FakeSerieDetailsEventsRepository : EventsRepository {
   override fun getNewEventId(): String = "new-event-id"
 }
 
+@RunWith(RobolectricTestRunner::class)
 class SerieDetailsScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
 
+  private lateinit var context: Context
   private lateinit var fakeSeriesRepo: FakeSerieDetailsSeriesRepository
   private lateinit var fakeEventsRepo: FakeSerieDetailsEventsRepository
+
+  @Before
+  fun setUpFirebase() {
+    context = RuntimeEnvironment.getApplication()
+    // Initialize Firebase if not already initialized
+    if (FirebaseApp.getApps(context).isEmpty()) {
+      FirebaseApp.initializeApp(context)
+    }
+  }
 
   private fun setup() {
     fakeSeriesRepo = FakeSerieDetailsSeriesRepository()
@@ -467,18 +484,15 @@ class SerieDetailsScreenTest {
           serieId = serie.serieId, serieDetailsViewModel = viewModel, currentUserId = "user2")
     }
 
-    composeTestRule.waitUntil(timeoutMillis = 3000) {
-      composeTestRule
-          .onAllNodesWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.MESSAGE_FULL_SERIE)
 
     // Verify serie is full
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.MEMBERS_COUNT).assertIsDisplayed()
 
     // Join button should be disabled
-    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE).assertIsNotEnabled()
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE).assertDoesNotExist()
   }
 
   // ========== Navigation ==========

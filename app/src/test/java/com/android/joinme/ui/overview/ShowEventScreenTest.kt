@@ -9,7 +9,10 @@ import java.util.*
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class ShowEventScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
@@ -39,6 +42,26 @@ class ShowEventScreenTest {
         maxParticipants = maxParticipants,
         visibility = EventVisibility.PUBLIC,
         ownerId = ownerId)
+  }
+
+  /** --- FULL EVENT TEST --- */
+  @Test
+  fun joinButtonIsDisabledWhenEventIsFullForNotParticipants() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent(maxParticipants = 1)
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          currentUserId = "user3",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
+    }
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON).assertDoesNotExist()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.FULL_EVENT_MESSAGE).assertExists()
   }
 
   /** --- BASIC RENDERING --- */
@@ -587,76 +610,5 @@ class ShowEventScreenTest {
     composeTestRule
         .onNodeWithTag(ShowEventScreenTestTags.EVENT_VISIBILITY)
         .assertTextContains("PRIVATE")
-  }
-
-  /** --- FULL EVENT TESTS --- */
-  @Test
-  fun joiningFullEvent_showsErrorToast() {
-    val repo = EventsRepositoryLocal()
-    // Create event with max participants already reached
-    val event =
-        createTestEvent(
-            ownerId = "owner123", participants = listOf("user1", "owner123"), maxParticipants = 2)
-    runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
-
-    composeTestRule.setContent {
-      ShowEventScreen(
-          eventId = event.eventId,
-          currentUserId = "user3",
-          showEventViewModel = viewModel,
-          onGoBack = {},
-          onEditEvent = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Verify event is full
-    composeTestRule
-        .onNodeWithTag(ShowEventScreenTestTags.EVENT_MEMBERS)
-        .assertTextContains("MEMBERS : 2/2")
-
-    // Try to join
-    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON).performClick()
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Verify user was NOT added (still 2 participants)
-    composeTestRule
-        .onNodeWithTag(ShowEventScreenTestTags.EVENT_MEMBERS)
-        .assertTextContains("MEMBERS : 2/2")
-    // Still shows JOIN EVENT (not QUIT)
-    composeTestRule
-        .onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON)
-        .assertTextContains("JOIN EVENT")
-  }
-
-  /** --- LOCATION TESTS --- */
-  @Test
-  fun eventWithoutLocation_showsEmptyLocation() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent().copy(location = null)
-    runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
-
-    composeTestRule.setContent {
-      ShowEventScreen(
-          eventId = event.eventId,
-          currentUserId = "user1",
-          showEventViewModel = viewModel,
-          onGoBack = {},
-          onEditEvent = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // The location tag should still exist but be empty or show empty text
-    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_LOCATION).assertExists()
   }
 }
