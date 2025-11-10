@@ -2,6 +2,7 @@ package com.android.joinme.ui.overview
 
 import android.annotation.SuppressLint
 import android.widget.NumberPicker
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,11 +19,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.map.Location
+import com.android.joinme.ui.theme.Dimens
+import com.android.joinme.ui.theme.buttonColors
+import com.android.joinme.ui.theme.customColors
+import com.android.joinme.ui.theme.outlinedTextField
 import java.util.Locale
 
 /** Data class representing the test tags for event form fields. */
@@ -83,7 +87,7 @@ data class EventFormState(
  * @param onVisibilityChange Callback when visibility changes
  * @param onSave Callback when save button is clicked, returns true if save was successful
  * @param onGoBack Callback when back button is clicked
- * @param saveButtonText Text to display on the save button (default: "Save")
+ * @param saveButtonText Text to display on the save button (default: "SAVE")
  */
 @SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,7 +108,7 @@ fun EventFormScreen(
     onVisibilityChange: (String) -> Unit,
     onSave: () -> Boolean,
     onGoBack: () -> Unit,
-    saveButtonText: String = "Save"
+    saveButtonText: String = "SAVE"
 ) {
   val eventTypes = EventType.values().map { it.name.uppercase(Locale.ROOT) }
   val visibilities = listOf(EventVisibility.PUBLIC.name, EventVisibility.PRIVATE.name)
@@ -127,16 +131,17 @@ fun EventFormScreen(
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
-          HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+          HorizontalDivider(
+              color = MaterialTheme.colorScheme.outlineVariant, thickness = Dimens.BorderWidth.thin)
         }
       }) { paddingValues ->
         Column(
             modifier =
                 Modifier.fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
+                    .padding(Dimens.Padding.medium)
                     .padding(paddingValues),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            verticalArrangement = Arrangement.spacedBy(Dimens.Padding.small)) {
               // Type dropdown
               ExposedDropdownMenuBox(
                   expanded = showTypeDropdown,
@@ -162,14 +167,24 @@ fun EventFormScreen(
                             Modifier.menuAnchor().fillMaxWidth().testTag(testTags.inputEventType))
                     ExposedDropdownMenu(
                         expanded = showTypeDropdown,
-                        onDismissRequest = { showTypeDropdown = false }) {
-                          eventTypes.forEach { type ->
+                        onDismissRequest = { showTypeDropdown = false },
+                        modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
+                          eventTypes.forEachIndexed { index, type ->
                             DropdownMenuItem(
-                                text = { Text(type) },
+                                text = {
+                                  Text(
+                                      text = type,
+                                      color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                      style = MaterialTheme.typography.headlineSmall)
+                                },
                                 onClick = {
                                   onTypeChange(type)
                                   showTypeDropdown = false
-                                })
+                                },
+                                colors = MaterialTheme.customColors.dropdownMenu)
+                            if (index < eventTypes.lastIndex) {
+                              HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                            }
                           }
                         }
                   }
@@ -208,7 +223,7 @@ fun EventFormScreen(
                   },
                   modifier =
                       Modifier.fillMaxWidth()
-                          .height(150.dp)
+                          .height(Dimens.EventForm.descriptionField)
                           .testTag(testTags.inputEventDescription))
 
               // Location
@@ -224,7 +239,7 @@ fun EventFormScreen(
               // Max Participants and Duration pickers
               Row(
                   modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                  horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium)) {
                     var showParticipantsDialog by remember { mutableStateOf(false) }
                     var tempParticipants by remember {
                       mutableIntStateOf(formState.maxParticipants.toIntOrNull() ?: 1)
@@ -323,19 +338,7 @@ fun EventFormScreen(
                                   color = MaterialTheme.colorScheme.error)
                             }
                           },
-                          colors =
-                              OutlinedTextFieldDefaults.colors(
-                                  disabledTextColor =
-                                      LocalContentColor.current.copy(
-                                          LocalContentColor.current.alpha),
-                                  disabledBorderColor = MaterialTheme.colorScheme.outline,
-                                  disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledPlaceholderColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledLeadingIconColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledTrailingIconColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant),
+                          colors = MaterialTheme.customColors.outlinedTextField(),
                           enabled = false,
                           modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventDuration))
                     }
@@ -378,7 +381,7 @@ fun EventFormScreen(
               // Date and Time pickers
               Row(
                   modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                  horizontalArrangement = Arrangement.spacedBy(Dimens.Padding.medium)) {
                     val context = LocalContext.current
                     val calendar = remember { java.util.Calendar.getInstance() }
                     val (year, month, day) =
@@ -420,19 +423,7 @@ fun EventFormScreen(
                                   color = MaterialTheme.colorScheme.error)
                             }
                           },
-                          colors =
-                              OutlinedTextFieldDefaults.colors(
-                                  disabledTextColor =
-                                      LocalContentColor.current.copy(
-                                          LocalContentColor.current.alpha),
-                                  disabledBorderColor = MaterialTheme.colorScheme.outline,
-                                  disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledPlaceholderColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledLeadingIconColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledTrailingIconColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant),
+                          colors = MaterialTheme.customColors.outlinedTextField(),
                           enabled = false,
                           modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventDate))
                     }
@@ -456,19 +447,7 @@ fun EventFormScreen(
                           readOnly = true,
                           label = { Text("Time") },
                           placeholder = { Text("Select time") },
-                          colors =
-                              OutlinedTextFieldDefaults.colors(
-                                  disabledTextColor =
-                                      LocalContentColor.current.copy(
-                                          LocalContentColor.current.alpha),
-                                  disabledBorderColor = MaterialTheme.colorScheme.outline,
-                                  disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledPlaceholderColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledLeadingIconColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledTrailingIconColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant),
+                          colors = MaterialTheme.customColors.outlinedTextField(),
                           enabled = false,
                           modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventTime))
                     }
@@ -502,30 +481,37 @@ fun EventFormScreen(
                                 .testTag(testTags.inputEventVisibility))
                     ExposedDropdownMenu(
                         expanded = showVisibilityDropdown,
-                        onDismissRequest = { showVisibilityDropdown = false }) {
-                          visibilities.forEach { vis ->
+                        onDismissRequest = { showVisibilityDropdown = false },
+                        modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
+                          visibilities.forEachIndexed { index, vis ->
                             DropdownMenuItem(
-                                text = { Text(vis) },
+                                text = {
+                                  Text(
+                                      text = vis,
+                                      color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                      style = MaterialTheme.typography.headlineSmall)
+                                },
                                 onClick = {
                                   onVisibilityChange(vis)
                                   showVisibilityDropdown = false
-                                })
+                                },
+                                colors = MaterialTheme.customColors.dropdownMenu)
+                            if (index < visibilities.lastIndex) {
+                              HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                            }
                           }
                         }
                   }
 
-              Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
               // Save button
               Button(
-                  onClick = { if (onSave()) {} },
+                  onClick = { onSave() },
                   modifier = Modifier.fillMaxWidth().testTag(testTags.buttonSaveEvent),
                   enabled = formState.isValid,
-                  colors =
-                      ButtonDefaults.buttonColors(
-                          containerColor = MaterialTheme.colorScheme.onBackground,
-                          contentColor = MaterialTheme.colorScheme.onPrimary)) {
-                    Text(saveButtonText)
+                  colors = MaterialTheme.customColors.buttonColors()) {
+                    Text(saveButtonText, style = MaterialTheme.typography.titleSmall)
                   }
             }
       }
@@ -594,17 +580,17 @@ fun LocationField(
           modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventLocation))
 
       if (showSuggestions) {
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Dimens.Spacing.small))
         Surface(
-            shape = RoundedCornerShape(12.dp),
-            tonalElevation = 6.dp,
+            shape = RoundedCornerShape(Dimens.CornerRadius.large),
+            tonalElevation = Dimens.Elevation.medium,
             modifier =
                 Modifier.fillMaxWidth()
-                    .heightIn(max = 240.dp)
+                    .heightIn(max = Dimens.EventForm.suggestionsField)
                     .border(
-                        width = 1.dp,
+                        width = Dimens.BorderWidth.thin,
                         color = MaterialTheme.colorScheme.outlineVariant,
-                        shape = RoundedCornerShape(12.dp))) {
+                        shape = RoundedCornerShape(Dimens.CornerRadius.large))) {
               LazyColumn(modifier = Modifier.testTag(testTags.inputEventLocationSuggestions)) {
                 items(suggestions) { loc ->
                   ListItem(
@@ -616,9 +602,9 @@ fun LocationField(
                                 suppressNextOpen = true
                                 onSuggestionSelected(loc)
                               }
-                              .padding(horizontal = 4.dp)
+                              .padding(horizontal = Dimens.Padding.extraSmall)
                               .testTag(testTags.inputEventLocationSuggestions))
-                  HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
+                  HorizontalDivider(Modifier, thickness = Dimens.BorderWidth.thin)
                 }
               }
             }

@@ -1,8 +1,12 @@
 package com.android.joinme.ui.theme
 
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuItemColors
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SelectableChipColors
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -35,6 +39,14 @@ data class CustomColors(
     val filterChip: SelectableChipColors,
     val dropdownMenu: MenuItemColors,
     val backgroundMenu: Color,
+    val buttonContainerColor: Color,
+    val buttonContentColor: Color,
+    val outlinedTextFieldDisabledTextColor: Color,
+    val outlinedTextFieldDisabledBorderColor: Color,
+    val outlinedTextFieldDisabledLabelColor: Color,
+    val outlinedTextFieldDisabledPlaceholderColor: Color,
+    val outlinedTextFieldDisabledLeadingIconColor: Color,
+    val outlinedTextFieldDisabledTrailingIconColor: Color,
 )
 
 /** Custom light color palette. */
@@ -96,7 +108,15 @@ val lightCustomColors =
                 disabledLeadingIconColor = onSecondaryContainerLight,
                 disabledTrailingIconColor = onSecondaryContainerLight,
             ),
-        backgroundMenu = primaryLight)
+        backgroundMenu = primaryLight,
+        buttonContainerColor = primaryLight,
+        buttonContentColor = onPrimaryLight,
+        outlinedTextFieldDisabledTextColor = onSurfaceLight,
+        outlinedTextFieldDisabledBorderColor = outlineLight,
+        outlinedTextFieldDisabledLabelColor = onSurfaceVariantLight,
+        outlinedTextFieldDisabledPlaceholderColor = onSurfaceVariantLight,
+        outlinedTextFieldDisabledLeadingIconColor = onSurfaceVariantLight,
+        outlinedTextFieldDisabledTrailingIconColor = onSurfaceVariantLight)
 
 /** Custom dark color palette. */
 val darkCustomColors =
@@ -151,19 +171,59 @@ val darkCustomColors =
         // DROPDOWN MENU COLORS FOR SEARCH SCREEN
         dropdownMenu =
             MenuItemColors(
-                textColor = surfaceLight,
-                leadingIconColor = onSecondaryContainerLight,
-                trailingIconColor = onSecondaryContainerLight,
-                disabledTextColor = onSecondaryContainerLight,
-                disabledLeadingIconColor = onSecondaryContainerLight,
-                disabledTrailingIconColor = onSecondaryContainerLight,
+                textColor = onSurfaceDark,
+                leadingIconColor = onSecondaryContainerDark,
+                trailingIconColor = onSecondaryContainerDark,
+                disabledTextColor = onSecondaryContainerDark,
+                disabledLeadingIconColor = onSecondaryContainerDark,
+                disabledTrailingIconColor = onSecondaryContainerDark,
             ),
 
         // DROPDOWN MENU BACKGROUND FOR SEARCH SCREEN
-        backgroundMenu = surfaceContainerDark)
+        backgroundMenu = surfaceContainerDark,
+        buttonContainerColor = primaryDark,
+        buttonContentColor = onPrimaryDark,
+        outlinedTextFieldDisabledTextColor = onSurfaceDark,
+        outlinedTextFieldDisabledBorderColor = outlineDark,
+        outlinedTextFieldDisabledLabelColor = onSurfaceVariantDark,
+        outlinedTextFieldDisabledPlaceholderColor = onSurfaceVariantDark,
+        outlinedTextFieldDisabledLeadingIconColor = onSurfaceVariantDark,
+        outlinedTextFieldDisabledTrailingIconColor = onSurfaceVariantDark)
 
 internal val LocalCustomColors = staticCompositionLocalOf { lightCustomColors }
 
 /** Extension property on [MaterialTheme] to provide easy access to custom colors. */
 val MaterialTheme.customColors: CustomColors
   @Composable @ReadOnlyComposable get() = LocalCustomColors.current
+
+/**
+ * Returns customized colors for Button components.
+ *
+ * Provides a consistent color scheme for buttons.
+ *
+ * @return ButtonColors configured with custom colors.
+ */
+@Composable
+fun CustomColors.buttonColors(): ButtonColors {
+  return ButtonDefaults.buttonColors(
+      containerColor = buttonContainerColor, contentColor = buttonContentColor)
+}
+
+/**
+ * Returns customized colors for OutlinedTextField components.
+ *
+ * Provides a consistent color scheme for disabled states of outlined text fields, including text,
+ * borders, labels, placeholders, and icons.
+ *
+ * @return TextFieldColors configured with custom disabled state colors
+ */
+@Composable
+fun CustomColors.outlinedTextField(): TextFieldColors {
+  return OutlinedTextFieldDefaults.colors(
+      disabledTextColor = outlinedTextFieldDisabledTextColor,
+      disabledBorderColor = outlinedTextFieldDisabledBorderColor,
+      disabledLabelColor = outlinedTextFieldDisabledLabelColor,
+      disabledPlaceholderColor = outlinedTextFieldDisabledPlaceholderColor,
+      disabledLeadingIconColor = outlinedTextFieldDisabledLeadingIconColor,
+      disabledTrailingIconColor = outlinedTextFieldDisabledTrailingIconColor)
+}

@@ -553,4 +553,16 @@ object Dimens {
     /** 6dp - Vertical padding for each card item */
     val cardVerticalPadding: Dp = 6.dp
   }
+
+  /**
+   * Event Form Dimensions
+   *
+   * Dimensions specific to the EventForm component including description field height.
+   */
+  object EventForm {
+    /** 150.dp - height for description field */
+    val descriptionField: Dp = 150.dp
+    /** 240.dp - height for suggestions field */
+    val suggestionsField: Dp = 240.dp
+  }
 }
