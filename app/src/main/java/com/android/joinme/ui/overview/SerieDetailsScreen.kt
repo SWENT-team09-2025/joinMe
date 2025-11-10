@@ -28,52 +28,52 @@ import kotlinx.coroutines.launch
  * Provides consistent identifiers for testing individual UI elements.
  */
 object SerieDetailsScreenTestTags {
-  /** Test tag for the screen root */
-  const val SCREEN = "serieDetailsScreen"
+    /** Test tag for the screen root */
+    const val SCREEN = "serieDetailsScreen"
 
-  /** Test tag for the serie title in the top bar */
-  const val SERIE_TITLE = "serieTitle"
+    /** Test tag for the serie title in the top bar */
+    const val SERIE_TITLE = "serieTitle"
 
-  /** Test tag for the meeting date/time text */
-  const val MEETING_INFO = "meetingInfo"
+    /** Test tag for the meeting date/time text */
+    const val MEETING_INFO = "meetingInfo"
 
-  /** Test tag for the visibility text (PUBLIC/PRIVATE) */
-  const val VISIBILITY = "visibility"
+    /** Test tag for the visibility text (PUBLIC/PRIVATE) */
+    const val VISIBILITY = "visibility"
 
-  /** Test tag for the members count text */
-  const val MEMBERS_COUNT = "membersCount"
+    /** Test tag for the members count text */
+    const val MEMBERS_COUNT = "membersCount"
 
-  /** Test tag for the duration text */
-  const val DURATION = "duration"
+    /** Test tag for the duration text */
+    const val DURATION = "duration"
 
-  /** Test tag for the description text */
-  const val DESCRIPTION = "description"
+    /** Test tag for the description text */
+    const val DESCRIPTION = "description"
 
-  /** Test tag for the event list container */
-  const val EVENT_LIST = "eventList"
+    /** Test tag for the event list container */
+    const val EVENT_LIST = "eventList"
 
-  /** Test tag prefix for individual event cards */
-  const val EVENT_CARD = "eventCard"
+    /** Test tag prefix for individual event cards */
+    const val EVENT_CARD = "eventCard"
 
-  /** Test tag for the owner info text */
-  const val OWNER_INFO = "ownerInfo"
+    /** Test tag for the owner info text */
+    const val OWNER_INFO = "ownerInfo"
 
-  /** Test tag for the "Add event" button */
-  const val BUTTON_ADD_EVENT = "buttonAddEvent"
+    /** Test tag for the "Add event" button */
+    const val BUTTON_ADD_EVENT = "buttonAddEvent"
 
-  /** Test tag for the "Quit serie" button */
-  const val BUTTON_QUIT_SERIE = "buttonQuitSerie"
+    /** Test tag for the "Quit serie" button */
+    const val BUTTON_QUIT_SERIE = "buttonQuitSerie"
 
-  /** Test tag for the loading indicator */
-  const val LOADING = "loading"
+    /** Test tag for the loading indicator */
+    const val LOADING = "loading"
 
-  /** Test tag for the back button */
-  const val BACK_BUTTON = "backButton"
+    /** Test tag for the back button */
+    const val BACK_BUTTON = "backButton"
 
-  /** Test tag for the edit serie button */
-  const val EDIT_SERIE_BUTTON = "editSerieButton"
+    /** Test tag for the edit serie button */
+    const val EDIT_SERIE_BUTTON = "editSerieButton"
 
-  const val MESSAGE_FULL_SERIE = "messageFullSerie"
+    const val MESSAGE_FULL_SERIE = "messageFullSerie"
 }
 
 /**
@@ -213,67 +213,38 @@ fun SerieDetailsScreen(
             HorizontalDivider(
                 thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
 
-                // Join/Quit serie button (shown to non-owners)
-                if (!uiState.isOwner(currentUserId)) {
-                  if (uiState.canJoin(currentUserId) || uiState.isParticipant(currentUserId)) {
-                    Button(
-                        onClick = {
-                          coroutineScope.launch {
-                            val success =
-                                if (uiState.isParticipant(currentUserId)) {
-                                  serieDetailsViewModel.quitSerie((currentUserId))
-                                } else {
-                                  serieDetailsViewModel.joinSerie(currentUserId)
-                                }
-                            if (success && !uiState.isParticipant(currentUserId)) {
-                              // If user quit successfully, navigate back
-                              onQuitSerieSuccess()
-                            }
-                          }
-                        },
+                // Events list in LazyColumn with fixed size
+                if (uiState.events.isNotEmpty()) {
+                    LazyColumn(
                         modifier =
                             Modifier.fillMaxWidth()
-                                .height(Dimens.Button.standardHeight)
-                                .testTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE),
-                        shape = RoundedCornerShape(Dimens.CornerRadius.medium),
-                        enabled =
-                            uiState.isParticipant(currentUserId) || uiState.canJoin(currentUserId),
-                        colors = MaterialTheme.customColors.buttonColors()) {
-                          Text(
-                              text =
-                                  if (uiState.isParticipant(currentUserId)) "QUIT SERIE"
-                                  else "JOIN SERIE",
-                              style = MaterialTheme.typography.headlineSmall)
+                                .weight(1f)
+                                .testTag(SerieDetailsScreenTestTags.EVENT_LIST),
+                        verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium),
+                    ) {
+                        items(uiState.events.size) { index ->
+                            val event = uiState.events[index]
+                            EventCard(
+                                event = event,
+                                onClick = { onEventCardClick(event.eventId) },
+                                testTag = "${SerieDetailsScreenTestTags.EVENT_CARD}_${event.eventId}")
                         }
-                  } else {
-                    Text(
+                    }
+                } else {
+                    // Empty state - same height as LazyColumn
+                    Box(
                         modifier =
                             Modifier.fillMaxWidth()
-                                .padding(bottom = Dimens.Spacing.huge)
-                                .testTag(SerieDetailsScreenTestTags.MESSAGE_FULL_SERIE),
-                        text = "Sorry the serie:\n ${uiState.getTitle()} \n is full",
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold)
-                  }
+                                .weight(1f) // Same height as LazyColumn
+                                .testTag(SerieDetailsScreenTestTags.EVENT_LIST),
+                        contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "No events in this serie yet",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center)
+                    }
                 }
-              }
-            } else {
-              // Empty state - same height as LazyColumn
-              Box(
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .weight(1f) // Same height as LazyColumn
-                          .testTag(SerieDetailsScreenTestTags.EVENT_LIST),
-                  contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "No events in this serie yet",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center)
-                  }
-            }
 
             HorizontalDivider(
                 thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
@@ -359,5 +330,5 @@ fun SerieDetailsScreen(
             }
           }
         }
-      }
+    }
 }
