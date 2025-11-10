@@ -324,8 +324,7 @@ fun ShowEventScreen(
                         fontSize = 16.sp,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold
-                    )
+                        fontWeight = FontWeight.Bold)
                   }
                 }
               }
