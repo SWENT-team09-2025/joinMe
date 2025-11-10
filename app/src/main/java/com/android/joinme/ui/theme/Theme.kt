@@ -118,6 +118,6 @@ fun JoinMeTheme(
   }
 
   CompositionLocalProvider(LocalCustomColors provides customColors) {
-    MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+    MaterialTheme(colorScheme = colorScheme, typography = AppTypography, content = content)
   }
 }
