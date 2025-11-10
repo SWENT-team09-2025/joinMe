@@ -11,6 +11,7 @@ import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepositoryLocal
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.model.utils.Visibility
+import com.android.joinme.ui.overview.CreateEventForSerieScreenTestTags
 import com.android.joinme.ui.overview.CreateEventScreenTestTags
 import com.android.joinme.ui.overview.EditSerieScreenTestTags
 import com.android.joinme.ui.overview.OverviewScreenTestTags
@@ -824,5 +825,79 @@ class MainActivityNavigationTest {
 
     // Verify we're back on Overview screen
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
+  }
+
+  // ========== Create Event For Serie Navigation Tests ==========
+
+  @Test
+  fun canNavigateToCreateEventForSerieFromSerieDetails() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Navigate to SerieDetails by clicking on the serie card (test-1 from setup)
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST)
+        .performScrollToNode(hasTestTag("serieItemtest-1"))
+
+    composeTestRule.onNodeWithTag("serieItemtest-1").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000) // Wait longer for serie data to load
+    composeTestRule.waitForIdle()
+
+    // Verify we're on SerieDetails screen
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.SCREEN).assertExists()
+
+    // Wait for serie data to load and buttons to appear
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Verify Add Event button exists (should be visible since user is owner)
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT).assertExists()
+
+    // Click Add Event button
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're on CreateEventForSerieScreen
+    composeTestRule.onNodeWithText("Create Event for Serie").assertExists()
+    composeTestRule
+        .onNodeWithTag(CreateEventForSerieScreenTestTags.INPUT_EVENT_TITLE)
+        .assertExists()
+  }
+
+  @Test
+  fun createEventForSerie_goBackButtonWorks() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Navigate: Overview -> SerieDetails -> CreateEventForSerie (using test-1 from setup)
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST)
+        .performScrollToNode(hasTestTag("serieItemtest-1"))
+
+    composeTestRule.onNodeWithTag("serieItemtest-1").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000) // Wait for serie data to load
+    composeTestRule.waitForIdle()
+
+    // Wait for buttons to appear
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're on CreateEventForSerieScreen
+    composeTestRule.onNodeWithText("Create Event for Serie").assertExists()
+
+    // Click back button
+    composeTestRule.onNodeWithContentDescription("Back").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're back on SerieDetails (not Overview)
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.SCREEN).assertExists()
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.SERIE_TITLE).assertExists()
   }
 }

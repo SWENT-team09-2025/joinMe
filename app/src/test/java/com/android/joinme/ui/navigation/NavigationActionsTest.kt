@@ -175,7 +175,7 @@ class NavigationActionsTest {
   }
 
   @Test
-  fun `navigateTo CreateEventForSerie with serieId navigates to correct route`() {
+  fun navigateToCreateEventForSeriewithserieIdnavigatestocorrectroute() {
     val serieId = "test-serie-123"
     every { navController.currentDestination?.route } returns Screen.CreateSerie.route
 
@@ -509,6 +509,76 @@ class NavigationActionsTest {
             assertTrue(options.shouldRestoreState())
             assertFalse(options.shouldLaunchSingleTop())
           })
+    }
+  }
+
+  // ========== Create Event For Serie Navigation Tests ==========
+
+  @Test
+  fun `navigateTo CreateEventForSerie with serieId navigates to correct route`() {
+    val serieId = "test-serie-456"
+    every { navController.currentDestination?.route } returns Screen.SerieDetails(serieId).route
+
+    actions.navigateTo(Screen.CreateEventForSerie(serieId))
+
+    verify {
+      navController.navigate(
+          eq("create_event_for_serie/$serieId"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `CreateEventForSerie route companion object matches pattern`() {
+    assertEquals("create_event_for_serie/{serieId}", Screen.CreateEventForSerie.Companion.route)
+  }
+
+  @Test
+  fun `CreateEventForSerie instance route contains actual serieId`() {
+    val serieId = "my-serie-789"
+    val screen = Screen.CreateEventForSerie(serieId)
+    assertEquals("create_event_for_serie/$serieId", screen.route)
+  }
+
+  @Test
+  fun `CreateEventForSerie screen has correct name`() {
+    val screen = Screen.CreateEventForSerie("test-id")
+    assertEquals("Create Event for Serie", screen.name)
+    assertFalse(screen.isTopLevelDestination)
+  }
+
+  @Test
+  fun `navigateTo CreateEventForSerie from SerieDetails screen works correctly`() {
+    val serieId = "serie-create-event-123"
+    every { navController.currentDestination?.route } returns Screen.SerieDetails(serieId).route
+
+    actions.navigateTo(Screen.CreateEventForSerie(serieId))
+
+    verify {
+      navController.navigate(
+          eq("create_event_for_serie/$serieId"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `navigateTo CreateEventForSerie with special characters in serieId`() {
+    val serieId = "serie-123-abc-xyz"
+    every { navController.currentDestination?.route } returns Screen.Overview.route
+
+    actions.navigateTo(Screen.CreateEventForSerie(serieId))
+
+    verify {
+      navController.navigate(
+          eq("create_event_for_serie/$serieId"), any<NavOptionsBuilder.() -> Unit>())
     }
   }
 }

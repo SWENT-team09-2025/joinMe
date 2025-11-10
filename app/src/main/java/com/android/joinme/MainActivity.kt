@@ -230,10 +230,7 @@ fun JoinMe(
                 navigationActions.navigateTo(Screen.ShowEventScreen(eventId))
               },
               onAddEventClick = {
-                // TODO: Implement navigation to CreateEvent with serieId
-                Toast.makeText(
-                        context, "Add event to serie - not yet implemented", Toast.LENGTH_SHORT)
-                    .show()
+                navigationActions.navigateTo(Screen.CreateEventForSerie(serieId))
               },
               onEditSerieClick = { id -> navigationActions.navigateTo(Screen.EditSerie(id)) },
               onQuitSerieSuccess = { navigationActions.goBack() })
@@ -247,6 +244,16 @@ fun JoinMe(
               serieId = serieId,
               onGoBack = { navigationActions.goBack() },
               onDone = { navigationActions.navigateTo(Screen.Overview) })
+        } ?: run { Toast.makeText(context, "Serie ID is null", Toast.LENGTH_SHORT).show() }
+      }
+      composable(Screen.CreateEventForSerie.route) { navBackStackEntry ->
+        val serieId = navBackStackEntry.arguments?.getString("serieId")
+
+        serieId?.let {
+          CreateEventForSerieScreen(
+              serieId = serieId,
+              onDone = { navigationActions.navigateTo(Screen.Overview) },
+              onGoBack = { navigationActions.goBack() })
         } ?: run { Toast.makeText(context, "Serie ID is null", Toast.LENGTH_SHORT).show() }
       }
     }
