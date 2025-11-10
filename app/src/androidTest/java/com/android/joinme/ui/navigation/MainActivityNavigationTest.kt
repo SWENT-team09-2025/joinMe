@@ -6,10 +6,18 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.android.joinme.JoinMe
 import com.android.joinme.model.event.*
+import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.serie.SerieFilter
+import com.android.joinme.model.serie.SeriesRepositoryLocal
+import com.android.joinme.model.serie.SeriesRepositoryProvider
+import com.android.joinme.model.utils.Visibility
 import com.android.joinme.ui.overview.CreateEventScreenTestTags
+import com.android.joinme.ui.overview.EditSerieScreenTestTags
 import com.android.joinme.ui.overview.OverviewScreenTestTags
+import com.android.joinme.ui.overview.SerieDetailsScreenTestTags
 import com.android.joinme.ui.overview.ShowEventScreenTestTags
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import java.util.*
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
@@ -39,12 +47,32 @@ class MainActivityNavigationTest {
         ownerId = ownerId)
   }
 
+  private fun createTestSerie(
+      id: String,
+      title: String,
+      ownerId: String = FirebaseAuth.getInstance().currentUser?.uid ?: "test-owner"
+  ): Serie {
+    // Create serie with future date to ensure it appears in upcoming items
+    val futureDate = Date(System.currentTimeMillis() + 3600000) // 1 hour from now
+    return Serie(
+        serieId = id,
+        title = title,
+        description = "Test serie description",
+        date = Timestamp(futureDate),
+        participants = listOf(ownerId),
+        maxParticipants = 10,
+        visibility = Visibility.PUBLIC,
+        eventIds = emptyList(),
+        ownerId = ownerId)
+  }
+
   @Before
   fun setup() {
     // Setup repository with test data
     System.setProperty("IS_TEST_ENV", "true")
     val repo = EventsRepositoryProvider.getRepository(isOnline = false)
-    if (repo is EventsRepositoryLocal) {
+    val repoSerie = SeriesRepositoryProvider.repository
+    if (repo is EventsRepositoryLocal && repoSerie is SeriesRepositoryLocal) {
       runBlocking {
         // Clear existing events - create a copy of the list to avoid
         // ConcurrentModificationException
@@ -53,6 +81,13 @@ class MainActivityNavigationTest {
 
         // Add test event
         repo.addEvent(createTestEvent("test-1", "Test Event"))
+
+        // Clear existing series
+        val series = repoSerie.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN).toList()
+        series.forEach { repoSerie.deleteSerie(it.serieId) }
+        // Add test serie owned by "unknown" (default currentUserId in SerieDetailsScreen when no
+        // auth)
+        repoSerie.addSerie(createTestSerie("test-1", "Test Serie", "unknown"))
       }
     }
 
@@ -684,18 +719,110 @@ class MainActivityNavigationTest {
     }
   }
 
-  // ========== Serie Details Navigation Tests ==========
+  // ========== Edit Serie Navigation Tests ==========
 
   @Test
-  fun verifySerieDetailsRouteConfiguration() {
+  fun canNavigateToEditSerieFromSerieDetails() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
-    // Verify SerieDetails route is configured correctly
-    assert(Screen.SerieDetails.Companion.route == "serie_details/{serieId}")
-    assert(!Screen.SerieDetails("test-id").isTopLevelDestination)
+    // Navigate to SerieDetails by clicking on the serie card (test-1 from setup)
+    // Use performScrollToNode to find the item even if it needs scrolling
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST)
+        .performScrollToNode(hasTestTag("serieItemtest-1"))
 
-    // Verify the route accepts a serieId parameter
-    val testSerieDetails = Screen.SerieDetails("test-serie-123")
-    assert(testSerieDetails.route == "serie_details/test-serie-123")
+    composeTestRule.onNodeWithTag("serieItemtest-1").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Verify we're on SerieDetails screen
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.SCREEN).assertExists()
+
+    // Verify Edit Serie button exists (should be visible since user is owner)
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON).assertExists()
+
+    // Click Edit Serie button
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're on EditSerieScreen
+    composeTestRule.onNodeWithText("Edit Serie").assertExists()
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE).assertExists()
+  }
+
+  @Test
+  fun editSerie_goBackButtonWorks() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Navigate: Overview -> SerieDetails -> EditSerie (using test-1 from setup)
+    // Use performScrollToNode to find the item even if it needs scrolling
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST)
+        .performScrollToNode(hasTestTag("serieItemtest-1"))
+
+    composeTestRule.onNodeWithTag("serieItemtest-1").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're on EditSerieScreen
+    composeTestRule.onNodeWithText("Edit Serie").assertExists()
+
+    // Click back button
+    composeTestRule.onNodeWithContentDescription("Back").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're back on SerieDetails (not Overview)
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.SCREEN).assertExists()
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.SERIE_TITLE).assertExists()
+  }
+
+  @Test
+  fun editSerie_onSaveNavigatesToOverview() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Navigate: Overview -> SerieDetails -> EditSerie (using test-1 from setup)
+    // Use performScrollToNode to find the item even if it needs scrolling
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST)
+        .performScrollToNode(hasTestTag("serieItemtest-1"))
+
+    composeTestRule.onNodeWithTag("serieItemtest-1").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're on EditSerieScreen
+    composeTestRule.onNodeWithText("Edit Serie").assertExists()
+
+    // Make a small change to the title
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE).performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE)
+        .performTextInput("Updated Serie Title")
+
+    composeTestRule.waitForIdle()
+
+    // Click Save button
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.SERIE_SAVE).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Verify we're back on Overview screen
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
   }
 }
