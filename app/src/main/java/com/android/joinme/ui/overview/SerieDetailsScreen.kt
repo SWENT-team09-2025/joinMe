@@ -13,13 +13,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.ui.components.EventCard
-import com.android.joinme.ui.theme.onBackgroundLight
-import com.android.joinme.ui.theme.onPrimaryLight
-import com.android.joinme.ui.theme.outlineVariantLight
+import com.android.joinme.ui.theme.Dimens
+import com.android.joinme.ui.theme.buttonColors
+import com.android.joinme.ui.theme.customColors
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
@@ -125,8 +124,7 @@ fun SerieDetailsScreen(
               title = {
                 Text(
                     text = uiState.serie?.title ?: "Loading...",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.testTag(SerieDetailsScreenTestTags.SERIE_TITLE))
               },
               navigationIcon = {
@@ -135,13 +133,15 @@ fun SerieDetailsScreen(
                     modifier = Modifier.testTag(SerieDetailsScreenTestTags.BACK_BUTTON)) {
                       Icon(
                           imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                          tint = MaterialTheme.colorScheme.primary,
                           contentDescription = "Back")
                     }
               },
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
-          HorizontalDivider(color = outlineVariantLight, thickness = 1.dp)
+          HorizontalDivider(
+              color = MaterialTheme.colorScheme.primary, thickness = Dimens.BorderWidth.thin)
         }
       }) { paddingValues ->
         if (uiState.isLoading) {
@@ -158,24 +158,24 @@ fun SerieDetailsScreen(
               modifier =
                   Modifier.fillMaxSize()
                       .padding(paddingValues)
-                      .padding(horizontal = 16.dp)
-                      .padding(bottom = 16.dp),
-              verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Spacer(modifier = Modifier.height(8.dp))
+                      .padding(horizontal = Dimens.Spacing.medium)
+                      .padding(bottom = Dimens.Spacing.medium),
+              verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium)) {
+                Spacer(modifier = Modifier.height(Dimens.Spacing.small))
 
                 // Meeting date and time
                 Text(
                     text = "MEETING: ${uiState.formattedDateTime}",
-                    fontSize = 16.sp,
+                    style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier =
                         Modifier.fillMaxWidth()
                             .testTag(SerieDetailsScreenTestTags.MEETING_INFO)
-                            .padding(vertical = 8.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            .padding(vertical = Dimens.Spacing.small),
+                    textAlign = TextAlign.Center)
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Dimens.Spacing.small))
 
                 // Info row: Visibility, Members, Duration
                 Row(
@@ -184,39 +184,40 @@ fun SerieDetailsScreen(
                     verticalAlignment = Alignment.CenterVertically) {
                       Text(
                           text = uiState.visibilityDisplay,
-                          fontSize = 16.sp,
+                          style = MaterialTheme.typography.bodyLarge,
                           fontWeight = FontWeight.Medium,
                           color = MaterialTheme.colorScheme.onSurface,
                           modifier = Modifier.testTag(SerieDetailsScreenTestTags.VISIBILITY))
 
                       Text(
                           text = "MEMBERS : ${uiState.participantsCount}",
-                          fontSize = 14.sp,
+                          style = MaterialTheme.typography.bodyMedium,
                           fontWeight = FontWeight.Medium,
                           color = MaterialTheme.colorScheme.onSurface,
                           modifier = Modifier.testTag(SerieDetailsScreenTestTags.MEMBERS_COUNT))
 
                       Text(
                           text = uiState.formattedDuration,
-                          fontSize = 14.sp,
-                          fontWeight = FontWeight.Medium,
+                          style = MaterialTheme.typography.bodyMedium,
                           color = MaterialTheme.colorScheme.onSurface,
                           modifier = Modifier.testTag(SerieDetailsScreenTestTags.DURATION))
                     }
 
-                HorizontalDivider(thickness = 1.dp, color = outlineVariantLight)
+                HorizontalDivider(
+                    thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
 
                 // Description
                 Text(
                     text = uiState.serie?.description ?: "",
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier =
                         Modifier.fillMaxWidth()
-                            .heightIn(min = 80.dp)
+                            .heightIn(min = Dimens.Profile.bioMinHeight)
                             .testTag(SerieDetailsScreenTestTags.DESCRIPTION))
 
-                HorizontalDivider(thickness = 1.dp, color = outlineVariantLight)
+                HorizontalDivider(
+                    thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
 
                 // Events list in LazyColumn with fixed size
                 if (uiState.events.isNotEmpty()) {
@@ -225,7 +226,7 @@ fun SerieDetailsScreen(
                           Modifier.fillMaxWidth()
                               .weight(1f)
                               .testTag(SerieDetailsScreenTestTags.EVENT_LIST),
-                      verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                      verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
                         items(uiState.events.size) { index ->
                           val event = uiState.events[index]
                           EventCard(
@@ -244,25 +245,26 @@ fun SerieDetailsScreen(
                       contentAlignment = Alignment.Center) {
                         Text(
                             text = "No events in this serie yet",
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            textAlign = TextAlign.Center)
                       }
                 }
 
-                HorizontalDivider(thickness = 1.dp, color = outlineVariantLight)
+                HorizontalDivider(
+                    thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
 
                 // Owner information
                 Text(
                     text = "CREATED BY ${uiState.serie?.ownerId ?: "Unknown"}",
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier =
                         Modifier.fillMaxWidth()
                             .testTag(SerieDetailsScreenTestTags.OWNER_INFO)
-                            .padding(vertical = 8.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            .padding(vertical = Dimens.Spacing.small),
+                    textAlign = TextAlign.Center)
 
                 // Add event button (only shown to owner)
                 if (uiState.isOwner(currentUserId)) {
@@ -270,26 +272,22 @@ fun SerieDetailsScreen(
                       onClick = onAddEventClick,
                       modifier =
                           Modifier.fillMaxWidth()
-                              .height(56.dp)
+                              .height(Dimens.Button.standardHeight)
                               .testTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT),
-                      shape = RoundedCornerShape(8.dp),
-                      colors =
-                          ButtonDefaults.buttonColors(
-                              containerColor = onBackgroundLight, contentColor = onPrimaryLight)) {
-                        Text(text = "ADD EVENT", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+                      colors = MaterialTheme.customColors.buttonColors()) {
+                        Text(text = "ADD EVENT", style = MaterialTheme.typography.headlineSmall)
                       }
                   Button(
                       onClick = onEditSerieClick,
                       modifier =
                           Modifier.fillMaxWidth()
-                              .height(56.dp)
+                              .height(Dimens.Button.standardHeight)
                               .testTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON),
-                      shape = RoundedCornerShape(8.dp),
+                      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
                       enabled = uiState.isOwner(currentUserId),
-                      colors =
-                          ButtonDefaults.buttonColors(
-                              containerColor = onBackgroundLight, contentColor = onPrimaryLight)) {
-                        Text(text = "EDIT SERIE", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                      colors = MaterialTheme.customColors.buttonColors()) {
+                        Text(text = "EDIT SERIE", style = MaterialTheme.typography.headlineSmall)
                       }
                 }
 
@@ -312,20 +310,17 @@ fun SerieDetailsScreen(
                       },
                       modifier =
                           Modifier.fillMaxWidth()
-                              .height(56.dp)
+                              .height(Dimens.Button.standardHeight)
                               .testTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE),
-                      shape = RoundedCornerShape(8.dp),
+                      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
                       enabled =
                           uiState.isParticipant(currentUserId) || uiState.canJoin(currentUserId),
-                      colors =
-                          ButtonDefaults.buttonColors(
-                              containerColor = onBackgroundLight, contentColor = onPrimaryLight)) {
+                      colors = MaterialTheme.customColors.buttonColors()) {
                         Text(
                             text =
                                 if (uiState.isParticipant(currentUserId)) "QUIT SERIE"
                                 else "JOIN SERIE",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium)
+                            style = MaterialTheme.typography.headlineSmall)
                       }
                 }
               }
