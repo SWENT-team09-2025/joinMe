@@ -176,7 +176,12 @@ class EditEventForSerieViewModel(
     // Update all subsequent events
     for (i in (editedEventIndex + 1) until serieEvents.size) {
       val event = serieEvents[i]
-      val newDate = Timestamp(java.util.Date(event.date.toDate().time + timeShiftMs))
+      val newTimeMs = event.date.toDate().time + timeShiftMs
+      val secondsPerMs = 1000L
+      val nanosPerMs = 1000000
+      val seconds = newTimeMs / secondsPerMs
+      val nanos = ((newTimeMs % secondsPerMs) * nanosPerMs).toInt()
+      val newDate = Timestamp(seconds, nanos)
       val updatedEvent = event.copy(date = newDate)
       eventRepository.editEvent(event.eventId, updatedEvent)
     }
