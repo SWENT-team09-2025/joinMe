@@ -20,6 +20,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
+import com.android.joinme.model.notification.FCMTokenManager
 import com.android.joinme.ui.groups.CreateGroupScreen
 import com.android.joinme.ui.groups.EditGroupScreen
 import com.android.joinme.ui.groups.GroupDetailScreen
@@ -118,6 +119,13 @@ fun JoinMe(
           ?: if (FirebaseAuth.getInstance().currentUser == null) Screen.Auth.name
           else Screen.Overview.route
 
+  // Initialize FCM token when user is logged in
+  LaunchedEffect(Unit) {
+    if (FirebaseAuth.getInstance().currentUser != null) {
+      FCMTokenManager.initializeFCMToken(context)
+    }
+  }
+
   // Navigate to event if opened from notification
   LaunchedEffect(initialEventId) {
     if (initialEventId != null && FirebaseAuth.getInstance().currentUser != null) {
@@ -136,7 +144,11 @@ fun JoinMe(
       composable(Screen.Auth.route) {
         SignInScreen(
             credentialManager = credentialManager,
-            onSignedIn = { navigationActions.navigateTo(Screen.Overview) })
+            onSignedIn = {
+              // Initialize FCM token after successful sign-in
+              FCMTokenManager.initializeFCMToken(context)
+              navigationActions.navigateTo(Screen.Overview)
+            })
       }
     }
 
@@ -275,7 +287,11 @@ fun JoinMe(
             onBackClick = { navigationActions.goBack() },
             onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
-            onSignOutComplete = { navigationActions.navigateTo(Screen.Auth) })
+            onSignOutComplete = {
+              // Clear FCM token on sign-out
+              FCMTokenManager.clearFCMToken()
+              navigationActions.navigateTo(Screen.Auth)
+            })
       }
 
       composable(Screen.EditProfile.route) {
@@ -284,9 +300,6 @@ fun JoinMe(
             onBackClick = { navigationActions.goBack() },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
             onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
-            onChangePasswordClick = {
-              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
-            }, // TODO implement change password flow in a future update
             onSaveSuccess = { navigationActions.navigateTo(Screen.Profile) })
       }
 

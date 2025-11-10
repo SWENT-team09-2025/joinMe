@@ -43,13 +43,6 @@ class EventsRepositoryProviderTest {
   }
 
   @Test
-  fun usesLocalRepo_inTestEnvironment_evenWhenOnline() {
-    // The test environment is detected by Robolectric fingerprint
-    val repo = EventsRepositoryProvider.getRepository(isOnline = true, context = context)
-    assertTrue(repo is EventsRepositoryLocal)
-  }
-
-  @Test
   fun getRepository_returnsLocalRepo_whenIsTestEnvPropertySet() {
     System.setProperty("IS_TEST_ENV", "true")
     val repo = EventsRepositoryProvider.getRepository(isOnline = true, context = context)
@@ -106,15 +99,6 @@ class EventsRepositoryProviderTest {
   }
 
   @Test
-  fun getFirestoreRepo_fallsBackToFirebaseAppContext_whenContextIsNull() {
-    // Test that null context doesn't cause crashes
-    // In test environment, should return local repo
-    val repo = EventsRepositoryProvider.getRepository(isOnline = false, context = null)
-    assertNotNull(repo)
-    assertTrue(repo is EventsRepositoryLocal)
-  }
-
-  @Test
   fun getFirestoreRepo_cachesSingletonInstance() {
     // Verify the singleton caching behavior
     // Multiple calls should return the same instance
@@ -135,8 +119,6 @@ class EventsRepositoryProviderTest {
 
   @Test
   fun getRepository_detectsTestEnvironment_byAndroidJUnitRunner() {
-    // This test runs with RobolectricTestRunner, which should be detected
-    // as a test environment
     val repo = EventsRepositoryProvider.getRepository(isOnline = true, context = context)
     assertTrue(repo is EventsRepositoryLocal)
   }

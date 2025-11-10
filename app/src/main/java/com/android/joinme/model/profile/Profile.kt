@@ -13,5 +13,6 @@ data class Profile(
     val interests: List<String> = emptyList(),
     val bio: String? = null,
     val createdAt: Timestamp? = null,
-    val updatedAt: Timestamp? = null
+    val updatedAt: Timestamp? = null,
+    val fcmToken: String? = null
 )

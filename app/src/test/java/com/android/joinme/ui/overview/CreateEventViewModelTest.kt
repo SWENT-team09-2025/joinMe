@@ -178,37 +178,6 @@ class CreateEventViewModelTest {
     Assert.assertNotNull(vm.uiState.value.errorMsg)
   }
 
-  //  @Test
-  //  fun createEvent_withValidForm_addsToRepository_andReturnsTrue() = runTest {
-  //    vm.setType("SPORTS")
-  //    vm.setTitle("Football")
-  //    vm.setDescription("Friendly 5v5")
-  //    vm.setLocation("EPFL Field")
-  //    vm.setDate("25/12/2023 10:00")
-  //    vm.setMaxParticipants("10")
-  //    vm.setDuration("90")
-  //    vm.setVisibility("PUBLIC")
-  //
-  //    val ok = vm.createEvent()
-  //    advanceUntilIdle() // let viewModelScope.launch complete
-  //
-  //    assertTrue(ok)
-  //    assertEquals(1, repo.added.size)
-  //
-  //    val e = repo.added.first()
-  //    assertEquals("fake-id-1", e.eventId)
-  //    assertEquals(EventType.SPORTS, e.type)
-  //    assertEquals("Football", e.title)
-  //    assertEquals("Friendly 5v5", e.description)
-  //    assertEquals(10, e.maxParticipants)
-  //    assertEquals(90, e.duration)
-  //    assertEquals(EventVisibility.PUBLIC, e.visibility)
-  //    // location is nullable in Event; ViewModel usually maps the address into Location(...)
-  //    assertEquals("EPFL Field", e.location?.name)
-  //    // date conversion is already exercised; we just ensure it exists
-  //    assertNotNull(e.date)
-  //  }
-
   // ---------- error clearing ----------
 
   @Test

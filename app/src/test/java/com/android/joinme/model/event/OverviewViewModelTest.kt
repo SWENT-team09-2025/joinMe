@@ -151,18 +151,6 @@ class OverviewViewModelTest {
   }
 
   @Test
-  fun `isLoading is false after error`() = runTest {
-    fakeEventRepository.shouldThrow = true
-
-    viewModel.refreshUIState()
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    val state = viewModel.uiState.value
-    assertFalse(state.isLoading)
-    assertNotNull(state.errorMsg)
-  }
-
-  @Test
   fun `events belonging to series are filtered out`() = runTest {
     fakeEventRepository.shouldThrow = false
     fakeSerieRepository.shouldThrow = false

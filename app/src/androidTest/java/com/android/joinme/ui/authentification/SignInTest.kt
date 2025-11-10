@@ -45,19 +45,4 @@ class SignInScreenTest {
     // Here we only test that click triggers something; actual sign-in flow needs mocking
     assertFalse(clicked)
   }
-
-  /*@Test
-  fun signInScreen_showsLoadingIndicatorWhenLoading() {
-      val viewModel = SignInViewModel()
-      setupScreen(viewModel = viewModel)
-
-      composeTestRule.runOnUiThread {
-          viewModel.clearErrorMsg() // Just to trigger state update
-      }hello
-
-      composeTestRule.onNodeWithTag(SignInScreenTestTags.LOGIN_BUTTON).assertIsDisplayed()
-      composeTestRule.runOnUiThread {
-          viewModel.signIn(viewModel = viewModel) // simulate loading
-      }
-  }*/
 }

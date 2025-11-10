@@ -123,6 +123,18 @@ class GroupDetailViewModelTest {
     override suspend fun deleteProfile(uid: String) {
       profiles.remove(uid)
     }
+
+    override suspend fun uploadProfilePhoto(
+        context: android.content.Context,
+        uid: String,
+        imageUri: android.net.Uri
+    ): String {
+      return "http://fakeurl.com/$uid.jpg"
+    }
+
+    override suspend fun deleteProfilePhoto(uid: String) {
+      // No-op for fake
+    }
   }
 
   private lateinit var fakeGroupRepo: FakeGroupRepository

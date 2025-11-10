@@ -88,11 +88,13 @@ class MapViewModelTest {
   }
 
   @Test
-  fun `clearErrorMsg clears error message`() = runTest {
+  fun `clearErrorMsg is tested with initial error`() = runTest {
     val stateField = viewModel.javaClass.getDeclaredField("_uiState")
     stateField.isAccessible = true
     val mutableState = stateField.get(viewModel) as MutableStateFlow<MapUIState>
-    mutableState.value = MapUIState(errorMsg = "Test error")
+    mutableState.value = MapUIState(errorMsg = "Some error")
+
+    assertEquals("Some error", viewModel.uiState.value.errorMsg)
 
     viewModel.clearErrorMsg()
 
@@ -133,20 +135,6 @@ class MapViewModelTest {
     onClearedMethod?.invoke(viewModel)
 
     verify(mockLocationService).stopLocationUpdates()
-  }
-
-  @Test
-  fun `clearErrorMsg is tested with initial error`() = runTest {
-    val stateField = viewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(viewModel) as MutableStateFlow<MapUIState>
-    mutableState.value = MapUIState(errorMsg = "Some error")
-
-    assertEquals("Some error", viewModel.uiState.value.errorMsg)
-
-    viewModel.clearErrorMsg()
-
-    assertNull(viewModel.uiState.value.errorMsg)
   }
 
   @Test

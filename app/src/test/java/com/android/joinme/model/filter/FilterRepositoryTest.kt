@@ -79,41 +79,31 @@ class FilterRepositoryTest {
   }
 
   @Test
-  fun `toggleSocial deselects social filter`() = runTest {
-    FilterRepository.toggleSocial()
-
-    val state = FilterRepository.filterState.first()
-    assertFalse(state.isSocialSelected)
-    assertFalse(state.isAllSelected)
-  }
-
-  @Test
   fun `toggleSocial twice returns to initial state`() = runTest {
     FilterRepository.toggleSocial()
+
+    val firstToggle = FilterRepository.filterState.first()
+    assertFalse(firstToggle.isSocialSelected)
+    assertFalse(firstToggle.isAllSelected)
+
     FilterRepository.toggleSocial()
 
-    val state = FilterRepository.filterState.first()
-    assertTrue(state.isSocialSelected)
-    assertTrue(state.isAllSelected)
-  }
-
-  @Test
-  fun `toggleActivity deselects activity filter`() = runTest {
-    FilterRepository.toggleActivity()
-
-    val state = FilterRepository.filterState.first()
-    assertFalse(state.isActivitySelected)
-    assertFalse(state.isAllSelected)
+    val secondToggle = FilterRepository.filterState.first()
+    assertTrue(secondToggle.isSocialSelected)
+    assertTrue(secondToggle.isAllSelected)
   }
 
   @Test
   fun `toggleActivity twice returns to initial state`() = runTest {
     FilterRepository.toggleActivity()
-    FilterRepository.toggleActivity()
+    val firstToggle = FilterRepository.filterState.first()
+    assertFalse(firstToggle.isActivitySelected)
+    assertFalse(firstToggle.isAllSelected)
 
-    val state = FilterRepository.filterState.first()
-    assertTrue(state.isActivitySelected)
-    assertTrue(state.isAllSelected)
+    FilterRepository.toggleActivity()
+    val secondToggle = FilterRepository.filterState.first()
+    assertTrue(secondToggle.isActivitySelected)
+    assertTrue(secondToggle.isAllSelected)
   }
 
   @Test

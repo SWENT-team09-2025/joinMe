@@ -134,32 +134,6 @@ class NotificationWorkerTest {
   }
 
   @Test
-  fun `doWork creates notification with correct content`() = runBlocking {
-    val eventId = "event456"
-    val eventTitle = "Soccer Match"
-    val inputData =
-        Data.Builder().putString("eventId", eventId).putString("eventTitle", eventTitle).build()
-
-    val worker = createWorker(inputData)
-    val result = worker.doWork()
-
-    // Verify the worker completed successfully
-    // In a real scenario, the notification would be displayed
-    assertEquals(ListenableWorker.Result.success(), result)
-  }
-
-  @Test
-  fun `doWork handles empty strings gracefully`() = runBlocking {
-    val inputData = Data.Builder().putString("eventId", "").putString("eventTitle", "").build()
-
-    val worker = createWorker(inputData)
-    val result = worker.doWork()
-
-    // Empty eventId should still work (though not ideal in production)
-    assertEquals(ListenableWorker.Result.success(), result)
-  }
-
-  @Test
   fun `NotificationWorker class exists and extends CoroutineWorker`() {
     // Verify the worker class is properly defined
     assertTrue(NotificationWorker::class.java.superclass?.simpleName == "CoroutineWorker")

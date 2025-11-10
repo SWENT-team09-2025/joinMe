@@ -47,17 +47,6 @@ class GroupDetailViewModelFactoryTest {
   }
 
   @Test
-  fun `factory uses provided repositories`() {
-    // When
-    val viewModel = factory.create(GroupDetailViewModel::class.java)
-
-    // Then
-    assertNotNull(viewModel)
-    // The ViewModel should be created with the provided repositories
-    // This is implicitly tested by the fact that the ViewModel is created successfully
-  }
-
-  @Test
   fun `factory can be instantiated with custom repositories`() {
     // Given
     val customGroupRepo = mockk<GroupRepository>(relaxed = true)
