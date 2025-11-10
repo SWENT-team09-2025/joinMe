@@ -106,7 +106,7 @@ fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, 
 
                   Text(
                       text =
-                          SimpleDateFormat("H'h'mm", Locale.getDefault())
+                          SimpleDateFormat("HH'h'mm", Locale.getDefault())
                               .format(serie.date.toDate()),
                       style = MaterialTheme.typography.bodySmall,
                       color = MaterialTheme.customColors.onSerieContainer)

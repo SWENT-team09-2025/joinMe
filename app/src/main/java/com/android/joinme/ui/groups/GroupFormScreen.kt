@@ -46,7 +46,8 @@ data class GroupFormTestTags(
     val nameSupportingText: String,
     val descriptionSupportingText: String,
     val categoryMenu: String,
-    val categoryOptionPrefix: String
+    val categoryOptionPrefix: String,
+    val categoryDropdownTouchableArea: String
 )
 
 /** Data class representing the state of the group form. */
@@ -398,7 +399,9 @@ private fun CategoryDropdown(
       ExposedDropdownMenu(
           expanded = expanded,
           onDismissRequest = { expanded = false },
-          modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
+          modifier =
+              Modifier.background(MaterialTheme.customColors.backgroundMenu)
+                  .testTag(testTags.categoryDropdownTouchableArea)) {
             eventTypes.forEachIndexed { index, type ->
               DropdownMenuItem(
                   text = {

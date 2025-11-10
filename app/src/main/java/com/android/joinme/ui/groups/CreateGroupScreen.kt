@@ -20,8 +20,8 @@ object CreateGroupScreenTestTags {
   const val DESCRIPTION_SUPPORTING_TEXT = "create_description_supporting_text"
   const val CATEGORY_MENU = "create_category_menu"
   const val CATEGORY_OPTION_PREFIX = "create_category_option_"
-
   const val DELETE_PHOTO_BUTTON = "delete_photo_button"
+  const val CATEGORY_DROPDOWN_TOUCHABLE_AREA = "create_category_dropdown_touchable_area"
 }
 
 /**
@@ -78,7 +78,9 @@ fun CreateGroupScreen(
           descriptionSupportingText = CreateGroupScreenTestTags.DESCRIPTION_SUPPORTING_TEXT,
           categoryMenu = CreateGroupScreenTestTags.CATEGORY_MENU,
           categoryOptionPrefix = CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX,
-          deletePhotoButton = CreateGroupScreenTestTags.DELETE_PHOTO_BUTTON)
+          deletePhotoButton = CreateGroupScreenTestTags.DELETE_PHOTO_BUTTON,
+          categoryDropdownTouchableArea =
+              CreateGroupScreenTestTags.CATEGORY_DROPDOWN_TOUCHABLE_AREA)
 
   val formState =
       GroupFormState(

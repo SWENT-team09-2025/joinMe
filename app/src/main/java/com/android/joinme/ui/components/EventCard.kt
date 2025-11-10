@@ -64,7 +64,8 @@ fun EventCard(modifier: Modifier = Modifier, event: Event, onClick: () -> Unit, 
 
                 Text(
                     text =
-                        SimpleDateFormat("H'h'mm", Locale.getDefault()).format(event.date.toDate()),
+                        SimpleDateFormat("HH'h'mm", Locale.getDefault())
+                            .format(event.date.toDate()),
                     style = MaterialTheme.typography.bodySmall,
                     color = event.type.getOnContainerColor())
               }
