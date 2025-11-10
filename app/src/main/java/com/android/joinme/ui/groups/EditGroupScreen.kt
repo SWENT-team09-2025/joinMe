@@ -20,6 +20,8 @@ object EditGroupScreenTags {
   const val DESCRIPTION_SUPPORTING_TEXT = "description_supporting_text"
   const val CATEGORY_MENU = "category_menu"
   const val CATEGORY_OPTION_PREFIX = "category_option_"
+
+  const val DELETE_PHOTO_BUTTON = "delete_photo_button"
 }
 
 /**
@@ -79,7 +81,8 @@ fun EditGroupScreen(
           nameSupportingText = EditGroupScreenTags.NAME_SUPPORTING_TEXT,
           descriptionSupportingText = EditGroupScreenTags.DESCRIPTION_SUPPORTING_TEXT,
           categoryMenu = EditGroupScreenTags.CATEGORY_MENU,
-          categoryOptionPrefix = EditGroupScreenTags.CATEGORY_OPTION_PREFIX)
+          categoryOptionPrefix = EditGroupScreenTags.CATEGORY_OPTION_PREFIX,
+          deletePhotoButton = EditGroupScreenTags.DELETE_PHOTO_BUTTON)
 
   val formState =
       GroupFormState(
