@@ -641,4 +641,13 @@ object Dimens {
     /** 48dp - Size of member profile pictures in members list */
     val memberProfilePictureSize: Dp = 48.dp
   }
+  /**
+   * Event Form Field Dimensions
+   *
+   * Dimensions specific to the EventFormField component.
+   */
+  object EventFormFields {
+    /** 150.dp - height for description field */
+    val descriptionField: Dp = 150.dp
+  }
 }

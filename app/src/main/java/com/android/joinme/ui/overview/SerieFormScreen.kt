@@ -2,6 +2,7 @@ package com.android.joinme.ui.overview
 
 import android.annotation.SuppressLint
 import android.widget.NumberPicker
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,6 +16,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.viewinterop.AndroidView
 import com.android.joinme.ui.theme.Dimens
+import com.android.joinme.ui.theme.buttonColors
+import com.android.joinme.ui.theme.customColors
+import com.android.joinme.ui.theme.outlinedTextField
 import java.util.*
 
 /** Data class representing the test tags for serie form fields. */
@@ -140,13 +144,19 @@ fun SerieFormScreen(
 ) {
   Scaffold(
       topBar = {
-        TopAppBar(
-            title = { Text(title) },
-            navigationIcon = {
-              IconButton(onClick = onGoBack) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-              }
-            })
+        Column {
+          CenterAlignedTopAppBar(
+              title = { Text(title, style = MaterialTheme.typography.titleLarge) },
+              navigationIcon = {
+                IconButton(onClick = onGoBack) {
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                      contentDescription = "Back")
+                }
+              })
+          HorizontalDivider(
+              thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
+        }
       }) { paddingValues ->
         Column(
             modifier =
@@ -223,7 +233,7 @@ fun SerieFormScreen(
                                 modifier = Modifier.testTag(testTags.errorMessage))
                           }
                         },
-                        colors = readOnlyTextFieldColors(),
+                        colors = MaterialTheme.customColors.outlinedTextField(),
                         singleLine = true)
                   }
 
@@ -308,7 +318,7 @@ fun SerieFormScreen(
                                   modifier = Modifier.testTag(testTags.errorMessage))
                             }
                           },
-                          colors = readOnlyTextFieldColors(),
+                          colors = MaterialTheme.customColors.outlinedTextField(),
                           singleLine = true)
                     }
 
@@ -343,7 +353,7 @@ fun SerieFormScreen(
                                   modifier = Modifier.testTag(testTags.errorMessage))
                             }
                           },
-                          colors = readOnlyTextFieldColors(),
+                          colors = MaterialTheme.customColors.outlinedTextField(),
                           singleLine = true)
                     }
                   }
@@ -380,14 +390,24 @@ fun SerieFormScreen(
 
                     ExposedDropdownMenu(
                         expanded = expandedVisibility,
-                        onDismissRequest = { expandedVisibility = false }) {
-                          visibilityOptions.forEach { option ->
+                        onDismissRequest = { expandedVisibility = false },
+                        modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
+                          visibilityOptions.forEachIndexed { index, option ->
                             DropdownMenuItem(
-                                text = { Text(option) },
+                                text = {
+                                  Text(
+                                      text = option,
+                                      color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                      style = MaterialTheme.typography.headlineSmall)
+                                },
                                 onClick = {
                                   onVisibilityChange(option)
                                   expandedVisibility = false
-                                })
+                                },
+                                colors = MaterialTheme.customColors.dropdownMenu)
+                            if (index < visibilityOptions.lastIndex) {
+                              HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                            }
                           }
                         }
                   }
@@ -401,10 +421,7 @@ fun SerieFormScreen(
                       Modifier.fillMaxWidth()
                           .height(Dimens.Button.standardHeight)
                           .testTag(testTags.buttonSaveSerie),
-                  colors =
-                      ButtonDefaults.buttonColors(
-                          containerColor = MaterialTheme.colorScheme.onBackground,
-                          contentColor = MaterialTheme.colorScheme.onPrimary),
+                  colors = MaterialTheme.customColors.buttonColors(),
                   enabled = formState.isValid && !formState.isLoading) {
                     if (formState.isLoading) {
                       CircularProgressIndicator(
@@ -418,22 +435,4 @@ fun SerieFormScreen(
               Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
             }
       }
-}
-
-/**
- * Provides consistent colors for read-only (disabled) text fields.
- *
- * This function returns TextFieldColors configured to make disabled fields appear enabled,
- * maintaining visual consistency across read-only input fields like date pickers and number
- * selectors.
- *
- * @return TextFieldColors configured for read-only fields
- */
-@Composable
-private fun readOnlyTextFieldColors(): TextFieldColors {
-  return OutlinedTextFieldDefaults.colors(
-      disabledTextColor = LocalContentColor.current.copy(LocalContentColor.current.alpha),
-      disabledBorderColor = MaterialTheme.colorScheme.outline,
-      disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-      disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant)
 }

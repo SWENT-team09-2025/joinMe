@@ -10,8 +10,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import com.android.joinme.model.map.Location
+import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
 import kotlinx.coroutines.launch
@@ -74,6 +74,20 @@ fun EventForSerieFormScreen(
       onSearchLocations(formState.locationQuery)
     }
   }
+  val eventFormTestTags =
+      EventFormTestTags(
+          inputEventType = testTags.inputEventType,
+          inputEventTitle = testTags.inputEventTitle,
+          inputEventDescription = testTags.inputEventDescription,
+          inputEventLocation = testTags.inputEventLocation,
+          inputEventLocationSuggestions = testTags.inputEventLocationSuggestions,
+          inputEventMaxParticipants = "",
+          inputEventDuration = testTags.inputEventDuration,
+          inputEventDate = "",
+          inputEventTime = "",
+          inputEventVisibility = "",
+          buttonSaveEvent = testTags.buttonSaveEvent,
+          errorMessage = testTags.errorMessage)
 
   Scaffold(
       topBar = {
@@ -90,16 +104,17 @@ fun EventForSerieFormScreen(
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
-          HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 1.dp)
+          HorizontalDivider(
+              color = MaterialTheme.colorScheme.primary, thickness = Dimens.BorderWidth.thin)
         }
       }) { paddingValues ->
         Column(
             modifier =
                 Modifier.fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
+                    .padding(Dimens.Padding.medium)
                     .padding(paddingValues),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
               // Type dropdown
               EventTypeField(
                   value = formState.type,
@@ -135,20 +150,6 @@ fun EventForSerieFormScreen(
                   testTag = testTags.inputEventDuration)
 
               // Location field with search functionality
-              val eventFormTestTags =
-                  EventFormTestTags(
-                      inputEventType = testTags.inputEventType,
-                      inputEventTitle = testTags.inputEventTitle,
-                      inputEventDescription = testTags.inputEventDescription,
-                      inputEventLocation = testTags.inputEventLocation,
-                      inputEventLocationSuggestions = testTags.inputEventLocationSuggestions,
-                      inputEventMaxParticipants = "",
-                      inputEventDuration = testTags.inputEventDuration,
-                      inputEventDate = "",
-                      inputEventTime = "",
-                      inputEventVisibility = "",
-                      buttonSaveEvent = testTags.buttonSaveEvent,
-                      errorMessage = testTags.errorMessage)
 
               LocationField(
                   query = formState.locationQuery,
@@ -159,7 +160,7 @@ fun EventForSerieFormScreen(
                   onSuggestionSelected = onLocationSelected,
                   testTags = eventFormTestTags)
 
-              Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
               // Save button
               Button(
