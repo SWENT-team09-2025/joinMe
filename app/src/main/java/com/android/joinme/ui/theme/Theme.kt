@@ -91,7 +91,7 @@ private val LightColorScheme =
         surfaceContainerHighest = surfaceContainerHighestLight)
 
 @Composable
-fun SampleAppTheme(
+fun JoinMeTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = false,
