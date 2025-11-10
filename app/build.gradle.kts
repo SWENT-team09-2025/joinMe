@@ -93,7 +93,7 @@ android {
                 it.enabled = !it.name.contains("Release")
             }
         }
-        packagingOptions {
+        packaging {
             jniLibs {
                 useLegacyPackaging = true
             }
