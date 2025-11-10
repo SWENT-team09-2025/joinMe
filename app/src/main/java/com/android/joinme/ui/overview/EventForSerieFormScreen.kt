@@ -31,29 +31,13 @@ data class EventForSerieFormTestTags(
     val errorMessage: String
 )
 
-/** Data class representing the state of the event for serie form. */
-data class EventForSerieFormState(
-    val type: String,
-    val title: String,
-    val description: String,
-    val duration: String,
-    val locationQuery: String,
-    val locationSuggestions: List<Location>,
-    val selectedLocation: Location?,
-    val isValid: Boolean,
-    val invalidTypeMsg: String?,
-    val invalidTitleMsg: String?,
-    val invalidDescriptionMsg: String?,
-    val invalidDurationMsg: String?,
-    val invalidLocationMsg: String?
-)
-
 /**
  * Generic event for serie form screen component used by both Create and Edit event for serie
  * screens.
  *
  * @param title The title to display in the top bar
  * @param formState The current state of the form
+ * @param isFormValid Whether the form is valid and can be submitted
  * @param testTags Test tags for UI testing
  * @param onTypeChange Callback when event type changes
  * @param onTitleChange Callback when title changes
@@ -71,7 +55,8 @@ data class EventForSerieFormState(
 @Composable
 fun EventForSerieFormScreen(
     title: String,
-    formState: EventForSerieFormState,
+    formState: EventForSerieFormUIState,
+    isFormValid: Boolean,
     testTags: EventForSerieFormTestTags,
     onTypeChange: (String) -> Unit,
     onTitleChange: (String) -> Unit,
@@ -185,7 +170,7 @@ fun EventForSerieFormScreen(
                     }
                   },
                   modifier = Modifier.fillMaxWidth().testTag(testTags.buttonSaveEvent),
-                  enabled = formState.isValid,
+                  enabled = isFormValid,
                   colors =
                       ButtonDefaults.buttonColors(
                           containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {

@@ -46,30 +46,53 @@ class EventForSerieFormScreenTest {
           buttonSaveEvent = "buttonSaveEvent",
           errorMessage = "errorMessage")
 
+  /** Helper function to create a test form state. */
+  private fun createTestFormState(
+      type: String = "",
+      title: String = "",
+      description: String = "",
+      duration: String = "",
+      location: String = "",
+      locationQuery: String = "",
+      locationSuggestions: List<Location> = emptyList(),
+      selectedLocation: Location? = null,
+      isLoading: Boolean = false,
+      errorMsg: String? = null,
+      invalidTypeMsg: String? = null,
+      invalidTitleMsg: String? = null,
+      invalidDescriptionMsg: String? = null,
+      invalidDurationMsg: String? = null,
+      invalidLocationMsg: String? = null
+  ): CreateEventForSerieUIState {
+    return CreateEventForSerieUIState(
+        type = type,
+        title = title,
+        description = description,
+        duration = duration,
+        location = location,
+        locationQuery = locationQuery,
+        locationSuggestions = locationSuggestions,
+        selectedLocation = selectedLocation,
+        isLoading = isLoading,
+        errorMsg = errorMsg,
+        invalidTypeMsg = invalidTypeMsg,
+        invalidTitleMsg = invalidTitleMsg,
+        invalidDescriptionMsg = invalidDescriptionMsg,
+        invalidDurationMsg = invalidDurationMsg,
+        invalidLocationMsg = invalidLocationMsg)
+  }
+
   // ---------- Basic Rendering ----------
 
   @Test
   fun screenTitleAndAllFieldsAreDisplayed() {
-    val formState =
-        EventForSerieFormState(
-            type = "",
-            title = "",
-            description = "",
-            duration = "",
-            locationQuery = "",
-            locationSuggestions = emptyList(),
-            selectedLocation = null,
-            isValid = false,
-            invalidTypeMsg = null,
-            invalidTitleMsg = null,
-            invalidDescriptionMsg = null,
-            invalidDurationMsg = null,
-            invalidLocationMsg = null)
+    val formState = createTestFormState()
 
     composeTestRule.setContent {
       EventForSerieFormScreen(
           title = "Custom Form Title",
           formState = formState,
+          isFormValid = formState.isValid,
           testTags = testTags,
           onTypeChange = {},
           onTitleChange = {},
@@ -97,7 +120,7 @@ class EventForSerieFormScreenTest {
   @Test
   fun saveButtonTextCanBeCustomized() {
     val formState =
-        EventForSerieFormState(
+        createTestFormState(
             type = "SPORTS",
             title = "Test",
             description = "Desc",
@@ -105,7 +128,6 @@ class EventForSerieFormScreenTest {
             locationQuery = "",
             locationSuggestions = emptyList(),
             selectedLocation = Location(1.0, 1.0, "Test"),
-            isValid = true,
             invalidTypeMsg = null,
             invalidTitleMsg = null,
             invalidDescriptionMsg = null,
@@ -116,6 +138,7 @@ class EventForSerieFormScreenTest {
       EventForSerieFormScreen(
           title = "Test Form",
           formState = formState,
+          isFormValid = formState.isValid,
           testTags = testTags,
           onTypeChange = {},
           onTitleChange = {},
@@ -137,7 +160,7 @@ class EventForSerieFormScreenTest {
   @Test
   fun formDisplaysStateValues() {
     val formState =
-        EventForSerieFormState(
+        createTestFormState(
             type = "SPORTS",
             title = "Weekly Match",
             description = "Regular game",
@@ -145,7 +168,6 @@ class EventForSerieFormScreenTest {
             locationQuery = "EPFL",
             locationSuggestions = emptyList(),
             selectedLocation = null,
-            isValid = false,
             invalidTypeMsg = null,
             invalidTitleMsg = null,
             invalidDescriptionMsg = null,
@@ -156,6 +178,7 @@ class EventForSerieFormScreenTest {
       EventForSerieFormScreen(
           title = "Test Form",
           formState = formState,
+          isFormValid = formState.isValid,
           testTags = testTags,
           onTypeChange = {},
           onTitleChange = {},
@@ -178,7 +201,7 @@ class EventForSerieFormScreenTest {
   @Test
   fun saveButtonIsDisabledWhenFormInvalid() {
     val formState =
-        EventForSerieFormState(
+        createTestFormState(
             type = "",
             title = "",
             description = "",
@@ -186,7 +209,6 @@ class EventForSerieFormScreenTest {
             locationQuery = "",
             locationSuggestions = emptyList(),
             selectedLocation = null,
-            isValid = false,
             invalidTypeMsg = null,
             invalidTitleMsg = null,
             invalidDescriptionMsg = null,
@@ -197,6 +219,7 @@ class EventForSerieFormScreenTest {
       EventForSerieFormScreen(
           title = "Test Form",
           formState = formState,
+          isFormValid = formState.isValid,
           testTags = testTags,
           onTypeChange = {},
           onTitleChange = {},
@@ -215,7 +238,7 @@ class EventForSerieFormScreenTest {
   @Test
   fun saveButtonIsEnabledWhenFormValid() {
     val formState =
-        EventForSerieFormState(
+        createTestFormState(
             type = "SPORTS",
             title = "Test Event",
             description = "Description",
@@ -223,7 +246,6 @@ class EventForSerieFormScreenTest {
             locationQuery = "EPFL",
             locationSuggestions = emptyList(),
             selectedLocation = Location(1.0, 1.0, "EPFL"),
-            isValid = true,
             invalidTypeMsg = null,
             invalidTitleMsg = null,
             invalidDescriptionMsg = null,
@@ -234,6 +256,7 @@ class EventForSerieFormScreenTest {
       EventForSerieFormScreen(
           title = "Test Form",
           formState = formState,
+          isFormValid = formState.isValid,
           testTags = testTags,
           onTypeChange = {},
           onTitleChange = {},
@@ -254,7 +277,7 @@ class EventForSerieFormScreenTest {
   @Test
   fun validationErrorsAreDisplayed() {
     val formState =
-        EventForSerieFormState(
+        createTestFormState(
             type = "",
             title = "",
             description = "",
@@ -262,7 +285,6 @@ class EventForSerieFormScreenTest {
             locationQuery = "",
             locationSuggestions = emptyList(),
             selectedLocation = null,
-            isValid = false,
             invalidTypeMsg = "Type cannot be empty",
             invalidTitleMsg = "Title cannot be empty",
             invalidDescriptionMsg = "Description cannot be empty",
@@ -273,6 +295,7 @@ class EventForSerieFormScreenTest {
       EventForSerieFormScreen(
           title = "Test Form",
           formState = formState,
+          isFormValid = formState.isValid,
           testTags = testTags,
           onTypeChange = {},
           onTitleChange = {},
@@ -298,7 +321,7 @@ class EventForSerieFormScreenTest {
   fun typeDropdownOpensAndSelectsValue() {
     var selectedType = ""
     val formState =
-        EventForSerieFormState(
+        createTestFormState(
             type = "",
             title = "",
             description = "",
@@ -306,7 +329,6 @@ class EventForSerieFormScreenTest {
             locationQuery = "",
             locationSuggestions = emptyList(),
             selectedLocation = null,
-            isValid = false,
             invalidTypeMsg = null,
             invalidTitleMsg = null,
             invalidDescriptionMsg = null,
@@ -317,6 +339,7 @@ class EventForSerieFormScreenTest {
       EventForSerieFormScreen(
           title = "Test Form",
           formState = formState,
+          isFormValid = formState.isValid,
           testTags = testTags,
           onTypeChange = { selectedType = it },
           onTitleChange = {},
@@ -340,7 +363,7 @@ class EventForSerieFormScreenTest {
   fun titleInputTriggersCallback() {
     var changedTitle = ""
     val formState =
-        EventForSerieFormState(
+        createTestFormState(
             type = "",
             title = "",
             description = "",
@@ -348,7 +371,6 @@ class EventForSerieFormScreenTest {
             locationQuery = "",
             locationSuggestions = emptyList(),
             selectedLocation = null,
-            isValid = false,
             invalidTypeMsg = null,
             invalidTitleMsg = null,
             invalidDescriptionMsg = null,
@@ -359,6 +381,7 @@ class EventForSerieFormScreenTest {
       EventForSerieFormScreen(
           title = "Test Form",
           formState = formState,
+          isFormValid = formState.isValid,
           testTags = testTags,
           onTypeChange = {},
           onTitleChange = { changedTitle = it },
@@ -380,7 +403,7 @@ class EventForSerieFormScreenTest {
   fun durationDialogOpensAndConfirms() {
     var selectedDuration = ""
     val formState =
-        EventForSerieFormState(
+        createTestFormState(
             type = "",
             title = "",
             description = "",
@@ -388,7 +411,6 @@ class EventForSerieFormScreenTest {
             locationQuery = "",
             locationSuggestions = emptyList(),
             selectedLocation = null,
-            isValid = false,
             invalidTypeMsg = null,
             invalidTitleMsg = null,
             invalidDescriptionMsg = null,
@@ -399,6 +421,7 @@ class EventForSerieFormScreenTest {
       EventForSerieFormScreen(
           title = "Test Form",
           formState = formState,
+          isFormValid = formState.isValid,
           testTags = testTags,
           onTypeChange = {},
           onTitleChange = {},
@@ -422,7 +445,7 @@ class EventForSerieFormScreenTest {
   fun durationDialogCanBeCancelled() {
     var selectedDuration = ""
     val formState =
-        EventForSerieFormState(
+        createTestFormState(
             type = "",
             title = "",
             description = "",
@@ -430,7 +453,6 @@ class EventForSerieFormScreenTest {
             locationQuery = "",
             locationSuggestions = emptyList(),
             selectedLocation = null,
-            isValid = false,
             invalidTypeMsg = null,
             invalidTitleMsg = null,
             invalidDescriptionMsg = null,
@@ -441,6 +463,7 @@ class EventForSerieFormScreenTest {
       EventForSerieFormScreen(
           title = "Test Form",
           formState = formState,
+          isFormValid = formState.isValid,
           testTags = testTags,
           onTypeChange = {},
           onTitleChange = {},
@@ -469,7 +492,7 @@ class EventForSerieFormScreenTest {
             Location(3.0, 3.0, "SwissTech Convention Center"))
 
     val formState =
-        EventForSerieFormState(
+        createTestFormState(
             type = "",
             title = "",
             description = "",
@@ -477,7 +500,6 @@ class EventForSerieFormScreenTest {
             locationQuery = "EPFL",
             locationSuggestions = suggestions,
             selectedLocation = null,
-            isValid = false,
             invalidTypeMsg = null,
             invalidTitleMsg = null,
             invalidDescriptionMsg = null,
@@ -488,6 +510,7 @@ class EventForSerieFormScreenTest {
       EventForSerieFormScreen(
           title = "Test Form",
           formState = formState,
+          isFormValid = formState.isValid,
           testTags = testTags,
           onTypeChange = {},
           onTitleChange = {},
@@ -508,7 +531,7 @@ class EventForSerieFormScreenTest {
   @Test
   fun allEventTypesAreAvailableInDropdown() {
     val formState =
-        EventForSerieFormState(
+        createTestFormState(
             type = "",
             title = "",
             description = "",
@@ -516,7 +539,6 @@ class EventForSerieFormScreenTest {
             locationQuery = "",
             locationSuggestions = emptyList(),
             selectedLocation = null,
-            isValid = false,
             invalidTypeMsg = null,
             invalidTitleMsg = null,
             invalidDescriptionMsg = null,
@@ -527,6 +549,7 @@ class EventForSerieFormScreenTest {
       EventForSerieFormScreen(
           title = "Test Form",
           formState = formState,
+          isFormValid = formState.isValid,
           testTags = testTags,
           onTypeChange = {},
           onTitleChange = {},
@@ -550,7 +573,7 @@ class EventForSerieFormScreenTest {
   fun backButtonTriggersCallback() {
     var backCalled = false
     val formState =
-        EventForSerieFormState(
+        createTestFormState(
             type = "",
             title = "",
             description = "",
@@ -558,7 +581,6 @@ class EventForSerieFormScreenTest {
             locationQuery = "",
             locationSuggestions = emptyList(),
             selectedLocation = null,
-            isValid = false,
             invalidTypeMsg = null,
             invalidTitleMsg = null,
             invalidDescriptionMsg = null,
@@ -569,6 +591,7 @@ class EventForSerieFormScreenTest {
       EventForSerieFormScreen(
           title = "Test Form",
           formState = formState,
+          isFormValid = formState.isValid,
           testTags = testTags,
           onTypeChange = {},
           onTitleChange = {},
@@ -589,7 +612,7 @@ class EventForSerieFormScreenTest {
   @Test
   fun typeValidationErrorIsDisplayed() {
     val formState =
-        EventForSerieFormState(
+        createTestFormState(
             type = "",
             title = "",
             description = "",
@@ -597,7 +620,6 @@ class EventForSerieFormScreenTest {
             locationQuery = "",
             locationSuggestions = emptyList(),
             selectedLocation = null,
-            isValid = false,
             invalidTypeMsg = "Event type cannot be empty",
             invalidTitleMsg = null,
             invalidDescriptionMsg = null,
@@ -608,6 +630,7 @@ class EventForSerieFormScreenTest {
       EventForSerieFormScreen(
           title = "Test Form",
           formState = formState,
+          isFormValid = formState.isValid,
           testTags = testTags,
           onTypeChange = {},
           onTitleChange = {},
@@ -626,7 +649,7 @@ class EventForSerieFormScreenTest {
   @Test
   fun durationValidationErrorIsDisplayed() {
     val formState =
-        EventForSerieFormState(
+        createTestFormState(
             type = "",
             title = "",
             description = "",
@@ -634,7 +657,6 @@ class EventForSerieFormScreenTest {
             locationQuery = "",
             locationSuggestions = emptyList(),
             selectedLocation = null,
-            isValid = false,
             invalidTypeMsg = null,
             invalidTitleMsg = null,
             invalidDescriptionMsg = null,
@@ -645,6 +667,7 @@ class EventForSerieFormScreenTest {
       EventForSerieFormScreen(
           title = "Test Form",
           formState = formState,
+          isFormValid = formState.isValid,
           testTags = testTags,
           onTypeChange = {},
           onTitleChange = {},
