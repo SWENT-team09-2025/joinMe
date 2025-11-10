@@ -565,4 +565,49 @@ object Dimens {
     /** 240.dp - height for suggestions field */
     val suggestionsField: Dp = 240.dp
   }
+
+  /**
+   * Group feature dimensions.
+   *
+   * Dimensions specific to group screens including picture sizes, edit controls, and form fields.
+   * Mirrors Profile dimensions for consistency across the app.
+   */
+  object Group {
+    // Group picture blur radius
+    /** 3dp - Standard blur radius for group pictures */
+    val pictureBlurRadius: Dp = 3.dp
+
+    // Group picture sizes
+    /** 140dp - Large group picture (edit/create screen) */
+    val pictureLarge: Dp = 140.dp
+
+    // Group picture section
+    /** 24dp - Vertical padding around group picture section */
+    val picturePadding: Dp = 24.dp
+
+    // Edit picture controls (overlay on picture in edit screen)
+    /** 120dp - Size of edit picture button */
+    val editButtonSize: Dp = 120.dp
+
+    /** 50dp - Size of edit icon container */
+    val editIconContainer: Dp = 50.dp
+
+    /** 56dp - Size of edit icon itself */
+    val editIconSize: Dp = 56.dp
+
+    // Delete picture button (bottom-right corner)
+    /** 40dp - Size of delete picture button */
+    val deleteButtonSize: Dp = 40.dp
+
+    /** 24dp - Size of delete icon */
+    val deleteIconSize: Dp = 24.dp
+
+    // Group form fields
+    /** 120dp - Minimum height for description field */
+    val descriptionMinHeight: Dp = 120.dp
+
+    /** 32dp - Spacing before save button section */
+    val saveButtonTopSpacing: Dp = 32.dp
+  }
 }
+
