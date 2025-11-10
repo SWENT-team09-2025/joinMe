@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -162,7 +163,7 @@ private fun GroupContent(
                     shape = RoundedCornerShape(Dimens.CornerRadius.large))
                 .padding(Dimens.Padding.medium)) {
           LazyColumn(
-              modifier = Modifier.fillMaxSize(),
+              modifier = Modifier.fillMaxSize().testTag("membersList"),
               verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
                 items(members) { member ->
                   MemberItem(

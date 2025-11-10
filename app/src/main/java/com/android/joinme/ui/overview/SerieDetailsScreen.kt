@@ -337,35 +337,6 @@ fun SerieDetailsScreen(
                         color = MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.Bold)
                   }
-                  Button(
-                      onClick = {
-                        coroutineScope.launch {
-                          val success =
-                              if (uiState.isParticipant(currentUserId)) {
-                                serieDetailsViewModel.quitSerie((currentUserId))
-                              } else {
-                                serieDetailsViewModel.joinSerie(currentUserId)
-                              }
-                          if (success && !uiState.isParticipant(currentUserId)) {
-                            // If user quit successfully, navigate back
-                            onQuitSerieSuccess()
-                          }
-                        }
-                      },
-                      modifier =
-                          Modifier.fillMaxWidth()
-                              .height(Dimens.Button.standardHeight)
-                              .testTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE),
-                      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
-                      enabled =
-                          uiState.isParticipant(currentUserId) || uiState.canJoin(currentUserId),
-                      colors = MaterialTheme.customColors.buttonColors()) {
-                        Text(
-                            text =
-                                if (uiState.isParticipant(currentUserId)) "QUIT SERIE"
-                                else "JOIN SERIE",
-                            style = MaterialTheme.typography.headlineSmall)
-                      }
                 }
               }
         }
