@@ -57,6 +57,7 @@ internal constructor(
      * @param ownerId User ID of the series creator/owner
      * @return A new Serie instance with lastEventEndTime initialized to the serie's start date
      */
+    @JvmStatic
     operator fun invoke(
         serieId: String,
         title: String,
