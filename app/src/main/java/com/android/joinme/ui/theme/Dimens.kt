@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
  * - `SerieCard`: Dimensions specific to the SerieCard component
  * - `SerieForm`: Dimensions specific to the Serie form component
  * - `SignIn`: Sign-in screen specific dimensions
+ * - `History`: History screen specific dimensions
  *
  * Usage example:
  * ```
@@ -526,5 +527,30 @@ object Dimens {
 
     /** 48dp - Size of loading indicator on sign-in screen */
     val loadingIndicatorSize: Dp = 48.dp
+  }
+
+  /**
+   * History screen dimensions.
+   *
+   * Dimensions specific to the history screen including padding, spacing, and icon sizes.
+   */
+  object History {
+    /** 48dp - Size of top bar action placeholder to center title */
+    val topBarActionSize: Dp = 48.dp
+
+    /** 1dp - Thickness of divider below top bar */
+    val dividerThickness: Dp = 1.dp
+
+    /** 32dp - Horizontal padding for empty state message */
+    val emptyMessagePadding: Dp = 32.dp
+
+    /** 8dp - Vertical content padding for history list */
+    val listVerticalPadding: Dp = 8.dp
+
+    /** 16dp - Horizontal content padding for history list */
+    val listHorizontalPadding: Dp = 16.dp
+
+    /** 6dp - Vertical padding for each card item */
+    val cardVerticalPadding: Dp = 6.dp
   }
 }
