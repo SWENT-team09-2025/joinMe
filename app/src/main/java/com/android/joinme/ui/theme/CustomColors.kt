@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import com.android.joinme.model.event.EventType
 
 /** Data class for custom semantic colors. */
 data class CustomColors(
@@ -210,6 +211,31 @@ val MaterialTheme.customColors: CustomColors
 fun CustomColors.buttonColors(): ButtonColors {
   return ButtonDefaults.buttonColors(
       containerColor = buttonContainerColor, contentColor = buttonContentColor)
+}
+
+/**
+ * Returns customized colors for Button components based on the given [EventType].
+ *
+ * Provides a consistent color scheme for buttons corresponding to different event types.
+ *
+ * @param type The [EventType] to determine the button colors.
+ * @return ButtonColors configured with custom colors for the specified event type.
+ */
+@Composable
+fun CustomColors.buttonColorsForEventType(type: EventType): ButtonColors {
+  return ButtonDefaults.buttonColors(
+      containerColor =
+          when (type) {
+            EventType.ACTIVITY -> activity
+            EventType.SPORTS -> sports
+            EventType.SOCIAL -> social
+          },
+      contentColor =
+          when (type) {
+            EventType.ACTIVITY -> onActivity
+            EventType.SPORTS -> onSports
+            EventType.SOCIAL -> onSocial
+          })
 }
 
 /**

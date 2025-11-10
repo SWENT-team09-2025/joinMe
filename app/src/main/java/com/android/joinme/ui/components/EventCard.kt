@@ -25,7 +25,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.getColor
-import com.android.joinme.model.event.getOnColor
+import com.android.joinme.model.event.getOnContainerColor
 import com.android.joinme.ui.theme.Dimens
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -60,13 +60,13 @@ fun EventCard(modifier: Modifier = Modifier, event: Event, onClick: () -> Unit, 
                         SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
                             .format(event.date.toDate()),
                     style = MaterialTheme.typography.bodySmall,
-                    color = event.type.getOnColor())
+                    color = event.type.getOnContainerColor())
 
                 Text(
                     text =
                         SimpleDateFormat("H'h'mm", Locale.getDefault()).format(event.date.toDate()),
                     style = MaterialTheme.typography.bodySmall,
-                    color = event.type.getOnColor())
+                    color = event.type.getOnContainerColor())
               }
 
           Spacer(modifier = Modifier.height(Dimens.Spacing.small))
@@ -75,7 +75,7 @@ fun EventCard(modifier: Modifier = Modifier, event: Event, onClick: () -> Unit, 
               text = event.title,
               style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.Bold,
-              color = event.type.getOnColor())
+              color = event.type.getOnContainerColor())
 
           Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
 
@@ -86,7 +86,7 @@ fun EventCard(modifier: Modifier = Modifier, event: Event, onClick: () -> Unit, 
                 Text(
                     text = "Place : ${event.location?.name ?: "Unknown"}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = event.type.getOnColor().copy(alpha = 0.9f),
+                    color = event.type.getOnContainerColor().copy(alpha = 0.9f),
                     maxLines = 3,
                     modifier = Modifier.fillMaxSize(0.6f))
                 Icon(

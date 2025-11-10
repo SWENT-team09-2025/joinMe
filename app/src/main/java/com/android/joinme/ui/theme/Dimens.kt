@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.sp
  * - `SerieForm`: Dimensions specific to the Serie form component
  * - `SignIn`: Sign-in screen specific dimensions
  * - `History`: History screen specific dimensions
+ * - `Group`: Group feature dimensions (form/edit screens)
+ * - `GroupDetail`: Group detail screen specific dimensions
  *
  * Usage example:
  * ```
@@ -618,5 +620,25 @@ object Dimens {
 
     /** 32dp - Spacing before save button section */
     val saveButtonTopSpacing: Dp = 32.dp
+  }
+
+  /**
+   * Group detail screen dimensions.
+   *
+   * Dimensions specific to the group detail screen. Most dimensions reuse existing values from
+   * Spacing, Padding, and other objects for consistency.
+   */
+  object GroupDetail {
+    /** 120dp - Size of group picture on detail screen */
+    val pictureSize: Dp = 120.dp
+
+    /** 175dp - Size of group picture image (larger to fill circle with padding) */
+    val pictureImageSize: Dp = 175.dp
+
+    /** 28dp - Corner radius for group events button (pill shape) */
+    val eventsButtonCornerRadius: Dp = 28.dp
+
+    /** 48dp - Size of member profile pictures in members list */
+    val memberProfilePictureSize: Dp = 48.dp
   }
 }

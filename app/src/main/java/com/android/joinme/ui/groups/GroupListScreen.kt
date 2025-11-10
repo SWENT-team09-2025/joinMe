@@ -56,7 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.getColor
-import com.android.joinme.model.event.getOnColor
+import com.android.joinme.model.event.getOnContainerColor
 import com.android.joinme.model.groups.Group
 import com.android.joinme.ui.components.BubbleAction
 import com.android.joinme.ui.components.BubbleAlignment
@@ -456,7 +456,7 @@ fun GroupListScreen(
 @Composable
 private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: (Float) -> Unit) {
   val groupColor = group.category.getColor()
-  val groupOnColor = group.category.getOnColor()
+  val groupOnColor = group.category.getOnContainerColor()
 
   Card(
       modifier =
