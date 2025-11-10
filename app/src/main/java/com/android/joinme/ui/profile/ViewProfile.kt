@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.sharp.AccountCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,15 +15,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.Tab
-import com.google.firebase.Timestamp
+import com.android.joinme.ui.theme.Dimens
 
 /**
  * ViewProfileTestTags contains test tag constants for the ViewProfile screen. These tags enable UI
@@ -91,14 +87,14 @@ fun ViewProfileScreen(
               Column(
                   modifier =
                       Modifier.align(Alignment.Center)
-                          .padding(24.dp)
+                          .padding(Dimens.Padding.large)
                           .testTag(ViewProfileTestTags.ERROR_MESSAGE),
                   horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = error ?: "Unknown error",
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyLarge)
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
                     Button(
                         onClick = { profileViewModel.loadProfile(uid) },
                         modifier = Modifier.testTag(ViewProfileTestTags.RETRY_BUTTON)) {
@@ -134,19 +130,22 @@ private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
 
         // Profile Header
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 24.dp),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = Dimens.Padding.large, vertical = Dimens.Padding.large),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
               Text(
                   text = "Profile",
                   color = MaterialTheme.colorScheme.onSurface,
-                  fontSize = 28.sp,
+                  fontSize = Dimens.FontSize.headlineMedium,
                   fontWeight = FontWeight.Bold,
                   modifier = Modifier.testTag(ViewProfileTestTags.PROFILE_TITLE))
               OutlinedButton(
                   onClick = onLogoutClick,
-                  shape = RoundedCornerShape(24.dp),
-                  border = BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface),
+                  shape = RoundedCornerShape(Dimens.CornerRadius.pill),
+                  border =
+                      BorderStroke(Dimens.BorderWidth.medium, MaterialTheme.colorScheme.onSurface),
                   colors =
                       ButtonDefaults.outlinedButtonColors(
                           contentColor = MaterialTheme.colorScheme.onSurface),
@@ -154,30 +153,32 @@ private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                         contentDescription = "Logout",
-                        modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
+                        modifier = Modifier.size(Dimens.IconSize.medium))
+                    Spacer(modifier = Modifier.width(Dimens.Spacing.small))
                     Text("log out", fontWeight = FontWeight.Medium)
                   }
             }
 
-        // Profile Picture
+        // Profile Picture - Now displays actual photo if available
         Box(
             modifier =
                 Modifier.fillMaxWidth()
-                    .padding(vertical = 32.dp)
+                    .padding(vertical = Dimens.Padding.extraLarge)
                     .testTag(ViewProfileTestTags.PROFILE_PICTURE),
             contentAlignment = Alignment.Center) {
-              Icon(
-                  imageVector = Icons.Sharp.AccountCircle,
+              ProfilePhotoImage(
+                  photoUrl = profile.photoUrl,
                   contentDescription = "Profile Picture",
-                  modifier = Modifier.size(210.dp),
-                  tint = MaterialTheme.colorScheme.onSurface)
+                  size = Dimens.Profile.photoExtraLarge)
             }
 
         // Form Fields (Read-only)
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)) {
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = Dimens.Padding.large)
+                    .padding(bottom = Dimens.Padding.extraLarge),
+            verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.fieldSpacing)) {
               ProfileField(
                   label = "Username",
                   value = profile.username,
@@ -199,7 +200,7 @@ private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
               ProfileField(
                   label = "Bio",
                   value = profile.bio ?: "No bio available",
-                  minHeight = 120.dp,
+                  minHeight = Dimens.Profile.bioMinHeight,
                   testTag = ViewProfileTestTags.BIO_FIELD)
             }
       }
@@ -210,57 +211,30 @@ private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
 private fun ProfileField(
     label: String,
     value: String,
-    minHeight: Dp = 56.dp,
+    minHeight: Dp = Dimens.Profile.fieldMinHeight,
     testTag: String = ""
 ) {
   Column(modifier = if (testTag.isNotEmpty()) Modifier.testTag(testTag) else Modifier) {
     Text(
         text = label,
         color = MaterialTheme.colorScheme.onSurface,
-        fontSize = 18.sp,
+        fontSize = Dimens.FontSize.titleMedium,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(bottom = 12.dp))
+        modifier = Modifier.padding(bottom = Dimens.Profile.fieldLabelSpacing))
     Box(
         modifier =
             Modifier.fillMaxWidth()
                 .heightIn(min = minHeight)
-                .clip(RoundedCornerShape(12.dp))
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
-                .padding(20.dp)) {
-          Text(text = value, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
+                .clip(RoundedCornerShape(Dimens.Profile.fieldCornerRadius))
+                .border(
+                    Dimens.BorderWidth.thin,
+                    MaterialTheme.colorScheme.outline,
+                    RoundedCornerShape(Dimens.Profile.fieldCornerRadius))
+                .padding(Dimens.Profile.fieldInternalPadding)) {
+          Text(
+              text = value,
+              fontSize = Dimens.FontSize.bodyLarge,
+              color = MaterialTheme.colorScheme.onSurface)
         }
   }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ViewProfileScreenPreview() {
-  val profileMathieu =
-      Profile(
-          uid = "preview-uid",
-          username = "Mathieu Pfeffer",
-          email = "pfeffer@gmail.com",
-          dateOfBirth = "23/05/1995",
-          country = "Nigeria",
-          interests = listOf("Golf", "Nature"),
-          bio = "I am a EPFL student, 21 and I like horses and golf.",
-          createdAt = Timestamp.now(),
-          updatedAt = Timestamp.now())
-
-  Scaffold(
-      containerColor = MaterialTheme.colorScheme.surface,
-      topBar = {
-        ProfileTopBar(
-            currentScreen = ProfileScreen.VIEW_PROFILE,
-            onBackClick = {},
-            onProfileClick = {},
-            onGroupClick = {},
-            onEditClick = {})
-      },
-      bottomBar = { BottomNavigationMenu(selectedTab = Tab.Profile, onTabSelected = {}) }) { padding
-        ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-          ProfileContent(profile = profileMathieu, onLogoutClick = {})
-        }
-      }
 }

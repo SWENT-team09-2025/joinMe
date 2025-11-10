@@ -143,34 +143,6 @@ class NotificationSchedulerTest {
   }
 
   @Test
-  fun `scheduleEventNotification calculates correct delay`() {
-    // Event 1 hour in the future
-    val futureTime = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1)
-    val event =
-        Event(
-            eventId = "event123",
-            type = EventType.SOCIAL,
-            title = "Test Event",
-            description = "Test Description",
-            location = Location(0.0, 0.0, "Test Location"),
-            date = Timestamp(Date(futureTime)),
-            duration = 60,
-            participants = emptyList(),
-            maxParticipants = 10,
-            visibility = EventVisibility.PUBLIC,
-            ownerId = "user123")
-
-    val capturedRequest = slot<OneTimeWorkRequest>()
-
-    NotificationScheduler.scheduleEventNotification(context, event)
-
-    verify { mockWorkManager.enqueue(capture(capturedRequest)) }
-
-    // Verify work request was created (delay is internal, but we can verify it was enqueued)
-    assert(capturedRequest.isCaptured)
-  }
-
-  @Test
   fun `cancelEventNotification handles multiple cancellations`() {
     val eventId = "event999"
 

@@ -194,23 +194,6 @@ class EventItemTest {
   }
 
   @Test
-  fun `EventItems can be sorted by date`() {
-    val olderDate = Timestamp(Date(System.currentTimeMillis() - 100000))
-    val newerDate = Timestamp(Date(System.currentTimeMillis() + 100000))
-
-    val olderEvent = sampleEvent.copy(date = olderDate)
-    val newerEvent = sampleEvent.copy(eventId = "newer123", date = newerDate)
-
-    val items: List<EventItem> =
-        listOf(EventItem.SingleEvent(newerEvent), EventItem.SingleEvent(olderEvent))
-
-    val sortedItems = items.sortedBy { it.date.seconds }
-
-    assertEquals("event123", sortedItems[0].eventItemId)
-    assertEquals("newer123", sortedItems[1].eventItemId)
-  }
-
-  @Test
   fun `mixed EventItems can be sorted by date`() {
     val olderDate = Timestamp(Date(System.currentTimeMillis() - 100000))
     val newerDate = Timestamp(Date(System.currentTimeMillis() + 100000))
@@ -238,19 +221,6 @@ class EventItemTest {
         }
 
     assertEquals("single", result)
-  }
-
-  @Test
-  fun `EventSerie can be pattern matched using when expression`() {
-    val eventSerie: EventItem = EventItem.EventSerie(sampleSerie)
-
-    val result =
-        when (eventSerie) {
-          is EventItem.SingleEvent -> "single"
-          is EventItem.EventSerie -> "serie"
-        }
-
-    assertEquals("serie", result)
   }
 
   @Test

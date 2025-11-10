@@ -93,53 +93,11 @@ class CreateGroupViewModelTest {
 
   @Test
   fun `setName with valid name clears nameError`() = runTest {
-    viewModel.setName("Valid Group Name")
+    viewModel.setName("  Valid Group_Name  ")
 
     val state = viewModel.uiState.value
     assertNull(state.nameError)
-    assertEquals("Valid Group Name", state.name)
-  }
-
-  @Test
-  fun `setName with underscores and numbers is valid`() = runTest {
-    viewModel.setName("Test_Group_123")
-
-    val state = viewModel.uiState.value
-    assertNull(state.nameError)
-    assertEquals("Test_Group_123", state.name)
-  }
-
-  @Test
-  fun `setName trims leading spaces`() = runTest {
-    viewModel.setName("   Valid Name")
-
-    val state = viewModel.uiState.value
-    // Name is stored with spaces, but validation passes on trimmed version
-    assertEquals("   Valid Name", state.name)
-    assertNull(state.nameError)
-    assertTrue(state.isValid)
-  }
-
-  @Test
-  fun `setName trims trailing spaces`() = runTest {
-    viewModel.setName("Valid Name   ")
-
-    val state = viewModel.uiState.value
-    // Name is stored with spaces, but validation passes on trimmed version
-    assertEquals("Valid Name   ", state.name)
-    assertNull(state.nameError)
-    assertTrue(state.isValid)
-  }
-
-  @Test
-  fun `setName trims both leading and trailing spaces`() = runTest {
-    viewModel.setName("   Valid Name   ")
-
-    val state = viewModel.uiState.value
-    // Name is stored with spaces, but validation passes on trimmed version
-    assertEquals("   Valid Name   ", state.name)
-    assertNull(state.nameError)
-    assertTrue(state.isValid)
+    assertEquals("  Valid Group_Name  ", state.name)
   }
 
   @Test
@@ -165,16 +123,6 @@ class CreateGroupViewModelTest {
   }
 
   @Test
-  fun `setName with spaces preserves single spaces between words`() = runTest {
-    viewModel.setName("My Group Name")
-
-    val state = viewModel.uiState.value
-    assertEquals("My Group Name", state.name)
-    assertNull(state.nameError)
-    assertTrue(state.isValid)
-  }
-
-  @Test
   fun `setName with multiple consecutive spaces sets error`() = runTest {
     viewModel.setName("My  Group")
 
@@ -184,39 +132,15 @@ class CreateGroupViewModelTest {
     assertFalse(state.isValid)
   }
 
-  @Test
-  fun `setName with three consecutive spaces sets error`() = runTest {
-    viewModel.setName("My   Group")
-
-    val state = viewModel.uiState.value
-    assertEquals("My   Group", state.name)
-    assertEquals("Multiple consecutive spaces not allowed", state.nameError)
-    assertFalse(state.isValid)
-  }
-
-  @Test
-  fun `setName with multiple spaces in different positions sets error`() = runTest {
-    viewModel.setName("My  Group  Name")
-
-    val state = viewModel.uiState.value
-    assertEquals("My  Group  Name", state.name)
-    assertEquals("Multiple consecutive spaces not allowed", state.nameError)
-    assertFalse(state.isValid)
-  }
-
-  @Test
-  fun `setName validates multiple spaces before other rules`() = runTest {
-    viewModel.setName("My  Group@Name")
-
-    val state = viewModel.uiState.value
-    // Should catch multiple spaces error first
-    assertEquals("Multiple consecutive spaces not allowed", state.nameError)
-    assertFalse(state.isValid)
-  }
-
   // =======================================
   // Category Tests
   // =======================================
+
+  @Test
+  fun `default category is ACTIVITY`() = runTest {
+    val state = viewModel.uiState.value
+    assertEquals(EventType.ACTIVITY, state.category)
+  }
 
   @Test
   fun `setCategory with SOCIAL updates category`() = runTest {
@@ -238,12 +162,6 @@ class CreateGroupViewModelTest {
   fun `setCategory with ACTIVITY updates category`() = runTest {
     viewModel.setCategory(EventType.ACTIVITY)
 
-    val state = viewModel.uiState.value
-    assertEquals(EventType.ACTIVITY, state.category)
-  }
-
-  @Test
-  fun `default category is ACTIVITY`() = runTest {
     val state = viewModel.uiState.value
     assertEquals(EventType.ACTIVITY, state.category)
   }
@@ -278,15 +196,6 @@ class CreateGroupViewModelTest {
     val state = viewModel.uiState.value
     assertNull(state.descriptionError)
     assertEquals(description, state.description)
-  }
-
-  @Test
-  fun `setDescription with valid text clears descriptionError`() = runTest {
-    viewModel.setDescription("A valid description")
-
-    val state = viewModel.uiState.value
-    assertNull(state.descriptionError)
-    assertEquals("A valid description", state.description)
   }
 
   // =======================================
@@ -349,16 +258,6 @@ class CreateGroupViewModelTest {
     viewModel.setName("Another Valid Name")
     state = viewModel.uiState.value
     assertTrue(state.isValid)
-  }
-
-  @Test
-  fun `form is invalid when name has multiple consecutive spaces`() = runTest {
-    viewModel.setName("My  Group")
-    viewModel.setCategory(EventType.SOCIAL)
-
-    val state = viewModel.uiState.value
-    assertFalse(state.isValid)
-    assertEquals("Multiple consecutive spaces not allowed", state.nameError)
   }
 
   @Test

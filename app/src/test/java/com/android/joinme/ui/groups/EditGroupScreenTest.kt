@@ -2,16 +2,32 @@ package com.android.joinme.ui.groups
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.test.core.app.ApplicationProvider
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
+import com.google.firebase.FirebaseApp
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28], qualifiers = "w360dp-h640dp-normal-long-notround-any-420dpi-keyshidden-nonav")
 class EditGroupScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
+
+  @Before
+  fun setUp() {
+    // Initialize Firebase for Robolectric tests
+    val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+    if (FirebaseApp.getApps(context).isEmpty()) {
+      FirebaseApp.initializeApp(context)
+    }
+  }
 
   private lateinit var fakeRepository: FakeGroupRepository
   private lateinit var viewModel: EditGroupViewModel
@@ -88,10 +104,9 @@ class EditGroupScreenTest {
     composeTestRule
         .onNodeWithTag(EditGroupScreenTags.GROUP_DESCRIPTION_TEXT_FIELD)
         .assertIsDisplayed()
-    composeTestRule
-        .onNodeWithTag(EditGroupScreenTags.DESCRIPTION_SUPPORTING_TEXT)
-        .assertIsDisplayed()
-    composeTestRule.onNodeWithTag(EditGroupScreenTags.SAVE_BUTTON).assertIsDisplayed()
+    // Elements below the fold need to be scrolled to or checked with assertExists()
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.DESCRIPTION_SUPPORTING_TEXT).assertExists()
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.SAVE_BUTTON).assertExists()
   }
 
   @Test
