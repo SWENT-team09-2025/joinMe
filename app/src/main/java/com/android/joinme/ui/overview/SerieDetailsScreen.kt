@@ -12,7 +12,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.ui.components.EventCard
@@ -135,7 +134,6 @@ fun SerieDetailsScreen(
                     modifier = Modifier.testTag(SerieDetailsScreenTestTags.BACK_BUTTON)) {
                       Icon(
                           imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                          tint = MaterialTheme.colorScheme.primary,
                           contentDescription = "Back")
                     }
               },
@@ -143,7 +141,7 @@ fun SerieDetailsScreen(
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
           HorizontalDivider(
-              color = MaterialTheme.colorScheme.primary, thickness = Dimens.BorderWidth.thin)
+              thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
         }
       }) { paddingValues ->
         if (uiState.isLoading) {
@@ -160,138 +158,60 @@ fun SerieDetailsScreen(
               modifier =
                   Modifier.fillMaxSize()
                       .padding(paddingValues)
-                      .padding(horizontal = Dimens.Spacing.medium)
-                      .padding(bottom = Dimens.Spacing.medium),
-              verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium)) {
-                Spacer(modifier = Modifier.height(Dimens.Spacing.small))
+                      .padding(horizontal = Dimens.Spacing.large),
+              verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium),
+          ) {
+            Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
-                // Meeting date and time
-                Text(
-                    text = "MEETING: ${uiState.formattedDateTime}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .testTag(SerieDetailsScreenTestTags.MEETING_INFO)
-                            .padding(vertical = Dimens.Spacing.small),
-                    textAlign = TextAlign.Center)
+            // Meeting date and time
+            Text(
+                text = "MEETING: ${uiState.formattedDateTime}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.fillMaxWidth().testTag(SerieDetailsScreenTestTags.MEETING_INFO),
+                textAlign = TextAlign.Center)
 
-                Spacer(modifier = Modifier.height(Dimens.Spacing.small))
+            Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
-                // Info row: Visibility, Members, Duration
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically) {
-                      Text(
-                          text = uiState.visibilityDisplay,
-                          style = MaterialTheme.typography.bodyLarge,
-                          fontWeight = FontWeight.Medium,
-                          color = MaterialTheme.colorScheme.onSurface,
-                          modifier = Modifier.testTag(SerieDetailsScreenTestTags.VISIBILITY))
+            // Info row: Visibility, Members, Duration
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically) {
+                  Text(
+                      text = uiState.visibilityDisplay,
+                      style = MaterialTheme.typography.bodyMedium,
+                      color = MaterialTheme.colorScheme.onSurface,
+                      modifier = Modifier.testTag(SerieDetailsScreenTestTags.VISIBILITY))
 
-                      Text(
-                          text = "MEMBERS : ${uiState.participantsCount}",
-                          style = MaterialTheme.typography.bodyMedium,
-                          fontWeight = FontWeight.Medium,
-                          color = MaterialTheme.colorScheme.onSurface,
-                          modifier = Modifier.testTag(SerieDetailsScreenTestTags.MEMBERS_COUNT))
+                  Text(
+                      text = "MEMBERS : ${uiState.participantsCount}",
+                      style = MaterialTheme.typography.bodyMedium,
+                      color = MaterialTheme.colorScheme.onSurface,
+                      modifier = Modifier.testTag(SerieDetailsScreenTestTags.MEMBERS_COUNT))
 
-                      Text(
-                          text = uiState.formattedDuration,
-                          style = MaterialTheme.typography.bodyMedium,
-                          color = MaterialTheme.colorScheme.onSurface,
-                          modifier = Modifier.testTag(SerieDetailsScreenTestTags.DURATION))
-                    }
-
-                HorizontalDivider(
-                    thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
-
-                // Description
-                Text(
-                    text = uiState.serie?.description ?: "",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .heightIn(min = Dimens.Profile.bioMinHeight)
-                            .testTag(SerieDetailsScreenTestTags.DESCRIPTION))
-
-                HorizontalDivider(
-                    thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
-
-                // Events list in LazyColumn with fixed size
-                if (uiState.events.isNotEmpty()) {
-                  LazyColumn(
-                      modifier =
-                          Modifier.fillMaxWidth()
-                              .weight(1f)
-                              .testTag(SerieDetailsScreenTestTags.EVENT_LIST),
-                      verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
-                        items(uiState.events.size) { index ->
-                          val event = uiState.events[index]
-                          EventCard(
-                              event = event,
-                              onClick = { onEventCardClick(event.eventId) },
-                              testTag = "${SerieDetailsScreenTestTags.EVENT_CARD}_${event.eventId}")
-                        }
-                      }
-                } else {
-                  // Empty state - same height as LazyColumn
-                  Box(
-                      modifier =
-                          Modifier.fillMaxWidth()
-                              .weight(1f) // Same height as LazyColumn
-                              .testTag(SerieDetailsScreenTestTags.EVENT_LIST),
-                      contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "No events in this serie yet",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center)
-                      }
+                  Text(
+                      text = uiState.formattedDuration,
+                      style = MaterialTheme.typography.bodyMedium,
+                      color = MaterialTheme.colorScheme.onSurface,
+                      modifier = Modifier.testTag(SerieDetailsScreenTestTags.DURATION))
                 }
 
-                HorizontalDivider(
-                    thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
+            HorizontalDivider(
+                thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
 
-                // Owner information
-                Text(
-                    text = "CREATED BY ${uiState.serie?.ownerId ?: "Unknown"}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .testTag(SerieDetailsScreenTestTags.OWNER_INFO)
-                            .padding(vertical = Dimens.Spacing.small),
-                    textAlign = TextAlign.Center)
+            // Description
+            Text(
+                text = uiState.serie?.description ?: "",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .heightIn(min = Dimens.Spacing.large)
+                        .testTag(SerieDetailsScreenTestTags.DESCRIPTION))
 
-                // Add event button (only shown to owner)
-                if (uiState.isOwner(currentUserId)) {
-                  Button(
-                      onClick = onAddEventClick,
-                      modifier =
-                          Modifier.fillMaxWidth()
-                              .height(Dimens.Button.standardHeight)
-                              .testTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT),
-                      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
-                      colors = MaterialTheme.customColors.buttonColors()) {
-                        Text(text = "ADD EVENT", style = MaterialTheme.typography.headlineSmall)
-                      }
-                  Button(
-                      onClick = { onEditSerieClick(serieId) },
-                      modifier =
-                          Modifier.fillMaxWidth()
-                              .height(Dimens.Button.standardHeight)
-                              .testTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON),
-                      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
-                      enabled = uiState.isOwner(currentUserId),
-                      colors = MaterialTheme.customColors.buttonColors()) {
-                        Text(text = "EDIT SERIE", style = MaterialTheme.typography.headlineSmall)
-                      }
-                }
+            HorizontalDivider(
+                thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
 
                 // Join/Quit serie button (shown to non-owners)
                 if (!uiState.isOwner(currentUserId)) {
@@ -339,6 +259,105 @@ fun SerieDetailsScreen(
                   }
                 }
               }
+            } else {
+              // Empty state - same height as LazyColumn
+              Box(
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .weight(1f) // Same height as LazyColumn
+                          .testTag(SerieDetailsScreenTestTags.EVENT_LIST),
+                  contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "No events in this serie yet",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center)
+                  }
+            }
+
+            HorizontalDivider(
+                thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
+
+            // Owner information
+            Text(
+                text = "CREATED BY ${uiState.serie?.ownerId ?: "Unknown"}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .testTag(SerieDetailsScreenTestTags.OWNER_INFO)
+                        .padding(vertical = Dimens.Spacing.small),
+                textAlign = TextAlign.Center)
+
+            // Add event button (only shown to owner)
+            if (uiState.isOwner(currentUserId)) {
+              Button(
+                  onClick = onAddEventClick,
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .height(Dimens.Spacing.huge)
+                          .testTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT),
+                  shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+                  colors = MaterialTheme.customColors.buttonColors()) {
+                    Text(text = "ADD EVENT", style = MaterialTheme.typography.headlineSmall)
+                  }
+              Button(
+                  onClick = { onEditSerieClick(serieId) },
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .height(Dimens.Spacing.huge)
+                          .testTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON),
+                  shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+                  enabled = uiState.isOwner(currentUserId),
+                  colors = MaterialTheme.customColors.buttonColors()) {
+                    Text(text = "EDIT SERIE", style = MaterialTheme.typography.headlineSmall)
+                  }
+            }
+
+            // Join/Quit serie button (shown to non-owners)
+            if (!uiState.isOwner(currentUserId)) {
+              if (uiState.canJoin(currentUserId) || uiState.isParticipant(currentUserId)) {
+                Button(
+                    onClick = {
+                      coroutineScope.launch {
+                        val success =
+                            if (uiState.isParticipant(currentUserId)) {
+                              serieDetailsViewModel.quitSerie((currentUserId))
+                            } else {
+                              serieDetailsViewModel.joinSerie(currentUserId)
+                            }
+                        if (success && !uiState.isParticipant(currentUserId)) {
+                          // If user quit successfully, navigate back
+                          onQuitSerieSuccess()
+                        }
+                      }
+                    },
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .height(Dimens.Spacing.huge)
+                            .testTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE),
+                    shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+                    enabled =
+                        uiState.isParticipant(currentUserId) || uiState.canJoin(currentUserId),
+                    colors = MaterialTheme.customColors.buttonColors()) {
+                      Text(
+                          text =
+                              if (uiState.isParticipant(currentUserId)) "QUIT SERIE"
+                              else "JOIN SERIE",
+                          style = MaterialTheme.typography.headlineSmall)
+                    }
+              } else {
+                Text(
+                    text = "This serie is full",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .testTag(SerieDetailsScreenTestTags.MESSAGE_FULL_SERIE),
+                    textAlign = TextAlign.Center)
+              }
+            }
+          }
         }
       }
 }
