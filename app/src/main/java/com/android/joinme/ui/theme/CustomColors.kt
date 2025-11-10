@@ -155,8 +155,8 @@ val darkCustomColors =
         // NOT IMPLEMENTED YET
         filterChip =
             SelectableChipColors(
-                containerColor = onPrimaryDark,
-                labelColor = onPrimaryDark,
+                containerColor = surfaceContainerHighDark,
+                labelColor = onSurfaceVariantDark,
                 disabledContainerColor = surfaceContainerHighDark,
                 disabledLabelColor = surfaceDark,
                 leadingIconColor = surfaceDark,

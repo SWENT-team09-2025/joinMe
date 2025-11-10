@@ -188,7 +188,7 @@ fun OverviewScreen(
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
           HorizontalDivider(
-              color = MaterialTheme.colorScheme.outlineVariant, thickness = Dimens.BorderWidth.thin)
+              color = MaterialTheme.colorScheme.primary, thickness = Dimens.BorderWidth.thin)
         }
       },
       bottomBar = {

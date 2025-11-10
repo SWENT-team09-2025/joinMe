@@ -18,11 +18,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +32,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -46,6 +49,7 @@ import com.android.joinme.model.event.Event
 import com.android.joinme.ui.components.EventCard
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
+import com.android.joinme.ui.navigation.NavigationTestTags
 import com.android.joinme.ui.navigation.Tab
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.customColors
@@ -94,7 +98,17 @@ fun SearchScreen(
   }
 
   Scaffold(
-      topBar = { TopAppBar(title = { Text("Search") }) },
+      topBar = {
+          Column {
+              CenterAlignedTopAppBar(
+                  modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
+                  title = { Text(text = "Search", style = MaterialTheme.typography.titleLarge) },
+                  colors =
+                      TopAppBarDefaults.topAppBarColors(
+                          containerColor = MaterialTheme.colorScheme.surface))
+              HorizontalDivider(
+                  color = MaterialTheme.colorScheme.primary, thickness = Dimens.BorderWidth.thin)
+          } },
       bottomBar = {
         BottomNavigationMenu(
             selectedTab = Tab.Search,
