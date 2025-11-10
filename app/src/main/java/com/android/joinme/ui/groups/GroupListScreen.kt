@@ -19,20 +19,23 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,18 +47,21 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.groups.Group
@@ -64,49 +70,18 @@ import com.android.joinme.ui.components.BubbleAlignment
 import com.android.joinme.ui.components.FloatingActionBubbles
 import com.android.joinme.ui.profile.ProfileScreen
 import com.android.joinme.ui.profile.ProfileTopBar
+import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.ScrimOverlayColorDarkTheme
 import com.android.joinme.ui.theme.ScrimOverlayColorLightTheme
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 
 /** Dimensions and styling constants for GroupListScreen and its components */
-private object GroupListScreenDimensions {
-  // FAB (Floating Action Button)
-  val fabCornerRadius = 24.dp
-  val fabBottomPadding = 84.dp
-
-  // List Layout
-  val listHorizontalPadding = 16.dp
-  val listVerticalPadding = 12.dp
-  val cardSpacing = 12.dp
-
-  // Card Menu Overlay
-  val menuBubbleSpacing = 8.dp
-  val menuRightPadding = 60.dp
-  val menuHeight = 272.dp // 5 bubbles × 48dp + 4 spacers × 8dp
-  val menuBottomMargin = 80.dp // Space for FAB
-  val menuTopMargin = 80.dp // Space below app bar
-
-  // Scrim Animation
-  const val scrimAnimationDuration = 300 // milliseconds
-  const val scrimZIndex = 1000f
-
-  // GroupCard
-  val cardMinHeight = 86.dp
-  val cardPadding = 12.dp
-  val titleDescriptionSpacing = 4.dp
-  val descriptionMembersSpacing = 6.dp
-  const val descriptionAlpha = 0.8f
-  const val membersAlpha = 0.7f
-
-  // MenuBubble
-  val bubbleCornerRadius = 24.dp
-  val bubbleHeight = 48.dp
-  val bubbleHorizontalPadding = 16.dp
-  val bubbleVerticalPadding = 8.dp
-  val bubbleIconTextSpacing = 8.dp
-  val bubbleIconSize = 20.dp
-}
+// Constants for GroupListScreen
+private const val SCRIM_ANIMATION_DURATION = 300 // milliseconds
+private const val SCRIM_Z_INDEX = 1000f
+private const val DESCRIPTION_ALPHA = 0.8f
+private const val MEMBERS_ALPHA = 0.7f
 
 /**
  * Contains test tags for UI elements in the GroupListScreen.
@@ -153,6 +128,11 @@ object GroupListScreenTestTags {
   const val OWNER_CANNOT_LEAVE_OK_BUTTON = "ownerCannotLeaveOkButton"
   const val ONLY_OWNER_CAN_DELETE_DIALOG = "onlyOwnerCanDeleteDialog"
   const val ONLY_OWNER_CAN_DELETE_OK_BUTTON = "onlyOwnerCanDeleteOkButton"
+
+  // Share dialog
+  const val SHARE_GROUP_DIALOG = "shareGroupDialog"
+  const val SHARE_GROUP_COPY_LINK_BUTTON = "shareGroupCopyLinkButton"
+  const val SHARE_GROUP_CLOSE_BUTTON = "shareGroupCloseButton"
 
   /**
    * Generates a test tag for a specific group card.
@@ -236,6 +216,9 @@ fun GroupListScreen(
   // State for delete group confirmation dialog
   var groupToDelete by remember { mutableStateOf<Group?>(null) }
 
+  // State for share group dialog
+  var groupToShare by remember { mutableStateOf<Group?>(null) }
+
   // State for owner trying to leave (restriction dialog)
   var showOwnerCannotLeaveDialog by remember { mutableStateOf(false) }
 
@@ -285,7 +268,7 @@ fun GroupListScreen(
                     contentDescription = "Join a new group",
                     tint = MaterialTheme.colorScheme.onPrimary)
               },
-              shape = RoundedCornerShape(GroupListScreenDimensions.fabCornerRadius),
+              shape = RoundedCornerShape(Dimens.CornerRadius.pill),
               text = { Text("Join a new group", color = MaterialTheme.colorScheme.onPrimary) },
               containerColor =
                   if (showJoinBubbles) MaterialTheme.colorScheme.surfaceVariant
@@ -299,15 +282,11 @@ fun GroupListScreen(
           LazyColumn(
               modifier =
                   Modifier.fillMaxSize()
-                      .padding(horizontal = GroupListScreenDimensions.listHorizontalPadding)
-                      .padding(
-                          bottom =
-                              pd.calculateBottomPadding() +
-                                  GroupListScreenDimensions.fabBottomPadding)
+                      .padding(horizontal = Dimens.Padding.medium)
+                      .padding(bottom = pd.calculateBottomPadding() + Dimens.Padding.fabBottom)
                       .padding(top = pd.calculateTopPadding())
                       .testTag(GroupListScreenTestTags.LIST),
-              contentPadding =
-                  PaddingValues(vertical = GroupListScreenDimensions.listVerticalPadding)) {
+              contentPadding = PaddingValues(vertical = Dimens.Padding.smallMedium)) {
                 items(groups) { group ->
                   GroupCard(
                       group = group,
@@ -319,7 +298,7 @@ fun GroupListScreen(
                         openMenuGroupId = if (openMenuGroupId == group.id) null else group.id
                         menuButtonYPosition = yPosition
                       })
-                  Spacer(Modifier.height(GroupListScreenDimensions.cardSpacing))
+                  Spacer(Modifier.height(Dimens.Spacing.itemSpacing))
                 }
               }
         } else {
@@ -356,12 +335,11 @@ fun GroupListScreen(
         val isOwner = group.ownerId == currentUserId
         val numberOfButtons = 5 // Always show all 5 buttons
         val dynamicMenuHeight =
-            GroupListScreenDimensions.bubbleHeight.times(numberOfButtons) +
-                GroupListScreenDimensions.menuBubbleSpacing.times(numberOfButtons - 1)
+            Dimens.Button.minHeight.times(numberOfButtons) +
+                Dimens.Spacing.small.times(numberOfButtons - 1)
 
         // Check if menu would go off-screen
-        val spaceBelow =
-            screenHeightDp - buttonTopPaddingDp - GroupListScreenDimensions.menuBottomMargin
+        val spaceBelow = screenHeightDp - buttonTopPaddingDp - Dimens.Padding.menuVerticalMargin
         val shouldPositionAbove = spaceBelow < dynamicMenuHeight
 
         // Calculate final top position
@@ -369,7 +347,7 @@ fun GroupListScreen(
             if (shouldPositionAbove) {
               // Position menu so bottom aligns with button (menu above button)
               (buttonTopPaddingDp - dynamicMenuHeight).coerceAtLeast(
-                  GroupListScreenDimensions.menuTopMargin)
+                  Dimens.Padding.menuVerticalMargin)
             } else {
               // Normal position (menu below button)
               buttonTopPaddingDp
@@ -379,8 +357,7 @@ fun GroupListScreen(
         val scrimAlpha by
             animateFloatAsState(
                 targetValue = 1f,
-                animationSpec =
-                    tween(durationMillis = GroupListScreenDimensions.scrimAnimationDuration),
+                animationSpec = tween(durationMillis = SCRIM_ANIMATION_DURATION),
                 label = "cardMenuScrimAlpha")
         val isDarkTheme = isSystemInDarkTheme()
         val scrimBaseColor =
@@ -391,7 +368,7 @@ fun GroupListScreen(
         Box(
             modifier =
                 Modifier.fillMaxSize()
-                    .zIndex(GroupListScreenDimensions.scrimZIndex)
+                    .zIndex(SCRIM_Z_INDEX)
                     .background(scrimColor)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -401,10 +378,8 @@ fun GroupListScreen(
               Column(
                   modifier =
                       Modifier.align(Alignment.TopEnd)
-                          .padding(
-                              top = topPaddingDp, end = GroupListScreenDimensions.menuRightPadding),
-                  verticalArrangement =
-                      Arrangement.spacedBy(GroupListScreenDimensions.menuBubbleSpacing),
+                          .padding(top = topPaddingDp, end = Dimens.Padding.menuRight),
+                  verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small),
                   horizontalAlignment = Alignment.End) {
                     // View Group Details
                     MenuBubble(
@@ -437,8 +412,9 @@ fun GroupListScreen(
                         text = "Share Group",
                         icon = Icons.Default.Share,
                         onClick = {
-                          onShareGroup(group)
                           openMenuGroupId = null
+                          groupToShare = group
+                          onShareGroup(group)
                         },
                         testTag = GroupListScreenTestTags.SHARE_GROUP_BUBBLE)
 
@@ -484,96 +460,70 @@ fun GroupListScreen(
 
     // Leave Group Confirmation Dialog
     groupToLeave?.let { group ->
-      AlertDialog(
+      CustomConfirmationDialog(
           modifier = Modifier.testTag(GroupListScreenTestTags.LEAVE_GROUP_DIALOG),
-          onDismissRequest = { groupToLeave = null },
-          title = { Text("Leave Group") },
-          text = {
-            Text(
-                "Are you sure you want to leave '${group.name}'? You will no longer have access to this group.")
+          title = "Are you sure you want to leave\nthis group?",
+          confirmText = "Yes",
+          cancelText = "No",
+          onConfirm = {
+            onLeaveGroup(group)
+            groupToLeave = null
           },
-          confirmButton = {
-            Button(
-                modifier = Modifier.testTag(GroupListScreenTestTags.LEAVE_GROUP_CONFIRM_BUTTON),
-                onClick = {
-                  onLeaveGroup(group)
-                  groupToLeave = null
-                }) {
-                  Text("Leave")
-                }
-          },
-          dismissButton = {
-            TextButton(
-                modifier = Modifier.testTag(GroupListScreenTestTags.LEAVE_GROUP_CANCEL_BUTTON),
-                onClick = { groupToLeave = null }) {
-                  Text("Cancel")
-                }
-          })
+          onDismiss = { groupToLeave = null },
+          confirmButtonTestTag = GroupListScreenTestTags.LEAVE_GROUP_CONFIRM_BUTTON,
+          cancelButtonTestTag = GroupListScreenTestTags.LEAVE_GROUP_CANCEL_BUTTON)
     }
 
     // Delete Group Confirmation Dialog
     groupToDelete?.let { group ->
-      AlertDialog(
+      CustomConfirmationDialog(
           modifier = Modifier.testTag(GroupListScreenTestTags.DELETE_GROUP_DIALOG),
-          onDismissRequest = { groupToDelete = null },
-          title = { Text("Delete Group") },
-          text = {
-            Text(
-                "Are you sure you want to delete '${group.name}'? This action cannot be undone and all group data will be permanently removed.")
+          title = "Are you sure you want to delete\nthis group?",
+          message = "The group will be permanently deleted\nThis action is irreversible",
+          confirmText = "Yes",
+          cancelText = "No",
+          onConfirm = {
+            onDeleteGroup(group)
+            groupToDelete = null
           },
-          confirmButton = {
-            Button(
-                modifier = Modifier.testTag(GroupListScreenTestTags.DELETE_GROUP_CONFIRM_BUTTON),
-                onClick = {
-                  onDeleteGroup(group)
-                  groupToDelete = null
-                }) {
-                  Text("Delete")
-                }
-          },
-          dismissButton = {
-            TextButton(
-                modifier = Modifier.testTag(GroupListScreenTestTags.DELETE_GROUP_CANCEL_BUTTON),
-                onClick = { groupToDelete = null }) {
-                  Text("Cancel")
-                }
-          })
+          onDismiss = { groupToDelete = null },
+          confirmButtonTestTag = GroupListScreenTestTags.DELETE_GROUP_CONFIRM_BUTTON,
+          cancelButtonTestTag = GroupListScreenTestTags.DELETE_GROUP_CANCEL_BUTTON)
+    }
+
+    // Share Group Dialog
+    groupToShare?.let { group ->
+      ShareGroupDialog(
+          group = group,
+          onDismiss = { groupToShare = null },
+          onShareComplete = { onShareGroup(group) })
     }
 
     // Owner Cannot Leave Group Dialog (Restriction)
     if (showOwnerCannotLeaveDialog) {
-      AlertDialog(
+      CustomConfirmationDialog(
           modifier = Modifier.testTag(GroupListScreenTestTags.OWNER_CANNOT_LEAVE_DIALOG),
-          onDismissRequest = { showOwnerCannotLeaveDialog = false },
-          title = { Text("Cannot Leave Group") },
-          text = {
-            Text(
-                "You cannot leave this group because you are the owner. You can only delete the group.")
-          },
-          confirmButton = {
-            Button(
-                modifier = Modifier.testTag(GroupListScreenTestTags.OWNER_CANNOT_LEAVE_OK_BUTTON),
-                onClick = { showOwnerCannotLeaveDialog = false }) {
-                  Text("OK")
-                }
-          })
+          title = "You cannot leave this group",
+          message =
+              "Only non-owners can leave the group. As the owner, you can delete the group instead",
+          confirmText = "OK",
+          cancelText = null,
+          onConfirm = { showOwnerCannotLeaveDialog = false },
+          onDismiss = { showOwnerCannotLeaveDialog = false },
+          confirmButtonTestTag = GroupListScreenTestTags.OWNER_CANNOT_LEAVE_OK_BUTTON)
     }
 
     // Only Owner Can Delete Group Dialog (Restriction)
     if (showOnlyOwnerCanDeleteDialog) {
-      AlertDialog(
+      CustomConfirmationDialog(
           modifier = Modifier.testTag(GroupListScreenTestTags.ONLY_OWNER_CAN_DELETE_DIALOG),
-          onDismissRequest = { showOnlyOwnerCanDeleteDialog = false },
-          title = { Text("Cannot Delete Group") },
-          text = { Text("Only the owner of the group can delete the group.") },
-          confirmButton = {
-            Button(
-                modifier =
-                    Modifier.testTag(GroupListScreenTestTags.ONLY_OWNER_CAN_DELETE_OK_BUTTON),
-                onClick = { showOnlyOwnerCanDeleteDialog = false }) {
-                  Text("OK")
-                }
-          })
+          title = "You cannot delete this group",
+          message = "Only the owner of the group can delete the group",
+          confirmText = "OK",
+          cancelText = null,
+          onConfirm = { showOnlyOwnerCanDeleteDialog = false },
+          onDismiss = { showOnlyOwnerCanDeleteDialog = false },
+          confirmButtonTestTag = GroupListScreenTestTags.ONLY_OWNER_CAN_DELETE_OK_BUTTON)
     }
   } // Close outer Box
 }
@@ -594,13 +544,13 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: (Float) 
   Card(
       modifier =
           Modifier.fillMaxWidth()
-              .heightIn(min = GroupListScreenDimensions.cardMinHeight)
+              .heightIn(min = Dimens.Padding.cardMinHeight)
               .clickable { onClick() }
               .testTag(GroupListScreenTestTags.cardTag(group.id)),
       colors =
           CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(GroupListScreenDimensions.cardPadding),
+            modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.smallMedium),
             verticalAlignment = Alignment.Top) {
               Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -609,7 +559,7 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: (Float) 
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onPrimaryContainer)
-                Spacer(Modifier.height(GroupListScreenDimensions.titleDescriptionSpacing))
+                Spacer(Modifier.height(Dimens.Padding.extraSmall))
                 if (group.description.isNotBlank()) {
                   Text(
                       text = group.description,
@@ -618,15 +568,14 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: (Float) 
                       overflow = TextOverflow.Ellipsis,
                       color =
                           MaterialTheme.colorScheme.onPrimaryContainer.copy(
-                              alpha = GroupListScreenDimensions.descriptionAlpha))
+                              alpha = DESCRIPTION_ALPHA))
                 }
-                Spacer(Modifier.height(GroupListScreenDimensions.descriptionMembersSpacing))
+                Spacer(Modifier.height(Dimens.Padding.extraSmallSpacing))
                 Text(
                     text = "members: ${group.memberIds.size}",
                     style = MaterialTheme.typography.labelSmall,
                     color =
-                        MaterialTheme.colorScheme.onPrimaryContainer.copy(
-                            alpha = GroupListScreenDimensions.membersAlpha))
+                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = MEMBERS_ALPHA))
               }
               var buttonYPosition by remember { mutableFloatStateOf(0f) }
 
@@ -652,25 +601,227 @@ private fun MenuBubble(text: String, icon: ImageVector, onClick: () -> Unit, tes
   FloatingActionButton(
       onClick = onClick,
       containerColor = MaterialTheme.colorScheme.surface,
-      shape = RoundedCornerShape(GroupListScreenDimensions.bubbleCornerRadius),
-      modifier = Modifier.height(GroupListScreenDimensions.bubbleHeight).testTag(testTag)) {
+      shape = RoundedCornerShape(Dimens.CornerRadius.pill),
+      modifier = Modifier.height(Dimens.Button.minHeight).testTag(testTag)) {
         Row(
             modifier =
                 Modifier.padding(
-                    horizontal = GroupListScreenDimensions.bubbleHorizontalPadding,
-                    vertical = GroupListScreenDimensions.bubbleVerticalPadding),
+                    horizontal = Dimens.Padding.medium, vertical = Dimens.Padding.small),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement =
-                Arrangement.spacedBy(GroupListScreenDimensions.bubbleIconTextSpacing)) {
+            horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
               Icon(
                   imageVector = icon,
                   contentDescription = text,
                   tint = MaterialTheme.colorScheme.onSurface,
-                  modifier = Modifier.size(GroupListScreenDimensions.bubbleIconSize))
+                  modifier = Modifier.size(Dimens.IconSize.smallMedium))
               Text(
                   text = text,
                   color = MaterialTheme.colorScheme.onSurface,
                   style = MaterialTheme.typography.bodyMedium)
             }
       }
+}
+
+/**
+ * Custom confirmation dialog matching the design in screenshots.
+ *
+ * @param title Dialog title text
+ * @param message Optional message text below title
+ * @param confirmText Text for confirm button
+ * @param cancelText Text for cancel button (null to show only confirm button)
+ * @param onConfirm Callback when confirm button is clicked
+ * @param onDismiss Callback when dialog is dismissed
+ * @param confirmButtonTestTag Test tag for confirm button
+ * @param cancelButtonTestTag Test tag for cancel button
+ * @param modifier Modifier for the dialog
+ */
+@Composable
+private fun CustomConfirmationDialog(
+    title: String,
+    message: String? = null,
+    confirmText: String,
+    cancelText: String?,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    confirmButtonTestTag: String = "",
+    cancelButtonTestTag: String = "",
+    modifier: Modifier = Modifier
+) {
+  Dialog(onDismissRequest = onDismiss) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(Dimens.CornerRadius.extraLarge),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+          Column(
+              modifier = Modifier.padding(Dimens.Padding.large),
+              horizontalAlignment = Alignment.CenterHorizontally) {
+                // Title
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = Dimens.Padding.medium))
+
+                // Optional message
+                message?.let {
+                  Text(
+                      text = it,
+                      style = MaterialTheme.typography.bodyMedium,
+                      textAlign = TextAlign.Center,
+                      color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                      modifier = Modifier.padding(bottom = Dimens.Padding.large))
+                }
+
+                // Buttons
+                if (cancelText != null) {
+                  // Two buttons side by side
+                  Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
+                        // Cancel button
+                        Button(
+                            onClick = onDismiss,
+                            modifier =
+                                Modifier.weight(1f)
+                                    .height(Dimens.Button.minHeight)
+                                    .testTag(cancelButtonTestTag),
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondary),
+                            shape = RoundedCornerShape(Dimens.CornerRadius.extraLarge)) {
+                              Text(text = cancelText, color = MaterialTheme.colorScheme.onSecondary)
+                            }
+
+                        // Confirm button
+                        Button(
+                            onClick = onConfirm,
+                            modifier =
+                                Modifier.weight(1f)
+                                    .height(Dimens.Button.minHeight)
+                                    .testTag(confirmButtonTestTag),
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary),
+                            shape = RoundedCornerShape(Dimens.CornerRadius.extraLarge)) {
+                              Text(text = confirmText, color = MaterialTheme.colorScheme.onPrimary)
+                            }
+                      }
+                } else {
+                  // Single confirm button
+                  Button(
+                      onClick = onConfirm,
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .height(Dimens.Button.minHeight)
+                              .testTag(confirmButtonTestTag),
+                      colors =
+                          ButtonDefaults.buttonColors(
+                              containerColor = MaterialTheme.colorScheme.primary),
+                      shape = RoundedCornerShape(Dimens.CornerRadius.extraLarge)) {
+                        Text(text = confirmText, color = MaterialTheme.colorScheme.onPrimary)
+                      }
+                }
+              }
+        }
+  }
+}
+
+/**
+ * Share Group Dialog matching the design in screenshots.
+ *
+ * @param group The group to share
+ * @param onDismiss Callback when dialog is dismissed
+ * @param onShareComplete Callback after link is copied (for additional share actions)
+ */
+@Composable
+private fun ShareGroupDialog(group: Group, onDismiss: () -> Unit, onShareComplete: () -> Unit) {
+  val context = LocalContext.current
+  val clipboardManager = LocalClipboardManager.current
+
+  Dialog(onDismissRequest = onDismiss) {
+    Card(
+        modifier = Modifier.fillMaxWidth().testTag(GroupListScreenTestTags.SHARE_GROUP_DIALOG),
+        shape = RoundedCornerShape(Dimens.CornerRadius.extraLarge),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+          Column(
+              modifier = Modifier.padding(Dimens.Padding.large),
+              horizontalAlignment = Alignment.CenterHorizontally) {
+                // Header with close button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically) {
+                      Spacer(Modifier.width(24.dp)) // Balance the close button
+                      Text(
+                          text = "       Share this group",
+                          style = MaterialTheme.typography.titleMedium,
+                          color = MaterialTheme.colorScheme.onSurface)
+                      IconButton(
+                          onClick = onDismiss,
+                          modifier =
+                              Modifier.testTag(GroupListScreenTestTags.SHARE_GROUP_CLOSE_BUTTON)) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = MaterialTheme.colorScheme.onSurface)
+                          }
+                    }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Group name
+                Text(
+                    text = group.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.fillMaxWidth())
+
+                Spacer(Modifier.height(24.dp))
+
+                // Copy invite link button
+                Button(
+                    onClick = {
+                      // Generate invite link (you can customize this based on your app's deep
+                      // linking)
+                      val inviteLink = "https://joinme.app/invite/${group.id}"
+                      clipboardManager.setText(AnnotatedString(inviteLink))
+                      Toast.makeText(context, "Invite link copied to clipboard", Toast.LENGTH_SHORT)
+                          .show()
+                      onShareComplete()
+                    },
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .height(Dimens.Button.minHeight)
+                            .testTag(GroupListScreenTestTags.SHARE_GROUP_COPY_LINK_BUTTON),
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary),
+                    shape = RoundedCornerShape(Dimens.CornerRadius.extraLarge)) {
+                      Row(
+                          horizontalArrangement = Arrangement.Center,
+                          verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Copy invite link",
+                                color = MaterialTheme.colorScheme.onPrimary)
+                          }
+                    }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Helper text
+                Text(
+                    text = "Anyone with this link can join the group",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    textAlign = TextAlign.Center)
+              }
+        }
+  }
 }

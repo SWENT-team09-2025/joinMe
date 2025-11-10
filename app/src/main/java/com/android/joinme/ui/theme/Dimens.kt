@@ -126,6 +126,9 @@ object Dimens {
     /** 8dp - Tight internal padding */
     val small: Dp = 8.dp
 
+    /** 12dp - Small-medium internal padding */
+    val smallMedium: Dp = 12.dp
+
     /** 16dp - Standard internal padding */
     val medium: Dp = 16.dp
 
@@ -141,6 +144,25 @@ object Dimens {
 
     /** 16dp - Standard vertical padding for screen edges */
     val screenVertical: Dp = 16.dp
+
+    // Component-specific padding
+    /** 60dp - Right padding for menu positioning */
+    val menuRight: Dp = 60.dp
+
+    /** 80dp - Bottom/top margin for menus */
+    val menuVerticalMargin: Dp = 80.dp
+
+    /** 84dp - Bottom padding for FAB */
+    val fabBottom: Dp = 84.dp
+
+    /** 272dp - Height for menu overlay (5 items × 48dp + 4 spacers × 8dp) */
+    val menuHeight: Dp = 272.dp
+
+    /** 86dp - Minimum height for group cards */
+    val cardMinHeight: Dp = 86.dp
+
+    /** 6dp - Small spacing (description to members) */
+    val extraSmallSpacing: Dp = 6.dp
   }
 
   /**
@@ -262,6 +284,9 @@ object Dimens {
   object IconSize {
     /** 16dp - Small icons (inline with text) */
     val small: Dp = 16.dp
+
+    /** 20dp - Small-medium icons (menu bubbles) */
+    val smallMedium: Dp = 20.dp
 
     /** 24dp - Standard icons (buttons, navigation) - Most common */
     val medium: Dp = 24.dp

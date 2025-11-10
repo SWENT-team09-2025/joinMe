@@ -45,8 +45,24 @@ class CreateGroupScreenAndroidTest {
       if (index != -1) groups[index] = newValue else throw Exception("Group not found")
     }
 
-    override suspend fun deleteGroup(groupId: String) {
+    override suspend fun deleteGroup(groupId: String, userId: String) {
+      val group = getGroup(groupId)
+      if (group.ownerId != userId) {
+        throw Exception("Only the group owner can delete this group")
+      }
       if (!groups.removeIf { it.id == groupId }) throw Exception("Group not found")
+    }
+
+    override suspend fun leaveGroup(groupId: String, userId: String) {
+      val group = getGroup(groupId)
+      val updatedMemberIds = group.memberIds.filter { it != userId }
+
+      if (updatedMemberIds.size == group.memberIds.size) {
+        throw Exception("User is not a member of this group")
+      }
+
+      val updatedGroup = group.copy(memberIds = updatedMemberIds)
+      editGroup(groupId, updatedGroup)
     }
   }
 

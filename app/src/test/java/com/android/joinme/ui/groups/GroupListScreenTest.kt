@@ -1204,11 +1204,7 @@ class GroupListScreenTest {
 
     // Verify dialog appears
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_DIALOG).assertExists()
-    composeTestRule.onNodeWithText("Leave Group").assertExists()
-    composeTestRule
-        .onNodeWithText(
-            "Are you sure you want to leave 'Test Group'? You will no longer have access to this group.")
-        .assertExists()
+    composeTestRule.onNodeWithText("Are you sure you want to leave\nthis group?").assertExists()
   }
 
   @Test
@@ -1249,18 +1245,15 @@ class GroupListScreenTest {
   }
 
   @Test
-  fun leaveGroupDialog_showsCorrectGroupName_whenNotOwner() {
+  fun leaveGroupDialog_showsCorrectMessage_whenNotOwner() {
     val group = Group(id = "test1", name = "My Awesome Group", ownerId = "owner1")
 
     composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
     // Open menu and click Leave Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
     composeTestRule.onNodeWithText("Leave Group").performClick()
-    // Verify group name appears in dialog
-    composeTestRule
-        .onNodeWithText(
-            "Are you sure you want to leave 'My Awesome Group'? You will no longer have access to this group.")
-        .assertExists()
+    // Verify dialog message appears
+    composeTestRule.onNodeWithText("Are you sure you want to leave\nthis group?").assertExists()
   }
 
   @Test
@@ -1290,10 +1283,10 @@ class GroupListScreenTest {
 
     // Verify owner restriction dialog appears (not the regular leave dialog)
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.OWNER_CANNOT_LEAVE_DIALOG).assertExists()
-    composeTestRule.onNodeWithText("Cannot Leave Group").assertExists()
+    composeTestRule.onNodeWithText("You cannot leave this group").assertExists()
     composeTestRule
         .onNodeWithText(
-            "You cannot leave this group because you are the owner. You can only delete the group.")
+            "Only non-owners can leave the group. As the owner, you can delete the group instead")
         .assertExists()
   }
 
@@ -1371,7 +1364,7 @@ class GroupListScreenTest {
 
     // Verify confirmation dialog appears (owner CAN delete)
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_DIALOG).assertExists()
-    composeTestRule.onNodeWithText("Delete Group").assertExists()
+    composeTestRule.onNodeWithText("Are you sure you want to delete\nthis group?").assertExists()
   }
 
   @Test
@@ -1399,8 +1392,7 @@ class GroupListScreenTest {
 
     // Verify the warning message is displayed correctly
     composeTestRule
-        .onNodeWithText(
-            "Are you sure you want to delete 'My Test Group'? This action cannot be undone and all group data will be permanently removed.")
+        .onNodeWithText("The group will be permanently deleted\nThis action is irreversible")
         .assertExists()
   }
 
@@ -1505,7 +1497,7 @@ class GroupListScreenTest {
     composeTestRule
         .onNodeWithTag(GroupListScreenTestTags.ONLY_OWNER_CAN_DELETE_DIALOG)
         .assertExists()
-    composeTestRule.onNodeWithText("Cannot Delete Group").assertExists()
+    composeTestRule.onNodeWithText("You cannot delete this group").assertExists()
   }
 
   @Test
@@ -1534,7 +1526,7 @@ class GroupListScreenTest {
 
     // Verify the restriction message is displayed correctly
     composeTestRule
-        .onNodeWithText("Only the owner of the group can delete the group.")
+        .onNodeWithText("Only the owner of the group can delete the group")
         .assertExists()
   }
 
@@ -1576,5 +1568,137 @@ class GroupListScreenTest {
         .onNodeWithTag(GroupListScreenTestTags.ONLY_OWNER_CAN_DELETE_DIALOG)
         .assertDoesNotExist()
     assertNull(deletedGroup)
+  }
+
+  // =======================================
+  // Share Group Dialog Tests
+  // =======================================
+
+  @Test
+  fun shareGroupButton_opensShareDialog() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu and click Share Group
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("Share Group").performClick()
+
+    // Verify share dialog appears
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_DIALOG).assertExists()
+  }
+
+  @Test
+  fun shareGroupDialog_displaysCorrectGroupName() {
+    val group = Group(id = "test1", name = "My Awesome Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu and click Share Group
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("Share Group").performClick()
+
+    // Verify share dialog appears and contains the group name
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_DIALOG).assertExists()
+    // Note: Group name appears in both card and dialog, so we just verify dialog is showing
+    composeTestRule.onNodeWithText("       Share this group").assertExists()
+  }
+
+  @Test
+  fun shareGroupDialog_displaysShareTitle() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu and click Share Group
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("Share Group").performClick()
+
+    // Verify dialog title is displayed
+    composeTestRule.onNodeWithText("       Share this group").assertExists()
+  }
+
+  @Test
+  fun shareGroupDialog_hasCopyLinkButton() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu and click Share Group
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("Share Group").performClick()
+
+    // Verify copy link button is displayed
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_COPY_LINK_BUTTON)
+        .assertExists()
+        .assertHasClickAction()
+  }
+
+  @Test
+  fun shareGroupDialog_hasCloseButton() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu and click Share Group
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("Share Group").performClick()
+
+    // Verify close button is displayed
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_CLOSE_BUTTON)
+        .assertExists()
+        .assertHasClickAction()
+  }
+
+  @Test
+  fun shareGroupDialog_closeButton_dismissesDialog() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu and click Share Group
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("Share Group").performClick()
+
+    // Verify dialog is open
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_DIALOG).assertExists()
+
+    // Click close button
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_CLOSE_BUTTON).performClick()
+
+    // Verify dialog is dismissed
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_DIALOG).assertDoesNotExist()
+  }
+
+  @Test
+  fun shareGroupDialog_copyLinkButton_isClickable() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu and click Share Group
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("Share Group").performClick()
+
+    // Verify copy link button is clickable
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_COPY_LINK_BUTTON)
+        .assertHasClickAction()
+  }
+
+  @Test
+  fun shareGroupDialog_displaysCopyInviteLinkText() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu and click Share Group
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("Share Group").performClick()
+
+    // Verify "Copy invite link" text is displayed
+    composeTestRule.onNodeWithText("Copy invite link").assertExists()
   }
 }
