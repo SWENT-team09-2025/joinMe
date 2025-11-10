@@ -1,6 +1,8 @@
 package com.android.joinme.ui.theme
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuItemColors
+import androidx.compose.material3.SelectableChipColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -29,7 +31,10 @@ data class CustomColors(
     val unselectedIconColor: Color,
     val unselectedTextColor: Color,
     val disabledIconColor: Color,
-    val disabledTextColor: Color
+    val disabledTextColor: Color,
+    val filterChip: SelectableChipColors,
+    val dropdownMenu: MenuItemColors,
+    val backgroundMenu: Color,
 )
 
 /** Custom light color palette. */
@@ -61,7 +66,37 @@ val lightCustomColors =
         unselectedIconColor = onPrimaryContainerLight.copy(0.6f),
         unselectedTextColor = onPrimaryContainerLight.copy(0.6f),
         disabledIconColor = onPrimaryLight.copy(0.6f),
-        disabledTextColor = onPrimaryLight.copy(0.6f))
+        disabledTextColor = onPrimaryLight.copy(0.6f),
+
+        // FILTER CHIP COLORS FOR SEARCH SCREEN
+        filterChip =
+            SelectableChipColors(
+                containerColor = surfaceLight,
+                labelColor = onSurfaceVariantLight,
+                disabledContainerColor = surfaceLight,
+                disabledLabelColor = secondaryLight,
+                leadingIconColor = secondaryLight,
+                trailingIconColor = secondaryLight,
+                disabledLeadingIconColor = secondaryLight,
+                disabledTrailingIconColor = secondaryLight,
+                selectedContainerColor = primaryLight,
+                disabledSelectedContainerColor = surfaceLight,
+                selectedLabelColor = onPrimaryLight,
+                selectedLeadingIconColor = secondaryLight,
+                selectedTrailingIconColor = secondaryLight,
+            ),
+
+        // DROPDOWN MENU COLORS DOR SEARCH SCREEN
+        dropdownMenu =
+            MenuItemColors(
+                textColor = surfaceLight,
+                leadingIconColor = onSecondaryContainerLight,
+                trailingIconColor = onSecondaryContainerLight,
+                disabledTextColor = onSecondaryContainerLight,
+                disabledLeadingIconColor = onSecondaryContainerLight,
+                disabledTrailingIconColor = onSecondaryContainerLight,
+            ),
+        backgroundMenu = primaryLight)
 
 /** Custom dark color palette. */
 val darkCustomColors =
@@ -92,7 +127,40 @@ val darkCustomColors =
         unselectedIconColor = inverseSurfaceDark.copy(alpha = 0.6f),
         unselectedTextColor = inverseSurfaceDark.copy(alpha = 0.6f),
         disabledIconColor = inverseSurfaceDark.copy(alpha = 0.6f),
-        disabledTextColor = inverseSurfaceDark.copy(alpha = 0.6f))
+        disabledTextColor = inverseSurfaceDark.copy(alpha = 0.6f),
+
+        // FILTER CHIP COLORS FOR SEARCH SCREEN
+        // NOT IMPLEMENTED YET
+        filterChip =
+            SelectableChipColors(
+                containerColor = onPrimaryDark,
+                labelColor = onPrimaryDark,
+                disabledContainerColor = surfaceContainerHighDark,
+                disabledLabelColor = surfaceDark,
+                leadingIconColor = surfaceDark,
+                trailingIconColor = surfaceDark,
+                disabledLeadingIconColor = surfaceDark,
+                disabledTrailingIconColor = surfaceDark,
+                selectedContainerColor = primaryDark,
+                disabledSelectedContainerColor = surfaceContainerHighDark,
+                selectedLabelColor = onPrimaryDark,
+                selectedLeadingIconColor = surfaceDark,
+                selectedTrailingIconColor = surfaceDark,
+            ),
+
+        // DROPDOWN MENU COLORS FOR SEARCH SCREEN
+        dropdownMenu =
+            MenuItemColors(
+                textColor = surfaceLight,
+                leadingIconColor = onSecondaryContainerLight,
+                trailingIconColor = onSecondaryContainerLight,
+                disabledTextColor = onSecondaryContainerLight,
+                disabledLeadingIconColor = onSecondaryContainerLight,
+                disabledTrailingIconColor = onSecondaryContainerLight,
+            ),
+
+        // DROPDOWN MENU BACKGROUND FOR SEARCH SCREEN
+        backgroundMenu = surfaceContainerDark)
 
 internal val LocalCustomColors = staticCompositionLocalOf { lightCustomColors }
 
