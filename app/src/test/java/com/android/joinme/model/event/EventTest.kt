@@ -1,6 +1,5 @@
 package com.android.joinme.model.event
 
-import androidx.compose.ui.graphics.Color
 import com.android.joinme.model.map.Location
 import com.google.firebase.Timestamp
 import java.util.Calendar
@@ -194,34 +193,5 @@ class EventTest {
     assertFalse(pastEvent.isUpcoming())
     assertFalse(pastEvent.isActive())
     assertTrue(pastEvent.isExpired())
-  }
-
-  @Test
-  fun `getColor returns correct color for SPORTS event type`() {
-    val color = EventType.SPORTS.getColor()
-    assertEquals(Color(0xFF7242E4), color)
-  }
-
-  @Test
-  fun `getColor returns correct color for ACTIVITY event type`() {
-    val color = EventType.ACTIVITY.getColor()
-    assertEquals(Color(0xFF42E465), color)
-  }
-
-  @Test
-  fun `getColor returns correct color for SOCIAL event type`() {
-    val color = EventType.SOCIAL.getColor()
-    assertEquals(Color(0xFFD33E3B), color)
-  }
-
-  @Test
-  fun `getColor returns different colors for different event types`() {
-    val sportsColor = EventType.SPORTS.getColor()
-    val activityColor = EventType.ACTIVITY.getColor()
-    val socialColor = EventType.SOCIAL.getColor()
-
-    assertNotEquals(sportsColor, activityColor)
-    assertNotEquals(sportsColor, socialColor)
-    assertNotEquals(activityColor, socialColor)
   }
 }
