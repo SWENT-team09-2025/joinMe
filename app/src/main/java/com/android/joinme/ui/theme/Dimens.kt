@@ -565,4 +565,13 @@ object Dimens {
     /** 240.dp - height for suggestions field */
     val suggestionsField: Dp = 240.dp
   }
+  /**
+   * Show Event Dimensions
+   *
+   * Dimensions specific to the ShowEvent component including description field height.
+   */
+  object ShowEvent {
+    /** 80.dp - height for description field */
+    val minDescriptionField: Dp = 80.dp
+  }
 }
