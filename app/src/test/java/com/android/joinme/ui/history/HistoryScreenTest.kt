@@ -610,6 +610,11 @@ class HistoryScreenTest {
             visibility = EventVisibility.PUBLIC,
             ownerId = "owner1")
 
+    // Set end time for ongoing serie (started 1 hour ago, ends 1 hour from now)
+    val calendarOngoingEnd = Calendar.getInstance()
+    calendarOngoingEnd.add(Calendar.HOUR, 1)
+    val endDateOngoing = Timestamp(calendarOngoingEnd.time)
+
     val ongoingSerie =
         Serie(
             serieId = "2",
@@ -620,7 +625,8 @@ class HistoryScreenTest {
             maxParticipants = 10,
             visibility = Visibility.PUBLIC,
             eventIds = listOf("ongoing-event-1"),
-            ownerId = "owner1")
+            ownerId = "owner1",
+            lastEventEndTime = endDateOngoing) // Ends in future, so still active
 
     // Create an upcoming serie (starts in 2 hours)
     val calendarUpcoming = Calendar.getInstance()
@@ -637,7 +643,8 @@ class HistoryScreenTest {
             maxParticipants = 10,
             visibility = Visibility.PUBLIC,
             eventIds = listOf(),
-            ownerId = "owner1")
+            ownerId = "owner1",
+            lastEventEndTime = startDateUpcoming) // Not expired, upcoming
 
     runBlocking {
       serieRepo.addSerie(expiredSerie)
@@ -718,6 +725,8 @@ class HistoryScreenTest {
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.DAY_OF_MONTH, -daysAgo) // Date in the past
     val serieDate = Timestamp(calendar.time)
+    calendar.add(Calendar.HOUR, -1) // Ended 1 hour before the start (so it's expired)
+    val serieEndDate = Timestamp(calendar.time)
 
     return Serie(
         serieId = serieId,
@@ -728,7 +737,8 @@ class HistoryScreenTest {
         maxParticipants = 10,
         visibility = Visibility.PUBLIC,
         eventIds = listOf(),
-        ownerId = "owner1")
+        ownerId = "owner1",
+        lastEventEndTime = serieEndDate) // Set to past so it's expired
   }
 
   @Test

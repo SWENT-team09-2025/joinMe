@@ -19,6 +19,15 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /** Note: This file was refactored using IA (Claude) */
 
+/** Milliseconds per second conversion factor */
+private const val MILLIS_PER_SECOND = 1000L
+
+/** Seconds per minute conversion factor */
+private const val SECONDS_PER_MINUTE = 60L
+
+/** Milliseconds per minute conversion factor */
+private const val MILLIS_PER_MINUTE = SECONDS_PER_MINUTE * MILLIS_PER_SECOND
+
 /**
  * UI state for the CreateEventForSerie screen.
  *
@@ -174,8 +183,14 @@ class CreateEventForSerieViewModel(
       // Add the event to the repository
       eventRepository.addEvent(event)
 
-      // Update the serie to include the new event ID
-      val updatedSerie = serie.copy(eventIds = serie.eventIds + newEventId)
+      // Calculate the end time of the new event
+      val newEventEndTime = event.date.toDate().time + (event.duration * MILLIS_PER_MINUTE)
+      val newEventEndTimestamp = Timestamp(java.util.Date(newEventEndTime))
+
+      // Update the serie to include the new event ID and update lastEventEndTime
+      val updatedSerie =
+          serie.copy(
+              eventIds = serie.eventIds + newEventId, lastEventEndTime = newEventEndTimestamp)
       serieRepository.editSerie(serieId, updatedSerie)
 
       clearErrorMsg()
@@ -218,7 +233,7 @@ class CreateEventForSerieViewModel(
 
     // Calculate when the last event ends
     val lastEvent = serieEvents.last()
-    val lastEventEndTime = lastEvent.date.toDate().time + (lastEvent.duration * 60 * 1000)
+    val lastEventEndTime = lastEvent.date.toDate().time + (lastEvent.duration * MILLIS_PER_MINUTE)
 
     return Timestamp(java.util.Date(lastEventEndTime))
   }

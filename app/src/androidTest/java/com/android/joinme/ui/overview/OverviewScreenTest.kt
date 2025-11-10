@@ -1008,17 +1008,23 @@ class OverviewScreenTest {
             visibility = EventVisibility.PUBLIC,
             ownerId = "owner1")
 
+    // Serie starts in 1 hour with two 60-minute events
+    val serieStartDate = calendar.time
+    val serieEndCalendar = calendar.clone() as Calendar
+    serieEndCalendar.add(Calendar.MINUTE, 120) // Two 60-min events = 120 min total
+
     val serie =
         Serie(
             serieId = "serie1",
             title = "Weekly Basketball",
             description = "Weekly basketball games",
-            date = Timestamp(calendar.time),
+            date = Timestamp(serieStartDate),
             participants = listOf("user1"),
             maxParticipants = 10,
             visibility = Visibility.PUBLIC,
             eventIds = listOf("event1", "event2"),
-            ownerId = "owner1")
+            ownerId = "owner1",
+            lastEventEndTime = Timestamp(serieEndCalendar.time))
 
     runBlocking {
       eventRepo.addEvent(event1)
@@ -1080,17 +1086,23 @@ class OverviewScreenTest {
             visibility = EventVisibility.PUBLIC,
             ownerId = "owner")
 
+    // Serie starts in 1 hour with one 60-minute event
+    val serieStartDate2 = calendar.time
+    val serieEndCalendar2 = calendar.clone() as Calendar
+    serieEndCalendar2.add(Calendar.MINUTE, 60) // One 60-min event
+
     val serie =
         Serie(
             serieId = "serie1",
             title = "Event Serie",
             description = "Serie description",
-            date = Timestamp(calendar.time),
+            date = Timestamp(serieStartDate2),
             participants = listOf("user1"),
             maxParticipants = 10,
             visibility = Visibility.PUBLIC,
             eventIds = listOf("event2"),
-            ownerId = "owner1")
+            ownerId = "owner1",
+            lastEventEndTime = Timestamp(serieEndCalendar2.time))
 
     runBlocking {
       eventRepo.addEvent(standaloneEvent)
@@ -1124,18 +1136,23 @@ class OverviewScreenTest {
     val standaloneEvent = createEvent("standalone", "Standalone Event", EventType.SPORTS)
     val serieEvent = createEvent("serie_event", "Serie Event", EventType.SOCIAL)
 
-    // Create serie that contains serie_event
+    // Create serie that contains serie_event (starts in 1 hour, 60-min event)
+    val serieStartDate3 = calendar.time
+    val serieEndCalendar3 = calendar.clone() as Calendar
+    serieEndCalendar3.add(Calendar.MINUTE, 60)
+
     val serie =
         Serie(
             serieId = "serie1",
             title = "My Serie",
             description = "Serie description",
-            date = Timestamp(calendar.time),
+            date = Timestamp(serieStartDate3),
             participants = listOf("user1"),
             maxParticipants = 10,
             visibility = Visibility.PUBLIC,
             eventIds = listOf("serie_event"),
-            ownerId = "owner1")
+            ownerId = "owner1",
+            lastEventEndTime = Timestamp(serieEndCalendar3.time))
 
     runBlocking {
       eventRepo.addEvent(standaloneEvent)
@@ -1192,18 +1209,22 @@ class OverviewScreenTest {
                 visibility = EventVisibility.PUBLIC,
                 ownerId = "owner1"))
 
-        // Create serie
+        // Create serie (starts in 1 hour, 60-min event)
+        val serieStartTime = calendar.time
+        val serieEndTime = (calendar.clone() as Calendar).apply { add(Calendar.MINUTE, 60) }.time
+
         serieRepo.addSerie(
             Serie(
                 serieId = "serie$i",
                 title = "Serie $i",
                 description = "Description $i",
-                date = Timestamp(calendar.time),
+                date = Timestamp(serieStartTime),
                 participants = listOf("user1"),
                 maxParticipants = 10,
                 visibility = Visibility.PUBLIC,
                 eventIds = listOf("event$i"),
-                ownerId = "owner1"))
+                ownerId = "owner1",
+                lastEventEndTime = Timestamp(serieEndTime)))
       }
     }
 
@@ -1245,17 +1266,23 @@ class OverviewScreenTest {
             visibility = EventVisibility.PUBLIC,
             ownerId = "owner1")
 
+    // Calculate serie end time (started 30 min ago + 120 min duration = ends in 90 min)
+    val serieStartTime = calendar.time
+    calendar.add(Calendar.MINUTE, 120) // Add event duration
+    val serieEndTime = Timestamp(calendar.time)
+
     val ongoingSerie =
         Serie(
             serieId = "ongoing_serie",
             title = "Ongoing Serie",
             description = "Ongoing serie description",
-            date = Timestamp(calendar.time),
+            date = Timestamp(serieStartTime),
             participants = listOf("user1"),
             maxParticipants = 10,
             visibility = Visibility.PUBLIC,
             eventIds = listOf("ongoing_serie_event"),
-            ownerId = "owner1")
+            ownerId = "owner1",
+            lastEventEndTime = serieEndTime) // Set to future so serie is active
 
     runBlocking {
       eventRepo.addEvent(ongoingEvent)
@@ -1314,17 +1341,23 @@ class OverviewScreenTest {
             visibility = EventVisibility.PUBLIC,
             ownerId = "owner")
 
+    // Serie starts in 1 hour with one 60-minute event
+    val serieStartDate5 = calendar.time
+    val serieEndCalendar5 = calendar.clone() as Calendar
+    serieEndCalendar5.add(Calendar.MINUTE, 60)
+
     val serie =
         Serie(
             serieId = "serie1",
             title = "Event Serie",
             description = "Serie description",
-            date = Timestamp(calendar.time),
+            date = Timestamp(serieStartDate5),
             participants = listOf("user1"),
             maxParticipants = 10,
             visibility = Visibility.PUBLIC,
             eventIds = listOf("serie_event1"),
-            ownerId = "owner1")
+            ownerId = "owner1",
+            lastEventEndTime = Timestamp(serieEndCalendar5.time))
 
     runBlocking {
       eventRepo.addEvent(standaloneEvent)
