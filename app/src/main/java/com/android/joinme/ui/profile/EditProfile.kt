@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -22,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.theme.Dimens
-import com.android.joinme.ui.theme.scrimLight
+import com.android.joinme.ui.theme.TransparentColor
 
 /** Test tags for EditProfileScreen components to enable UI testing. */
 object EditProfileTestTags {
@@ -347,28 +348,32 @@ private fun ProfilePictureSection(
                     color = MaterialTheme.colorScheme.primary,
                     strokeWidth = Dimens.LoadingIndicator.strokeWidth)
               } else {
-                // Display actual profile photo with blur effect
-                ProfilePhotoImage(
-                    photoUrl = photoUrl,
-                    contentDescription = "Profile Picture",
-                    size = Dimens.Profile.photoLarge,
-                    showLoadingIndicator = false) // Use our own indicator
-
-                // Blur overlay using a semi-transparent box
                 Box(
-                    modifier =
-                        Modifier.size(Dimens.Profile.photoLarge)
-                            .clip(CircleShape)
-                            .background(scrimLight))
+                    modifier = Modifier
+                        .size(Dimens.Profile.photoLarge)
+                        .clip(CircleShape)
+                        .blur(Dimens.Profile.photoBlurRadius),
+                    contentAlignment = Alignment.Center) {
+                      // Tint scrim for a frosted glass look
+                      Box(
+                          modifier =
+                              Modifier.matchParentSize()
+                                  .background(TransparentColor)) {}
+
+                      ProfilePhotoImage(
+                          photoUrl = photoUrl,
+                          contentDescription = "Profile Picture",
+                          size = Dimens.Profile.photoLarge,
+                          showLoadingIndicator = false) // Use our own indicator
+                    }
 
                 // Edit button
                 Button(
                     onClick = onPictureEditClick,
                     colors =
                         ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
-                            disabledContainerColor =
-                                MaterialTheme.colorScheme.surface.copy(alpha = 0f)),
+                            containerColor = TransparentColor,
+                            disabledContainerColor = TransparentColor),
                     shape = CircleShape,
                     modifier =
                         Modifier.size(Dimens.Profile.editButtonSize)
@@ -377,12 +382,12 @@ private fun ProfilePictureSection(
                           modifier =
                               Modifier.size(Dimens.Profile.editIconContainer)
                                   .clip(CircleShape)
-                                  .background(MaterialTheme.colorScheme.surface.copy(alpha = 0f)),
+                                  .background(TransparentColor),
                           contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Outlined.Edit,
                                 contentDescription = "Edit Photo",
-                                tint = MaterialTheme.colorScheme.onSurface,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(Dimens.Profile.editIconSize))
                           }
                     }

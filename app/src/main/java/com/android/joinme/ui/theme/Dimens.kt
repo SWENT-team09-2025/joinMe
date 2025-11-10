@@ -315,6 +315,10 @@ object Dimens {
    * Centralized here to maintain consistency across ViewProfile and EditProfile screens.
    */
   object Profile {
+    // Profile phot blur radius
+    /** 3dp - Standard blur radius for profile photos */
+    val photoBlurRadius: Dp = 3.dp
+
     // Profile photo sizes
     /** 40dp - Small profile photo (list items, comments) */
     val photoSmall: Dp = 40.dp
