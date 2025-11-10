@@ -10,11 +10,14 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.map.Location
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
 /**
  * Pure UI tests for LocationField. We render the composable directly with fake state so there is no
  * dependency on ViewModel or network.
  */
+@RunWith(RobolectricTestRunner::class)
 class LocationFieldTest {
 
   @get:Rule val composeTestRule = createComposeRule()

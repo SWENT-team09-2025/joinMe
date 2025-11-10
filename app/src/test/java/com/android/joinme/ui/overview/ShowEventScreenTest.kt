@@ -9,7 +9,10 @@ import java.util.*
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class ShowEventScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()

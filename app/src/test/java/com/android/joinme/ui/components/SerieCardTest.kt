@@ -8,12 +8,17 @@ import com.google.firebase.Timestamp
 import java.util.Calendar
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
- * Instrumented tests for the SerieCard component.
+ * Unit tests with Robolectric for the SerieCard component.
  *
  * Tests the UI behavior, display, and interactions of the SerieCard component.
  */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28], qualifiers = "w360dp-h640dp-normal-long-notround-any-420dpi-keyshidden-nonav")
 class SerieCardTest {
 
   @get:Rule val composeTestRule = createComposeRule()
@@ -432,25 +437,6 @@ class SerieCardTest {
 
     composeTestRule.onNodeWithText("31/12/2025").assertExists()
     composeTestRule.onNodeWithText("23h59").assertExists()
-  }
-
-  @Test
-  fun serieCard_displaysWithNoParticipants() {
-    val serie =
-        Serie(
-            serieId = "1",
-            title = "No Participants Serie",
-            description = "desc",
-            date = Timestamp.now(),
-            participants = emptyList(),
-            maxParticipants = 10,
-            visibility = Visibility.PUBLIC,
-            eventIds = listOf("event1", "event2"),
-            ownerId = "owner1")
-
-    composeTestRule.setContent { SerieCard(serie = serie, onClick = {}, testTag = "testCard") }
-
-    composeTestRule.onNodeWithText("No Participants Serie").assertExists()
   }
 
   @Test

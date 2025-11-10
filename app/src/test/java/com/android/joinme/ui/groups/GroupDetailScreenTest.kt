@@ -1,5 +1,7 @@
 package com.android.joinme.ui.groups
 
+import android.content.Context
+import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.EventType
@@ -10,9 +12,12 @@ import com.android.joinme.model.profile.ProfileRepository
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /** Fake GroupRepository for testing GroupDetailScreen. */
-class FakeGroupDetailRepository : GroupRepository {
+private class FakeGroupDetailRepository : GroupRepository {
   private val groups = mutableMapOf<String, Group>()
   var shouldThrowError = false
 
@@ -47,7 +52,7 @@ class FakeGroupDetailRepository : GroupRepository {
 }
 
 /** Fake ProfileRepository for testing GroupDetailScreen. */
-class FakeProfileDetailRepository : ProfileRepository {
+private class FakeProfileDetailRepository : ProfileRepository {
   private val profiles = mutableMapOf<String, Profile>()
 
   fun addProfile(profile: Profile) {
@@ -69,8 +74,18 @@ class FakeProfileDetailRepository : ProfileRepository {
   override suspend fun deleteProfile(uid: String) {
     profiles.remove(uid)
   }
+
+  override suspend fun uploadProfilePhoto(context: Context, uid: String, imageUri: Uri): String {
+    return "https://fakeurl.com/$uid/profilephoto.jpg"
+  }
+
+  override suspend fun deleteProfilePhoto(uid: String) {
+    // No-op for fake
+  }
 }
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28], qualifiers = "w360dp-h640dp-normal-long-notround-any-420dpi-keyshidden-nonav")
 class GroupDetailScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
