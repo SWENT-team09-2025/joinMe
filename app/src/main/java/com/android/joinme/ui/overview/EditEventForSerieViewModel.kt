@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** Note: This file was done using the help of IA (Claude) */
+/** Note: This file was written using the help of IA (Claude) */
 
 /**
  * UI state for the EditEventForSerie screen.
