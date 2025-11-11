@@ -210,7 +210,7 @@ class SerieFormScreenTest {
     }
 
     // Button may be below the fold, use assertExists()
-    composeTestRule.onNodeWithText("Next").assertExists()
+    composeTestRule.onNodeWithText("NEXT").assertExists()
   }
 
   /** --- LOADING STATE --- */

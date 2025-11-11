@@ -101,6 +101,5 @@ fun CreateEventScreen(
         }
         true
       },
-      onGoBack = onGoBack,
-      saveButtonText = "Save")
+      onGoBack = onGoBack)
 }

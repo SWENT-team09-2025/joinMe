@@ -10,11 +10,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import com.android.joinme.model.map.Location
-import com.android.joinme.ui.theme.ButtonSaveColor
-import com.android.joinme.ui.theme.DarkButtonColor
-import com.android.joinme.ui.theme.DividerColor
+import com.android.joinme.ui.theme.Dimens
+import com.android.joinme.ui.theme.buttonColors
+import com.android.joinme.ui.theme.customColors
 import kotlinx.coroutines.launch
 
 /** Note: This file was created with the help of IA (Claude) */
@@ -48,7 +47,7 @@ data class EventForSerieFormTestTags(
  * @param onSearchLocations Callback to trigger location search
  * @param onSave Callback when save button is clicked, returns true if save was successful
  * @param onGoBack Callback when back button is clicked
- * @param saveButtonText Text to display on the save button (default: "Save")
+ * @param saveButtonText Text to display on the save button (default: "SAVE")
  */
 @SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,7 +66,7 @@ fun EventForSerieFormScreen(
     onSearchLocations: suspend (String) -> Unit,
     onSave: suspend () -> Boolean,
     onGoBack: () -> Unit,
-    saveButtonText: String = "Save"
+    saveButtonText: String = "SAVE"
 ) {
   // Trigger location search when query changes
   LaunchedEffect(formState.locationQuery) {
@@ -75,6 +74,20 @@ fun EventForSerieFormScreen(
       onSearchLocations(formState.locationQuery)
     }
   }
+  val eventFormTestTags =
+      EventFormTestTags(
+          inputEventType = testTags.inputEventType,
+          inputEventTitle = testTags.inputEventTitle,
+          inputEventDescription = testTags.inputEventDescription,
+          inputEventLocation = testTags.inputEventLocation,
+          inputEventLocationSuggestions = testTags.inputEventLocationSuggestions,
+          inputEventMaxParticipants = "",
+          inputEventDuration = testTags.inputEventDuration,
+          inputEventDate = "",
+          inputEventTime = "",
+          inputEventVisibility = "",
+          buttonSaveEvent = testTags.buttonSaveEvent,
+          errorMessage = testTags.errorMessage)
 
   Scaffold(
       topBar = {
@@ -91,16 +104,17 @@ fun EventForSerieFormScreen(
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
-          HorizontalDivider(color = DividerColor, thickness = 1.dp)
+          HorizontalDivider(
+              color = MaterialTheme.colorScheme.primary, thickness = Dimens.BorderWidth.thin)
         }
       }) { paddingValues ->
         Column(
             modifier =
                 Modifier.fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
+                    .padding(Dimens.Padding.medium)
                     .padding(paddingValues),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
               // Type dropdown
               EventTypeField(
                   value = formState.type,
@@ -136,20 +150,6 @@ fun EventForSerieFormScreen(
                   testTag = testTags.inputEventDuration)
 
               // Location field with search functionality
-              val eventFormTestTags =
-                  EventFormTestTags(
-                      inputEventType = testTags.inputEventType,
-                      inputEventTitle = testTags.inputEventTitle,
-                      inputEventDescription = testTags.inputEventDescription,
-                      inputEventLocation = testTags.inputEventLocation,
-                      inputEventLocationSuggestions = testTags.inputEventLocationSuggestions,
-                      inputEventMaxParticipants = "",
-                      inputEventDuration = testTags.inputEventDuration,
-                      inputEventDate = "",
-                      inputEventTime = "",
-                      inputEventVisibility = "",
-                      buttonSaveEvent = testTags.buttonSaveEvent,
-                      errorMessage = testTags.errorMessage)
 
               LocationField(
                   query = formState.locationQuery,
@@ -160,7 +160,7 @@ fun EventForSerieFormScreen(
                   onSuggestionSelected = onLocationSelected,
                   testTags = eventFormTestTags)
 
-              Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
               // Save button
               Button(
@@ -171,9 +171,7 @@ fun EventForSerieFormScreen(
                   },
                   modifier = Modifier.fillMaxWidth().testTag(testTags.buttonSaveEvent),
                   enabled = isFormValid,
-                  colors =
-                      ButtonDefaults.buttonColors(
-                          containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
+                  colors = MaterialTheme.customColors.buttonColors()) {
                     Text(saveButtonText)
                   }
             }

@@ -172,35 +172,29 @@ class CreateGroupScreenTest {
   @Test
   fun categoryDropdown_opensMenuOnClick() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
-    // Click on the dropdown arrow icon, not the text field
-    composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
-    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_MENU).assertIsDisplayed()
+    // Click on the dropdown field to open menu
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN).performClick()
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN_TOUCHABLE_AREA)
+        .assertIsDisplayed()
   }
 
   @Test
   fun categoryDropdown_showsAllThreeOptions() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
-    // Click the dropdown arrow to open menu
-    composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
-    composeTestRule
-        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "SOCIAL")
-        .assertIsDisplayed()
-    composeTestRule
-        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "ACTIVITY")
-        .assertIsDisplayed()
-    composeTestRule
-        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "SPORTS")
-        .assertIsDisplayed()
+    // Click the dropdown to open menu
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN).performClick()
+    composeTestRule.onNodeWithText("SOCIAL").assertIsDisplayed()
+    composeTestRule.onNodeWithText("ACTIVITY").assertIsDisplayed()
+    composeTestRule.onNodeWithText("SPORTS").assertIsDisplayed()
   }
 
   @Test
   fun categoryDropdown_selectsSocialCategory() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
-    // Click the dropdown arrow to open menu
-    composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
-    composeTestRule
-        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "SOCIAL")
-        .performClick()
+    // Click the dropdown to open menu
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN).performClick()
+    composeTestRule.onNodeWithText("SOCIAL").performClick()
     composeTestRule
         .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN)
         .assertTextContains("Social")
@@ -209,11 +203,9 @@ class CreateGroupScreenTest {
   @Test
   fun categoryDropdown_selectsSportsCategory() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
-    // Click the dropdown arrow to open menu
-    composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
-    composeTestRule
-        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "SPORTS")
-        .performClick()
+    // Click the dropdown to open menu
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN).performClick()
+    composeTestRule.onNodeWithText("SPORTS").performClick()
     composeTestRule
         .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN)
         .assertTextContains("Sports")
@@ -222,12 +214,12 @@ class CreateGroupScreenTest {
   @Test
   fun categoryDropdown_closesAfterSelection() {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
-    // Click the dropdown arrow to open menu
-    composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
+    // Click the dropdown to open menu
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN).performClick()
+    composeTestRule.onNodeWithText("SOCIAL").performClick()
     composeTestRule
-        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "SOCIAL")
-        .performClick()
-    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_MENU).assertDoesNotExist()
+        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN_TOUCHABLE_AREA)
+        .assertDoesNotExist()
   }
 
   @Test
@@ -297,11 +289,9 @@ class CreateGroupScreenTest {
     composeTestRule.waitForIdle()
 
     // Select category
-    composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN).performClick()
     composeTestRule.waitForIdle()
-    composeTestRule
-        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "SPORTS")
-        .performClick()
+    composeTestRule.onNodeWithText("SPORTS").performClick()
     composeTestRule.waitForIdle()
 
     // Fill in description
@@ -319,22 +309,18 @@ class CreateGroupScreenTest {
     composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
 
     // Select Social
-    composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN).performClick()
     composeTestRule.waitForIdle()
-    composeTestRule
-        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "SOCIAL")
-        .performClick()
+    composeTestRule.onNodeWithText("SOCIAL").performClick()
     composeTestRule.waitForIdle()
     composeTestRule
         .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN)
         .assertTextContains("Social")
 
     // Switch to Sports
-    composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN).performClick()
     composeTestRule.waitForIdle()
-    composeTestRule
-        .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_OPTION_PREFIX + "SPORTS")
-        .performClick()
+    composeTestRule.onNodeWithText("SPORTS").performClick()
     composeTestRule.waitForIdle()
     composeTestRule
         .onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN)
