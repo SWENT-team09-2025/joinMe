@@ -125,12 +125,6 @@ object GroupListScreenTestTags {
   const val DELETE_GROUP_CONFIRM_BUTTON = "deleteGroupConfirmButton"
   const val DELETE_GROUP_CANCEL_BUTTON = "deleteGroupCancelButton"
 
-  // Restriction dialogs
-  const val OWNER_CANNOT_LEAVE_DIALOG = "ownerCannotLeaveDialog"
-  const val OWNER_CANNOT_LEAVE_OK_BUTTON = "ownerCannotLeaveOkButton"
-  const val ONLY_OWNER_CAN_DELETE_DIALOG = "onlyOwnerCanDeleteDialog"
-  const val ONLY_OWNER_CAN_DELETE_OK_BUTTON = "onlyOwnerCanDeleteOkButton"
-
   // Share dialog
   const val SHARE_GROUP_DIALOG = "shareGroupDialog"
   const val SHARE_GROUP_COPY_LINK_BUTTON = "shareGroupCopyLinkButton"
@@ -220,12 +214,6 @@ fun GroupListScreen(
 
   // State for share group dialog
   var groupToShare by remember { mutableStateOf<Group?>(null) }
-
-  // State for owner trying to leave (restriction dialog)
-  var showOwnerCannotLeaveDialog by remember { mutableStateOf(false) }
-
-  // State for non-owner trying to delete (restriction dialog)
-  var showOnlyOwnerCanDeleteDialog by remember { mutableStateOf(false) }
 
   // State for join with link dialog
   var showJoinWithLinkDialog by remember { mutableStateOf(false) }
@@ -510,33 +498,6 @@ fun GroupListScreen(
           group = group,
           onDismiss = { groupToShare = null },
           onShareComplete = { onShareGroup(group) })
-    }
-
-    // Owner Cannot Leave Group Dialog (Restriction)
-    if (showOwnerCannotLeaveDialog) {
-      CustomConfirmationDialog(
-          modifier = Modifier.testTag(GroupListScreenTestTags.OWNER_CANNOT_LEAVE_DIALOG),
-          title = "You cannot leave this group",
-          message =
-              "Only non-owners can leave the group. As the owner, you can delete the group instead",
-          confirmText = "OK",
-          cancelText = null,
-          onConfirm = { showOwnerCannotLeaveDialog = false },
-          onDismiss = { showOwnerCannotLeaveDialog = false },
-          confirmButtonTestTag = GroupListScreenTestTags.OWNER_CANNOT_LEAVE_OK_BUTTON)
-    }
-
-    // Only Owner Can Delete Group Dialog (Restriction)
-    if (showOnlyOwnerCanDeleteDialog) {
-      CustomConfirmationDialog(
-          modifier = Modifier.testTag(GroupListScreenTestTags.ONLY_OWNER_CAN_DELETE_DIALOG),
-          title = "You cannot delete this group",
-          message = "Only the owner of the group can delete the group",
-          confirmText = "OK",
-          cancelText = null,
-          onConfirm = { showOnlyOwnerCanDeleteDialog = false },
-          onDismiss = { showOnlyOwnerCanDeleteDialog = false },
-          confirmButtonTestTag = GroupListScreenTestTags.ONLY_OWNER_CAN_DELETE_OK_BUTTON)
     }
 
     // Join with Link Dialog
