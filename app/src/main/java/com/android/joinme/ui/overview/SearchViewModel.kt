@@ -195,15 +195,22 @@ class SearchViewModel(
    * Applies filters and search query to all events and series, then updates the UI state.
    *
    * This method combines events and series into a single list of EventItems, applies category
-   * filters, search query filters, and sorts the results by date.
+   * filters, search query filters, and sorts the results by date. Events that belong to series are
+   * excluded - only the serie card is shown for those events.
    */
   private fun applyFiltersToUIState() {
     // Apply category filters (Social, Activity, Sports) to events
     val filteredEvents = filterRepository.applyFilters(allEvents)
 
-    // Convert filtered events and all series to EventItems
+    // Identify events that belong to series
+    val serieEventIds = allSeries.flatMap { it.eventIds }.toSet()
+
+    // Filter out standalone events (events not in any serie)
+    val standaloneEvents = filteredEvents.filterNot { it.eventId in serieEventIds }
+
+    // Convert standalone events and all series to EventItems
     val eventItems = mutableListOf<EventItem>()
-    eventItems.addAll(filteredEvents.map { EventItem.SingleEvent(it) })
+    eventItems.addAll(standaloneEvents.map { EventItem.SingleEvent(it) })
     eventItems.addAll(allSeries.map { EventItem.EventSerie(it) })
 
     // Apply search query filter if query is not empty
