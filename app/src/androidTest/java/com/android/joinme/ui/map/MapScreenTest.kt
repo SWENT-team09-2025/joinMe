@@ -97,7 +97,7 @@ class MapScreenTest {
     val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
     stateField.isAccessible = true
     val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
-    mutableState.value = MapUIState(todos = testEvents)
+    mutableState.value = MapUIState(events = testEvents)
 
     composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
     composeTestRule.waitForIdle()

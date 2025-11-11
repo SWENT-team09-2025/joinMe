@@ -33,6 +33,7 @@ import com.android.joinme.ui.navigation.Screen
 import com.android.joinme.ui.navigation.Tab
 import com.android.joinme.ui.theme.IconColor
 import com.android.joinme.ui.theme.MapControlBackgroundColor
+import com.android.joinme.ui.theme.SerieCardLayer3Color
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -52,6 +53,8 @@ object MapScreenTestTags {
 
   fun getTestTagForEventMarker(eventId: String): String = "eventMarker$eventId"
 }
+
+const val SNIPPET_MESSAGE = "Tap to see more & join me"
 
 /**
  * Converts a Compose Color to a hue value (0-360) for Google Maps marker coloring.
@@ -145,7 +148,7 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
                   properties = mapProperties,
                   uiSettings =
                       MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = true)) {
-                    uiState.todos.forEach { event ->
+                    uiState.events.forEach { event ->
                       event.location?.let { location ->
                         val position = LatLng(location.latitude, location.longitude)
                         val hue = colorToHue(event.type.getColor())
@@ -155,11 +158,24 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
                             icon = BitmapDescriptorFactory.defaultMarker(hue),
                             tag = getTestTagForEventMarker(event.eventId),
                             title = event.title,
-                            snippet = "Tap to see more & join me",
+                            snippet = SNIPPET_MESSAGE,
                             onInfoWindowClick = {
                               navigationActions?.navigateTo(Screen.ShowEventScreen(event.eventId))
                             })
                       }
+                    }
+                    uiState.series.forEach { (location, serie) ->
+                      val position = LatLng(location.latitude, location.longitude)
+                      val hue = colorToHue(SerieCardLayer3Color)
+                      Marker(
+                          state = MarkerState(position = position),
+                          icon = BitmapDescriptorFactory.defaultMarker(hue),
+                          tag = getTestTagForEventMarker(serie.serieId),
+                          title = serie.title,
+                          snippet = SNIPPET_MESSAGE,
+                          onInfoWindowClick = {
+                            navigationActions?.navigateTo(Screen.SerieDetails(serie.serieId))
+                          })
                     }
                   }
 
