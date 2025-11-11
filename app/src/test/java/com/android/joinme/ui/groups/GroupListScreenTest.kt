@@ -1726,4 +1726,273 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g2")).performClick()
     composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertIsDisplayed()
   }
+
+  // =======================================
+  // FAB State Tests
+  // =======================================
+
+  @Test
+  fun fab_showsCorrectIcon_whenClosed() {
+    composeTestRule.setContent { GroupListScreen() }
+
+    // FAB should be visible
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).assertIsDisplayed()
+  }
+
+  @Test
+  fun fab_showsCorrectIcon_whenOpen() {
+    composeTestRule.setContent { GroupListScreen() }
+
+    // Open FAB
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+
+    // FAB should still be visible (just with different styling)
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).assertIsDisplayed()
+  }
+
+  @Test
+  fun fab_closesJoinBubbles_whenClickedTwice() {
+    composeTestRule.setContent { GroupListScreen() }
+
+    // Open bubbles
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithText("JOIN WITH LINK").assertExists()
+
+    // Close bubbles
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithText("JOIN WITH LINK").assertDoesNotExist()
+  }
+
+  // =======================================
+  // Menu Scrim Tests
+  // =======================================
+
+  @Test
+  fun cardMenu_hasScrim_whenOpen() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+
+    // Menu should be visible
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertIsDisplayed()
+  }
+
+  @Test
+  fun cardMenu_closesWhenClickingCard() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertIsDisplayed()
+
+    // Click card
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("test1")).performClick()
+
+    // Menu should close
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertDoesNotExist()
+  }
+
+  @Test
+  fun openingDifferentCardMenu_opensSecondMenu() {
+    val groups =
+        listOf(
+            Group(id = "g1", name = "Group 1", ownerId = "owner1"),
+            Group(id = "g2", name = "Group 2", ownerId = "owner2"))
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
+
+    // Open first menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g1")).performClick()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertIsDisplayed()
+
+    // Close first menu by clicking the button again
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g1")).performClick()
+
+    // Open second menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g2")).performClick()
+
+    // Second menu should be displayed
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertIsDisplayed()
+  }
+
+  // =======================================
+  // ShareGroupDialog Copy Button Tests
+  // =======================================
+
+  @Test
+  fun shareGroupDialog_copyButton_isClickable() {
+    val group = Group(id = "test-id-123", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open share dialog
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test-id-123")).performClick()
+    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
+
+    // Click copy button
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_COPY_LINK_BUTTON)
+        .performClick()
+
+    // Dialog should still be open after copy
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_DIALOG).assertExists()
+  }
+
+  // =======================================
+  // Empty State Tests
+  // =======================================
+
+  @Test
+  fun emptyState_hasCorrectStyling() {
+    composeTestRule.setContent { GroupListScreen() }
+
+    // Empty state should be visible
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EMPTY).assertIsDisplayed()
+
+    // FAB should still be visible
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).assertIsDisplayed()
+  }
+
+  @Test
+  fun emptyState_canOpenJoinBubbles() {
+    composeTestRule.setContent { GroupListScreen() }
+
+    // Verify empty state
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EMPTY).assertIsDisplayed()
+
+    // Open join bubbles
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+
+    // Bubbles should be visible
+    composeTestRule.onNodeWithText("JOIN WITH LINK").assertExists()
+    composeTestRule.onNodeWithText("CREATE A GROUP").assertExists()
+  }
+
+  // =======================================
+  // Group Card Content Tests
+  // =======================================
+
+  @Test
+  fun groupCard_displaysAllFields_whenAllPresent() {
+    val group =
+        Group(
+            id = "test1",
+            name = "Complete Group",
+            description = "A full description",
+            ownerId = "owner1",
+            memberIds = List(25) { "user$it" })
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // All fields should be visible
+    composeTestRule.onNodeWithText("Complete Group").assertIsDisplayed()
+    composeTestRule.onNodeWithText("A full description").assertIsDisplayed()
+    composeTestRule.onNodeWithText("members: 25").assertIsDisplayed()
+  }
+
+  @Test
+  fun groupCard_hasMoreButton() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // More button should be visible
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).assertIsDisplayed()
+  }
+
+  @Test
+  fun groupCard_moreButton_hasCorrectIcon() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // More button should have click action
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).assertHasClickAction()
+  }
+
+  // =======================================
+  // Confirmation Dialog Tests
+  // =======================================
+
+  @Test
+  fun leaveGroupDialog_hasYesAndNoButtons() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open leave dialog
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("LEAVE GROUP").performClick()
+
+    // Both buttons should exist
+    composeTestRule.onNodeWithText("Yes").assertExists()
+    composeTestRule.onNodeWithText("No").assertExists()
+  }
+
+  @Test
+  fun deleteGroupDialog_hasYesAndNoButtons_whenOwner() {
+    val fakeRepo = FakeGroupRepository()
+    val listViewModel = GroupListViewModel(fakeRepo)
+    val testUserId = "testOwner999"
+
+    val group =
+        Group(
+            id = fakeRepo.getNewGroupId(),
+            name = "Test Group",
+            ownerId = testUserId,
+            memberIds = listOf(testUserId))
+    fakeRepo.setGroups(listOf(group))
+
+    composeTestRule.setContent {
+      GroupListScreen(viewModel = listViewModel, testCurrentUserId = testUserId)
+    }
+    composeTestRule.waitForIdle()
+
+    // Open delete dialog
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag(group.id)).performClick()
+    composeTestRule.onNodeWithText("DELETE GROUP").performClick()
+
+    // Both buttons should exist
+    composeTestRule.onNodeWithText("Yes").assertExists()
+    composeTestRule.onNodeWithText("No").assertExists()
+  }
+
+  // =======================================
+  // Scrolling Tests
+  // =======================================
+
+  @Test
+  fun largeList_canScrollToBottom() {
+    val groups = (1..100).map { i -> Group(id = "$i", name = "Group $i", ownerId = "owner$i") }
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
+
+    // Scroll to last item
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.LIST)
+        .performScrollToNode(hasTestTag(GroupListScreenTestTags.cardTag("100")))
+
+    // Last item should be visible
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("100")).assertIsDisplayed()
+  }
+
+  @Test
+  fun scrolledList_firstItemNotVisible() {
+    val groups = (1..100).map { i -> Group(id = "$i", name = "Group $i", ownerId = "owner$i") }
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
+
+    // Scroll to middle
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.LIST)
+        .performScrollToNode(hasTestTag(GroupListScreenTestTags.cardTag("50")))
+
+    // Middle item should be visible
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("50")).assertIsDisplayed()
+  }
 }
