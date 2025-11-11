@@ -30,11 +30,11 @@ class ShowEventViewModelTest {
   private val testDispatcher = StandardTestDispatcher()
 
   private fun createTestEvent(
-    eventId: String = "test-event-1",
-    ownerId: String = "owner123",
-    participants: List<String> = listOf("user1", "user2"),
-    maxParticipants: Int = 10,
-    daysFromNow: Int = 7
+      eventId: String = "test-event-1",
+      ownerId: String = "owner123",
+      participants: List<String> = listOf("user1", "user2"),
+      maxParticipants: Int = 10,
+      daysFromNow: Int = 7
   ): Event {
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.DAY_OF_YEAR, daysFromNow)
@@ -43,17 +43,17 @@ class ShowEventViewModelTest {
     calendar.set(Calendar.SECOND, 0)
 
     return Event(
-      eventId = eventId,
-      type = EventType.SPORTS,
-      title = "Basketball Game",
-      description = "Friendly 3v3 basketball match",
-      location = Location(46.5197, 6.6323, "EPFL"),
-      date = Timestamp(calendar.time),
-      duration = 90,
-      participants = participants,
-      maxParticipants = maxParticipants,
-      visibility = EventVisibility.PUBLIC,
-      ownerId = ownerId)
+        eventId = eventId,
+        type = EventType.SPORTS,
+        title = "Basketball Game",
+        description = "Friendly 3v3 basketball match",
+        location = Location(46.5197, 6.6323, "EPFL"),
+        date = Timestamp(calendar.time),
+        duration = 90,
+        participants = participants,
+        maxParticipants = maxParticipants,
+        visibility = EventVisibility.PUBLIC,
+        ownerId = ownerId)
   }
 
   @Before
@@ -129,7 +129,7 @@ class ShowEventViewModelTest {
     calendar.add(Calendar.MINUTE, -10)
 
     val activeEvent =
-      createTestEvent(eventId = "active-event").copy(date = Timestamp(calendar.time))
+        createTestEvent(eventId = "active-event").copy(date = Timestamp(calendar.time))
     repository.addEvent(activeEvent)
 
     val mockProfile = Profile(uid = "owner123", username = "TestUser", email = "test@example.com")
@@ -161,7 +161,8 @@ class ShowEventViewModelTest {
     val event = createTestEvent(ownerId = "error-owner")
     repository.addEvent(event)
 
-    whenever(profileRepository.getProfile("error-owner")).thenThrow(RuntimeException("Network error"))
+    whenever(profileRepository.getProfile("error-owner"))
+        .thenThrow(RuntimeException("Network error"))
 
     viewModel.loadEvent(event.eventId)
     advanceUntilIdle()
@@ -228,7 +229,8 @@ class ShowEventViewModelTest {
     val event = createTestEvent(participants = listOf("user1"))
     repository.addEvent(event)
 
-    val mockProfile = Profile(uid = "owner123", username = "EventOwner", email = "owner@example.com")
+    val mockProfile =
+        Profile(uid = "owner123", username = "EventOwner", email = "owner@example.com")
     whenever(profileRepository.getProfile(any())).thenReturn(mockProfile)
 
     viewModel.loadEvent(event.eventId)
@@ -248,7 +250,8 @@ class ShowEventViewModelTest {
     val event = createTestEvent(participants = listOf("user1", "user2"))
     repository.addEvent(event)
 
-    val mockProfile = Profile(uid = "owner123", username = "EventOwner", email = "owner@example.com")
+    val mockProfile =
+        Profile(uid = "owner123", username = "EventOwner", email = "owner@example.com")
     whenever(profileRepository.getProfile(any())).thenReturn(mockProfile)
 
     viewModel.loadEvent(event.eventId)
@@ -267,7 +270,8 @@ class ShowEventViewModelTest {
     val event = createTestEvent(participants = listOf("user1", "user2"), maxParticipants = 2)
     repository.addEvent(event)
 
-    val mockProfile = Profile(uid = "owner123", username = "EventOwner", email = "owner@example.com")
+    val mockProfile =
+        Profile(uid = "owner123", username = "EventOwner", email = "owner@example.com")
     whenever(profileRepository.getProfile(any())).thenReturn(mockProfile)
 
     viewModel.loadEvent(event.eventId)
@@ -345,20 +349,20 @@ class ShowEventViewModelTest {
   @Test
   fun viewModel_customInitialState_usesProvidedState() {
     val customState =
-      ShowEventUIState(
-        type = "SPORTS",
-        title = "Custom Event",
-        description = "Custom Description",
-        location = "Custom Location",
-        maxParticipants = "5",
-        participantsCount = "3",
-        duration = "30",
-        date = "01/01/2024 10:00",
-        visibility = "PRIVATE",
-        ownerId = "custom-owner",
-        ownerName = "Created by CustomUser",
-        participants = listOf("user1", "user2", "user3"),
-        isPastEvent = true)
+        ShowEventUIState(
+            type = "SPORTS",
+            title = "Custom Event",
+            description = "Custom Description",
+            location = "Custom Location",
+            maxParticipants = "5",
+            participantsCount = "3",
+            duration = "30",
+            date = "01/01/2024 10:00",
+            visibility = "PRIVATE",
+            ownerId = "custom-owner",
+            ownerName = "Created by CustomUser",
+            participants = listOf("user1", "user2", "user3"),
+            isPastEvent = true)
 
     val customViewModel = ShowEventViewModel(repository, profileRepository, customState)
 

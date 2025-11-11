@@ -33,47 +33,47 @@ class SerieDetailsViewModelTest {
   private val testDispatcher = StandardTestDispatcher()
 
   private fun createTestSerie(
-    serieId: String = "test-serie-1",
-    ownerId: String = "owner123",
-    participants: List<String> = listOf("user1", "user2"),
-    maxParticipants: Int = 10,
-    eventIds: List<String> = emptyList()
+      serieId: String = "test-serie-1",
+      ownerId: String = "owner123",
+      participants: List<String> = listOf("user1", "user2"),
+      maxParticipants: Int = 10,
+      eventIds: List<String> = emptyList()
   ): Serie {
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.DAY_OF_YEAR, 7)
 
     return Serie(
-      serieId = serieId,
-      title = "Weekly Basketball",
-      description = "Weekly basketball games",
-      ownerId = ownerId,
-      date = Timestamp(calendar.time),
-      visibility = Visibility.PUBLIC,
-      eventIds = eventIds,
-      participants = participants,
-      maxParticipants = maxParticipants)
+        serieId = serieId,
+        title = "Weekly Basketball",
+        description = "Weekly basketball games",
+        ownerId = ownerId,
+        date = Timestamp(calendar.time),
+        visibility = Visibility.PUBLIC,
+        eventIds = eventIds,
+        participants = participants,
+        maxParticipants = maxParticipants)
   }
 
   private fun createTestEvent(
-    eventId: String,
-    ownerId: String = "owner123",
-    daysFromNow: Int = 7
+      eventId: String,
+      ownerId: String = "owner123",
+      daysFromNow: Int = 7
   ): Event {
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.DAY_OF_YEAR, daysFromNow)
 
     return Event(
-      eventId = eventId,
-      type = EventType.SPORTS,
-      title = "Basketball Game",
-      description = "Friendly match",
-      location = Location(46.5197, 6.6323, "EPFL"),
-      date = Timestamp(calendar.time),
-      duration = 60,
-      participants = listOf(ownerId),
-      maxParticipants = 10,
-      visibility = EventVisibility.PUBLIC,
-      ownerId = ownerId)
+        eventId = eventId,
+        type = EventType.SPORTS,
+        title = "Basketball Game",
+        description = "Friendly match",
+        location = Location(46.5197, 6.6323, "EPFL"),
+        date = Timestamp(calendar.time),
+        duration = 60,
+        participants = listOf(ownerId),
+        maxParticipants = 10,
+        visibility = EventVisibility.PUBLIC,
+        ownerId = ownerId)
   }
 
   @Before
@@ -164,7 +164,7 @@ class SerieDetailsViewModelTest {
   @Test
   fun getOwnerDisplayName_repositoryThrows_returnsUnknown() = runTest {
     whenever(profileRepository.getProfile("error-owner"))
-      .thenThrow(RuntimeException("Network error"))
+        .thenThrow(RuntimeException("Network error"))
 
     val displayName = viewModel.getOwnerDisplayName("error-owner")
 
@@ -346,48 +346,49 @@ class SerieDetailsViewModelTest {
   @Test
   fun uiState_isParticipant_returnsTrue_whenUserIsParticipant() {
     val state =
-      SerieDetailsUIState(
-        serie = createTestSerie(participants = listOf("user1", "user2", "user3")))
+        SerieDetailsUIState(
+            serie = createTestSerie(participants = listOf("user1", "user2", "user3")))
     assertTrue(state.isParticipant("user2"))
   }
 
   @Test
   fun uiState_isParticipant_returnsFalse_whenUserIsNotParticipant() {
     val state =
-      SerieDetailsUIState(
-        serie = createTestSerie(participants = listOf("user1", "user2", "user3")))
+        SerieDetailsUIState(
+            serie = createTestSerie(participants = listOf("user1", "user2", "user3")))
     assertFalse(state.isParticipant("user4"))
   }
 
   @Test
   fun uiState_canJoin_returnsTrue_whenUserCanJoin() {
     val state =
-      SerieDetailsUIState(
-        serie = createTestSerie(ownerId = "owner", participants = listOf("user1"), maxParticipants = 5))
+        SerieDetailsUIState(
+            serie =
+                createTestSerie(
+                    ownerId = "owner", participants = listOf("user1"), maxParticipants = 5))
     assertTrue(state.canJoin("user2"))
   }
 
   @Test
   fun uiState_canJoin_returnsFalse_whenUserIsOwner() {
     val state =
-      SerieDetailsUIState(
-        serie = createTestSerie(ownerId = "owner", participants = listOf("user1")))
+        SerieDetailsUIState(
+            serie = createTestSerie(ownerId = "owner", participants = listOf("user1")))
     assertFalse(state.canJoin("owner"))
   }
 
   @Test
   fun uiState_canJoin_returnsFalse_whenUserIsParticipant() {
     val state =
-      SerieDetailsUIState(
-        serie = createTestSerie(participants = listOf("user1", "user2")))
+        SerieDetailsUIState(serie = createTestSerie(participants = listOf("user1", "user2")))
     assertFalse(state.canJoin("user1"))
   }
 
   @Test
   fun uiState_canJoin_returnsFalse_whenSerieFull() {
     val state =
-      SerieDetailsUIState(
-        serie = createTestSerie(participants = listOf("user1", "user2"), maxParticipants = 2))
+        SerieDetailsUIState(
+            serie = createTestSerie(participants = listOf("user1", "user2"), maxParticipants = 2))
     assertFalse(state.canJoin("user3"))
   }
 
