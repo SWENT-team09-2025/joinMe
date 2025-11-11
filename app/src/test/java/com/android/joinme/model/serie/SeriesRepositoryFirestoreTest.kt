@@ -1,5 +1,5 @@
 package com.android.joinme.model.serie
-
+/** Co-Write with Claude AI */
 import com.android.joinme.model.utils.Visibility
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
@@ -133,14 +133,57 @@ class SeriesRepositoryFirestoreTest {
 
   @Test
   fun deleteSerie_callsFirestoreDelete() = runTest {
-    // Given
+    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    val mockEventsCollection = mockk<CollectionReference>(relaxed = true)
+    val mockEventDoc1 = mockk<DocumentReference>(relaxed = true)
+    val mockEventDoc2 = mockk<DocumentReference>(relaxed = true)
+    val mockEventDoc3 = mockk<DocumentReference>(relaxed = true)
+
+    // Mock getSerie call
+    val testDate = Timestamp(Date())
+    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+    every { mockSnapshot.id } returns testSerieId
+    every { mockSnapshot.getString("title") } returns "Weekly Football"
+    every { mockSnapshot.getString("description") } returns "Weekly football series at the park"
+    every { mockSnapshot.getTimestamp("date") } returns testDate
+    every { mockSnapshot.get("participants") } returns listOf("user1", "user2")
+    every { mockSnapshot.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot.getString("visibility") } returns Visibility.PUBLIC.name
+    every { mockSnapshot.get("eventIds") } returns listOf("event1", "event2", "event3")
+    every { mockSnapshot.getString("ownerId") } returns testUserId
+    every { mockSnapshot.getTimestamp("lastEventEndTime") } returns testDate
+
+    // Mock events collection and event deletions
+    every { mockDb.collection(com.android.joinme.model.event.EVENTS_COLLECTION_PATH) } returns
+        mockEventsCollection
+    every { mockEventsCollection.document("event1") } returns mockEventDoc1
+    every { mockEventsCollection.document("event2") } returns mockEventDoc2
+    every { mockEventsCollection.document("event3") } returns mockEventDoc3
+    every { mockEventDoc1.delete() } returns Tasks.forResult(null)
+    every { mockEventDoc2.delete() } returns Tasks.forResult(null)
+    every { mockEventDoc3.delete() } returns Tasks.forResult(null)
+
+    // Mock serie deletion
     every { mockDocument.delete() } returns Tasks.forResult(null)
 
     // When
     repository.deleteSerie(testSerieId)
 
     // Then
+    // Verify getSerie was called
     verify { mockCollection.document(testSerieId) }
+    verify { mockDocument.get() }
+
+    // Verify all events were deleted
+    verify { mockDb.collection(com.android.joinme.model.event.EVENTS_COLLECTION_PATH) }
+    verify { mockEventsCollection.document("event1") }
+    verify { mockEventsCollection.document("event2") }
+    verify { mockEventsCollection.document("event3") }
+    verify { mockEventDoc1.delete() }
+    verify { mockEventDoc2.delete() }
+    verify { mockEventDoc3.delete() }
+
+    // Verify serie was deleted
     verify { mockDocument.delete() }
   }
 

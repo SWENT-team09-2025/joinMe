@@ -16,6 +16,7 @@ import com.android.joinme.model.utils.Visibility
 import com.google.firebase.FirebaseApp
 import com.google.firebase.Timestamp
 import java.util.*
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Rule
@@ -391,6 +392,11 @@ class SerieDetailsScreenTest {
 
     eventIds.forEach { eventId -> fakeEventsRepo.setEvent(createTestEvent(eventId = eventId)) }
 
+  fun ownerViewShowsDeleteButton() {
+    setup()
+    val serie = createTestSerie(ownerId = "owner123")
+    fakeSeriesRepo.setSerie(serie)
+
     val viewModel = createViewModel()
 
     composeTestRule.setContent {
@@ -417,6 +423,47 @@ class SerieDetailsScreenTest {
     fakeSeriesRepo.setSerie(serie)
 
     eventIds.forEach { eventId -> fakeEventsRepo.setEvent(createTestEvent(eventId = eventId)) }
+    // Verify delete button is shown
+    composeTestRule
+        .onNodeWithTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON)
+        .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON)
+        .assertTextContains("DELETE SERIE")
+  }
+
+  @Test
+  fun nonOwnerDoesNotSeeDeleteButton() {
+    setup()
+    val serie =
+        createTestSerie(ownerId = "owner123", participants = listOf("user1", "user2", "owner123"))
+    fakeSeriesRepo.setSerie(serie)
+
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      SerieDetailsScreen(
+          serieId = serie.serieId, serieDetailsViewModel = viewModel, currentUserId = "user1")
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Verify delete button is NOT shown for non-owner
+    composeTestRule
+        .onNodeWithTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON)
+        .assertDoesNotExist()
+  }
+
+  @Test
+  fun deleteButtonShowsConfirmationDialog() {
+    setup()
+    val serie = createTestSerie(ownerId = "owner123")
+    fakeSeriesRepo.setSerie(serie)
 
     val viewModel = createViewModel()
 
@@ -428,6 +475,7 @@ class SerieDetailsScreenTest {
     composeTestRule.waitUntil(timeoutMillis = 3000) {
       composeTestRule
           .onAllNodesWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT)
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON)
           .fetchSemanticsNodes()
           .isNotEmpty()
     }
@@ -445,6 +493,26 @@ class SerieDetailsScreenTest {
 
     eventIds.forEach { eventId -> fakeEventsRepo.setEvent(createTestEvent(eventId = eventId)) }
 
+    // Click delete button
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify confirmation dialog appears
+    composeTestRule.onNodeWithText("Delete Serie").assertIsDisplayed()
+    composeTestRule
+        .onNodeWithText("Are you sure you want to delete this serie? This action cannot be undone.")
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithText("Delete").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Cancel").assertIsDisplayed()
+  }
+
+  @Test
+  fun deleteDialogCancelButtonWorks() {
+    setup()
+    val serie = createTestSerie(ownerId = "owner123")
+    fakeSeriesRepo.setSerie(serie)
+
     val viewModel = createViewModel()
 
     composeTestRule.setContent {
@@ -455,12 +523,74 @@ class SerieDetailsScreenTest {
     composeTestRule.waitUntil(timeoutMillis = 3000) {
       composeTestRule
           .onAllNodesWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT)
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON)
           .fetchSemanticsNodes()
           .isNotEmpty()
     }
 
     // Verify button is disabled when there are more than 30 events
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT).assertIsNotEnabled()
+    // Click delete button
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Click cancel
+    composeTestRule.onNodeWithText("Cancel").performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify dialog is dismissed
+    composeTestRule.onNodeWithText("Delete Serie").assertDoesNotExist()
+
+    // Verify serie still exists (wasn't deleted)
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.SCREEN).assertIsDisplayed()
+  }
+
+  @Test
+  fun deleteSerieSuccessfullyDeletesAndNavigatesBack() {
+    setup()
+    val serie = createTestSerie(ownerId = "owner123")
+    fakeSeriesRepo.setSerie(serie)
+
+    var goBackCalled = false
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      SerieDetailsScreen(
+          serieId = serie.serieId,
+          serieDetailsViewModel = viewModel,
+          currentUserId = "owner123",
+          onGoBack = { goBackCalled = true })
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Click delete button
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Click delete in confirmation dialog
+    composeTestRule.onNodeWithText("Delete").performClick()
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Verify onGoBack was called
+    assertTrue(goBackCalled)
+
+    // Verify serie was deleted from repository
+    runBlocking {
+      val allSeries = fakeSeriesRepo.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN)
+      assertTrue(allSeries.none { it.serieId == serie.serieId })
+    }
   }
 
   // ========== Participant Tests ==========

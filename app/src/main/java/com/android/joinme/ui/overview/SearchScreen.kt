@@ -45,7 +45,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.Event
+import com.android.joinme.model.eventItem.EventItem
+import com.android.joinme.model.serie.Serie
 import com.android.joinme.ui.components.EventCard
+import com.android.joinme.ui.components.SerieCard
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.NavigationTestTags
@@ -59,18 +62,21 @@ object SearchScreenTestTags {
   const val EMPTY_EVENT_LIST_MSG = "emptySearchEventList"
 
   fun getTestTagForEventItem(event: Event): String = "searchEventItem${event.eventId}"
+
+  fun getTestTagForSerieItem(serie: Serie): String = "searchSerieItem${serie.serieId}"
 }
 
 /**
  * Search screen composable that displays a search interface with filters.
  *
- * Provides a search text field, filter chips (All, Social, Activity), and a sport category dropdown
- * menu. Users can search for events and apply various filters to narrow down results.
+ * Provides a search text field, filter chips (Social, Activity), and a sport category dropdown
+ * menu. Users can search for events and series and apply various filters to narrow down results.
  *
  * @param searchViewModel ViewModel managing search state and filter logic
  * @param searchQuery Initial search query (currently unused, reserved for future use)
  * @param navigationActions Navigation actions for handling tab navigation
  * @param onSelectEvent Callback invoked when an event is selected from the list
+ * @param onSelectSerie Callback invoked when a serie is selected from the list, receives serieId
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,13 +84,14 @@ fun SearchScreen(
     searchViewModel: SearchViewModel = viewModel(),
     searchQuery: String = "",
     navigationActions: NavigationActions? = null,
-    onSelectEvent: (Event) -> Unit = {}
+    onSelectEvent: (Event) -> Unit = {},
+    onSelectSerie: (String) -> Unit = {}
 ) {
   val context = LocalContext.current
   val uiState by searchViewModel.uiState.collectAsState()
   val filterState by searchViewModel.filterState.collectAsState()
   val focusManager = LocalFocusManager.current
-  val events = uiState.events
+  val eventItems = uiState.eventItems
 
   LaunchedEffect(Unit) { searchViewModel.refreshUIState() }
 
@@ -160,12 +167,6 @@ fun SearchScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
                       FilterChip(
-                          selected = filterState.isAllSelected,
-                          onClick = { searchViewModel.toggleAll() },
-                          label = { Text("All") },
-                          colors = MaterialTheme.customColors.filterChip)
-
-                      FilterChip(
                           selected = filterState.isSocialSelected,
                           onClick = { searchViewModel.toggleSocial() },
                           label = { Text("Social") },
@@ -220,7 +221,7 @@ fun SearchScreen(
                     }
               }
 
-          if (events.isNotEmpty()) {
+          if (eventItems.isNotEmpty()) {
             LazyColumn(
                 contentPadding = PaddingValues(vertical = Dimens.Padding.small),
                 modifier =
@@ -228,13 +229,24 @@ fun SearchScreen(
                         .weight(1f)
                         .padding(horizontal = Dimens.Padding.medium)
                         .testTag(SearchScreenTestTags.EVENT_LIST)) {
-                  items(events.size) { index ->
-                    val event = events[index]
-                    EventCard(
-                        modifier = Modifier.padding(vertical = Dimens.Padding.small),
-                        event = event,
-                        onClick = { onSelectEvent(event) },
-                        testTag = SearchScreenTestTags.getTestTagForEventItem(event))
+                  items(eventItems.size) { index ->
+                    val item = eventItems[index]
+                    when (item) {
+                      is EventItem.SingleEvent -> {
+                        EventCard(
+                            modifier = Modifier.padding(vertical = Dimens.Padding.small),
+                            event = item.event,
+                            onClick = { onSelectEvent(item.event) },
+                            testTag = SearchScreenTestTags.getTestTagForEventItem(item.event))
+                      }
+                      is EventItem.EventSerie -> {
+                        SerieCard(
+                            modifier = Modifier.padding(vertical = Dimens.Padding.small),
+                            serie = item.serie,
+                            onClick = { onSelectSerie(item.serie.serieId) },
+                            testTag = SearchScreenTestTags.getTestTagForSerieItem(item.serie))
+                      }
+                    }
                   }
                 }
           } else {
@@ -243,7 +255,8 @@ fun SearchScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally) {
                   Text(
-                      text = "You have no events yet. Join one, or create your own event.",
+                      text =
+                          "No events or series found. Try adjusting your filters or search query.",
                       textAlign = TextAlign.Center,
                       style = MaterialTheme.typography.bodyMedium,
                       modifier = Modifier.testTag(SearchScreenTestTags.EMPTY_EVENT_LIST_MSG))
