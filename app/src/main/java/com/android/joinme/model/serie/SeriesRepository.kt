@@ -50,6 +50,8 @@ interface SeriesRepository {
   /**
    * Deletes a Serie item from the repository.
    *
+   * This operation also deletes all events associated with this serie.
+   *
    * @param serieId The unique identifier of the Serie item to delete
    * @throws Exception if the Serie item is not found
    */

@@ -1,5 +1,6 @@
 package com.android.joinme.model.serie
 
+import com.android.joinme.model.event.EVENTS_COLLECTION_PATH
 import com.android.joinme.model.event.isActive
 import com.android.joinme.model.event.isExpired
 import com.android.joinme.model.event.isUpcoming
@@ -129,6 +130,10 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
    * @param serieId The unique identifier of the Serie item to delete
    */
   override suspend fun deleteSerie(serieId: String) {
+      val serie = getSerie(serieId)
+      //Delete all events related to the serie
+      serie.eventIds.forEach { eventId -> db.collection(EVENTS_COLLECTION_PATH).document(eventId).delete().await() }
+    //Delete serie
     db.collection(SERIES_COLLECTION_PATH).document(serieId).delete().await()
   }
 
