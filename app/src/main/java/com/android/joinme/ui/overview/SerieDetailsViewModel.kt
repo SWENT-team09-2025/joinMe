@@ -250,4 +250,17 @@ class SerieDetailsViewModel(
   fun clearErrorMsg() {
     _uiState.value = _uiState.value.copy(errorMsg = null)
   }
+
+  /**
+   * Deletes the serie from the repository.
+   *
+   * @param serieId The unique identifier of the serie to delete
+   */
+  suspend fun deleteSerie(serieId: String) {
+    try {
+      seriesRepository.deleteSerie(serieId)
+    } catch (e: Exception) {
+      setErrorMsg("Failed to delete serie: ${e.message}")
+    }
+  }
 }
