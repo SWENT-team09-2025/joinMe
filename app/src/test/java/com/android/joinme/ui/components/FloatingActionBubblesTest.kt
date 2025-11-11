@@ -405,7 +405,9 @@ class FloatingActionBubblesTest {
     // Given: Visible bubbles
     composeTestRule.setContent {
       FloatingActionBubbles(
-          visible = true, onDismiss = {}, actions = listOf(BubbleAction(text = "Action", onClick = {})))
+          visible = true,
+          onDismiss = {},
+          actions = listOf(BubbleAction(text = "Action", onClick = {})))
     }
 
     // Then: Scrim is displayed
@@ -519,7 +521,9 @@ class FloatingActionBubblesTest {
     // Given: Visible bubbles
     composeTestRule.setContent {
       FloatingActionBubbles(
-          visible = true, onDismiss = {}, actions = listOf(BubbleAction(text = "Action", onClick = {})))
+          visible = true,
+          onDismiss = {},
+          actions = listOf(BubbleAction(text = "Action", onClick = {})))
     }
 
     // Then: Scrim has click action
@@ -533,7 +537,9 @@ class FloatingActionBubblesTest {
     // Given: Visible bubbles
     composeTestRule.setContent {
       FloatingActionBubbles(
-          visible = true, onDismiss = {}, actions = listOf(BubbleAction(text = "Action", onClick = {})))
+          visible = true,
+          onDismiss = {},
+          actions = listOf(BubbleAction(text = "Action", onClick = {})))
     }
 
     // Then: Container has correct test tag
@@ -561,7 +567,9 @@ class FloatingActionBubblesTest {
     composeTestRule.onNodeWithText("Action").performClick()
 
     // Then: Dismiss called exactly once
-    assert(dismissCount == 1) { "Dismiss should be called exactly once, but was called $dismissCount times" }
+    assert(dismissCount == 1) {
+      "Dismiss should be called exactly once, but was called $dismissCount times"
+    }
   }
 
   @Test

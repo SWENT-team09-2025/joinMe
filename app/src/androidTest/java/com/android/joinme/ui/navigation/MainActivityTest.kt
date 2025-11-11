@@ -255,10 +255,11 @@ class MainActivityTest {
   fun mainActivity_launchesWithEventDeepLink_extractsEventId() {
     // Create intent with event deep link
     val context = ApplicationProvider.getApplicationContext<Context>()
-    val intent = Intent(context, MainActivity::class.java).apply {
-      data = Uri.parse("joinme://event/test-event-123")
-      action = Intent.ACTION_VIEW
-    }
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("joinme://event/test-event-123")
+          action = Intent.ACTION_VIEW
+        }
 
     // Launch activity with deep link
     val scenario = ActivityScenario.launch<MainActivity>(intent)
@@ -276,10 +277,11 @@ class MainActivityTest {
   fun mainActivity_launchesWithGroupDeepLink_extractsGroupId() {
     // Create intent with group deep link
     val context = ApplicationProvider.getApplicationContext<Context>()
-    val intent = Intent(context, MainActivity::class.java).apply {
-      data = Uri.parse("joinme://group/test-group-456")
-      action = Intent.ACTION_VIEW
-    }
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("joinme://group/test-group-456")
+          action = Intent.ACTION_VIEW
+        }
 
     // Launch activity with deep link
     val scenario = ActivityScenario.launch<MainActivity>(intent)
@@ -301,10 +303,11 @@ class MainActivityTest {
   fun mainActivity_launchesWithWebGroupDeepLink_extractsGroupId() {
     // Create intent with web-style group deep link (joinme.app/group/id)
     val context = ApplicationProvider.getApplicationContext<Context>()
-    val intent = Intent(context, MainActivity::class.java).apply {
-      data = Uri.parse("https://joinme.app/group/web-group-789")
-      action = Intent.ACTION_VIEW
-    }
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("https://joinme.app/group/web-group-789")
+          action = Intent.ACTION_VIEW
+        }
 
     // Launch activity with deep link
     val scenario = ActivityScenario.launch<MainActivity>(intent)
@@ -365,10 +368,11 @@ class MainActivityTest {
   fun mainActivity_handlesInvalidDeepLinkGracefully() {
     // Create intent with malformed deep link
     val context = ApplicationProvider.getApplicationContext<Context>()
-    val intent = Intent(context, MainActivity::class.java).apply {
-      data = Uri.parse("joinme://invalid")
-      action = Intent.ACTION_VIEW
-    }
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("joinme://invalid")
+          action = Intent.ACTION_VIEW
+        }
 
     // Launch activity with invalid deep link
     val scenario = ActivityScenario.launch<MainActivity>(intent)
