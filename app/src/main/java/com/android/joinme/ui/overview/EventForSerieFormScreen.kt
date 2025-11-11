@@ -47,7 +47,7 @@ data class EventForSerieFormTestTags(
  * @param onSearchLocations Callback to trigger location search
  * @param onSave Callback when save button is clicked, returns true if save was successful
  * @param onGoBack Callback when back button is clicked
- * @param saveButtonText Text to display on the save button (default: "Save")
+ * @param saveButtonText Text to display on the save button (default: "SAVE")
  */
 @SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,7 +66,7 @@ fun EventForSerieFormScreen(
     onSearchLocations: suspend (String) -> Unit,
     onSave: suspend () -> Boolean,
     onGoBack: () -> Unit,
-    saveButtonText: String = "Save"
+    saveButtonText: String = "SAVE"
 ) {
   // Trigger location search when query changes
   LaunchedEffect(formState.locationQuery) {

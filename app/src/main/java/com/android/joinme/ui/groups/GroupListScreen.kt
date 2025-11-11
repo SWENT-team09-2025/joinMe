@@ -175,7 +175,7 @@ fun GroupListScreen(
   val groupJoinBubbleActions = remember {
     listOf(
         BubbleAction(
-            text = "Join with link",
+            text = "JOIN WITH LINK",
             icon = Icons.Default.Link,
             onClick = {
               Toast.makeText(context, "Not implemented yet", Toast.LENGTH_SHORT).show()
@@ -183,7 +183,7 @@ fun GroupListScreen(
             },
             testTag = GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE),
         BubbleAction(
-            text = "Create a group",
+            text = "CREATE A GROUP",
             icon = Icons.Default.Add,
             onClick = onCreateGroup,
             testTag = GroupListScreenTestTags.CREATE_GROUP_BUBBLE))
@@ -211,7 +211,7 @@ fun GroupListScreen(
               icon = {
                 Icon(
                     Icons.Default.Add,
-                    contentDescription = "Join a new group",
+                    contentDescription = "JOIN A NEW GROUP",
                     tint =
                         if (showJoinBubbles) MaterialTheme.colorScheme.onSurfaceVariant
                         else MaterialTheme.colorScheme.onPrimary)
@@ -219,7 +219,7 @@ fun GroupListScreen(
               shape = RoundedCornerShape(Dimens.CornerRadius.pill),
               text = {
                 Text(
-                    "Join a new group",
+                    "JOIN A NEW GROUP",
                     color =
                         if (showJoinBubbles) MaterialTheme.colorScheme.onSurfaceVariant
                         else MaterialTheme.colorScheme.onPrimary)
@@ -343,7 +343,7 @@ fun GroupListScreen(
                   horizontalAlignment = Alignment.End) {
                     // View Group Details
                     MenuBubble(
-                        text = "View Group Details",
+                        text = "VIEW GROUP DETAILS",
                         icon = Icons.Default.Visibility,
                         onClick = {
                           onViewGroupDetails(group)
@@ -353,7 +353,7 @@ fun GroupListScreen(
 
                     // Leave Group
                     MenuBubble(
-                        text = "Leave Group",
+                        text = "LEAVE GROUP",
                         icon = Icons.AutoMirrored.Filled.ExitToApp,
                         onClick = {
                           onLeaveGroup(group)
@@ -363,7 +363,7 @@ fun GroupListScreen(
 
                     // Share Group
                     MenuBubble(
-                        text = "Share Group",
+                        text = "SHARE GROUP",
                         icon = Icons.Default.Share,
                         onClick = {
                           onShareGroup(group)
@@ -374,7 +374,7 @@ fun GroupListScreen(
                     // Edit Group - Only shown if current user is the owner
                     if (group.ownerId == currentUserId) {
                       MenuBubble(
-                          text = "Edit Group",
+                          text = "EDIT GROUP",
                           icon = Icons.Default.Edit,
                           onClick = {
                             onEditGroup(group)
@@ -386,7 +386,7 @@ fun GroupListScreen(
                     // Delete Group - Only shown if current user is the owner
                     if (group.ownerId == currentUserId) {
                       MenuBubble(
-                          text = "Delete Group",
+                          text = "DELETE GROUP",
                           icon = Icons.Default.Delete,
                           onClick = {
                             onDeleteGroup(group)

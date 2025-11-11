@@ -140,7 +140,7 @@ fun SerieFormScreen(
     onVisibilityChange: (String) -> Unit,
     onSave: () -> Boolean,
     onGoBack: () -> Unit,
-    saveButtonText: String = "Next"
+    saveButtonText: String = "NEXT"
 ) {
   Scaffold(
       topBar = {

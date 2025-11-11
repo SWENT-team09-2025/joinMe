@@ -155,7 +155,7 @@ private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
                         contentDescription = "Logout",
                         modifier = Modifier.size(Dimens.IconSize.medium))
                     Spacer(modifier = Modifier.width(Dimens.Spacing.small))
-                    Text("log out", fontWeight = FontWeight.Medium)
+                    Text("LOG OUT", fontWeight = FontWeight.Medium)
                   }
             }
 
