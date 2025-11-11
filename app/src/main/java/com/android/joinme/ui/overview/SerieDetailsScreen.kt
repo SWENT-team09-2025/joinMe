@@ -24,77 +24,26 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
 
-/**
- * Test tags for UI testing of the Serie Details screen components.
- *
- * Provides consistent identifiers for testing individual UI elements.
- */
 object SerieDetailsScreenTestTags {
-  /** Test tag for the screen root */
   const val SCREEN = "serieDetailsScreen"
-
-  /** Test tag for the serie title in the top bar */
   const val SERIE_TITLE = "serieTitle"
-
-  /** Test tag for the meeting date/time text */
   const val MEETING_INFO = "meetingInfo"
-
-  /** Test tag for the visibility text (PUBLIC/PRIVATE) */
   const val VISIBILITY = "visibility"
-
-  /** Test tag for the members count text */
   const val MEMBERS_COUNT = "membersCount"
-
-  /** Test tag for the duration text */
   const val DURATION = "duration"
-
-  /** Test tag for the description text */
   const val DESCRIPTION = "description"
-
-  /** Test tag for the event list container */
   const val EVENT_LIST = "eventList"
-
-  /** Test tag prefix for individual event cards */
   const val EVENT_CARD = "eventCard"
-
-  /** Test tag for the owner info text */
   const val OWNER_INFO = "ownerInfo"
-
-  /** Test tag for the "Add event" button */
   const val BUTTON_ADD_EVENT = "buttonAddEvent"
-
-  /** Test tag for the "Quit serie" button */
   const val BUTTON_QUIT_SERIE = "buttonQuitSerie"
-
-  /** Test tag for the loading indicator */
   const val LOADING = "loading"
-
-  /** Test tag for the back button */
   const val BACK_BUTTON = "backButton"
-
-  /** Test tag for the edit serie button */
   const val EDIT_SERIE_BUTTON = "editSerieButton"
-
-  /** Test tag for the delete serie button */
   const val DELETE_SERIE_BUTTON = "deleteSerieButton"
-
   const val MESSAGE_FULL_SERIE = "messageFullSerie"
 }
 
-/**
- * Screen for displaying the details of a serie.
- *
- * Shows serie information including title, date, visibility, participants count, duration,
- * description, and a list of associated events. Provides buttons for adding events (owner only) and
- * quitting the serie.
- *
- * @param serieId The unique identifier of the serie to display
- * @param serieDetailsViewModel ViewModel managing the screen state and business logic
- * @param onGoBack Callback invoked when the back button is pressed
- * @param onEventCardClick Callback invoked when an event card is clicked, receives the event ID
- * @param onAddEventClick Callback invoked when the "Add event" button is clicked
- * @param onQuitSerieSuccess Callback invoked when the user successfully quits the serie
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SerieDetailsScreen(
@@ -125,11 +74,14 @@ fun SerieDetailsScreen(
   }
 
   var ownerDisplayName by remember { mutableStateOf("...") }
+  // Only use LaunchedEffect to fetch owner display name (no composable calls here)
   LaunchedEffect(uiState.serie?.ownerId) {
     uiState.serie?.ownerId?.let { id ->
       ownerDisplayName = serieDetailsViewModel.getOwnerDisplayName(id)
     }
-  // Delete confirmation dialog
+  }
+
+  // Delete confirmation dialog (composable placed at top level)
   if (showDeleteDialog) {
     AlertDialog(
         onDismissRequest = { showDeleteDialog = false },
@@ -152,6 +104,7 @@ fun SerieDetailsScreen(
         dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } })
   }
 
+  // Main UI scaffold (now outside LaunchedEffect)
   Scaffold(
       modifier = Modifier.testTag(SerieDetailsScreenTestTags.SCREEN),
       topBar = {
@@ -180,7 +133,6 @@ fun SerieDetailsScreen(
         }
       }) { paddingValues ->
         if (uiState.isLoading) {
-          // Loading state
           Box(
               modifier = Modifier.fillMaxSize().padding(paddingValues),
               contentAlignment = Alignment.Center) {
@@ -188,7 +140,6 @@ fun SerieDetailsScreen(
                     modifier = Modifier.testTag(SerieDetailsScreenTestTags.LOADING))
               }
         } else if (uiState.serie != null) {
-          // Content state
           Column(
               modifier =
                   Modifier.fillMaxSize()
@@ -198,7 +149,6 @@ fun SerieDetailsScreen(
           ) {
             Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
-            // Meeting date and time
             Text(
                 text = "MEETING: ${uiState.formattedDateTime}",
                 style = MaterialTheme.typography.bodyMedium,
@@ -208,7 +158,6 @@ fun SerieDetailsScreen(
 
             Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
-            // Info row: Visibility, Members, Duration
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -235,7 +184,6 @@ fun SerieDetailsScreen(
             HorizontalDivider(
                 thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
 
-            // Description
             Text(
                 text = uiState.serie?.description ?: "",
                 style = MaterialTheme.typography.bodyMedium,
@@ -248,7 +196,6 @@ fun SerieDetailsScreen(
             HorizontalDivider(
                 thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
 
-            // Events list in LazyColumn with fixed size
             if (uiState.events.isNotEmpty()) {
               LazyColumn(
                   modifier =
@@ -266,11 +213,10 @@ fun SerieDetailsScreen(
                 }
               }
             } else {
-              // Empty state - same height as LazyColumn
               Box(
                   modifier =
                       Modifier.fillMaxWidth()
-                          .weight(1f) // Same height as LazyColumn
+                          .weight(1f)
                           .testTag(SerieDetailsScreenTestTags.EVENT_LIST),
                   contentAlignment = Alignment.Center) {
                     Text(
@@ -284,7 +230,6 @@ fun SerieDetailsScreen(
             HorizontalDivider(
                 thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
 
-            // Owner information
             Text(
                 text = "Created by $ownerDisplayName",
                 style = MaterialTheme.typography.bodyMedium,
@@ -295,7 +240,6 @@ fun SerieDetailsScreen(
                         .padding(vertical = Dimens.Spacing.small),
                 textAlign = TextAlign.Center)
 
-            // Add event button (only shown to owner)
             if (uiState.isOwner(currentUserId)) {
               Button(
                   onClick = onAddEventClick,
@@ -307,6 +251,7 @@ fun SerieDetailsScreen(
                   colors = MaterialTheme.customColors.buttonColors()) {
                     Text(text = "ADD EVENT", style = MaterialTheme.typography.headlineSmall)
                   }
+
               Button(
                   onClick = { onEditSerieClick(serieId) },
                   modifier =
@@ -336,7 +281,6 @@ fun SerieDetailsScreen(
                   }
             }
 
-            // Join/Quit serie button (shown to non-owners)
             if (!uiState.isOwner(currentUserId)) {
               if (uiState.canJoin(currentUserId) || uiState.isParticipant(currentUserId)) {
                 Button(
@@ -349,7 +293,6 @@ fun SerieDetailsScreen(
                               serieDetailsViewModel.joinSerie(currentUserId)
                             }
                         if (success && !uiState.isParticipant(currentUserId)) {
-                          // If user quit successfully, navigate back
                           onQuitSerieSuccess()
                         }
                       }
