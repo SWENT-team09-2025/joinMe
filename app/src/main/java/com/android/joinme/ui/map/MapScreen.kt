@@ -82,8 +82,8 @@ internal fun createMarkerForColor(color: Color): BitmapDescriptor {
 
   return if (isBlackish) {
     // Create custom black marker (3x size to match default markers)
-    val width = Dimens.PinMark.pinMarkWidth
-    val height = Dimens.PinMark.pinMarkHeight
+    val width = Dimens.PinMark.PIN_MARK_WIDTH
+    val height = Dimens.PinMark.PIN_MARK_HEIGHT
     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
 

@@ -557,9 +557,10 @@ object Dimens {
     val cardVerticalPadding: Dp = 6.dp
   }
 
+  /** Dimension for the pin mark generation for series */
   object PinMark {
-    val pinMarkWidth = 80
-    val pinMarkHeight = 120
+    const val PIN_MARK_WIDTH = 80
+    const val PIN_MARK_HEIGHT = 120
   }
 
   /**
