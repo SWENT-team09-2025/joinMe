@@ -59,6 +59,14 @@ class EditEventForSerieScreenTest {
     override suspend fun deleteEvent(eventId: String) {
       events.remove(eventId)
     }
+
+    override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
+      events
+          .filter { eventIds.contains(it.key) }
+          .let {
+            return it.values.toList()
+          }
+    }
   }
 
   private class FakeSeriesRepository : SeriesRepository {

@@ -809,6 +809,10 @@ class HistoryScreenTest {
       events.removeIf { it.eventId == eventId }
     }
 
+    override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
+      return events.filter { eventIds.contains(it.eventId) }
+    }
+
     override fun getNewEventId(): String = (events.size + 1).toString()
   }
 
