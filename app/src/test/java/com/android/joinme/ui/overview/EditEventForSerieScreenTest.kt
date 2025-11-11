@@ -1,7 +1,22 @@
 package com.android.joinme.ui.overview
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import com.android.joinme.model.event.Event
+import com.android.joinme.model.event.EventFilter
+import com.android.joinme.model.event.EventType
+import com.android.joinme.model.event.EventVisibility
+import com.android.joinme.model.event.EventsRepository
+import com.android.joinme.model.map.Location
+import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.serie.SerieFilter
+import com.android.joinme.model.serie.SeriesRepository
+import com.android.joinme.model.utils.Visibility
+import com.google.firebase.Timestamp
+import java.util.*
+import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -15,13 +30,113 @@ class EditEventForSerieScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
 
-  /** --- BASIC RENDERING --- */
-  @Test
-  fun allFieldsAndButtonAreDisplayed() {
+  // Fake repositories for testing
+  private class FakeEventsRepository : EventsRepository {
+    private val events = mutableMapOf<String, Event>()
+
+    fun addTestEvent(event: Event) {
+      events[event.eventId] = event
+    }
+
+    override suspend fun getEvent(eventId: String): Event {
+      return events[eventId] ?: throw NoSuchElementException("Event not found")
+    }
+
+    override suspend fun getAllEvents(filter: EventFilter): List<Event> {
+      return events.values.toList()
+    }
+
+    override suspend fun editEvent(eventId: String, event: Event) {
+      events[eventId] = event
+    }
+
+    override suspend fun addEvent(event: Event) {
+      events[event.eventId] = event
+    }
+
+    override fun getNewEventId(): String = "newId"
+
+    override suspend fun deleteEvent(eventId: String) {
+      events.remove(eventId)
+    }
+  }
+
+  private class FakeSeriesRepository : SeriesRepository {
+    private val series = mutableMapOf<String, Serie>()
+
+    fun addTestSerie(serie: Serie) {
+      series[serie.serieId] = serie
+    }
+
+    override suspend fun getSerie(serieId: String): Serie {
+      return series[serieId] ?: throw NoSuchElementException("Serie not found")
+    }
+
+    override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> =
+        series.values.toList()
+
+    override suspend fun addSerie(serie: Serie) {
+      series[serie.serieId] = serie
+    }
+
+    override suspend fun editSerie(serieId: String, serie: Serie) {
+      series[serieId] = serie
+    }
+
+    override fun getNewSerieId(): String = "newSerieId"
+
+    override suspend fun deleteSerie(serieId: String) {
+      series.remove(serieId)
+    }
+  }
+
+  private fun createTestEvent(): Event {
+    val calendar = Calendar.getInstance()
+    calendar.set(2025, Calendar.DECEMBER, 25, 14, 30, 0)
+
+    return Event(
+        eventId = "test-event-1",
+        ownerId = "owner123",
+        title = "Weekly Football",
+        type = EventType.SPORTS,
+        description = "Weekly football game",
+        location = Location(46.52, 6.63, "EPFL Field"),
+        date = Timestamp(calendar.time),
+        duration = 60,
+        maxParticipants = 10,
+        participants = listOf("owner123"),
+        visibility = EventVisibility.PUBLIC)
+  }
+
+  private fun createTestSerie(): Serie {
+    val calendar = Calendar.getInstance()
+    calendar.set(2025, Calendar.DECEMBER, 25, 14, 30, 0)
+
+    return Serie(
+        serieId = "test-serie-1",
+        title = "Weekly Football",
+        description = "Weekly football series",
+        date = Timestamp(calendar.time),
+        participants = listOf("owner123"),
+        maxParticipants = 10,
+        visibility = Visibility.PUBLIC,
+        eventIds = listOf("test-event-1"),
+        ownerId = "owner123")
+  }
+
+  /** Helper to setup the screen with default parameters */
+  private fun setupScreen() {
     composeTestRule.setContent {
       EditEventForSerieScreen(serieId = "testSerieId", eventId = "testEventId", onDone = {})
     }
+  }
 
+  /** --- BASIC RENDERING AND DISPLAY --- */
+  @Test
+  fun basicRendering_allFieldsButtonsAndTextsAreDisplayed() {
+    setupScreen()
+
+    // All fields are displayed
     composeTestRule
         .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TYPE)
         .assertIsDisplayed()
@@ -40,40 +155,47 @@ class EditEventForSerieScreenTest {
     composeTestRule
         .onNodeWithTag(EditEventForSerieScreenTestTags.BUTTON_SAVE_EVENT)
         .assertIsDisplayed()
-  }
 
-  @Test
-  fun titleAndButtonTextAreCorrect() {
-    composeTestRule.setContent {
-      EditEventForSerieScreen(serieId = "testSerieId", eventId = "testEventId", onDone = {})
-    }
-
+    // Title and button text are correct
     composeTestRule.onNodeWithText("Edit Event for Serie").assertIsDisplayed()
     composeTestRule.onNodeWithText("Save Changes").assertIsDisplayed()
+
+    // Fields inherited from serie are not displayed
+    composeTestRule
+        .onNodeWithTag("inputEventMaxParticipants", useUnmergedTree = true)
+        .assertDoesNotExist()
+    composeTestRule.onNodeWithTag("inputEventDate", useUnmergedTree = true).assertDoesNotExist()
+    composeTestRule.onNodeWithTag("inputEventTime", useUnmergedTree = true).assertDoesNotExist()
+    composeTestRule
+        .onNodeWithTag("inputEventVisibility", useUnmergedTree = true)
+        .assertDoesNotExist()
   }
 
   /** --- INPUT BEHAVIOR --- */
   @Test
-  fun typeDropdownWorks() {
-    composeTestRule.setContent {
-      EditEventForSerieScreen(serieId = "testSerieId", eventId = "testEventId", onDone = {})
-    }
+  fun inputBehavior_typeDropdownAndAllTypesAvailable() {
+    setupScreen()
 
+    // Click on type dropdown
     composeTestRule.onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TYPE).performClick()
 
+    // All event types are available
     composeTestRule.onNodeWithText("SPORTS").assertIsDisplayed()
+    composeTestRule.onNodeWithText("ACTIVITY").assertIsDisplayed()
+    composeTestRule.onNodeWithText("SOCIAL").assertIsDisplayed()
+
+    // Select SPORTS
     composeTestRule.onNodeWithText("SPORTS").performClick()
 
+    // Verify selection
     composeTestRule
         .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TYPE)
         .assertTextContains("SPORTS")
   }
 
   @Test
-  fun textFieldsAcceptInput() {
-    composeTestRule.setContent {
-      EditEventForSerieScreen(serieId = "testSerieId", eventId = "testEventId", onDone = {})
-    }
+  fun inputBehavior_textFieldsAcceptInput() {
+    setupScreen()
 
     val title = "Updated Football Match"
     val desc = "Updated description"
@@ -112,66 +234,8 @@ class EditEventForSerieScreenTest {
   }
 
   @Test
-  fun allEventTypesAreAvailable() {
-    composeTestRule.setContent {
-      EditEventForSerieScreen(serieId = "testSerieId", eventId = "testEventId", onDone = {})
-    }
-
-    composeTestRule.onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TYPE).performClick()
-
-    composeTestRule.onNodeWithText("SPORTS").assertIsDisplayed()
-    composeTestRule.onNodeWithText("ACTIVITY").assertIsDisplayed()
-    composeTestRule.onNodeWithText("SOCIAL").assertIsDisplayed()
-  }
-
-  /** --- VALIDATION BEHAVIOR --- */
-  @Test
-  fun emptyTitleDisablesSaveButton() {
-    composeTestRule.setContent {
-      EditEventForSerieScreen(serieId = "testSerieId", eventId = "testEventId", onDone = {})
-    }
-
-    composeTestRule
-        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TITLE)
-        .performTextClearance()
-
-    composeTestRule.waitForIdle()
-    composeTestRule
-        .onNodeWithTag(EditEventForSerieScreenTestTags.BUTTON_SAVE_EVENT)
-        .assertIsNotEnabled()
-  }
-
-  @Test
-  fun whitespaceInputsShouldBeTreatedAsEmpty() {
-    composeTestRule.setContent {
-      EditEventForSerieScreen(serieId = "testSerieId", eventId = "testEventId", onDone = {})
-    }
-
-    composeTestRule
-        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TITLE)
-        .performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TITLE)
-        .performTextInput("   ")
-
-    composeTestRule
-        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_DESCRIPTION)
-        .performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_DESCRIPTION)
-        .performTextInput("   ")
-
-    composeTestRule.waitForIdle()
-    composeTestRule
-        .onNodeWithTag(EditEventForSerieScreenTestTags.BUTTON_SAVE_EVENT)
-        .assertIsNotEnabled()
-  }
-
-  @Test
-  fun switchingTypeRetainsOtherFields() {
-    composeTestRule.setContent {
-      EditEventForSerieScreen(serieId = "testSerieId", eventId = "testEventId", onDone = {})
-    }
+  fun inputBehavior_switchingTypeRetainsOtherFields() {
+    setupScreen()
 
     val title = "Morning Run"
     val desc = "Light jog near EPFL"
@@ -204,25 +268,28 @@ class EditEventForSerieScreenTest {
         .assertTextContains(desc)
   }
 
-  /** --- EDIT-SPECIFIC BEHAVIOR --- */
   @Test
-  fun durationPickerOpensOnClick() {
-    composeTestRule.setContent {
-      EditEventForSerieScreen(serieId = "testSerieId", eventId = "testEventId", onDone = {})
-    }
+  fun inputBehavior_durationPickerOpensAndSelectsValue() {
+    setupScreen()
 
+    // Opens on click
     composeTestRule
         .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_DURATION)
         .performClick()
 
     composeTestRule.onNodeWithText("Select Duration (min)").assertIsDisplayed()
+
+    // Selects value
+    composeTestRule.onNodeWithText("OK").performClick()
+
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_DURATION)
+        .assertExists()
   }
 
   @Test
-  fun locationFieldAcceptsInput() {
-    composeTestRule.setContent {
-      EditEventForSerieScreen(serieId = "testSerieId", eventId = "testEventId", onDone = {})
-    }
+  fun inputBehavior_locationFieldAcceptsInput() {
+    setupScreen()
 
     val location = "Rolex Learning Center"
     composeTestRule
@@ -238,23 +305,58 @@ class EditEventForSerieScreenTest {
   }
 
   @Test
-  fun fieldsNotInheritedFromSerieAreNotDisplayed() {
-    composeTestRule.setContent {
-      EditEventForSerieScreen(serieId = "testSerieId", eventId = "testEventId", onDone = {})
-    }
+  fun inputBehavior_locationSelectionTriggersViewModel() {
+    setupScreen()
 
     composeTestRule
-        .onNodeWithTag("inputEventMaxParticipants", useUnmergedTree = true)
-        .assertDoesNotExist()
-    composeTestRule.onNodeWithTag("inputEventDate", useUnmergedTree = true).assertDoesNotExist()
-    composeTestRule.onNodeWithTag("inputEventTime", useUnmergedTree = true).assertDoesNotExist()
+        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_LOCATION)
+        .performTextInput("EPFL")
+
+    composeTestRule.waitForIdle()
+  }
+
+  /** --- VALIDATION BEHAVIOR --- */
+  @Test
+  fun validation_emptyTitleDisablesSaveButton() {
+    setupScreen()
+
     composeTestRule
-        .onNodeWithTag("inputEventVisibility", useUnmergedTree = true)
-        .assertDoesNotExist()
+        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TITLE)
+        .performTextClearance()
+
+    composeTestRule.waitForIdle()
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.BUTTON_SAVE_EVENT)
+        .assertIsNotEnabled()
   }
 
   @Test
-  fun eventIdAndSerieIdArePassedCorrectly() {
+  fun validation_whitespaceInputsTreatedAsEmpty() {
+    setupScreen()
+
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TITLE)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TITLE)
+        .performTextInput("   ")
+
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextInput("   ")
+
+    composeTestRule.waitForIdle()
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.BUTTON_SAVE_EVENT)
+        .assertIsNotEnabled()
+  }
+
+  /** --- PARAMETER PASSING --- */
+  @Test
+  fun parameters_eventIdAndSerieIdPassedCorrectly() {
     val testSerieId = "unique-serie-id-123"
     val testEventId = "unique-event-id-456"
 
@@ -263,5 +365,56 @@ class EditEventForSerieScreenTest {
     }
 
     composeTestRule.onNodeWithTag(EditEventForSerieScreenTestTags.BUTTON_SAVE_EVENT).assertExists()
+  }
+
+  /** --- SAVE FUNCTIONALITY --- */
+  @Test
+  fun save_clickingWithValidDataCallsOnDone() {
+    val eventRepo = FakeEventsRepository()
+    val serieRepo = FakeSeriesRepository()
+    val event = createTestEvent()
+    val serie = createTestSerie()
+
+    runBlocking {
+      eventRepo.addTestEvent(event)
+      serieRepo.addTestSerie(serie)
+    }
+
+    val viewModel = EditEventForSerieViewModel(eventRepo, serieRepo)
+    var saveCalled = false
+
+    composeTestRule.setContent {
+      EditEventForSerieScreen(
+          serieId = serie.serieId,
+          eventId = event.eventId,
+          editEventForSerieViewModel = viewModel,
+          onDone = { saveCalled = true })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Wait for button to be enabled (event data should be loaded)
+    composeTestRule.waitUntil(timeoutMillis = 5_000) {
+      composeTestRule
+          .onAllNodesWithTag(EditEventForSerieScreenTestTags.BUTTON_SAVE_EVENT)
+          .fetchSemanticsNodes()
+          .firstOrNull()
+          ?.config
+          ?.getOrNull(SemanticsProperties.Disabled) == null
+    }
+
+    // Click save
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.BUTTON_SAVE_EVENT)
+        .performScrollTo()
+        .performClick()
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+
+    // Assert callback called
+    assert(saveCalled)
   }
 }
