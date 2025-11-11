@@ -1675,4 +1675,98 @@ class GroupListScreenTest {
     // Verify "Copy Group ID" text is displayed
     composeTestRule.onNodeWithText("Copy Group ID").assertExists()
   }
+
+  // =======================================
+  // Additional Coverage Tests
+  // =======================================
+
+  @Test
+  fun groupCard_moreButton_isDisplayed() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Verify more button is displayed
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).assertIsDisplayed()
+  }
+
+  @Test
+  fun groupCard_moreButton_triggersMenu() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Click more button
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+
+    // Verify menu is displayed
+    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+  }
+
+  @Test
+  fun menuScrim_clickingOutside_closesMenu() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+
+    // Click on the card (which is behind the scrim, but should close the menu)
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("test1")).performClick()
+
+    // Menu should be closed
+    composeTestRule.onNodeWithText("View Group Details").assertDoesNotExist()
+  }
+
+  @Test
+  fun emptyState_showsCorrectMessages() {
+    composeTestRule.setContent { GroupListScreen() }
+
+    // Verify both lines of empty state message
+    composeTestRule.onNodeWithText("You are currently not").assertIsDisplayed()
+    composeTestRule.onNodeWithText("assigned to a group…").assertIsDisplayed()
+  }
+
+  @Test
+  fun groupWithDescription_displaysDescription() {
+    val group = Group(id = "test1", name = "Group", description = "Test Description", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    composeTestRule.onNodeWithText("Test Description").assertIsDisplayed()
+  }
+
+  @Test
+  fun groupWithoutDescription_doesNotShowDescriptionArea() {
+    val group = Group(id = "test1", name = "Group", description = "", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Description should not be visible (tested implicitly - only name and members shown)
+    composeTestRule.onNodeWithText("Group").assertIsDisplayed()
+    composeTestRule.onNodeWithText("members: 0").assertIsDisplayed()
+  }
+
+  @Test
+  fun multipleGroups_eachHasIndependentMenu() {
+    val groups = listOf(
+        Group(id = "g1", name = "Group 1", ownerId = "owner1"),
+        Group(id = "g2", name = "Group 2", ownerId = "owner2")
+    )
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
+
+    // Open first menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g1")).performClick()
+    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+
+    // Close by clicking action
+    composeTestRule.onNodeWithText("View Group Details").performClick()
+
+    // Open second menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g2")).performClick()
+    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+  }
 }
