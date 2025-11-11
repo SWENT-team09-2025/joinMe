@@ -1731,7 +1731,8 @@ class GroupListScreenTest {
 
   @Test
   fun groupWithDescription_displaysDescription() {
-    val group = Group(id = "test1", name = "Group", description = "Test Description", ownerId = "owner1")
+    val group =
+        Group(id = "test1", name = "Group", description = "Test Description", ownerId = "owner1")
 
     composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
 
@@ -1751,10 +1752,10 @@ class GroupListScreenTest {
 
   @Test
   fun multipleGroups_eachHasIndependentMenu() {
-    val groups = listOf(
-        Group(id = "g1", name = "Group 1", ownerId = "owner1"),
-        Group(id = "g2", name = "Group 2", ownerId = "owner2")
-    )
+    val groups =
+        listOf(
+            Group(id = "g1", name = "Group 1", ownerId = "owner1"),
+            Group(id = "g2", name = "Group 2", ownerId = "owner2"))
 
     composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
 

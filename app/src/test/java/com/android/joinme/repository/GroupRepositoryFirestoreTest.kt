@@ -553,8 +553,7 @@ class GroupRepositoryFirestoreTest {
 
     // Then
     verify {
-      mockDocument.set(
-          match<Group> { it.memberIds.size == 1 && it.memberIds.contains(newUserId) })
+      mockDocument.set(match<Group> { it.memberIds.size == 1 && it.memberIds.contains(newUserId) })
     }
   }
 
