@@ -106,4 +106,6 @@ val onSerieContainerLight = Color(0xFFFFFFFF)
 val serieContainerDark = Color(0xFF444444)
 val onSerieContainerDark = Color(0xFFFFFFFF)
 
+val seriePinMark = Color(0xFF000000)
+
 val TransparentColor = Color.Transparent

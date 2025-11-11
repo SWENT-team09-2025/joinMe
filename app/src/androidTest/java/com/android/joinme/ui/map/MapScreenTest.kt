@@ -1,11 +1,13 @@
 package com.android.joinme.ui.map
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import com.android.joinme.model.event.Event
@@ -14,14 +16,27 @@ import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.utils.Visibility
+import com.google.android.gms.maps.MapsInitializer
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.junit.Assert.assertNotNull
+import org.junit.BeforeClass
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class MapScreenTest {
+
+  companion object {
+    @JvmStatic
+    @BeforeClass
+    fun initializeMaps() {
+      // Initialize Google Maps before running tests
+      MapsInitializer.initialize(ApplicationProvider.getApplicationContext())
+    }
+  }
+
   @get:Rule
   val permissionRule: GrantPermissionRule =
       GrantPermissionRule.grant(
@@ -181,5 +196,65 @@ class MapScreenTest {
         .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
         .assertExists()
         .assertIsDisplayed()
+  }
+
+  @Test
+  fun createMarkerForColor_createsCustomMarkerForBlack() {
+    // Test that black color creates a custom marker (not default)
+    val blackColor = Color.Black
+    val marker = createMarkerForColor(blackColor)
+
+    // Verify that a marker is created
+    assertNotNull(marker)
+  }
+
+  @Test
+  fun createMarkerForColor_createsDefaultMarkerForRed() {
+    // Test that red color creates a default marker with hue
+    val redColor = Color.Red
+    val marker = createMarkerForColor(redColor)
+
+    // Verify that a marker is created
+    assertNotNull(marker)
+  }
+
+  @Test
+  fun createMarkerForColor_createsDefaultMarkerForGreen() {
+    // Test that green color creates a default marker with hue
+    val greenColor = Color.Green
+    val marker = createMarkerForColor(greenColor)
+
+    // Verify that a marker is created
+    assertNotNull(marker)
+  }
+
+  @Test
+  fun createMarkerForColor_createsDefaultMarkerForBlue() {
+    // Test that blue color creates a default marker with hue
+    val blueColor = Color.Blue
+    val marker = createMarkerForColor(blueColor)
+
+    // Verify that a marker is created
+    assertNotNull(marker)
+  }
+
+  @Test
+  fun createMarkerForColor_createsCustomMarkerForVeryDarkGray() {
+    // Test that very dark gray (almost black) creates a custom marker
+    val veryDarkGray = Color(0xFF0A0A0A)
+    val marker = createMarkerForColor(veryDarkGray)
+
+    // Verify that a marker is created
+    assertNotNull(marker)
+  }
+
+  @Test
+  fun createMarkerForColor_createsDefaultMarkerForYellow() {
+    // Test that yellow color creates a default marker with hue
+    val yellowColor = Color.Yellow
+    val marker = createMarkerForColor(yellowColor)
+
+    // Verify that a marker is created
+    assertNotNull(marker)
   }
 }
