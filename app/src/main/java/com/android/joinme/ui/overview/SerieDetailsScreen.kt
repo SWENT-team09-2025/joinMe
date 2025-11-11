@@ -264,6 +264,7 @@ fun SerieDetailsScreen(
             if (uiState.isOwner(currentUserId)) {
               Button(
                   onClick = onAddEventClick,
+                  enabled = uiState.events.size < 30,
                   modifier =
                       Modifier.fillMaxWidth()
                           .height(Dimens.Spacing.huge)
