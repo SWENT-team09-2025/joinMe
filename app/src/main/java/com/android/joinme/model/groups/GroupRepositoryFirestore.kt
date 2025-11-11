@@ -15,22 +15,18 @@ const val GROUPS_COLLECTION_PATH = "groups"
  * objects.
  */
 class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupRepository {
-  private val ownerAttributeName = "ownerId"
 
   override fun getNewGroupId(): String {
     return db.collection(GROUPS_COLLECTION_PATH).document().id
   }
 
   override suspend fun getAllGroups(): List<Group> {
-    val ownerId =
+    val userId =
         Firebase.auth.currentUser?.uid
             ?: throw Exception("GroupRepositoryFirestore: User not logged in.")
 
     val snapshot =
-        db.collection(GROUPS_COLLECTION_PATH)
-            .whereEqualTo(ownerAttributeName, ownerId)
-            .get()
-            .await()
+        db.collection(GROUPS_COLLECTION_PATH).whereArrayContains("memberIds", userId).get().await()
 
     return snapshot.mapNotNull { documentToGroup(it) }
   }

@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -74,6 +75,8 @@ object SerieDetailsScreenTestTags {
 
   /** Test tag for the edit serie button */
   const val EDIT_SERIE_BUTTON = "editSerieButton"
+
+  const val MESSAGE_FULL_SERIE = "messageFullSerie"
 }
 
 /**
@@ -99,7 +102,7 @@ fun SerieDetailsScreen(
     onEventCardClick: (String) -> Unit = {},
     onAddEventClick: () -> Unit = {},
     onQuitSerieSuccess: () -> Unit = {},
-    onEditSerieClick: () -> Unit = {},
+    onEditSerieClick: (String) -> Unit = {},
     currentUserId: String = Firebase.auth.currentUser?.uid ?: "unknown"
 ) {
   val uiState by serieDetailsViewModel.uiState.collectAsState()
@@ -279,7 +282,7 @@ fun SerieDetailsScreen(
                         Text(text = "ADD EVENT", fontSize = 16.sp, fontWeight = FontWeight.Medium)
                       }
                   Button(
-                      onClick = onEditSerieClick,
+                      onClick = { onEditSerieClick(serieId) },
                       modifier =
                           Modifier.fillMaxWidth()
                               .height(56.dp)
@@ -295,38 +298,51 @@ fun SerieDetailsScreen(
 
                 // Join/Quit serie button (shown to non-owners)
                 if (!uiState.isOwner(currentUserId)) {
-                  Button(
-                      onClick = {
-                        coroutineScope.launch {
-                          val success =
-                              if (uiState.isParticipant(currentUserId)) {
-                                serieDetailsViewModel.quitSerie((currentUserId))
-                              } else {
-                                serieDetailsViewModel.joinSerie(currentUserId)
-                              }
-                          if (success && !uiState.isParticipant(currentUserId)) {
-                            // If user quit successfully, navigate back
-                            onQuitSerieSuccess()
+                  if (uiState.canJoin(currentUserId) || uiState.isParticipant(currentUserId)) {
+                    Button(
+                        onClick = {
+                          coroutineScope.launch {
+                            val success =
+                                if (uiState.isParticipant(currentUserId)) {
+                                  serieDetailsViewModel.quitSerie((currentUserId))
+                                } else {
+                                  serieDetailsViewModel.joinSerie(currentUserId)
+                                }
+                            if (success && !uiState.isParticipant(currentUserId)) {
+                              // If user quit successfully, navigate back
+                              onQuitSerieSuccess()
+                            }
                           }
+                        },
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .height(56.dp)
+                                .testTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE),
+                        shape = RoundedCornerShape(8.dp),
+                        enabled =
+                            uiState.isParticipant(currentUserId) || uiState.canJoin(currentUserId),
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
+                          Text(
+                              text =
+                                  if (uiState.isParticipant(currentUserId)) "QUIT SERIE"
+                                  else "JOIN SERIE",
+                              fontSize = 16.sp,
+                              fontWeight = FontWeight.Medium)
                         }
-                      },
-                      modifier =
-                          Modifier.fillMaxWidth()
-                              .height(56.dp)
-                              .testTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE),
-                      shape = RoundedCornerShape(8.dp),
-                      enabled =
-                          uiState.isParticipant(currentUserId) || uiState.canJoin(currentUserId),
-                      colors =
-                          ButtonDefaults.buttonColors(
-                              containerColor = DarkButtonColor, contentColor = ButtonSaveColor)) {
-                        Text(
-                            text =
-                                if (uiState.isParticipant(currentUserId)) "QUIT SERIE"
-                                else "JOIN SERIE",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium)
-                      }
+                  } else {
+                    Text(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .padding(bottom = 50.dp)
+                                .testTag(SerieDetailsScreenTestTags.MESSAGE_FULL_SERIE),
+                        text = "Sorry the serie:\n ${uiState.getTitle()} \n is full",
+                        fontSize = 16.sp,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold)
+                  }
                 }
               }
         }

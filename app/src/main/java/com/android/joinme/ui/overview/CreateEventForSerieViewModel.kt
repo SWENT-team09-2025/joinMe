@@ -6,7 +6,6 @@ import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
-import com.android.joinme.model.map.Location
 import com.android.joinme.model.map.LocationRepository
 import com.android.joinme.model.map.NominatimLocationRepository
 import com.android.joinme.model.serie.Serie
@@ -19,72 +18,14 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /** Note: This file was refactored using IA (Claude) */
 
-/**
- * UI state for the CreateEventForSerie screen.
- *
- * Only includes fields that the user needs to input when creating an event for an existing serie:
- * - Event type
- * - Event title
- * - Event description
- * - Event duration
- * - Event location
- *
- * Other fields (date, maxParticipants, visibility, participants, ownerId) will be inherited from
- * the serie.
- *
- * @property type The event type (SPORTS, ACTIVITY, or SOCIAL)
- * @property title The event title
- * @property description The event description
- * @property duration The event duration in minutes as a string
- * @property location The event location name
- * @property locationQuery The current location search query
- * @property locationSuggestions List of location suggestions from search
- * @property selectedLocation The selected Location object
- * @property isLoading Indicates whether the event is currently being created
- * @property errorMsg Global error message for the form
- * @property invalidTypeMsg Validation message for the type field
- * @property invalidTitleMsg Validation message for the title field
- * @property invalidDescriptionMsg Validation message for the description field
- * @property invalidDurationMsg Validation message for the duration field
- * @property invalidLocationMsg Validation message for the location field
- */
-data class CreateEventForSerieUIState(
-    override val type: String = "",
-    override val title: String = "",
-    override val description: String = "",
-    override val duration: String = "",
-    override val location: String = "",
-    override val locationQuery: String = "",
-    override val locationSuggestions: List<Location> = emptyList(),
-    override val selectedLocation: Location? = null,
-    override val isLoading: Boolean = false,
-    override val errorMsg: String? = null,
+/** Milliseconds per second conversion factor */
+private const val MILLIS_PER_SECOND = 1000L
 
-    // validation messages
-    override val invalidTypeMsg: String? = null,
-    override val invalidTitleMsg: String? = null,
-    override val invalidDescriptionMsg: String? = null,
-    override val invalidDurationMsg: String? = null,
-    override val invalidLocationMsg: String? = null,
-) : EventForSerieFormUIState {
-  /**
-   * Checks if all form fields are valid and filled.
-   *
-   * @return True if all validation messages are null and all fields are not blank
-   */
-  val isValid: Boolean
-    get() =
-        invalidTypeMsg == null &&
-            invalidTitleMsg == null &&
-            invalidDescriptionMsg == null &&
-            invalidDurationMsg == null &&
-            invalidLocationMsg == null &&
-            type.isNotBlank() &&
-            title.isNotBlank() &&
-            description.isNotBlank() &&
-            duration.isNotBlank() &&
-            selectedLocation != null
-}
+/** Seconds per minute conversion factor */
+private const val SECONDS_PER_MINUTE = 60L
+
+/** Milliseconds per minute conversion factor */
+private const val MILLIS_PER_MINUTE = SECONDS_PER_MINUTE * MILLIS_PER_SECOND
 
 /**
  * ViewModel for the CreateEventForSerie screen.
@@ -108,13 +49,13 @@ class CreateEventForSerieViewModel(
     locationRepository: LocationRepository = NominatimLocationRepository(HttpClientProvider.client)
 ) : BaseEventForSerieViewModel(locationRepository) {
 
-  override val _uiState = MutableStateFlow(CreateEventForSerieUIState())
-  val uiState: StateFlow<CreateEventForSerieUIState> = _uiState.asStateFlow()
+  override val _uiState = MutableStateFlow(EventForSerieFormState())
+  val uiState: StateFlow<EventForSerieFormState> = _uiState.asStateFlow()
 
   override fun getState(): EventForSerieFormUIState = _uiState.value
 
   override fun updateState(transform: (EventForSerieFormUIState) -> EventForSerieFormUIState) {
-    _uiState.value = transform(_uiState.value) as CreateEventForSerieUIState
+    _uiState.value = transform(_uiState.value) as EventForSerieFormState
   }
 
   /**
@@ -174,8 +115,14 @@ class CreateEventForSerieViewModel(
       // Add the event to the repository
       eventRepository.addEvent(event)
 
-      // Update the serie to include the new event ID
-      val updatedSerie = serie.copy(eventIds = serie.eventIds + newEventId)
+      // Calculate the end time of the new event
+      val newEventEndTime = event.date.toDate().time + (event.duration * MILLIS_PER_MINUTE)
+      val newEventEndTimestamp = Timestamp(java.util.Date(newEventEndTime))
+
+      // Update the serie to include the new event ID and update lastEventEndTime
+      val updatedSerie =
+          serie.copy(
+              eventIds = serie.eventIds + newEventId, lastEventEndTime = newEventEndTimestamp)
       serieRepository.editSerie(serieId, updatedSerie)
 
       clearErrorMsg()
@@ -218,7 +165,7 @@ class CreateEventForSerieViewModel(
 
     // Calculate when the last event ends
     val lastEvent = serieEvents.last()
-    val lastEventEndTime = lastEvent.date.toDate().time + (lastEvent.duration * 60 * 1000)
+    val lastEventEndTime = lastEvent.date.toDate().time + (lastEvent.duration * MILLIS_PER_MINUTE)
 
     return Timestamp(java.util.Date(lastEventEndTime))
   }

@@ -280,7 +280,6 @@ tasks.register("jacocoTestReport", JacocoReport::class) {
         "android/**/*.*",
         "**/AuthRepository\$*",
         "**/*\$DefaultImpls*",
-        "**/*\$Companion*",
         "**/*\$*Function*"
     )
 

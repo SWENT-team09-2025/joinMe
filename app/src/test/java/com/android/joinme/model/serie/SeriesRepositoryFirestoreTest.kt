@@ -92,16 +92,18 @@ class SeriesRepositoryFirestoreTest {
   fun getSerie_returnsSerieSuccessfully() = runTest {
     // Given
     val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    val testDate = Timestamp(Date())
     every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
     every { mockSnapshot.id } returns testSerieId
     every { mockSnapshot.getString("title") } returns "Weekly Football"
     every { mockSnapshot.getString("description") } returns "Weekly football series at the park"
-    every { mockSnapshot.getTimestamp("date") } returns testSerie.date
+    every { mockSnapshot.getTimestamp("date") } returns testDate
     every { mockSnapshot.get("participants") } returns listOf("user1", "user2")
     every { mockSnapshot.getLong("maxParticipants") } returns 10L
     every { mockSnapshot.getString("visibility") } returns Visibility.PUBLIC.name
     every { mockSnapshot.get("eventIds") } returns listOf("event1", "event2", "event3")
     every { mockSnapshot.getString("ownerId") } returns testUserId
+    every { mockSnapshot.getTimestamp("lastEventEndTime") } returns testDate
 
     // When
     val result = repository.getSerie(testSerieId)
@@ -112,6 +114,7 @@ class SeriesRepositoryFirestoreTest {
     assertEquals("Weekly Football", result.title)
     assertEquals(testUserId, result.ownerId)
     assertEquals(3, result.eventIds.size)
+    assertEquals(testDate, result.lastEventEndTime)
   }
 
   @Test
@@ -161,26 +164,30 @@ class SeriesRepositoryFirestoreTest {
         mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
 
     // Setup first serie - testUserId must be in participants
+    val date1 = Timestamp(Date())
     every { mockSnapshot1.id } returns "serie1"
     every { mockSnapshot1.getString("title") } returns "Serie 1"
     every { mockSnapshot1.getString("description") } returns "Description 1"
-    every { mockSnapshot1.getTimestamp("date") } returns Timestamp(Date())
+    every { mockSnapshot1.getTimestamp("date") } returns date1
     every { mockSnapshot1.get("participants") } returns listOf(testUserId, "user1")
     every { mockSnapshot1.getLong("maxParticipants") } returns 10L
     every { mockSnapshot1.getString("visibility") } returns Visibility.PUBLIC.name
     every { mockSnapshot1.get("eventIds") } returns listOf("event1")
     every { mockSnapshot1.getString("ownerId") } returns testUserId
+    every { mockSnapshot1.getTimestamp("lastEventEndTime") } returns date1
 
     // Setup second serie - testUserId must be in participants
+    val date2 = Timestamp(Date())
     every { mockSnapshot2.id } returns "serie2"
     every { mockSnapshot2.getString("title") } returns "Serie 2"
     every { mockSnapshot2.getString("description") } returns "Description 2"
-    every { mockSnapshot2.getTimestamp("date") } returns Timestamp(Date())
+    every { mockSnapshot2.getTimestamp("date") } returns date2
     every { mockSnapshot2.get("participants") } returns listOf(testUserId, "user1", "user2")
     every { mockSnapshot2.getLong("maxParticipants") } returns 8L
     every { mockSnapshot2.getString("visibility") } returns Visibility.PRIVATE.name
     every { mockSnapshot2.get("eventIds") } returns listOf("event2", "event3")
     every { mockSnapshot2.getString("ownerId") } returns testUserId
+    every { mockSnapshot2.getTimestamp("lastEventEndTime") } returns date2
 
     // When
     val result = repository.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN)
@@ -244,16 +251,18 @@ class SeriesRepositoryFirestoreTest {
   fun getSerie_withEmptyEventIds() = runTest {
     // Given
     val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    val testDate = Timestamp(Date())
     every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
     every { mockSnapshot.id } returns testSerieId
     every { mockSnapshot.getString("title") } returns "Empty Serie"
     every { mockSnapshot.getString("description") } returns "Serie with no events"
-    every { mockSnapshot.getTimestamp("date") } returns testSerie.date
+    every { mockSnapshot.getTimestamp("date") } returns testDate
     every { mockSnapshot.get("participants") } returns emptyList<String>()
     every { mockSnapshot.getLong("maxParticipants") } returns 5L
     every { mockSnapshot.getString("visibility") } returns Visibility.PUBLIC.name
     every { mockSnapshot.get("eventIds") } returns emptyList<String>()
     every { mockSnapshot.getString("ownerId") } returns testUserId
+    every { mockSnapshot.getTimestamp("lastEventEndTime") } returns null // Missing field
 
     // When
     val result = repository.getSerie(testSerieId)
@@ -261,22 +270,25 @@ class SeriesRepositoryFirestoreTest {
     // Then
     assertNotNull(result)
     assertEquals(0, result.eventIds.size)
+    assertEquals(testDate, result.lastEventEndTime) // Should default to date
   }
 
   @Test
   fun getSerie_withDefaultVisibilityWhenNull() = runTest {
     // Given
     val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    val testDate = Timestamp(Date())
     every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
     every { mockSnapshot.id } returns testSerieId
     every { mockSnapshot.getString("title") } returns "Serie with default visibility"
     every { mockSnapshot.getString("description") } returns "Description"
-    every { mockSnapshot.getTimestamp("date") } returns testSerie.date
+    every { mockSnapshot.getTimestamp("date") } returns testDate
     every { mockSnapshot.get("participants") } returns emptyList<String>()
     every { mockSnapshot.getLong("maxParticipants") } returns 10L
     every { mockSnapshot.getString("visibility") } returns null // Null visibility
     every { mockSnapshot.get("eventIds") } returns listOf("event1")
     every { mockSnapshot.getString("ownerId") } returns testUserId
+    every { mockSnapshot.getTimestamp("lastEventEndTime") } returns testDate
 
     // When
     val result = repository.getSerie(testSerieId)
@@ -290,16 +302,18 @@ class SeriesRepositoryFirestoreTest {
   fun getSerie_withEmptyDescriptionDefaultsToEmpty() = runTest {
     // Given
     val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    val testDate = Timestamp(Date())
     every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
     every { mockSnapshot.id } returns testSerieId
     every { mockSnapshot.getString("title") } returns "Serie Title"
     every { mockSnapshot.getString("description") } returns null // Null description
-    every { mockSnapshot.getTimestamp("date") } returns testSerie.date
+    every { mockSnapshot.getTimestamp("date") } returns testDate
     every { mockSnapshot.get("participants") } returns emptyList<String>()
     every { mockSnapshot.getLong("maxParticipants") } returns 10L
     every { mockSnapshot.getString("visibility") } returns Visibility.PUBLIC.name
     every { mockSnapshot.get("eventIds") } returns listOf("event1")
     every { mockSnapshot.getString("ownerId") } returns testUserId
+    every { mockSnapshot.getTimestamp("lastEventEndTime") } returns testDate
 
     // When
     val result = repository.getSerie(testSerieId)
@@ -307,5 +321,56 @@ class SeriesRepositoryFirestoreTest {
     // Then
     assertNotNull(result)
     assertEquals("", result.description) // Should default to empty string
+  }
+
+  @Test
+  fun getSerie_withLastEventEndTime_returnsCorrectValue() = runTest {
+    // Given
+    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    val testDate = Timestamp(Date())
+    val lastEventDate = Timestamp(Date(testDate.toDate().time + 3600000)) // 1 hour later
+    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+    every { mockSnapshot.id } returns testSerieId
+    every { mockSnapshot.getString("title") } returns "Serie with lastEventEndTime"
+    every { mockSnapshot.getString("description") } returns "Test"
+    every { mockSnapshot.getTimestamp("date") } returns testDate
+    every { mockSnapshot.get("participants") } returns emptyList<String>()
+    every { mockSnapshot.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot.getString("visibility") } returns Visibility.PUBLIC.name
+    every { mockSnapshot.get("eventIds") } returns listOf("event1")
+    every { mockSnapshot.getString("ownerId") } returns testUserId
+    every { mockSnapshot.getTimestamp("lastEventEndTime") } returns lastEventDate
+
+    // When
+    val result = repository.getSerie(testSerieId)
+
+    // Then
+    assertNotNull(result)
+    assertEquals(lastEventDate, result.lastEventEndTime)
+  }
+
+  @Test
+  fun getSerie_withMissingLastEventEndTime_defaultsToDate() = runTest {
+    // Given
+    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    val testDate = Timestamp(Date())
+    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+    every { mockSnapshot.id } returns testSerieId
+    every { mockSnapshot.getString("title") } returns "Old Serie without lastEventEndTime"
+    every { mockSnapshot.getString("description") } returns "Old data"
+    every { mockSnapshot.getTimestamp("date") } returns testDate
+    every { mockSnapshot.get("participants") } returns emptyList<String>()
+    every { mockSnapshot.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot.getString("visibility") } returns Visibility.PUBLIC.name
+    every { mockSnapshot.get("eventIds") } returns listOf("event1")
+    every { mockSnapshot.getString("ownerId") } returns testUserId
+    every { mockSnapshot.getTimestamp("lastEventEndTime") } returns null // Old data without field
+
+    // When
+    val result = repository.getSerie(testSerieId)
+
+    // Then
+    assertNotNull(result)
+    assertEquals(testDate, result.lastEventEndTime) // Should default to serie date
   }
 }

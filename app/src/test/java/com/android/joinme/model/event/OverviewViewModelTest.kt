@@ -222,17 +222,19 @@ class OverviewViewModelTest {
     fakeEventRepository.addTestEvent(upcomingEvent)
 
     // Add an upcoming serie (with date in the future)
+    val futureDate = calendar.time
     val upcomingSerie =
         Serie(
             serieId = "upcoming_serie",
             title = "Upcoming Serie",
             description = "Upcoming serie desc",
-            date = Timestamp(calendar.time),
+            date = Timestamp(futureDate),
             participants = listOf("user1"),
             maxParticipants = 10,
             visibility = Visibility.PUBLIC,
             eventIds = listOf("upcoming_serie_event"),
-            ownerId = "owner1")
+            ownerId = "owner1",
+            lastEventEndTime = Timestamp(futureDate)) // Set to future so not expired
 
     fakeSerieRepository.addTestSerie(upcomingSerie)
 
@@ -267,17 +269,24 @@ class OverviewViewModelTest {
 
     fakeEventRepository.addTestEvent(activeSerieEvent)
 
+    // Calculate end time for the active serie (started 30 min ago, lasts 120 min = ends 90 min from
+    // now)
+    val serieStartTime = calendar.time
+    calendar.add(Calendar.MINUTE, 120) // Add duration
+    val serieEndTime = calendar.time
+
     val activeSerie =
         Serie(
             serieId = "active_serie",
             title = "Active Serie",
             description = "Active serie desc",
-            date = Timestamp(calendar.time),
+            date = Timestamp(serieStartTime),
             participants = listOf("user1"),
             maxParticipants = 10,
             visibility = Visibility.PUBLIC,
             eventIds = listOf("active_serie_event"),
-            ownerId = "owner1")
+            ownerId = "owner1",
+            lastEventEndTime = Timestamp(serieEndTime)) // Set to future so still active
 
     fakeSerieRepository.addTestSerie(activeSerie)
 
@@ -330,17 +339,22 @@ class OverviewViewModelTest {
 
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.HOUR, -2) // Started 2 hours ago
+    val pastStartDate = calendar.time
+    calendar.add(Calendar.MINUTE, -30) // Ended 30 minutes ago (total duration 90 min)
+    val pastEndDate = calendar.time
+
     val pastSerie =
         Serie(
             serieId = "past_serie",
             title = "Past Serie",
             description = "Past serie desc",
-            date = Timestamp(calendar.time),
+            date = Timestamp(pastStartDate),
             participants = listOf("user1"),
             maxParticipants = 10,
             visibility = Visibility.PUBLIC,
             eventIds = listOf("past_serie_event"),
-            ownerId = "owner1")
+            ownerId = "owner1",
+            lastEventEndTime = Timestamp(pastEndDate)) // Set to past so it's expired
 
     fakeSerieRepository.addTestSerie(pastSerie)
 
@@ -509,17 +523,19 @@ class OverviewViewModelTest {
       // Add default serie with future date
       val calendar = Calendar.getInstance()
       calendar.add(Calendar.HOUR, 1)
+      val futureDate = calendar.time
       series.add(
           Serie(
               serieId = "serie1",
               title = "Test Serie",
               description = "Serie description",
-              date = Timestamp(calendar.time),
+              date = Timestamp(futureDate),
               participants = listOf("user1"),
               maxParticipants = 10,
               visibility = Visibility.PUBLIC,
               eventIds = listOf("serie_event_1"),
-              ownerId = "owner1"))
+              ownerId = "owner1",
+              lastEventEndTime = Timestamp(futureDate))) // Set to future so not expired
     }
 
     fun addTestSerie(serie: Serie) {

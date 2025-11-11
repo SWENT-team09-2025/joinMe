@@ -4,6 +4,8 @@ import com.android.joinme.model.event.Event
 import com.android.joinme.model.utils.Visibility
 import com.google.firebase.Timestamp
 
+/** Note: This file was co-written with the help of AI (Claude) */
+
 /** Milliseconds per minute conversion factor */
 private const val MILLIS_PER_MINUTE = 60_000L
 
@@ -23,8 +25,12 @@ private const val MILLIS_PER_MINUTE = 60_000L
  * @property visibility Visibility setting for events in this series (public or private)
  * @property eventIds List of event IDs belonging to this series
  * @property ownerId User ID of the series creator/owner
+ * @property lastEventEndTime The end time of the last event in the series. Used for optimization to
+ *   check if series is expired without loading all events. This is managed internally by the
+ *   repository and should not be set manually.
  */
-data class Serie(
+data class Serie
+internal constructor(
     val serieId: String,
     val title: String,
     val description: String,
@@ -34,7 +40,49 @@ data class Serie(
     val visibility: Visibility,
     val eventIds: List<String>,
     val ownerId: String,
-)
+    val lastEventEndTime: Timestamp? = null,
+) {
+  companion object {
+    /**
+     * Creates a new Serie instance. This is the public API for creating Series.
+     *
+     * @param serieId Unique identifier for this series
+     * @param title The title of the series
+     * @param description Detailed description of what the series is about
+     * @param date The starting date/time of the series
+     * @param participants List of user IDs of participants who have joined the series
+     * @param maxParticipants Maximum number of participants allowed per event in the series
+     * @param visibility Visibility setting for events in this series (public or private)
+     * @param eventIds List of event IDs belonging to this series
+     * @param ownerId User ID of the series creator/owner
+     * @return A new Serie instance with lastEventEndTime initialized to the serie's start date
+     */
+    @JvmStatic
+    operator fun invoke(
+        serieId: String,
+        title: String,
+        description: String,
+        date: Timestamp,
+        participants: List<String>,
+        maxParticipants: Int,
+        visibility: Visibility,
+        eventIds: List<String>,
+        ownerId: String,
+    ): Serie {
+      return Serie(
+          serieId = serieId,
+          title = title,
+          description = description,
+          date = date,
+          participants = participants,
+          maxParticipants = maxParticipants,
+          visibility = visibility,
+          eventIds = eventIds,
+          ownerId = ownerId,
+          lastEventEndTime = date)
+    }
+  }
+}
 
 /**
  * Data class combining a Serie with its associated Event objects. Useful for displaying series with
@@ -46,60 +94,56 @@ data class Serie(
 data class SerieWithEvents(val serie: Serie, val events: List<Event>)
 
 /**
- * Calculates the total duration of all events in the series.
+ * Calculates the total duration of the series.
  *
- * @param events List of all events to search through
+ * Since events follow each other without gaps, the total duration is the time span from the serie
+ * start date to the last event end time.
+ *
  * @return Total duration in minutes
  */
-fun Serie.getTotalDuration(events: List<Event>): Int {
-  return events.filter { it.eventId in eventIds }.sumOf { it.duration }
-}
-
-/**
- * Checks if the series has any currently active/ongoing events.
- *
- * An event is considered active if the current time falls between its start time and end time.
- *
- * @param events List of all events to check
- * @return True if at least one event in the series is currently active, false otherwise
- */
-fun Serie.isActive(events: List<Event>): Boolean {
-  val now = System.currentTimeMillis()
-  return events.any { event ->
-    if (event.eventId !in eventIds) return@any false
-    try {
-      val startTime = event.date.toDate().time
-      val endTime = startTime + (event.duration * MILLIS_PER_MINUTE)
-      now >= startTime && now < endTime
-    } catch (e: Exception) {
-      false
-    }
+fun Serie.getTotalDuration(): Int {
+  return try {
+    val startTime = date.toDate().time
+    val endTime = lastEventEndTime?.toDate()?.time ?: startTime
+    val durationMillis = endTime - startTime
+    (durationMillis / MILLIS_PER_MINUTE).toInt()
+  } catch (e: Exception) {
+    0
   }
 }
 
 /**
- * Checks if all events in the series have already occurred.
+ * Checks if the series is currently active.
  *
- * A series is considered expired if all its events have finished (end time has passed).
+ * A series is considered active if the current time falls between its start time and the last event
+ * end time.
  *
- * @param events List of all events to check
- * @return True if all events in the series have finished or if the series has no events, false if
- *   any event is ongoing or upcoming
+ * @return True if the series is currently active, false otherwise
  */
-fun Serie.isExpired(events: List<Event>): Boolean {
-  val serieEvents = events.filter { it.eventId in eventIds }
-  if (serieEvents.isEmpty()) {
-    return !isUpcoming()
-  }
-
+fun Serie.isActive(): Boolean {
   val now = System.currentTimeMillis()
-  return serieEvents.all { event ->
-    try {
-      val endTimeMillis = event.date.toDate().time + (event.duration * MILLIS_PER_MINUTE)
-      endTimeMillis < now
-    } catch (e: Exception) {
-      false
-    }
+  return try {
+    val startTime = date.toDate().time
+    val endTime = lastEventEndTime?.toDate()?.time ?: startTime
+    now >= startTime && now < endTime
+  } catch (e: Exception) {
+    false
+  }
+}
+
+/**
+ * Checks if the series has expired.
+ *
+ * A series is considered expired if the last event end time has passed.
+ *
+ * @return True if the series has finished, false otherwise
+ */
+fun Serie.isExpired(): Boolean {
+  val now = System.currentTimeMillis()
+  return try {
+    lastEventEndTime?.toDate()?.time?.let { it < now } ?: false
+  } catch (e: Exception) {
+    false
   }
 }
 
@@ -147,11 +191,10 @@ fun Serie.getTotalEventsCount(): Int = eventIds.size
 /**
  * Formats the total duration of the series into a human-readable string.
  *
- * @param events List of all events to calculate duration from
  * @return Formatted duration string (e.g., "5h 30min", "5h", or "90min")
  */
-fun Serie.getFormattedDuration(events: List<Event>): String {
-  val totalMinutes = getTotalDuration(events)
+fun Serie.getFormattedDuration(): String {
+  val totalMinutes = getTotalDuration()
   val hours = totalMinutes / 60
   val minutes = totalMinutes % 60
 

@@ -98,7 +98,7 @@ class OverviewViewModel(
                 .filter { item ->
                   when (item) {
                     is EventItem.SingleEvent -> item.event.isActive()
-                    is EventItem.EventSerie -> item.serie.isActive(allEvents)
+                    is EventItem.EventSerie -> item.serie.isActive()
                   }
                 }
                 .sortedBy { it.date.toDate().time }

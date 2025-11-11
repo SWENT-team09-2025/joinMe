@@ -29,17 +29,17 @@ import org.junit.Test
 class BaseEventForSerieViewModelTest {
 
   // ---- Test ViewModel ----
-  // Uses CreateEventForSerieUIState directly for testing
+  // Uses EventForSerieFormState directly for testing
   private class TestEventForSerieViewModel(locationRepository: LocationRepository) :
       BaseEventForSerieViewModel(locationRepository) {
 
-    override val _uiState = MutableStateFlow(CreateEventForSerieUIState())
+    override val _uiState = MutableStateFlow(EventForSerieFormState())
     val uiState = _uiState
 
     override fun getState(): EventForSerieFormUIState = _uiState.value
 
     override fun updateState(transform: (EventForSerieFormUIState) -> EventForSerieFormUIState) {
-      _uiState.value = transform(_uiState.value) as CreateEventForSerieUIState
+      _uiState.value = transform(_uiState.value) as EventForSerieFormState
     }
 
     // Expose for testing
