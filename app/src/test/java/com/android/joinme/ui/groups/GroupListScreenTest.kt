@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
@@ -946,18 +947,6 @@ class GroupListScreenTest {
     // Click again to close
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
     composeTestRule.onNodeWithText("JOIN WITH LINK").assertDoesNotExist()
-  }
-
-  @Test
-  fun joinWithLinkBubble_triggersCallback() {
-    var joinClicked = false
-
-    composeTestRule.setContent { GroupListScreen(onJoinWithLink = { joinClicked = true }) }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithText("JOIN WITH LINK").performClick()
-
-    assertTrue(joinClicked)
   }
 
   @Test
@@ -2022,9 +2011,7 @@ class GroupListScreenTest {
         .assertHasClickAction()
 
     // Click confirm button
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_CONFIRM_BUTTON)
-        .performClick()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_CONFIRM_BUTTON).performClick()
 
     // Verify callback was triggered
     assertTrue(confirmed)
@@ -2175,8 +2162,7 @@ class GroupListScreenTest {
   @Test
   fun groupCard_membersCount_displayedWithCorrectStyle() {
     val group =
-        Group(
-            id = "test1", name = "Group", ownerId = "owner1", memberIds = List(42) { "user$it" })
+        Group(id = "test1", name = "Group", ownerId = "owner1", memberIds = List(42) { "user$it" })
 
     composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
 
@@ -2329,38 +2315,25 @@ class GroupListScreenTest {
   }
 
   @Test
-  fun joinWithLinkBubble_clickTriggersCallback() {
-    var callbackInvoked = false
-    var callbackValue = ""
-
-    composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = createViewModel(emptyList()),
-          onJoinWithLink = {
-            callbackInvoked = true
-            callbackValue = it
-          })
-    }
+  fun joinWithLinkBubble_isClickable() {
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(emptyList())) }
 
     // Open join/create bubbles
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
 
-    // Click join with link
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).performClick()
-
-    // Verify callback was invoked (with empty string initially)
-    assert(callbackInvoked) { "onJoinWithLink callback should be invoked" }
-    assert(callbackValue == "") { "Initial callback value should be empty" }
+    // Verify join with link bubble is clickable
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE)
+        .assertHasClickAction()
   }
 
   @Test
-  fun joinWithLinkDialog_opensAfterBubbleClick() {
-    var dialogOpened = false
+  fun joinWithLinkBubble_doesNotTriggerCallbackImmediately() {
+    var callbackInvoked = false
 
     composeTestRule.setContent {
       GroupListScreen(
-          viewModel = createViewModel(emptyList()),
-          onJoinWithLink = { dialogOpened = true })
+          viewModel = createViewModel(emptyList()), onJoinWithLink = { callbackInvoked = true })
     }
 
     // Open join/create bubbles
@@ -2369,7 +2342,225 @@ class GroupListScreenTest {
     // Click join with link bubble
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).performClick()
 
-    // Verify the callback was triggered (indicating dialog logic was executed)
-    assert(dialogOpened) { "Dialog should open after clicking join with link bubble" }
+    // Verify callback was NOT invoked (dialog should open but callback should wait for user input)
+    assert(!callbackInvoked) {
+      "onJoinWithLink callback should not be invoked until user submits group ID"
+    }
+  }
+
+  // ===== JoinWithLinkDialog Tests =====
+
+  @Test
+  fun joinWithLinkDialog_displaysCorrectly() {
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(emptyList())) }
+
+    // Open join/create bubbles and click join with link
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).performClick()
+
+    // Verify dialog is displayed with all elements
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_DIALOG).assertExists()
+    composeTestRule.onNodeWithText("       Join a group").assertExists()
+    composeTestRule.onNodeWithText("Enter the Group ID to join").assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_INPUT).assertExists()
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_PASTE_BUTTON)
+        .assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_JOIN_BUTTON).assertExists()
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_CLOSE_BUTTON)
+        .assertExists()
+  }
+
+  @Test
+  fun joinWithLinkDialog_inputField_acceptsText() {
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(emptyList())) }
+
+    // Open dialog
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).performClick()
+
+    // Type in the input field
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_INPUT)
+        .performTextInput("test-group-id-123")
+
+    // Verify text is displayed
+    composeTestRule.onNodeWithText("test-group-id-123").assertExists()
+  }
+
+  @Test
+  fun joinWithLinkDialog_joinButton_triggersCallbackWithTrimmedInput() {
+    var joinedGroupId: String? = null
+
+    composeTestRule.setContent {
+      GroupListScreen(
+          viewModel = createViewModel(emptyList()), onJoinWithLink = { joinedGroupId = it })
+    }
+
+    // Open dialog
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).performClick()
+
+    // Enter group ID with extra whitespace
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_INPUT)
+        .performTextInput("  group123  ")
+
+    // Click join button
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_JOIN_BUTTON).performClick()
+
+    // Verify callback was invoked with trimmed ID
+    assert(joinedGroupId == "group123") { "Expected trimmed 'group123' but got '$joinedGroupId'" }
+  }
+
+  @Test
+  fun joinWithLinkDialog_joinButton_closesDialog() {
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(emptyList())) }
+
+    // Open dialog
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).performClick()
+
+    // Verify dialog is open
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_DIALOG).assertExists()
+
+    // Enter group ID and click join
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_INPUT)
+        .performTextInput("group123")
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_JOIN_BUTTON).performClick()
+
+    // Verify dialog is closed
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_DIALOG)
+        .assertDoesNotExist()
+  }
+
+  @Test
+  fun joinWithLinkDialog_joinButton_withEmptyInput_doesNotTriggerCallback() {
+    var callbackInvoked = false
+
+    composeTestRule.setContent {
+      GroupListScreen(
+          viewModel = createViewModel(emptyList()), onJoinWithLink = { callbackInvoked = true })
+    }
+
+    // Open dialog
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).performClick()
+
+    // Click join button without entering text
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_JOIN_BUTTON).performClick()
+
+    // Verify callback was NOT invoked
+    assert(!callbackInvoked) { "Callback should not be invoked with empty input" }
+
+    // Verify dialog is still open
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_DIALOG).assertExists()
+  }
+
+  @Test
+  fun joinWithLinkDialog_joinButton_withWhitespaceOnlyInput_doesNotTriggerCallback() {
+    var callbackInvoked = false
+
+    composeTestRule.setContent {
+      GroupListScreen(
+          viewModel = createViewModel(emptyList()), onJoinWithLink = { callbackInvoked = true })
+    }
+
+    // Open dialog
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).performClick()
+
+    // Enter only whitespace
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_INPUT)
+        .performTextInput("     ")
+
+    // Click join button
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_JOIN_BUTTON).performClick()
+
+    // Verify callback was NOT invoked
+    assert(!callbackInvoked) { "Callback should not be invoked with whitespace-only input" }
+
+    // Verify dialog is still open
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_DIALOG).assertExists()
+  }
+
+  @Test
+  fun joinWithLinkDialog_closeButton_closesDialog() {
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(emptyList())) }
+
+    // Open dialog
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).performClick()
+
+    // Verify dialog is open
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_DIALOG).assertExists()
+
+    // Click close button
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_CLOSE_BUTTON)
+        .performClick()
+
+    // Verify dialog is closed
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_DIALOG)
+        .assertDoesNotExist()
+  }
+
+  @Test
+  fun joinWithLinkDialog_closeButton_doesNotTriggerCallback() {
+    var callbackInvoked = false
+
+    composeTestRule.setContent {
+      GroupListScreen(
+          viewModel = createViewModel(emptyList()), onJoinWithLink = { callbackInvoked = true })
+    }
+
+    // Open dialog
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).performClick()
+
+    // Enter text and close without joining
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_INPUT)
+        .performTextInput("group123")
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_CLOSE_BUTTON)
+        .performClick()
+
+    // Verify callback was NOT invoked
+    assert(!callbackInvoked) { "Callback should not be invoked when closing dialog" }
+  }
+
+  @Test
+  fun joinWithLinkDialog_pasteButton_isClickable() {
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(emptyList())) }
+
+    // Open dialog
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).performClick()
+
+    // Verify paste button is clickable
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_PASTE_BUTTON)
+        .assertHasClickAction()
+  }
+
+  @Test
+  fun joinWithLinkDialog_inputField_isSingleLine() {
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(emptyList())) }
+
+    // Open dialog
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).performClick()
+
+    // Verify input field exists and is editable
+    composeTestRule
+        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_INPUT)
+        .assertIsDisplayed()
+        .assertHasClickAction()
   }
 }
