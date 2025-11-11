@@ -31,14 +31,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.eventItem.EventItem
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.ui.components.EventCard
 import com.android.joinme.ui.components.SerieCard
-import com.android.joinme.ui.theme.DividerColor
+import com.android.joinme.ui.theme.Dimens
 
 object HistoryScreenTestTags {
   const val SCREEN = "historyScreen"
@@ -109,12 +108,14 @@ fun HistoryScreen(
               },
               actions = {
                 // Empty Box to balance the navigation icon and center the title
-                Box(modifier = Modifier.size(48.dp))
+                Box(modifier = Modifier.size(Dimens.History.topBarActionSize))
               },
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
-          HorizontalDivider(color = DividerColor, thickness = 1.dp)
+          HorizontalDivider(
+              color = MaterialTheme.colorScheme.outlineVariant,
+              thickness = Dimens.History.dividerThickness)
         }
       }) { innerPadding ->
         when {
@@ -139,14 +140,17 @@ fun HistoryScreen(
                       textAlign = TextAlign.Center,
                       style = MaterialTheme.typography.bodyMedium,
                       modifier =
-                          Modifier.padding(horizontal = 32.dp)
+                          Modifier.padding(horizontal = Dimens.History.emptyMessagePadding)
                               .testTag(HistoryScreenTestTags.EMPTY_HISTORY_MSG))
                 }
           }
           else -> {
             // Content state
             LazyColumn(
-                contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
+                contentPadding =
+                    PaddingValues(
+                        vertical = Dimens.History.listVerticalPadding,
+                        horizontal = Dimens.History.listHorizontalPadding),
                 modifier =
                     Modifier.fillMaxWidth()
                         .padding(innerPadding)
@@ -155,14 +159,16 @@ fun HistoryScreen(
                     when (val item = expiredItems[index]) {
                       is EventItem.SingleEvent -> {
                         EventCard(
-                            modifier = Modifier.padding(vertical = 6.dp),
+                            modifier =
+                                Modifier.padding(vertical = Dimens.History.cardVerticalPadding),
                             event = item.event,
                             onClick = { onSelectEvent(item.event) },
                             testTag = HistoryScreenTestTags.getTestTagForEvent(item.event))
                       }
                       is EventItem.EventSerie -> {
                         SerieCard(
-                            modifier = Modifier.padding(vertical = 6.dp),
+                            modifier =
+                                Modifier.padding(vertical = Dimens.History.cardVerticalPadding),
                             serie = item.serie,
                             onClick = { onSelectSerie(item.serie) },
                             testTag = HistoryScreenTestTags.getTestTagForSerie(item.serie))

@@ -2,13 +2,14 @@ package com.android.joinme.ui.groups
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,13 +20,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.android.joinme.R
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.displayString
-import com.android.joinme.ui.theme.ErrorBorderColor
+import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.TransparentColor
+import com.android.joinme.ui.theme.buttonColors
+import com.android.joinme.ui.theme.customColors
+import com.android.joinme.ui.theme.outlinedTextField
+import java.util.Locale
 
 /** Data class representing the test tags for group form fields. */
 data class GroupFormTestTags(
@@ -33,6 +36,7 @@ data class GroupFormTestTags(
     val title: String,
     val groupPicture: String,
     val editPhotoButton: String,
+    val deletePhotoButton: String,
     val loadingIndicator: String,
     val errorMessage: String,
     val groupNameTextField: String,
@@ -42,7 +46,8 @@ data class GroupFormTestTags(
     val nameSupportingText: String,
     val descriptionSupportingText: String,
     val categoryMenu: String,
-    val categoryOptionPrefix: String
+    val categoryOptionPrefix: String,
+    val categoryDropdownTouchableArea: String
 )
 
 /** Data class representing the state of the group form. */
@@ -83,7 +88,10 @@ fun GroupFormScreen(
     onSave: () -> Unit,
     onGoBack: () -> Unit,
     saveButtonText: String = "Save",
-    onPictureEditClick: () -> Unit = {}
+    onPictureEditClick: () -> Unit = {},
+    onPictureDeleteClick: () -> Unit = {},
+    groupPictureUrl: String? = null,
+    isUploadingPicture: Boolean = false
 ) {
   Scaffold(
       modifier = Modifier.fillMaxSize().testTag(testTags.screen),
@@ -100,13 +108,16 @@ fun GroupFormScreen(
                 IconButton(onClick = onGoBack) {
                   Icon(
                       imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                      contentDescription = "Back")
+                      contentDescription = "Back",
+                      tint = MaterialTheme.colorScheme.primary)
                 }
               },
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
-          HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+          HorizontalDivider(
+              color = MaterialTheme.colorScheme.primary,
+              thickness = Dimens.History.dividerThickness)
         }
       }) { paddingValues ->
         when {
@@ -114,7 +125,9 @@ fun GroupFormScreen(
             Box(
                 modifier = Modifier.fillMaxSize().padding(paddingValues),
                 contentAlignment = Alignment.Center) {
-                  CircularProgressIndicator(modifier = Modifier.testTag(testTags.loadingIndicator))
+                  CircularProgressIndicator(
+                      color = MaterialTheme.colorScheme.primary,
+                      modifier = Modifier.testTag(testTags.loadingIndicator))
                 }
           }
           formState.errorMsg != null -> {
@@ -134,11 +147,18 @@ fun GroupFormScreen(
                         .padding(paddingValues)
                         .background(MaterialTheme.colorScheme.background)
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                        .padding(
+                            horizontal = Dimens.Padding.screenHorizontal,
+                            vertical = Dimens.Padding.screenVertical),
                 horizontalAlignment = Alignment.CenterHorizontally) {
-                  GroupPictureSection(onPictureEditClick = onPictureEditClick, testTags = testTags)
+                  GroupPictureSection(
+                      onPictureEditClick = onPictureEditClick,
+                      onPictureDeleteClick = onPictureDeleteClick,
+                      groupPictureUrl = groupPictureUrl,
+                      isUploadingPicture = isUploadingPicture,
+                      testTags = testTags)
 
-                  Spacer(modifier = Modifier.height(32.dp))
+                  Spacer(modifier = Modifier.height(Dimens.Spacing.extraLarge))
 
                   GroupNameInput(
                       value = formState.name,
@@ -146,14 +166,14 @@ fun GroupFormScreen(
                       error = formState.nameError,
                       testTags = testTags)
 
-                  Spacer(modifier = Modifier.height(24.dp))
+                  Spacer(modifier = Modifier.height(Dimens.Spacing.fieldSpacing))
 
                   CategoryDropdown(
                       selectedCategory = formState.category,
                       onCategorySelected = onCategoryChange,
                       testTags = testTags)
 
-                  Spacer(modifier = Modifier.height(24.dp))
+                  Spacer(modifier = Modifier.height(Dimens.Spacing.fieldSpacing))
 
                   DescriptionInput(
                       value = formState.description,
@@ -162,14 +182,14 @@ fun GroupFormScreen(
                       testTags = testTags)
 
                   Spacer(modifier = Modifier.weight(1f))
-                  Spacer(modifier = Modifier.height(32.dp))
+                  Spacer(modifier = Modifier.height(Dimens.Group.saveButtonTopSpacing))
 
                   SaveButton(
                       enabled = formState.isValid,
                       onClick = onSave,
                       text = saveButtonText,
                       testTags = testTags)
-                  Spacer(modifier = Modifier.height(16.dp))
+                  Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
                 }
           }
         }
@@ -177,43 +197,110 @@ fun GroupFormScreen(
 }
 
 /**
- * Displays the group picture section with an edit button overlay.
+ * Displays the group picture section with edit and delete button overlays.
  *
- * This component shows a circular placeholder image for the group with a blurred background effect.
- * An edit icon button is overlaid on the image to allow users to change the group picture.
- * Currently uses a default placeholder image that will be replaced with actual group pictures.
+ * This component shows a circular placeholder or actual image for the group with a blurred
+ * background effect. Edit and delete icon buttons are overlaid on the image to allow users to
+ * change or remove the group picture. The implementation mirrors ProfilePictureSection for
+ * consistency.
  *
  * @param onPictureEditClick Callback invoked when the user taps the edit button to change the
  *   picture
- * @param testTags Test tags for UI testing of the picture section and edit button
+ * @param onPictureDeleteClick Callback invoked when the user taps the delete button to remove the
+ *   picture
+ * @param groupPictureUrl Optional URL of the current group picture
+ * @param isUploadingPicture Whether a picture upload is in progress
+ * @param testTags Test tags for UI testing of the picture section and buttons
  */
 @Composable
-private fun GroupPictureSection(onPictureEditClick: () -> Unit, testTags: GroupFormTestTags) {
+private fun GroupPictureSection(
+    onPictureEditClick: () -> Unit,
+    onPictureDeleteClick: () -> Unit,
+    groupPictureUrl: String?,
+    isUploadingPicture: Boolean,
+    testTags: GroupFormTestTags
+) {
   Box(
-      modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp).testTag(testTags.groupPicture),
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(vertical = Dimens.Group.picturePadding)
+              .testTag(testTags.groupPicture),
       contentAlignment = Alignment.Center) {
-        Box(modifier = Modifier.size(140.dp), contentAlignment = Alignment.Center) {
-          Image(
-              painter = painterResource(id = R.drawable.group_default_picture),
-              contentDescription = "Group picture placeholder",
-              modifier = Modifier.matchParentSize().blur(5.dp).clip(CircleShape))
-
-          Button(
-              onClick = onPictureEditClick,
-              colors = ButtonDefaults.buttonColors(containerColor = TransparentColor),
-              shape = CircleShape,
-              modifier = Modifier.size(120.dp).testTag(testTags.editPhotoButton)) {
+        Box(
+            modifier = Modifier.size(Dimens.Group.pictureLarge),
+            contentAlignment = Alignment.Center) {
+              // Show loading indicator while uploading
+              if (isUploadingPicture) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(Dimens.Group.pictureLarge),
+                    color = MaterialTheme.colorScheme.primary,
+                    strokeWidth = Dimens.LoadingIndicator.strokeWidth)
+              } else {
                 Box(
-                    modifier = Modifier.size(50.dp).clip(CircleShape).background(TransparentColor),
+                    modifier =
+                        Modifier.size(Dimens.Group.pictureLarge)
+                            .clip(CircleShape)
+                            .blur(Dimens.Group.pictureBlurRadius),
                     contentAlignment = Alignment.Center) {
-                      Icon(
-                          imageVector = Icons.Outlined.Edit,
-                          contentDescription = "Edit Photo",
-                          tint = MaterialTheme.colorScheme.onSurface,
-                          modifier = Modifier.size(56.dp))
+                      // Tint scrim for a frosted glass look
+                      Box(modifier = Modifier.matchParentSize().background(TransparentColor)) {}
+
+                      // TODO: Replace with actual GroupPhotoImage component when available
+                      Image(
+                          painter = painterResource(id = R.drawable.group_default_picture),
+                          contentDescription = "Group picture",
+                          modifier = Modifier.matchParentSize().clip(CircleShape))
                     }
+
+                // Edit button overlay
+                Button(
+                    onClick = onPictureEditClick,
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = TransparentColor,
+                            disabledContainerColor = TransparentColor),
+                    shape = CircleShape,
+                    modifier =
+                        Modifier.size(Dimens.Group.editButtonSize)
+                            .testTag(testTags.editPhotoButton)) {
+                      Box(
+                          modifier =
+                              Modifier.size(Dimens.Group.editIconContainer)
+                                  .clip(CircleShape)
+                                  .background(TransparentColor),
+                          contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Outlined.Edit,
+                                contentDescription = "Edit Picture",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(Dimens.Group.editIconSize))
+                          }
+                    }
+
+                // Delete Icon Button (Bottom Right)
+                // Show only if a picture exists and we are not loading
+                if (groupPictureUrl != null && groupPictureUrl.isNotEmpty()) {
+                  IconButton(
+                      onClick = onPictureDeleteClick,
+                      modifier =
+                          Modifier.align(Alignment.BottomEnd)
+                              .size(Dimens.Group.deleteButtonSize)
+                              .clip(CircleShape)
+                              .background(MaterialTheme.colorScheme.surface)
+                              .border(
+                                  Dimens.BorderWidth.thin,
+                                  MaterialTheme.colorScheme.outlineVariant,
+                                  CircleShape)
+                              .testTag(testTags.deletePhotoButton)) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete Picture",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(Dimens.Group.deleteIconSize))
+                      }
+                }
               }
-        }
+            }
       }
 }
 
@@ -240,10 +327,10 @@ private fun GroupNameInput(
   Column(modifier = Modifier.fillMaxWidth()) {
     Text(
         text = "Group name",
-        fontSize = 16.sp,
+        style = MaterialTheme.typography.bodyLarge,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.padding(bottom = 8.dp))
+        modifier = Modifier.padding(bottom = Dimens.TextField.labelSpacing))
 
     OutlinedTextField(
         value = value,
@@ -252,20 +339,19 @@ private fun GroupNameInput(
         placeholder = { Text("Group name", color = MaterialTheme.colorScheme.onSurfaceVariant) },
         isError = error != null,
         singleLine = true,
-        colors =
-            OutlinedTextFieldDefaults.colors(
-                focusedBorderColor =
-                    if (error != null) ErrorBorderColor else MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor =
-                    if (error != null) ErrorBorderColor else MaterialTheme.colorScheme.outline,
-                errorBorderColor = ErrorBorderColor,
-                cursorColor = MaterialTheme.colorScheme.primary))
+        colors = MaterialTheme.customColors.outlinedTextField())
 
     Text(
         text = error ?: "3-30 characters. Letters, numbers, spaces, or underscores only",
-        fontSize = 12.sp,
-        color = if (error != null) ErrorBorderColor else MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 16.dp, top = 4.dp).testTag(testTags.nameSupportingText))
+        style = MaterialTheme.typography.bodySmall,
+        color =
+            if (error != null) MaterialTheme.colorScheme.error
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier =
+            Modifier.padding(
+                    start = Dimens.TextField.supportingTextPadding,
+                    top = Dimens.TextField.supportingTextSpacing)
+                .testTag(testTags.nameSupportingText))
   }
 }
 
@@ -282,6 +368,7 @@ private fun GroupNameInput(
  * @param onCategorySelected Callback invoked when a user selects a category from the dropdown
  * @param testTags Test tags for UI testing of the dropdown field and menu items
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoryDropdown(
     selectedCategory: EventType,
@@ -289,49 +376,48 @@ private fun CategoryDropdown(
     testTags: GroupFormTestTags
 ) {
   var expanded by remember { mutableStateOf(false) }
+  val eventTypes = EventType.values()
 
   Column(modifier = Modifier.fillMaxWidth()) {
     Text(
         text = "Category",
-        fontSize = 16.sp,
+        style = MaterialTheme.typography.bodyLarge,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.padding(bottom = 8.dp))
+        modifier = Modifier.padding(bottom = Dimens.TextField.labelSpacing))
 
-    Box(modifier = Modifier.fillMaxWidth()) {
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
       OutlinedTextField(
           value = selectedCategory.displayString(),
           onValueChange = {},
-          modifier = Modifier.fillMaxWidth().testTag(testTags.categoryDropdown),
+          modifier = Modifier.fillMaxWidth().menuAnchor().testTag(testTags.categoryDropdown),
           readOnly = true,
           placeholder = { Text("Group Type", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-          trailingIcon = {
-            IconButton(onClick = { expanded = !expanded }) {
-              Icon(
-                  imageVector = Icons.Default.ArrowDropDown,
-                  contentDescription = "Dropdown",
-                  tint = MaterialTheme.colorScheme.onSurface)
-            }
-          },
-          colors =
-              OutlinedTextFieldDefaults.colors(
-                  focusedBorderColor = MaterialTheme.colorScheme.primary,
-                  unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                  cursorColor = MaterialTheme.colorScheme.primary,
-                  disabledTextColor = MaterialTheme.colorScheme.onSurface))
+          trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+          colors = MaterialTheme.customColors.outlinedTextField())
 
-      DropdownMenu(
+      ExposedDropdownMenu(
           expanded = expanded,
           onDismissRequest = { expanded = false },
-          modifier = Modifier.fillMaxWidth(0.9f).testTag(testTags.categoryMenu)) {
-            EventType.values().forEach { eventType ->
+          modifier =
+              Modifier.background(MaterialTheme.customColors.backgroundMenu)
+                  .testTag(testTags.categoryDropdownTouchableArea)) {
+            eventTypes.forEachIndexed { index, type ->
               DropdownMenuItem(
-                  text = { Text(eventType.displayString()) },
+                  text = {
+                    Text(
+                        text = type.displayString().uppercase(Locale.ROOT),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        style = MaterialTheme.typography.headlineSmall)
+                  },
                   onClick = {
-                    onCategorySelected(eventType)
+                    onCategorySelected(type)
                     expanded = false
                   },
-                  modifier = Modifier.testTag(testTags.categoryOptionPrefix + eventType.name))
+                  colors = MaterialTheme.customColors.dropdownMenu)
+              if (index < eventTypes.lastIndex) {
+                HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+              }
             }
           }
     }
@@ -362,16 +448,18 @@ private fun DescriptionInput(
   Column(modifier = Modifier.fillMaxWidth()) {
     Text(
         text = "Description",
-        fontSize = 16.sp,
+        style = MaterialTheme.typography.bodyLarge,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.padding(bottom = 8.dp))
+        modifier = Modifier.padding(bottom = Dimens.TextField.labelSpacing))
 
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         modifier =
-            Modifier.fillMaxWidth().height(120.dp).testTag(testTags.groupDescriptionTextField),
+            Modifier.fillMaxWidth()
+                .height(Dimens.Group.descriptionMinHeight)
+                .testTag(testTags.groupDescriptionTextField),
         placeholder = {
           Text(
               "Tell us what your group is about",
@@ -379,21 +467,19 @@ private fun DescriptionInput(
         },
         isError = error != null,
         maxLines = 4,
-        colors =
-            OutlinedTextFieldDefaults.colors(
-                focusedBorderColor =
-                    if (error != null) ErrorBorderColor else MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor =
-                    if (error != null) ErrorBorderColor else MaterialTheme.colorScheme.outline,
-                errorBorderColor = ErrorBorderColor,
-                cursorColor = MaterialTheme.colorScheme.primary))
+        colors = MaterialTheme.customColors.outlinedTextField())
 
     Text(
         text = error ?: "0-300 characters. Letters, numbers, spaces, or underscores only",
-        fontSize = 12.sp,
-        color = if (error != null) ErrorBorderColor else MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.bodySmall,
+        color =
+            if (error != null) MaterialTheme.colorScheme.error
+            else MaterialTheme.colorScheme.onSurfaceVariant,
         modifier =
-            Modifier.padding(start = 16.dp, top = 4.dp).testTag(testTags.descriptionSupportingText))
+            Modifier.padding(
+                    start = Dimens.TextField.supportingTextPadding,
+                    top = Dimens.TextField.supportingTextSpacing)
+                .testTag(testTags.descriptionSupportingText))
   }
 }
 
@@ -407,7 +493,7 @@ private fun DescriptionInput(
  * provide clear visual feedback about button availability.
  *
  * @param enabled Whether the button should be enabled (typically based on form validation)
- * @param onClick Callback invoked when the user clicks the save button
+ * @param onClick Callback when the user clicks the save button
  * @param text The text to display on the button (e.g., "Save", "Create Group")
  * @param testTags Test tags for UI testing of the save button
  */
@@ -421,14 +507,13 @@ private fun SaveButton(
   Button(
       onClick = onClick,
       enabled = enabled,
-      modifier = Modifier.fillMaxWidth().height(56.dp).testTag(testTags.saveButton),
-      colors =
-          ButtonDefaults.buttonColors(
-              containerColor = MaterialTheme.colorScheme.primary,
-              disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-              contentColor = MaterialTheme.colorScheme.onPrimary,
-              disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+      modifier =
+          Modifier.fillMaxWidth().height(Dimens.Button.standardHeight).testTag(testTags.saveButton),
+      colors = MaterialTheme.customColors.buttonColors(),
       shape = MaterialTheme.shapes.medium) {
-        Text(text = text.uppercase(), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = text.uppercase(),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold)
       }
 }

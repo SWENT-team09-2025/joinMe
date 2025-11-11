@@ -37,11 +37,11 @@ data class AuthUIState(
  *
  * @property repository The repository used to perform authentication operations.
  */
-class SignInViewModel(private val repository: AuthRepository = AuthRepositoryFirebase()) :
+open class SignInViewModel(private val repository: AuthRepository = AuthRepositoryFirebase()) :
     ViewModel() {
 
   private val _uiState = MutableStateFlow(AuthUIState())
-  val uiState: StateFlow<AuthUIState> = _uiState
+  open val uiState: StateFlow<AuthUIState> = _uiState
 
   /** Clears the error message in the UI state. */
   fun clearErrorMsg() {

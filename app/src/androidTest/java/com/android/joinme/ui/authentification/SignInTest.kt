@@ -22,17 +22,13 @@ class SignInScreenTest {
       onSignedIn: () -> Unit = {}
   ) {
     composeTestRule.setContent { SignInScreen(authViewModel = viewModel, onSignedIn = onSignedIn) }
+    composeTestRule.waitForIdle()
   }
 
   @Test
   fun signInScreen_displaysAppLogo() {
     setupScreen()
     composeTestRule.onNodeWithTag(SignInScreenTestTags.APP_LOGO).assertIsDisplayed()
-  }
-
-  @Test
-  fun signInScreen_displaysLoginButton() {
-    setupScreen()
     composeTestRule.onNodeWithTag(SignInScreenTestTags.LOGIN_BUTTON).assertIsDisplayed()
     composeTestRule.onNodeWithText("Sign in with Google").assertIsDisplayed()
   }
@@ -42,7 +38,8 @@ class SignInScreenTest {
     var clicked = false
     setupScreen(onSignedIn = { clicked = true })
     composeTestRule.onNodeWithTag(SignInScreenTestTags.LOGIN_BUTTON).performClick()
-    // Here we only test that click triggers something; actual sign-in flow needs mocking
+    // Here we only test that click triggers something; actual sign-in flow needs a difficult
+    // mocking
     assertFalse(clicked)
   }
 }

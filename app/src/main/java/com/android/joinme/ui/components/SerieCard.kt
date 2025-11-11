@@ -26,15 +26,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.android.joinme.model.serie.Serie
-import com.android.joinme.ui.theme.IconColor
-import com.android.joinme.ui.theme.OnEventCardTextColor
-import com.android.joinme.ui.theme.SerieCardBackgroundColor
-import com.android.joinme.ui.theme.SerieCardLayer2BorderColor
-import com.android.joinme.ui.theme.SerieCardLayer2Color
-import com.android.joinme.ui.theme.SerieCardLayer3BorderColor
-import com.android.joinme.ui.theme.SerieCardLayer3Color
+import com.android.joinme.ui.theme.Dimens
+import com.android.joinme.ui.theme.customColors
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -55,36 +49,43 @@ import java.util.Locale
  */
 @Composable
 fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, testTag: String) {
-  Box(modifier = modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+  Box(modifier = modifier.fillMaxWidth().padding(bottom = Dimens.SerieCard.bottomPadding)) {
     // Third layer (furthest back)
     Box(
         modifier =
             Modifier.fillMaxWidth()
-                .padding(horizontal = 12.dp)
-                .offset(y = 12.dp)
-                .height(100.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(SerieCardLayer3Color)
-                .border(2.dp, SerieCardLayer3BorderColor, RoundedCornerShape(12.dp)))
+                .padding(horizontal = Dimens.SerieCard.thirdLayerHorizontalPadding)
+                .offset(y = Dimens.SerieCard.thirdLayerOffset)
+                .height(Dimens.SerieCard.cardHeight)
+                .clip(RoundedCornerShape(Dimens.CornerRadius.large))
+                .background(MaterialTheme.customColors.activity)
+                .border(
+                    Dimens.SerieCard.layerBorderWidth,
+                    MaterialTheme.customColors.activity,
+                    RoundedCornerShape(Dimens.CornerRadius.large)))
 
     // Second layer (middle)
     Box(
         modifier =
             Modifier.fillMaxWidth()
-                .padding(horizontal = 6.dp)
-                .offset(y = 6.dp)
-                .height(100.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(SerieCardLayer2Color)
-                .border(2.dp, SerieCardLayer2BorderColor, RoundedCornerShape(12.dp)))
+                .padding(horizontal = Dimens.SerieCard.secondLayerHorizontalPadding)
+                .offset(y = Dimens.SerieCard.secondLayerOffset)
+                .height(Dimens.SerieCard.cardHeight)
+                .clip(RoundedCornerShape(Dimens.CornerRadius.large))
+                .background(MaterialTheme.customColors.sports)
+                .border(
+                    Dimens.SerieCard.layerBorderWidth,
+                    MaterialTheme.customColors.sports,
+                    RoundedCornerShape(Dimens.CornerRadius.large)))
 
     // Main card (front)
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).testTag(testTag),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = SerieCardBackgroundColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)) {
-          Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+        shape = RoundedCornerShape(Dimens.CornerRadius.large),
+        colors =
+            CardDefaults.cardColors(containerColor = MaterialTheme.customColors.serieContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = Dimens.Elevation.large)) {
+          Column(modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.medium)) {
             // Top row: date, Serie badge, time
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -95,32 +96,32 @@ fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, 
                           SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
                               .format(serie.date.toDate()),
                       style = MaterialTheme.typography.bodySmall,
-                      color = OnEventCardTextColor)
+                      color = MaterialTheme.customColors.onSerieContainer)
 
                   Text(
                       text = "Serie 🔥",
                       style = MaterialTheme.typography.bodySmall,
                       fontWeight = FontWeight.Medium,
-                      color = OnEventCardTextColor)
+                      color = MaterialTheme.customColors.onSerieContainer)
 
                   Text(
                       text =
                           SimpleDateFormat("HH'h'mm", Locale.getDefault())
                               .format(serie.date.toDate()),
                       style = MaterialTheme.typography.bodySmall,
-                      color = OnEventCardTextColor)
+                      color = MaterialTheme.customColors.onSerieContainer)
                 }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(Dimens.Spacing.small))
 
             // Title
             Text(
                 text = serie.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = OnEventCardTextColor)
+                color = MaterialTheme.customColors.onSerieContainer)
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
 
             // Bottom row: arrow
             Row(
@@ -130,7 +131,7 @@ fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, 
                   Icon(
                       imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                       contentDescription = "View serie details",
-                      tint = IconColor)
+                      tint = MaterialTheme.colorScheme.onSurface)
                 }
           }
         }

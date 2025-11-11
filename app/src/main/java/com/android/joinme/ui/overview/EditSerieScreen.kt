@@ -105,5 +105,5 @@ fun EditSerieScreen(
         true
       },
       onGoBack = onGoBack,
-      saveButtonText = "Save")
+      saveButtonText = "SAVE")
 }

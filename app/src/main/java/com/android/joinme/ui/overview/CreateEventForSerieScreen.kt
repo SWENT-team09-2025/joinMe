@@ -81,5 +81,5 @@ fun CreateEventForSerieScreen(
         success
       },
       onGoBack = onGoBack,
-      saveButtonText = "Create Event")
+      saveButtonText = "CREATE EVENT")
 }
