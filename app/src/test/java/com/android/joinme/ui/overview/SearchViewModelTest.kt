@@ -443,6 +443,8 @@ class SearchViewModelTest {
     // Only items containing "Basketball" should be visible (event1 and serie)
     assertEquals(2, viewModel.uiState.value.eventItems.size)
     assertTrue(
-        viewModel.uiState.value.eventItems.all { it.title.contains("Basketball", ignoreCase = true) })
+        viewModel.uiState.value.eventItems.all {
+          it.title.contains("Basketball", ignoreCase = true)
+        })
   }
 }

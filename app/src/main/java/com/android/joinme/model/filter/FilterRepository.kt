@@ -43,8 +43,8 @@ data class FilterState(
  *
  * This singleton provides a centralized source of truth for event filters (Social, Activity,
  * Sports) that can be shared across multiple screens (e.g., SearchScreen, MapScreen). It maintains
- * filter state and provides methods to toggle individual filters. When no filters are selected,
- * all events are shown by default.
+ * filter state and provides methods to toggle individual filters. When no filters are selected, all
+ * events are shown by default.
  */
 object FilterRepository {
 

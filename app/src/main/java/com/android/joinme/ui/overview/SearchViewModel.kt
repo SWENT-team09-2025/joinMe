@@ -180,9 +180,7 @@ class SearchViewModel(
         val eventsDeferred = async {
           eventRepo.getAllEvents(EventFilter.EVENTS_FOR_SEARCH_SCREEN).filter { it.isUpcoming() }
         }
-        val seriesDeferred = async {
-          seriesRepo.getAllSeries(SerieFilter.SERIES_FOR_SEARCH_SCREEN)
-        }
+        val seriesDeferred = async { seriesRepo.getAllSeries(SerieFilter.SERIES_FOR_SEARCH_SCREEN) }
 
         allEvents = eventsDeferred.await()
         allSeries = seriesDeferred.await()

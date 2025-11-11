@@ -235,7 +235,6 @@ class SearchScreenTest {
     assert(viewModel.uiState.value.query == "test")
   }
 
-
   @Test
   fun searchScreen_viewModelIntegration_socialFilterUpdates() {
     val viewModel = SearchViewModel(EventsRepositoryLocal())

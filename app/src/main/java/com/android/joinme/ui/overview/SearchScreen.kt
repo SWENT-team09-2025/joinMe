@@ -61,9 +61,9 @@ object SearchScreenTestTags {
 /**
  * Search screen composable that displays a search interface with filters.
  *
- * Provides a search text field, filter chips (Social, Activity), and a sport category dropdown menu.
- * Users can search for events and series, and apply various filters to narrow down results. When no
- * filters are selected, all events and series are shown.
+ * Provides a search text field, filter chips (Social, Activity), and a sport category dropdown
+ * menu. Users can search for events and series, and apply various filters to narrow down results.
+ * When no filters are selected, all events and series are shown.
  *
  * @param searchViewModel ViewModel managing search state and filter logic
  * @param searchQuery Initial search query (currently unused, reserved for future use)
