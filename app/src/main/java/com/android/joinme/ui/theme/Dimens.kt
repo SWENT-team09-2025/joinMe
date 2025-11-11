@@ -152,25 +152,6 @@ object Dimens {
     /** 16dp - Standard vertical padding for screen edges */
     val screenVertical: Dp = 16.dp
 
-    // Component-specific padding
-    /** 60dp - Right padding for menu positioning */
-    val menuRight: Dp = 60.dp
-
-    /** 80dp - Bottom/top margin for menus */
-    val menuVerticalMargin: Dp = 80.dp
-
-    /** 84dp - Bottom padding for FAB */
-    val fabBottom: Dp = 84.dp
-
-    /** 272dp - Height for menu overlay (5 items × 48dp + 4 spacers × 8dp) */
-    val menuHeight: Dp = 272.dp
-
-    /** 86dp - Minimum height for group cards */
-    val cardMinHeight: Dp = 86.dp
-
-    /** 6dp - Small spacing (description to members) */
-    val extraSmallSpacing: Dp = 6.dp
-
     // FloatingActionBubbles padding
     /** 6dp - Small bubble padding */
     val smallBubble: Dp = 6.dp

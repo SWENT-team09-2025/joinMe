@@ -287,7 +287,7 @@ fun GroupListScreen(
               modifier =
                   Modifier.fillMaxSize()
                       .padding(horizontal = Dimens.Padding.medium)
-                      .padding(bottom = pd.calculateBottomPadding() + Dimens.Padding.fabBottom)
+                      .padding(bottom = pd.calculateBottomPadding() + Dimens.Padding.extraLargeBubble)
                       .padding(top = pd.calculateTopPadding())
                       .testTag(GroupListScreenTestTags.LIST),
               contentPadding = PaddingValues(vertical = Dimens.Padding.smallMedium)) {
@@ -343,7 +343,7 @@ fun GroupListScreen(
                 Dimens.Spacing.small.times(numberOfButtons - 1)
 
         // Check if menu would go off-screen
-        val spaceBelow = screenHeightDp - buttonTopPaddingDp - Dimens.Padding.menuVerticalMargin
+        val spaceBelow = screenHeightDp - buttonTopPaddingDp - Dimens.Padding.extraLargeBubble
         val shouldPositionAbove = spaceBelow < dynamicMenuHeight
 
         // Calculate final top position
@@ -351,7 +351,7 @@ fun GroupListScreen(
             if (shouldPositionAbove) {
               // Position menu so bottom aligns with button (menu above button)
               (buttonTopPaddingDp - dynamicMenuHeight).coerceAtLeast(
-                  Dimens.Padding.menuVerticalMargin)
+                  Dimens.Padding.extraLargeBubble)
             } else {
               // Normal position (menu below button)
               buttonTopPaddingDp
@@ -380,7 +380,7 @@ fun GroupListScreen(
               Column(
                   modifier =
                       Modifier.align(Alignment.TopEnd)
-                          .padding(top = topPaddingDp, end = Dimens.Padding.menuRight),
+                          .padding(top = topPaddingDp, end = Dimens.Spacing.huge),
                   verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small),
                   horizontalAlignment = Alignment.End) {
                     // View Group Details
@@ -562,7 +562,7 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: (Float) 
   Card(
       modifier =
           Modifier.fillMaxWidth()
-              .heightIn(min = Dimens.Padding.cardMinHeight)
+              .heightIn(min = Dimens.Button.standardHeight)
               .clickable { onClick() }
               .testTag(GroupListScreenTestTags.cardTag(group.id)),
       colors =
@@ -588,7 +588,7 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: (Float) 
                           MaterialTheme.colorScheme.onPrimaryContainer.copy(
                               alpha = DESCRIPTION_ALPHA))
                 }
-                Spacer(Modifier.height(Dimens.Padding.extraSmallSpacing))
+                Spacer(Modifier.height(Dimens.Spacing.extraSmall))
                 Text(
                     text = "members: ${group.memberIds.size}",
                     style = MaterialTheme.typography.labelSmall,
