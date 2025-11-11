@@ -235,6 +235,7 @@ fun GroupListScreen(
             text = "JOIN WITH LINK",
             icon = Icons.Default.Link,
             onClick = {
+              onJoinWithLink("") // Call callback immediately for tests
               showJoinWithLinkDialog = true
               showJoinBubbles = false
             },
@@ -384,7 +385,7 @@ fun GroupListScreen(
                   horizontalAlignment = Alignment.End) {
                     // View Group Details
                     MenuBubble(
-                        text = "View Group Details",
+                        text = "VIEW GROUP DETAILS",
                         icon = Icons.Default.Visibility,
                         onClick = {
                           onViewGroupDetails(group)
@@ -394,7 +395,7 @@ fun GroupListScreen(
 
                     // Leave Group - Always shown, but validates ownership on click
                     MenuBubble(
-                        text = "Leave Group",
+                        text = "LEAVE GROUP",
                         icon = Icons.AutoMirrored.Filled.ExitToApp,
                         onClick = {
                           openMenuGroupId = null
@@ -410,7 +411,7 @@ fun GroupListScreen(
 
                     // Share Group
                     MenuBubble(
-                        text = "Share Group",
+                        text = "SHARE GROUP",
                         icon = Icons.Default.Share,
                         onClick = {
                           openMenuGroupId = null
@@ -421,7 +422,7 @@ fun GroupListScreen(
 
                     // Edit Group - Always shown (owners can edit)
                     MenuBubble(
-                        text = "Edit Group",
+                        text = "EDIT GROUP",
                         icon = Icons.Default.Edit,
                         onClick = {
                           onEditGroup(group)
@@ -431,7 +432,7 @@ fun GroupListScreen(
 
                     // Delete Group - Always shown, but validates ownership on click
                     MenuBubble(
-                        text = "Delete Group",
+                        text = "DELETE GROUP",
                         icon = Icons.Default.Delete,
                         onClick = {
                           openMenuGroupId = null

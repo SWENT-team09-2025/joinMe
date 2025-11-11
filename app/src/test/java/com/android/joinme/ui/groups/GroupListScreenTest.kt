@@ -759,10 +759,10 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test4")).performClick()
 
     // Then: Edit Group button is visible
-    composeTestRule.onNodeWithText("Edit Group").assertExists()
+    composeTestRule.onNodeWithText("EDIT GROUP").assertExists()
 
     // Click it
-    composeTestRule.onNodeWithText("Edit Group").performClick()
+    composeTestRule.onNodeWithText("EDIT GROUP").performClick()
 
     // Callback should be triggered
     assertEquals(group, editedGroup)
@@ -787,10 +787,10 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test5")).performClick()
 
     // Then: Delete Group button is visible (always shown now)
-    composeTestRule.onNodeWithText("Delete Group").assertExists()
+    composeTestRule.onNodeWithText("DELETE GROUP").assertExists()
 
     // Click it - without Firebase Auth, restriction dialog should appear
-    composeTestRule.onNodeWithText("Delete Group").performClick()
+    composeTestRule.onNodeWithText("DELETE GROUP").performClick()
 
     // Verify restriction dialog appears (since currentUserId is null in tests)
     composeTestRule
@@ -1167,11 +1167,11 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
 
     // Verify button labels
-    composeTestRule.onNodeWithText("View Group Details").assertExists()
-    composeTestRule.onNodeWithText("Leave Group").assertExists()
-    composeTestRule.onNodeWithText("Share Group").assertExists()
-    composeTestRule.onNodeWithText("Edit Group").assertExists()
-    composeTestRule.onNodeWithText("Delete Group").assertExists()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertExists()
+    composeTestRule.onNodeWithText("LEAVE GROUP").assertExists()
+    composeTestRule.onNodeWithText("SHARE GROUP").assertExists()
+    composeTestRule.onNodeWithText("EDIT GROUP").assertExists()
+    composeTestRule.onNodeWithText("DELETE GROUP").assertExists()
   }
 
   // =======================================
@@ -1186,7 +1186,7 @@ class GroupListScreenTest {
 
     // Open menu and click Leave Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("Leave Group").performClick()
+    composeTestRule.onNodeWithText("LEAVE GROUP").performClick()
 
     // Verify dialog appears
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_DIALOG).assertExists()
@@ -1204,7 +1204,7 @@ class GroupListScreenTest {
 
     // Open menu and click Leave Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("Leave Group").performClick()
+    composeTestRule.onNodeWithText("LEAVE GROUP").performClick()
 
     // Click Cancel
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_CANCEL_BUTTON).performClick()
@@ -1223,7 +1223,7 @@ class GroupListScreenTest {
     }
     // Open menu and click Leave Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("Leave Group").performClick()
+    composeTestRule.onNodeWithText("LEAVE GROUP").performClick()
     // Click Leave (confirm)
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_CONFIRM_BUTTON).performClick()
     // Verify callback was called
@@ -1237,7 +1237,7 @@ class GroupListScreenTest {
     composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
     // Open menu and click Leave Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("Leave Group").performClick()
+    composeTestRule.onNodeWithText("LEAVE GROUP").performClick()
     // Verify dialog message appears
     composeTestRule.onNodeWithText("Are you sure you want to leave\nthis group?").assertExists()
   }
@@ -1265,7 +1265,7 @@ class GroupListScreenTest {
 
     // Open menu for the created group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag(group.id)).performClick()
-    composeTestRule.onNodeWithText("Leave Group").performClick()
+    composeTestRule.onNodeWithText("LEAVE GROUP").performClick()
 
     // Verify owner restriction dialog appears (not the regular leave dialog)
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.OWNER_CANNOT_LEAVE_DIALOG).assertExists()
@@ -1303,7 +1303,7 @@ class GroupListScreenTest {
 
     // Open menu for the created group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag(group.id)).performClick()
-    composeTestRule.onNodeWithText("Leave Group").performClick()
+    composeTestRule.onNodeWithText("LEAVE GROUP").performClick()
 
     // Verify owner restriction dialog appears (not the regular leave dialog)
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.OWNER_CANNOT_LEAVE_DIALOG).assertExists()
@@ -1346,7 +1346,7 @@ class GroupListScreenTest {
 
     // Open menu and click Delete Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag(group.id)).performClick()
-    composeTestRule.onNodeWithText("Delete Group").performClick()
+    composeTestRule.onNodeWithText("DELETE GROUP").performClick()
 
     // Verify confirmation dialog appears (owner CAN delete)
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_DIALOG).assertExists()
@@ -1374,7 +1374,7 @@ class GroupListScreenTest {
 
     // Open menu and click Delete Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag(group.id)).performClick()
-    composeTestRule.onNodeWithText("Delete Group").performClick()
+    composeTestRule.onNodeWithText("DELETE GROUP").performClick()
 
     // Verify the warning message is displayed correctly
     composeTestRule
@@ -1407,7 +1407,7 @@ class GroupListScreenTest {
 
     // Open menu and click Delete Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag(group.id)).performClick()
-    composeTestRule.onNodeWithText("Delete Group").performClick()
+    composeTestRule.onNodeWithText("DELETE GROUP").performClick()
 
     // Click Cancel button
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_CANCEL_BUTTON).performClick()
@@ -1442,7 +1442,7 @@ class GroupListScreenTest {
 
     // Open menu and click Delete Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag(group.id)).performClick()
-    composeTestRule.onNodeWithText("Delete Group").performClick()
+    composeTestRule.onNodeWithText("DELETE GROUP").performClick()
 
     // Click Delete button to confirm
     composeTestRule
@@ -1477,7 +1477,7 @@ class GroupListScreenTest {
 
     // Open menu and click Delete Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag(group.id)).performClick()
-    composeTestRule.onNodeWithText("Delete Group").performClick()
+    composeTestRule.onNodeWithText("DELETE GROUP").performClick()
 
     // Verify restriction dialog appears (non-owner CANNOT delete)
     composeTestRule
@@ -1508,7 +1508,7 @@ class GroupListScreenTest {
 
     // Open menu and click Delete Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag(group.id)).performClick()
-    composeTestRule.onNodeWithText("Delete Group").performClick()
+    composeTestRule.onNodeWithText("DELETE GROUP").performClick()
 
     // Verify the restriction message is displayed correctly
     composeTestRule
@@ -1542,7 +1542,7 @@ class GroupListScreenTest {
 
     // Open menu and click Delete Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag(group.id)).performClick()
-    composeTestRule.onNodeWithText("Delete Group").performClick()
+    composeTestRule.onNodeWithText("DELETE GROUP").performClick()
 
     // Click OK button on restriction dialog
     composeTestRule
@@ -1568,7 +1568,7 @@ class GroupListScreenTest {
 
     // Open menu and click Share Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("Share Group").performClick()
+    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
 
     // Verify share dialog appears
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_DIALOG).assertExists()
@@ -1582,7 +1582,7 @@ class GroupListScreenTest {
 
     // Open menu and click Share Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("Share Group").performClick()
+    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
 
     // Verify share dialog appears and contains the group name
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_DIALOG).assertExists()
@@ -1598,7 +1598,7 @@ class GroupListScreenTest {
 
     // Open menu and click Share Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("Share Group").performClick()
+    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
 
     // Verify dialog title is displayed
     composeTestRule.onNodeWithText("       Share this group").assertExists()
@@ -1612,7 +1612,7 @@ class GroupListScreenTest {
 
     // Open menu and click Share Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("Share Group").performClick()
+    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
 
     // Verify copy link button is displayed
     composeTestRule
@@ -1629,7 +1629,7 @@ class GroupListScreenTest {
 
     // Open menu and click Share Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("Share Group").performClick()
+    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
 
     // Verify close button is displayed
     composeTestRule
@@ -1646,7 +1646,7 @@ class GroupListScreenTest {
 
     // Open menu and click Share Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("Share Group").performClick()
+    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
 
     // Verify dialog is open
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_DIALOG).assertExists()
@@ -1666,7 +1666,7 @@ class GroupListScreenTest {
 
     // Open menu and click Share Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("Share Group").performClick()
+    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
 
     // Verify copy link button is clickable
     composeTestRule
@@ -1682,7 +1682,7 @@ class GroupListScreenTest {
 
     // Open menu and click Share Group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("Share Group").performClick()
+    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
 
     // Verify "Copy Group ID" text is displayed
     composeTestRule.onNodeWithText("Copy Group ID").assertExists()
@@ -1712,7 +1712,7 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
 
     // Verify menu is displayed
-    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertIsDisplayed()
   }
 
   @Test
@@ -1723,13 +1723,13 @@ class GroupListScreenTest {
 
     // Open menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertIsDisplayed()
 
     // Click on the card (which is behind the scrim, but should close the menu)
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("test1")).performClick()
 
     // Menu should be closed
-    composeTestRule.onNodeWithText("View Group Details").assertDoesNotExist()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertDoesNotExist()
   }
 
   @Test
@@ -1773,13 +1773,13 @@ class GroupListScreenTest {
 
     // Open first menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g1")).performClick()
-    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertIsDisplayed()
 
     // Close by clicking action
-    composeTestRule.onNodeWithText("View Group Details").performClick()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").performClick()
 
     // Open second menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g2")).performClick()
-    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertIsDisplayed()
   }
 }
