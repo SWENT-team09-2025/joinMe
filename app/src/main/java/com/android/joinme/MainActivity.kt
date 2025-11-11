@@ -269,7 +269,9 @@ fun JoinMe(
         SearchScreen(
             navigationActions = navigationActions,
             onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
-            onSelectSerie = { navigationActions.navigateTo(Screen.SerieDetails(it.serieId)) })
+            onSelectSerie = { serieId ->
+              navigationActions.navigateTo(Screen.SerieDetails(serieId))
+            })
       }
     }
 

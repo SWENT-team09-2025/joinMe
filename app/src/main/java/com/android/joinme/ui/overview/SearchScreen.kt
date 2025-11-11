@@ -62,6 +62,8 @@ object SearchScreenTestTags {
   const val EMPTY_EVENT_LIST_MSG = "emptySearchEventList"
 
   fun getTestTagForEventItem(event: Event): String = "searchEventItem${event.eventId}"
+
+  fun getTestTagForSerieItem(serie: Serie): String = "searchSerieItem${serie.serieId}"
 }
 
 /**
@@ -74,7 +76,7 @@ object SearchScreenTestTags {
  * @param searchQuery Initial search query (currently unused, reserved for future use)
  * @param navigationActions Navigation actions for handling tab navigation
  * @param onSelectEvent Callback invoked when an event is selected from the list
- * @param onSelectSerie Callback invoked when a serie is selected from the list
+ * @param onSelectSerie Callback invoked when a serie is selected from the list, receives serieId
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,7 +85,7 @@ fun SearchScreen(
     searchQuery: String = "",
     navigationActions: NavigationActions? = null,
     onSelectEvent: (Event) -> Unit = {},
-    onSelectSerie: (Serie) -> Unit = {}
+    onSelectSerie: (String) -> Unit = {}
 ) {
   val context = LocalContext.current
   val uiState by searchViewModel.uiState.collectAsState()
@@ -241,8 +243,8 @@ fun SearchScreen(
                         SerieCard(
                             modifier = Modifier.padding(vertical = Dimens.Padding.small),
                             serie = item.serie,
-                            onClick = { onSelectSerie(item.serie) },
-                            testTag = "searchSerieItem${item.serie.serieId}")
+                            onClick = { onSelectSerie(item.serie.serieId) },
+                            testTag = SearchScreenTestTags.getTestTagForSerieItem(item.serie))
                       }
                     }
                   }
