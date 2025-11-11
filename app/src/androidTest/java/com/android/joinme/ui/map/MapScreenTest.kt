@@ -12,6 +12,8 @@ import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.map.Location
+import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.utils.Visibility
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
@@ -126,6 +128,55 @@ class MapScreenTest {
     composeTestRule.waitForIdle()
 
     // Verify the map screen is still displayed
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_displaysMarkersForSeries() {
+    val testViewModel = MapViewModel()
+
+    // Create test locations
+    val location1 = Location(latitude = 46.5187, longitude = 6.5629, name = "EPFL")
+    val location2 = Location(latitude = 46.52, longitude = 6.57, name = "Lausanne")
+
+    // Create test series with locations
+    val testSeries =
+        mapOf(
+            location1 to
+                Serie(
+                    serieId = "serie1",
+                    title = "Weekly Football",
+                    description = "Test serie",
+                    date = Timestamp.now(),
+                    participants = emptyList(),
+                    maxParticipants = 10,
+                    visibility = Visibility.PUBLIC,
+                    eventIds = listOf("event1", "event2", "event3"),
+                    ownerId = "owner1"),
+            location2 to
+                Serie(
+                    serieId = "serie2",
+                    title = "Monthly Hiking",
+                    description = "Test serie 2",
+                    date = Timestamp.now(),
+                    participants = emptyList(),
+                    maxParticipants = 5,
+                    visibility = Visibility.PUBLIC,
+                    eventIds = listOf("event4", "event5"),
+                    ownerId = "owner2"))
+
+    // Use reflection to inject series into the ViewModel state
+    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
+    stateField.isAccessible = true
+    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
+    mutableState.value = MapUIState(series = testSeries)
+
+    composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
+    composeTestRule.waitForIdle()
+
     composeTestRule
         .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
         .assertExists()
