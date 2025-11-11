@@ -404,20 +404,25 @@ class HistoryViewModelTest {
     private val fakeSeries = mutableListOf<Serie>()
 
     init {
-      // Add an expired serie (date is 5 hours ago, no events)
+      // Add an expired serie (ended 2 hours ago)
       val calendar = Calendar.getInstance()
-      calendar.add(Calendar.HOUR, -5)
+      calendar.add(Calendar.HOUR, -5) // Started 5 hours ago
+      val startDate = calendar.time
+      calendar.add(Calendar.HOUR, 3) // Ended 2 hours ago
+      val endDate = calendar.time
+
       fakeSeries.add(
           Serie(
               serieId = "serie1",
               title = "Expired Serie",
               description = "Serie desc",
-              date = Timestamp(calendar.time),
+              date = Timestamp(startDate),
               participants = listOf("user1"),
               maxParticipants = 10,
               visibility = Visibility.PUBLIC,
-              eventIds = emptyList(), // Empty series with past date is expired
-              ownerId = "owner1"))
+              eventIds = emptyList(),
+              ownerId = "owner1",
+              lastEventEndTime = Timestamp(endDate))) // Set to past time to make it expired
     }
 
     fun clearAllSeries() {
@@ -427,17 +432,21 @@ class HistoryViewModelTest {
     fun addFutureSerie() {
       val calendar = Calendar.getInstance()
       calendar.add(Calendar.DAY_OF_MONTH, 30) // 30 days in the future
+      val futureDate = calendar.time
+
       fakeSeries.add(
           Serie(
               serieId = "futureSerie1",
               title = "Future Serie",
               description = "Future serie desc",
-              date = Timestamp(calendar.time),
+              date = Timestamp(futureDate),
               participants = listOf("user1"),
               maxParticipants = 10,
               visibility = Visibility.PUBLIC,
-              eventIds = emptyList(), // Empty series with future date is not expired
-              ownerId = "owner1"))
+              eventIds = emptyList(),
+              ownerId = "owner1",
+              lastEventEndTime =
+                  Timestamp(futureDate))) // Set to future time to make it not expired
     }
 
     override fun getNewSerieId(): String {

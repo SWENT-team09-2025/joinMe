@@ -371,6 +371,10 @@ class CreateEventForSerieViewModelTest {
     val updatedSerie = serieRepo.getSerie("serie-1")
     assertEquals(1, updatedSerie.eventIds.size)
     assertEquals(event.eventId, updatedSerie.eventIds.first())
+
+    // Verify lastEventEndTime was updated to the end of the new event
+    val expectedEndTime = event.date.toDate().time + (event.duration * 60 * 1000)
+    assertEquals(expectedEndTime, updatedSerie.lastEventEndTime?.toDate()?.time)
   }
 
   @Test
@@ -439,6 +443,10 @@ class CreateEventForSerieViewModelTest {
     assertEquals(2, updatedSerie.eventIds.size)
     assertTrue(updatedSerie.eventIds.contains("event-1"))
     assertTrue(updatedSerie.eventIds.contains(newEvent.eventId))
+
+    // Verify lastEventEndTime was updated to the end of the new (second) event
+    val expectedEndTime = newEvent.date.toDate().time + (newEvent.duration * 60 * 1000)
+    assertEquals(expectedEndTime, updatedSerie.lastEventEndTime?.toDate()?.time)
   }
 
   @Test
@@ -654,5 +662,56 @@ class CreateEventForSerieViewModelTest {
     // Verify serie has all three events
     val updatedSerie = serieRepo.getSerie("serie-1")
     assertEquals(3, updatedSerie.eventIds.size)
+
+    // Verify lastEventEndTime was updated to the end of the third (last) event
+    val expectedEndTime = event3.date.toDate().time + (event3.duration * 60 * 1000)
+    assertEquals(expectedEndTime, updatedSerie.lastEventEndTime?.toDate()?.time)
+  }
+
+  @Test
+  fun createEventForSerie_updatesLastEventEndTime() = runTest {
+    // Create a serie with initial lastEventEndTime
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_MONTH, 7)
+    val serieDate = Timestamp(calendar.time)
+
+    val serie =
+        Serie(
+            serieId = "serie-1",
+            title = "Test Serie",
+            description = "Test",
+            date = serieDate,
+            participants = listOf("owner-1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = emptyList(),
+            ownerId = "owner-1",
+            lastEventEndTime = serieDate) // Initially equals serie date
+
+    serieRepo.addSerie(serie)
+
+    // Verify initial lastEventEndTime
+    assertEquals(serieDate.toDate().time, serie.lastEventEndTime?.toDate()?.time)
+
+    // Create an event with 120 minute duration
+    vm.setType("SPORTS")
+    vm.setTitle("Long Event")
+    vm.setDescription("A long event")
+    vm.setDuration("120")
+    vm.selectLocation(Location(latitude = 1.0, longitude = 1.0, name = "Stadium"))
+
+    val ok = vm.createEventForSerie("serie-1")
+    advanceUntilIdle()
+
+    assertTrue(ok)
+
+    // Verify lastEventEndTime was updated
+    val updatedSerie = serieRepo.getSerie("serie-1")
+    val event = eventRepo.added.first()
+    val expectedEndTime = event.date.toDate().time + (120 * 60 * 1000)
+
+    assertEquals(expectedEndTime, updatedSerie.lastEventEndTime?.toDate()?.time)
+    // Verify it's different from the initial serie date
+    assertTrue(updatedSerie.lastEventEndTime!!.toDate().time > serieDate.toDate().time)
   }
 }

@@ -10,7 +10,6 @@ import java.util.Calendar
 import java.util.Date
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -29,7 +28,8 @@ class SerieTest {
           maxParticipants = 10,
           visibility = Visibility.PUBLIC,
           eventIds = listOf("event1", "event2", "event3"),
-          ownerId = "owner123")
+          ownerId = "owner123",
+          lastEventEndTime = sampleTimestamp)
 
   private fun createEvent(eventId: String, duration: Int = 90, hoursOffset: Int = 0): Event {
     val calendar = Calendar.getInstance()
@@ -61,23 +61,40 @@ class SerieTest {
   }
 
   @Test
-  fun `test serie equality and hashCode`() {
-    val serieCopy = sampleSerie.copy()
-    assertEquals(sampleSerie, serieCopy)
-    assertEquals(sampleSerie.hashCode(), serieCopy.hashCode())
+  fun `test serie has lastEventEndTime initialized to date`() {
+    // When creating a serie via the public API, lastEventEndTime should be set to date
+    assertTrue(sampleSerie.lastEventEndTime != null)
+    assertEquals(sampleSerie.date.toDate().time, sampleSerie.lastEventEndTime!!.toDate().time)
   }
 
   @Test
-  fun `test serie inequality`() {
-    val differentSerie = sampleSerie.copy(serieId = "serie456")
-    assertNotEquals(sampleSerie, differentSerie)
-  }
+  fun `test Serie invoke operator initializes lastEventEndTime correctly`() {
+    // Explicitly test the companion object's invoke operator function
+    val testDate = Timestamp(Date())
+    val serie =
+        Serie.invoke(
+            serieId = "test123",
+            title = "Test Title",
+            description = "Test Description",
+            date = testDate,
+            participants = listOf("user1", "user2"),
+            maxParticipants = 5,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner456")
 
-  @Test
-  fun `test copy function changes single property`() {
-    val newTitleSerie = sampleSerie.copy(title = "Changed Title")
-    assertEquals("Changed Title", newTitleSerie.title)
-    assertNotEquals(sampleSerie, newTitleSerie)
+    // Verify all parameters are set correctly
+    assertEquals("test123", serie.serieId)
+    assertEquals("Test Title", serie.title)
+    assertEquals("Test Description", serie.description)
+    assertEquals(testDate, serie.date)
+    assertEquals(listOf("user1", "user2"), serie.participants)
+    assertEquals(5, serie.maxParticipants)
+    assertEquals(Visibility.PUBLIC, serie.visibility)
+    assertEquals(listOf("event1"), serie.eventIds)
+    assertEquals("owner456", serie.ownerId)
+    // Verify lastEventEndTime is initialized to date (compare timestamps)
+    assertEquals(testDate.toDate().time, serie.lastEventEndTime?.toDate()?.time)
   }
 
   @Test
@@ -88,138 +105,176 @@ class SerieTest {
   }
 
   @Test
-  fun `getTotalDuration returns sum of all event durations`() {
-    val events =
-        listOf(
-            createEvent("event1", duration = 60),
-            createEvent("event2", duration = 90),
-            createEvent("event3", duration = 120))
-
-    val totalDuration = sampleSerie.getTotalDuration(events)
-    assertEquals(270, totalDuration) // 60 + 90 + 120
-  }
-
-  @Test
-  fun `getTotalDuration ignores events not in serie`() {
-    val events =
-        listOf(
-            createEvent("event1", duration = 60),
-            createEvent("event2", duration = 90),
-            createEvent("otherEvent", duration = 100))
-
-    val totalDuration = sampleSerie.getTotalDuration(events)
-    assertEquals(150, totalDuration) // 60 + 90, excluding otherEvent
-  }
-
-  @Test
-  fun `getTotalDuration returns zero for empty event list`() {
-    val totalDuration = sampleSerie.getTotalDuration(emptyList())
-    assertEquals(0, totalDuration)
-  }
-
-  @Test
-  fun `isActive returns true when one event is ongoing`() {
-    val events =
-        listOf(
-            createEvent("event1", duration = 60, hoursOffset = -3), // Past
-            createEvent("event2", duration = 120, hoursOffset = 0), // Ongoing (started now)
-            createEvent("event3", duration = 60, hoursOffset = 5)) // Future
-
-    assertTrue(sampleSerie.isActive(events))
-  }
-
-  @Test
-  fun `isActive returns false when all events are past`() {
-    val events =
-        listOf(
-            createEvent("event1", duration = 60, hoursOffset = -5),
-            createEvent("event2", duration = 60, hoursOffset = -3),
-            createEvent("event3", duration = 60, hoursOffset = -2))
-
-    assertFalse(sampleSerie.isActive(events))
-  }
-
-  @Test
-  fun `isActive returns false when all events are future`() {
-    val events =
-        listOf(
-            createEvent("event1", duration = 60, hoursOffset = 2),
-            createEvent("event2", duration = 60, hoursOffset = 5),
-            createEvent("event3", duration = 60, hoursOffset = 10))
-
-    assertFalse(sampleSerie.isActive(events))
-  }
-
-  @Test
-  fun `isActive ignores events not in serie`() {
-    val activeEventNotInSerie = createEvent("otherEvent", duration = 120, hoursOffset = 0)
-    val events =
-        listOf(
-            createEvent("event1", duration = 60, hoursOffset = -5), // Past
-            activeEventNotInSerie,
-            createEvent("event3", duration = 60, hoursOffset = 5)) // Future
-
-    assertFalse(sampleSerie.isActive(events))
-  }
-
-  @Test
-  fun `isExpired returns true when all events are past`() {
-    val events =
-        listOf(
-            createEvent("event1", duration = 60, hoursOffset = -5),
-            createEvent("event2", duration = 60, hoursOffset = -3),
-            createEvent("event3", duration = 60, hoursOffset = -2))
-
-    assertTrue(sampleSerie.isExpired(events))
-  }
-
-  @Test
-  fun `isExpired returns false when at least one event is ongoing`() {
-    val events =
-        listOf(
-            createEvent("event1", duration = 60, hoursOffset = -5), // Past
-            createEvent("event2", duration = 120, hoursOffset = 0), // Ongoing
-            createEvent("event3", duration = 60, hoursOffset = 5)) // Future
-
-    assertFalse(sampleSerie.isExpired(events))
-  }
-
-  @Test
-  fun `isExpired returns false when at least one event is future`() {
-    val events =
-        listOf(
-            createEvent("event1", duration = 60, hoursOffset = -5),
-            createEvent("event2", duration = 60, hoursOffset = -3),
-            createEvent("event3", duration = 60, hoursOffset = 2))
-
-    assertFalse(sampleSerie.isExpired(events))
-  }
-
-  @Test
-  fun `isExpired returns true when serie has no events and serie date is in past`() {
+  fun `getTotalDuration calculates from date to lastEventEndTime`() {
     val calendar = Calendar.getInstance()
-    calendar.add(Calendar.HOUR, -5)
-    val serie = sampleSerie.copy(eventIds = emptyList(), date = Timestamp(calendar.time))
-    val events = listOf(createEvent("event1", duration = 60, hoursOffset = -5))
+    val startDate = calendar.time
+    calendar.add(Calendar.MINUTE, 270) // 4.5 hours later
+    val endDate = calendar.time
 
-    assertTrue(serie.isExpired(events))
+    val serie =
+        Serie(
+            serieId = "serie123",
+            title = "Test Serie",
+            description = "Test",
+            date = Timestamp(startDate),
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1", "event2", "event3"),
+            ownerId = "owner123",
+            lastEventEndTime = Timestamp(endDate))
+
+    val totalDuration = serie.getTotalDuration()
+    assertEquals(270, totalDuration) // 270 minutes
   }
 
   @Test
-  fun `isExpired returns false when serie has no events but serie date is in future`() {
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.HOUR, 5)
-    val serie = sampleSerie.copy(eventIds = emptyList(), date = Timestamp(calendar.time))
-    val events = listOf(createEvent("event1", duration = 60, hoursOffset = -5))
+  fun `getTotalDuration returns zero when lastEventEndTime equals date`() {
+    val totalDuration = sampleSerie.getTotalDuration()
+    assertEquals(0, totalDuration) // date and lastEventEndTime are the same
+  }
 
-    assertFalse(serie.isExpired(events))
+  @Test
+  fun `isActive returns true when current time is between date and lastEventEndTime`() {
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -1) // Started 1 hour ago
+    val startDate = calendar.time
+    calendar.add(Calendar.HOUR, 3) // Ends 2 hours from now
+    val endDate = calendar.time
+
+    val serie =
+        Serie(
+            serieId = "serie123",
+            title = "Test Serie",
+            description = "Test",
+            date = Timestamp(startDate),
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner123",
+            lastEventEndTime = Timestamp(endDate))
+
+    assertTrue(serie.isActive())
+  }
+
+  @Test
+  fun `isActive returns false when serie has not started yet`() {
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 2) // Starts 2 hours from now
+    val startDate = calendar.time
+    calendar.add(Calendar.HOUR, 3) // Ends 5 hours from now
+    val endDate = calendar.time
+
+    val serie =
+        Serie(
+            serieId = "serie123",
+            title = "Test Serie",
+            description = "Test",
+            date = Timestamp(startDate),
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner123",
+            lastEventEndTime = Timestamp(endDate))
+
+    assertFalse(serie.isActive())
+  }
+
+  @Test
+  fun `isActive returns false when serie has already ended`() {
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -5) // Started 5 hours ago
+    val startDate = calendar.time
+    calendar.add(Calendar.HOUR, 3) // Ended 2 hours ago
+    val endDate = calendar.time
+
+    val serie =
+        Serie(
+            serieId = "serie123",
+            title = "Test Serie",
+            description = "Test",
+            date = Timestamp(startDate),
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner123",
+            lastEventEndTime = Timestamp(endDate))
+
+    assertFalse(serie.isActive())
+  }
+
+  @Test
+  fun `isExpired returns true when lastEventEndTime is in the past`() {
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -5) // Started 5 hours ago
+    val startDate = calendar.time
+    calendar.add(Calendar.HOUR, 3) // Ended 2 hours ago
+    val endDate = calendar.time
+
+    val serie =
+        Serie(
+            serieId = "serie123",
+            title = "Test Serie",
+            description = "Test",
+            date = Timestamp(startDate),
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner123",
+            lastEventEndTime = Timestamp(endDate))
+
+    assertTrue(serie.isExpired())
+  }
+
+  @Test
+  fun `isExpired returns false when lastEventEndTime is in the future`() {
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -1) // Started 1 hour ago
+    val startDate = calendar.time
+    calendar.add(Calendar.HOUR, 3) // Ends 2 hours from now
+    val endDate = calendar.time
+
+    val serie =
+        Serie(
+            serieId = "serie123",
+            title = "Test Serie",
+            description = "Test",
+            date = Timestamp(startDate),
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner123",
+            lastEventEndTime = Timestamp(endDate))
+
+    assertFalse(serie.isExpired())
+  }
+
+  @Test
+  fun `isExpired returns false when lastEventEndTime equals date (not started yet)`() {
+    assertFalse(sampleSerie.isExpired()) // lastEventEndTime equals date by default
   }
 
   @Test
   fun `isUpcoming returns true when serie date is in future`() {
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.HOUR, 2)
-    val futureSerie = sampleSerie.copy(date = Timestamp(calendar.time))
+
+    val futureSerie =
+        Serie(
+            serieId = "serie123",
+            title = "Test Serie",
+            description = "Test",
+            date = Timestamp(calendar.time),
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner123")
 
     assertTrue(futureSerie.isUpcoming())
   }
@@ -228,7 +283,18 @@ class SerieTest {
   fun `isUpcoming returns false when serie date is in past`() {
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.HOUR, -5)
-    val pastSerie = sampleSerie.copy(date = Timestamp(calendar.time))
+
+    val pastSerie =
+        Serie(
+            serieId = "serie123",
+            title = "Test Serie",
+            description = "Test",
+            date = Timestamp(calendar.time),
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner123")
 
     assertFalse(pastSerie.isUpcoming())
   }
@@ -266,49 +332,96 @@ class SerieTest {
 
   @Test
   fun `getTotalEventsCount returns zero for empty serie`() {
-    val emptySerie = sampleSerie.copy(eventIds = emptyList())
+    val emptySerie =
+        Serie(
+            serieId = "serie123",
+            title = "Test Serie",
+            description = "Test",
+            date = sampleTimestamp,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = emptyList(),
+            ownerId = "owner123")
+
     assertEquals(0, emptySerie.getTotalEventsCount())
   }
 
   @Test
   fun `getFormattedDuration returns hours and minutes when both present`() {
-    val events =
-        listOf(
-            createEvent("event1", duration = 90), // 1h 30min
-            createEvent("event2", duration = 120), // 2h
-            createEvent("event3", duration = 60)) // 1h
+    val calendar = Calendar.getInstance()
+    val startDate = calendar.time
+    calendar.add(Calendar.MINUTE, 270) // 4.5 hours later
+    val endDate = calendar.time
 
-    val formatted = sampleSerie.getFormattedDuration(events)
+    val serie =
+        Serie(
+            serieId = "serie123",
+            title = "Test Serie",
+            description = "Test",
+            date = Timestamp(startDate),
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner123",
+            lastEventEndTime = Timestamp(endDate))
+
+    val formatted = serie.getFormattedDuration()
     assertEquals("4h 30min", formatted) // Total: 270 minutes
   }
 
   @Test
   fun `getFormattedDuration returns only hours when no remaining minutes`() {
-    val events =
-        listOf(
-            createEvent("event1", duration = 60),
-            createEvent("event2", duration = 120),
-            createEvent("event3", duration = 60))
+    val calendar = Calendar.getInstance()
+    val startDate = calendar.time
+    calendar.add(Calendar.MINUTE, 240) // 4 hours later
+    val endDate = calendar.time
 
-    val formatted = sampleSerie.getFormattedDuration(events)
+    val serie =
+        Serie(
+            serieId = "serie123",
+            title = "Test Serie",
+            description = "Test",
+            date = Timestamp(startDate),
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner123",
+            lastEventEndTime = Timestamp(endDate))
+
+    val formatted = serie.getFormattedDuration()
     assertEquals("4h", formatted) // Total: 240 minutes
   }
 
   @Test
   fun `getFormattedDuration returns only minutes when less than one hour`() {
-    val events =
-        listOf(
-            createEvent("event1", duration = 15),
-            createEvent("event2", duration = 20),
-            createEvent("event3", duration = 10))
+    val calendar = Calendar.getInstance()
+    val startDate = calendar.time
+    calendar.add(Calendar.MINUTE, 45)
+    val endDate = calendar.time
 
-    val formatted = sampleSerie.getFormattedDuration(events)
+    val serie =
+        Serie(
+            serieId = "serie123",
+            title = "Test Serie",
+            description = "Test",
+            date = Timestamp(startDate),
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner123",
+            lastEventEndTime = Timestamp(endDate))
+
+    val formatted = serie.getFormattedDuration()
     assertEquals("45min", formatted)
   }
 
   @Test
-  fun `getFormattedDuration returns 0min for empty events`() {
-    val formatted = sampleSerie.getFormattedDuration(emptyList())
+  fun `getFormattedDuration returns 0min when lastEventEndTime equals date`() {
+    val formatted = sampleSerie.getFormattedDuration()
     assertEquals("0min", formatted)
   }
 
@@ -323,25 +436,64 @@ class SerieTest {
 
   @Test
   fun `serie with large number of events handles correctly`() {
+    val calendar = Calendar.getInstance()
+    val startDate = calendar.time
+    calendar.add(Calendar.MINUTE, 1200) // 20 hours later
+    val endDate = calendar.time
+
     val eventIds = (1..20).map { "event$it" }
-    val largeSerie = sampleSerie.copy(eventIds = eventIds)
+    val largeSerie =
+        Serie(
+            serieId = "serie123",
+            title = "Test Serie",
+            description = "Test",
+            date = Timestamp(startDate),
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = eventIds,
+            ownerId = "owner123",
+            lastEventEndTime = Timestamp(endDate))
+
     val events = eventIds.map { id -> createEvent(id, duration = 60, hoursOffset = 1) }
 
     assertEquals(20, largeSerie.getTotalEventsCount())
-    assertEquals(1200, largeSerie.getTotalDuration(events)) // 20 * 60
-    assertEquals("20h", largeSerie.getFormattedDuration(events))
+    assertEquals(1200, largeSerie.getTotalDuration()) // 20 * 60
+    assertEquals("20h", largeSerie.getFormattedDuration())
     assertEquals(20, largeSerie.getSerieEvents(events).size)
   }
 
   @Test
   fun `serie visibility can be PRIVATE`() {
-    val privateSerie = sampleSerie.copy(visibility = Visibility.PRIVATE)
+    val privateSerie =
+        Serie(
+            serieId = "serie123",
+            title = "Test Serie",
+            description = "Test",
+            date = sampleTimestamp,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = Visibility.PRIVATE,
+            eventIds = listOf("event1"),
+            ownerId = "owner123")
+
     assertEquals(Visibility.PRIVATE, privateSerie.visibility)
   }
 
   @Test
   fun `serie can have empty participants list`() {
-    val serieWithNoParticipants = sampleSerie.copy(participants = emptyList())
+    val serieWithNoParticipants =
+        Serie(
+            serieId = "serie123",
+            title = "Test Serie",
+            description = "Test",
+            date = sampleTimestamp,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner123")
+
     assertTrue(serieWithNoParticipants.participants.isEmpty())
     assertEquals(0, serieWithNoParticipants.participants.size)
   }
