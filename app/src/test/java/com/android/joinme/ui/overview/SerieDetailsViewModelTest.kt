@@ -505,7 +505,7 @@ class SerieDetailsViewModelTest {
 
     val errorEventsRepository =
         object : FakeEventsRepository() {
-          override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
+          override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
             throw Exception("Events fetch error")
           }
         }
