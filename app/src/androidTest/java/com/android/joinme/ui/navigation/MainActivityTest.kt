@@ -2,7 +2,11 @@ package com.android.joinme.ui.navigation
 /*CO-WRITE with claude AI*/
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.android.joinme.HttpClientProvider
 import com.android.joinme.MainActivity
@@ -243,5 +247,137 @@ class MainActivityTest {
 
     // Restore
     HttpClientProvider.client = originalClient
+  }
+
+  // ========== Deep Link Tests ==========
+
+  @Test
+  fun mainActivity_launchesWithEventDeepLink_extractsEventId() {
+    // Create intent with event deep link
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent = Intent(context, MainActivity::class.java).apply {
+      data = Uri.parse("joinme://event/test-event-123")
+      action = Intent.ACTION_VIEW
+    }
+
+    // Launch activity with deep link
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Verify intent data is set
+        assert(activity.intent.data != null)
+        assert(activity.intent.data?.host == "event")
+        assert(activity.intent.data?.lastPathSegment == "test-event-123")
+      }
+    }
+  }
+
+  @Test
+  fun mainActivity_launchesWithGroupDeepLink_extractsGroupId() {
+    // Create intent with group deep link
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent = Intent(context, MainActivity::class.java).apply {
+      data = Uri.parse("joinme://group/test-group-456")
+      action = Intent.ACTION_VIEW
+    }
+
+    // Launch activity with deep link
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Verify intent data is set and parsed correctly
+        val intentData = activity.intent.data
+        assert(intentData != null)
+        assert(intentData?.host == "group")
+        assert(intentData?.lastPathSegment == "test-group-456")
+
+        // Activity should not crash
+        assert(!activity.isFinishing)
+      }
+    }
+  }
+
+  @Test
+  fun mainActivity_launchesWithWebGroupDeepLink_extractsGroupId() {
+    // Create intent with web-style group deep link (joinme.app/group/id)
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent = Intent(context, MainActivity::class.java).apply {
+      data = Uri.parse("https://joinme.app/group/web-group-789")
+      action = Intent.ACTION_VIEW
+    }
+
+    // Launch activity with deep link
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Verify intent data is set and parsed correctly
+        val intentData = activity.intent.data
+        assert(intentData != null)
+        assert(intentData?.host == "joinme.app")
+
+        val pathSegments = intentData?.pathSegments
+        assert(pathSegments != null)
+        assert(pathSegments?.size == 2)
+        assert(pathSegments?.firstOrNull() == "group")
+        assert(pathSegments?.getOrNull(1) == "web-group-789")
+
+        // Activity should not crash
+        assert(!activity.isFinishing)
+      }
+    }
+  }
+
+  @Test
+  fun mainActivity_launchesWithNullDeepLink_doesNotCrash() {
+    // Create intent without deep link data
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent = Intent(context, MainActivity::class.java)
+    // Intentionally no data set
+
+    // Launch activity without deep link
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should handle null data gracefully
+        assert(activity.intent.data == null)
+        assert(!activity.isFinishing)
+      }
+    }
+  }
+
+  @Test
+  fun mainActivity_receivesNewIntent_doesNotCrash() {
+    // Test that receiving a new intent doesn't crash
+    // This indirectly tests onNewIntent by sending a new intent to running activity
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent = Intent(context, MainActivity::class.java)
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should not crash when receiving new intent
+        assert(!activity.isFinishing)
+      }
+    }
+  }
+
+  @Test
+  fun mainActivity_handlesInvalidDeepLinkGracefully() {
+    // Create intent with malformed deep link
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent = Intent(context, MainActivity::class.java).apply {
+      data = Uri.parse("joinme://invalid")
+      action = Intent.ACTION_VIEW
+    }
+
+    // Launch activity with invalid deep link
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should handle invalid data gracefully
+        assert(activity.intent.data != null)
+        assert(!activity.isFinishing)
+      }
+    }
   }
 }

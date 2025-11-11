@@ -769,36 +769,19 @@ class GroupListScreenTest {
   }
 
   @Test
-  fun deleteGroup_callbackIsTriggered_whenUserIsOwner() {
-    // Note: This test cannot fully verify the callback works for owners
-    // because ownership check requires Firebase.auth.currentUser?.uid == group.ownerId
-    // Without Firebase Auth initialized, currentUserId is null and doesn't match any ownerId
-    // So the restriction dialog will always be shown in tests
+  fun deleteGroup_buttonNotShown_whenUserIsNotOwner() {
+    // Without testCurrentUserId specified, currentUserId is null
+    // so user is not the owner and DELETE GROUP button should not be shown
 
     val group = Group(id = "test5", name = "Delete Group Test", ownerId = "someUserId")
-    var deletedGroup: Group? = null
 
-    composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = createViewModel(listOf(group)), onDeleteGroup = { deletedGroup = it })
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
 
     // When: User opens menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test5")).performClick()
 
-    // Then: Delete Group button is visible (always shown now)
-    composeTestRule.onNodeWithText("DELETE GROUP").assertExists()
-
-    // Click it - without Firebase Auth, restriction dialog should appear
-    composeTestRule.onNodeWithText("DELETE GROUP").performClick()
-
-    // Verify restriction dialog appears (since currentUserId is null in tests)
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.ONLY_OWNER_CAN_DELETE_DIALOG)
-        .assertExists()
-
-    // Callback should NOT be triggered
-    assertNull(deletedGroup)
+    // Then: Delete Group button is NOT visible (user is not owner)
+    composeTestRule.onNodeWithText("DELETE GROUP").assertDoesNotExist()
   }
 
   @Test
@@ -934,10 +917,9 @@ class GroupListScreenTest {
   @Test
   fun cardClick_doesNotTriggerWhenMenuIsOpen() {
     val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
-    var cardClicked = false
 
     composeTestRule.setContent {
-      GroupListScreen(viewModel = createViewModel(listOf(group)), onGroup = { cardClicked = true })
+      GroupListScreen(viewModel = createViewModel(listOf(group)), onGroup = {})
     }
 
     // Open menu
@@ -1088,12 +1070,16 @@ class GroupListScreenTest {
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
 
-    // All 5 menu options are now always visible
+    // Common menu options always visible
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE).assertExists()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_BUBBLE).assertExists()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).assertExists()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE).assertExists()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_BUBBLE).assertExists()
+
+    // Leave button shown for non-owners (currentUserId is null, not the owner)
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_BUBBLE).assertExists()
+
+    // Delete button NOT shown for non-owners (currentUserId is null, not the owner)
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_BUBBLE).assertDoesNotExist()
   }
 
   @Test
@@ -1111,7 +1097,7 @@ class GroupListScreenTest {
   // =======================================
 
   @Test
-  fun groupMenu_allFiveButtonsAlwaysVisible() {
+  fun groupMenu_commonButtonsAlwaysVisible() {
     val group = Group(id = "test1", name = "Test Group", ownerId = "currentUserId")
 
     composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
@@ -1119,12 +1105,15 @@ class GroupListScreenTest {
     // Open menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
 
-    // All 5 buttons should always be visible
+    // Common buttons always visible
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE).assertExists()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_BUBBLE).assertExists()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).assertExists()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE).assertExists()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_BUBBLE).assertExists()
+
+    // Leave shown for non-owners (currentUserId is null, not the owner)
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_BUBBLE).assertExists()
+    // Delete NOT shown for non-owners
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_BUBBLE).assertDoesNotExist()
   }
 
   @Test
@@ -1132,33 +1121,28 @@ class GroupListScreenTest {
     val groups =
         listOf(
             Group(id = "g1", name = "Group 1", ownerId = "currentUser"),
-            Group(id = "g2", name = "Group 2", ownerId = "otherUser"),
-            Group(id = "g3", name = "Group 3", ownerId = "anotherUser"))
+            Group(id = "g2", name = "Group 2", ownerId = "otherUser"))
 
     composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(groups)) }
 
-    // Check first group
+    // Check first group - currentUserId is null, so user is not owner
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g1")).performClick()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE).assertExists()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_BUBBLE).assertExists()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).assertExists()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE).assertExists()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_BUBBLE).assertDoesNotExist()
 
     // Close menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("g1")).performClick()
 
-    // Check second group
+    // Check second group - same behavior
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g2")).performClick()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE).assertExists()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_BUBBLE).assertExists()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).assertExists()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE).assertExists()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_BUBBLE).assertExists()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_BUBBLE).assertDoesNotExist()
   }
 
   @Test
-  fun groupMenu_allButtonsHaveCorrectLabels() {
+  fun groupMenu_commonButtonsHaveCorrectLabels() {
     val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
 
     composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
@@ -1166,12 +1150,12 @@ class GroupListScreenTest {
     // Open menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
 
-    // Verify button labels
+    // Verify button labels for common buttons
     composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertExists()
-    composeTestRule.onNodeWithText("LEAVE GROUP").assertExists()
+    composeTestRule.onNodeWithText("LEAVE GROUP").assertExists() // Shown for non-owner
     composeTestRule.onNodeWithText("SHARE GROUP").assertExists()
     composeTestRule.onNodeWithText("EDIT GROUP").assertExists()
-    composeTestRule.onNodeWithText("DELETE GROUP").assertExists()
+    // DELETE GROUP not shown since user is not owner (currentUserId is null)
   }
 
   // =======================================
@@ -1265,23 +1249,16 @@ class GroupListScreenTest {
 
     // Open menu for the created group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag(group.id)).performClick()
-    composeTestRule.onNodeWithText("LEAVE GROUP").performClick()
 
-    // Verify owner restriction dialog appears (not the regular leave dialog)
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.OWNER_CANNOT_LEAVE_DIALOG).assertExists()
-    composeTestRule.onNodeWithText("You cannot leave this group").assertExists()
-    composeTestRule
-        .onNodeWithText(
-            "Only non-owners can leave the group. As the owner, you can delete the group instead")
-        .assertExists()
+    // Verify LEAVE GROUP button does NOT exist (owner cannot leave)
+    composeTestRule.onNodeWithText("LEAVE GROUP").assertDoesNotExist()
   }
 
   @Test
-  fun leaveGroupDialog_okButton_dismissesDialog_whenOwner() {
+  fun leaveGroupButton_notShown_whenOwner() {
     val fakeRepo = FakeGroupRepository()
     val listViewModel = GroupListViewModel(fakeRepo)
     val testUserId = "testOwner456"
-    var leftGroup: Group? = null
 
     // Create a group directly in the repository where the test user is the owner
     val group =
@@ -1294,30 +1271,18 @@ class GroupListScreenTest {
 
     // Display the GroupListScreen with testCurrentUserId set to match the owner
     composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = listViewModel,
-          testCurrentUserId = testUserId,
-          onLeaveGroup = { leftGroup = it })
+      GroupListScreen(viewModel = listViewModel, testCurrentUserId = testUserId)
     }
     composeTestRule.waitForIdle()
 
     // Open menu for the created group
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag(group.id)).performClick()
-    composeTestRule.onNodeWithText("LEAVE GROUP").performClick()
 
-    // Verify owner restriction dialog appears (not the regular leave dialog)
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.OWNER_CANNOT_LEAVE_DIALOG).assertExists()
+    // Verify LEAVE GROUP button does NOT exist (owner cannot leave)
+    composeTestRule.onNodeWithText("LEAVE GROUP").assertDoesNotExist()
 
-    // Click OK button to dismiss the restriction dialog
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.OWNER_CANNOT_LEAVE_OK_BUTTON)
-        .performClick()
-
-    // Verify dialog is dismissed and onLeaveGroup callback was NOT called
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.OWNER_CANNOT_LEAVE_DIALOG)
-        .assertDoesNotExist()
-    assertNull(leftGroup)
+    // But DELETE GROUP button should exist (owner can delete)
+    composeTestRule.onNodeWithText("DELETE GROUP").assertExists()
   }
 
   // =======================================
@@ -1455,7 +1420,7 @@ class GroupListScreenTest {
   }
 
   @Test
-  fun deleteGroupButton_showsRestrictionDialog_whenNotOwner() {
+  fun deleteGroupButton_notShown_whenNotOwner() {
     val fakeRepo = FakeGroupRepository()
     val listViewModel = GroupListViewModel(fakeRepo)
     val testUserId = "testUser123"
@@ -1475,23 +1440,45 @@ class GroupListScreenTest {
     }
     composeTestRule.waitForIdle()
 
-    // Open menu and click Delete Group
+    // Open menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag(group.id)).performClick()
-    composeTestRule.onNodeWithText("DELETE GROUP").performClick()
 
-    // Verify restriction dialog appears (non-owner CANNOT delete)
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.ONLY_OWNER_CAN_DELETE_DIALOG)
-        .assertExists()
-    composeTestRule.onNodeWithText("You cannot delete this group").assertExists()
+    // Verify DELETE GROUP button does NOT exist (non-owner cannot delete)
+    composeTestRule.onNodeWithText("DELETE GROUP").assertDoesNotExist()
   }
 
   @Test
-  fun deleteGroupRestrictionDialog_showsCorrectMessage_whenNotOwner() {
+  fun deleteGroupButton_shown_whenOwner() {
     val fakeRepo = FakeGroupRepository()
     val listViewModel = GroupListViewModel(fakeRepo)
     val testUserId = "testUser124"
-    val ownerUserId = "differentOwner457"
+
+    val group =
+        Group(
+            id = fakeRepo.getNewGroupId(),
+            name = "Test Group",
+            ownerId = testUserId,
+            memberIds = listOf(testUserId))
+    fakeRepo.setGroups(listOf(group))
+
+    composeTestRule.setContent {
+      GroupListScreen(viewModel = listViewModel, testCurrentUserId = testUserId)
+    }
+    composeTestRule.waitForIdle()
+
+    // Open menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag(group.id)).performClick()
+
+    // Verify DELETE GROUP button EXISTS (owner can delete)
+    composeTestRule.onNodeWithText("DELETE GROUP").assertExists()
+  }
+
+  @Test
+  fun leaveGroupButton_shown_whenNotOwner() {
+    val fakeRepo = FakeGroupRepository()
+    val listViewModel = GroupListViewModel(fakeRepo)
+    val testUserId = "testUser125"
+    val ownerUserId = "differentOwner458"
 
     val group =
         Group(
@@ -1506,54 +1493,11 @@ class GroupListScreenTest {
     }
     composeTestRule.waitForIdle()
 
-    // Open menu and click Delete Group
+    // Open menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag(group.id)).performClick()
-    composeTestRule.onNodeWithText("DELETE GROUP").performClick()
 
-    // Verify the restriction message is displayed correctly
-    composeTestRule
-        .onNodeWithText("Only the owner of the group can delete the group")
-        .assertExists()
-  }
-
-  @Test
-  fun deleteGroupRestrictionDialog_okButton_dismissesDialog_whenNotOwner() {
-    val fakeRepo = FakeGroupRepository()
-    val listViewModel = GroupListViewModel(fakeRepo)
-    val testUserId = "testUser125"
-    val ownerUserId = "differentOwner458"
-    var deletedGroup: Group? = null
-
-    val group =
-        Group(
-            id = fakeRepo.getNewGroupId(),
-            name = "Test Group",
-            ownerId = ownerUserId,
-            memberIds = listOf(ownerUserId, testUserId))
-    fakeRepo.setGroups(listOf(group))
-
-    composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = listViewModel,
-          testCurrentUserId = testUserId,
-          onDeleteGroup = { deletedGroup = it })
-    }
-    composeTestRule.waitForIdle()
-
-    // Open menu and click Delete Group
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag(group.id)).performClick()
-    composeTestRule.onNodeWithText("DELETE GROUP").performClick()
-
-    // Click OK button on restriction dialog
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.ONLY_OWNER_CAN_DELETE_OK_BUTTON)
-        .performClick()
-
-    // Verify dialog is dismissed and callback was NOT called
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.ONLY_OWNER_CAN_DELETE_DIALOG)
-        .assertDoesNotExist()
-    assertNull(deletedGroup)
+    // Verify LEAVE GROUP button EXISTS (non-owner can leave)
+    composeTestRule.onNodeWithText("LEAVE GROUP").assertExists()
   }
 
   // =======================================

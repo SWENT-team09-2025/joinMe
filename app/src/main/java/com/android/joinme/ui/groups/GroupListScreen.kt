@@ -412,21 +412,17 @@ fun GroupListScreen(
                         },
                         testTag = GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE)
 
-                    // Leave Group - Always shown, but validates ownership on click
-                    MenuBubble(
-                        text = "LEAVE GROUP",
-                        icon = Icons.AutoMirrored.Filled.ExitToApp,
-                        onClick = {
-                          openMenuGroupId = null
-                          if (group.ownerId == currentUserId) {
-                            // Owner cannot leave - show restriction dialog
-                            showOwnerCannotLeaveDialog = true
-                          } else {
-                            // Non-owner can leave - show confirmation dialog
+                    // Leave Group - Only shown for non-owners
+                    if (group.ownerId != currentUserId) {
+                      MenuBubble(
+                          text = "LEAVE GROUP",
+                          icon = Icons.AutoMirrored.Filled.ExitToApp,
+                          onClick = {
+                            openMenuGroupId = null
                             groupToLeave = group
-                          }
-                        },
-                        testTag = GroupListScreenTestTags.LEAVE_GROUP_BUBBLE)
+                          },
+                          testTag = GroupListScreenTestTags.LEAVE_GROUP_BUBBLE)
+                    }
 
                     // Share Group
                     MenuBubble(
@@ -449,21 +445,17 @@ fun GroupListScreen(
                         },
                         testTag = GroupListScreenTestTags.EDIT_GROUP_BUBBLE)
 
-                    // Delete Group - Always shown, but validates ownership on click
-                    MenuBubble(
-                        text = "DELETE GROUP",
-                        icon = Icons.Default.Delete,
-                        onClick = {
-                          openMenuGroupId = null
-                          if (group.ownerId == currentUserId) {
-                            // Owner can delete - show confirmation dialog
+                    // Delete Group - Only shown for owners
+                    if (group.ownerId == currentUserId) {
+                      MenuBubble(
+                          text = "DELETE GROUP",
+                          icon = Icons.Default.Delete,
+                          onClick = {
+                            openMenuGroupId = null
                             groupToDelete = group
-                          } else {
-                            // Non-owner cannot delete - show restriction dialog
-                            showOnlyOwnerCanDeleteDialog = true
-                          }
-                        },
-                        testTag = GroupListScreenTestTags.DELETE_GROUP_BUBBLE)
+                          },
+                          testTag = GroupListScreenTestTags.DELETE_GROUP_BUBBLE)
+                    }
                   }
             }
       }
