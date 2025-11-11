@@ -17,8 +17,9 @@ class MapUIStateTest {
     val state = MapUIState()
 
     assertNull(state.userLocation)
-    assertTrue(state.todos.isEmpty())
+    assertTrue(state.events.isEmpty())
     assertNull(state.errorMsg)
+    assertTrue(state.series.isEmpty())
     assertFalse(state.isLoading)
   }
 
@@ -28,7 +29,7 @@ class MapUIStateTest {
     val state = MapUIState(userLocation = location)
 
     assertEquals(location, state.userLocation)
-    assertTrue(state.todos.isEmpty())
+    assertTrue(state.events.isEmpty())
     assertNull(state.errorMsg)
     assertFalse(state.isLoading)
   }
