@@ -158,7 +158,7 @@ class EditEventForSerieScreenTest {
 
     // Title and button text are correct
     composeTestRule.onNodeWithText("Edit Event for Serie").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Save Changes").assertIsDisplayed()
+    composeTestRule.onNodeWithText("SAVE CHANGES").assertIsDisplayed()
 
     // Fields inherited from serie are not displayed
     composeTestRule

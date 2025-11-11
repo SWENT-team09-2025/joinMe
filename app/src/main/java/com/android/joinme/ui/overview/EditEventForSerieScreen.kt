@@ -86,5 +86,5 @@ fun EditEventForSerieScreen(
         success
       },
       onGoBack = onGoBack,
-      saveButtonText = "Save Changes")
+      saveButtonText = "SAVE CHANGES")
 }
