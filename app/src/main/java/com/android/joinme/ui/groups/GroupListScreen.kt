@@ -232,7 +232,7 @@ fun GroupListScreen(
   val groupJoinBubbleActions = remember {
     listOf(
         BubbleAction(
-            text = "Join with link",
+            text = "JOIN WITH LINK",
             icon = Icons.Default.Link,
             onClick = {
               showJoinWithLinkDialog = true
@@ -240,7 +240,7 @@ fun GroupListScreen(
             },
             testTag = GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE),
         BubbleAction(
-            text = "Create a group",
+            text = "CREATE A GROUP",
             icon = Icons.Default.Add,
             onClick = onCreateGroup,
             testTag = GroupListScreenTestTags.CREATE_GROUP_BUBBLE))
