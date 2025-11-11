@@ -469,9 +469,9 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
 
     // Then: Both bubble actions are visible with correct text
-    composeTestRule.onNodeWithText("Join with link").assertIsDisplayed()
+    composeTestRule.onNodeWithText("JOIN WITH LINK").assertIsDisplayed()
 
-    composeTestRule.onNodeWithText("Create a group").assertIsDisplayed()
+    composeTestRule.onNodeWithText("CREATE A GROUP").assertIsDisplayed()
   }
 
   @Test
@@ -691,7 +691,7 @@ class GroupListScreenTest {
 
     // When: User opens menu and clicks "View Group Details"
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("View Group Details").performClick()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").performClick()
 
     // Then: Callback was invoked with correct group
     assertEquals(group, viewedGroup)
@@ -710,7 +710,7 @@ class GroupListScreenTest {
 
     // When: User opens menu and clicks "Leave Group"
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test2")).performClick()
-    composeTestRule.onNodeWithText("Leave Group").performClick()
+    composeTestRule.onNodeWithText("LEAVE GROUP").performClick()
 
     // Then: Callback was invoked with correct group
     assertEquals(group, leftGroup)
@@ -729,7 +729,7 @@ class GroupListScreenTest {
 
     // When: User opens menu and clicks "Share Group"
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test3")).performClick()
-    composeTestRule.onNodeWithText("Share Group").performClick()
+    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
 
     // Then: Callback was invoked with correct group
     assertEquals(group, sharedGroup)
@@ -792,10 +792,10 @@ class GroupListScreenTest {
 
     // When: User performs multiple actions
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g1")).performClick()
-    composeTestRule.onNodeWithText("View Group Details").performClick()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").performClick()
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g2")).performClick()
-    composeTestRule.onNodeWithText("Share Group").performClick()
+    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
 
     // Then: Callbacks were invoked correctly
     assertEquals(listOf("g1"), viewedGroups)
@@ -812,13 +812,13 @@ class GroupListScreenTest {
 
     // Open menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertIsDisplayed()
 
     // Click an action
-    composeTestRule.onNodeWithText("View Group Details").performClick()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").performClick()
 
     // Menu should close
-    composeTestRule.onNodeWithText("View Group Details").assertDoesNotExist()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertDoesNotExist()
   }
 
   @Test
@@ -829,13 +829,13 @@ class GroupListScreenTest {
 
     // Open join/create menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithText("Join with link").assertIsDisplayed()
+    composeTestRule.onNodeWithText("JOIN WITH LINK").assertIsDisplayed()
 
     // Open card menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
 
     // Join/create menu should be closed
-    composeTestRule.onNodeWithText("Join with link").assertDoesNotExist()
+    composeTestRule.onNodeWithText("JOIN WITH LINK").assertDoesNotExist()
   }
 
   @Test
@@ -846,13 +846,13 @@ class GroupListScreenTest {
 
     // Open card menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertIsDisplayed()
 
     // Open join/create menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
 
     // Card menu should be closed
-    composeTestRule.onNodeWithText("View Group Details").assertDoesNotExist()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertDoesNotExist()
   }
 
   @Test
@@ -927,15 +927,15 @@ class GroupListScreenTest {
     composeTestRule.setContent { GroupListScreen() }
 
     // Initially closed
-    composeTestRule.onNodeWithText("Join with link").assertDoesNotExist()
+    composeTestRule.onNodeWithText("JOIN WITH LINK").assertDoesNotExist()
 
     // Click to open
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithText("Join with link").assertIsDisplayed()
+    composeTestRule.onNodeWithText("JOIN WITH LINK").assertIsDisplayed()
 
     // Click again to close
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithText("Join with link").assertDoesNotExist()
+    composeTestRule.onNodeWithText("JOIN WITH LINK").assertDoesNotExist()
   }
 
   @Test
@@ -945,7 +945,7 @@ class GroupListScreenTest {
     composeTestRule.setContent { GroupListScreen(onJoinWithLink = { joinClicked = true }) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithText("Join with link").performClick()
+    composeTestRule.onNodeWithText("JOIN WITH LINK").performClick()
 
     assertTrue(joinClicked)
   }
@@ -957,7 +957,7 @@ class GroupListScreenTest {
     composeTestRule.setContent { GroupListScreen(onCreateGroup = { createClicked = true }) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithText("Create a group").performClick()
+    composeTestRule.onNodeWithText("CREATE A GROUP").performClick()
 
     assertTrue(createClicked)
   }
@@ -973,7 +973,7 @@ class GroupListScreenTest {
 
     // FAB should still work
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithText("Create a group").performClick()
+    composeTestRule.onNodeWithText("CREATE A GROUP").performClick()
 
     assertTrue(createClicked)
   }
@@ -989,17 +989,17 @@ class GroupListScreenTest {
 
     // Open first menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g1")).performClick()
-    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertIsDisplayed()
 
     // Toggle first menu closed by clicking same button again
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g1")).performClick()
-    composeTestRule.onNodeWithText("View Group Details").assertDoesNotExist()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertDoesNotExist()
 
     // Open second menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("g2")).performClick()
 
     // Second menu should now be open
-    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertIsDisplayed()
   }
 
   @Test
@@ -1010,11 +1010,11 @@ class GroupListScreenTest {
 
     // Open menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertIsDisplayed()
 
     // Click same button to close
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("View Group Details").assertDoesNotExist()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertDoesNotExist()
   }
 
   @Test
@@ -1041,7 +1041,7 @@ class GroupListScreenTest {
 
     // Open menu for first visible item
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("1")).performClick()
-    composeTestRule.onNodeWithText("View Group Details").assertIsDisplayed()
+    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertIsDisplayed()
 
     // Scroll down
     composeTestRule
