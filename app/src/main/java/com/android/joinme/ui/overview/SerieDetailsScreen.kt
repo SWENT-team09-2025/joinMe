@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.ui.components.EventCard
@@ -114,6 +115,13 @@ fun SerieDetailsScreen(
     if (errorMsg != null) {
       Toast.makeText(context, errorMsg, Toast.LENGTH_SHORT).show()
       serieDetailsViewModel.clearErrorMsg()
+    }
+  }
+
+  var ownerDisplayName by remember { mutableStateOf("...") }
+  LaunchedEffect(uiState.serie?.ownerId) {
+    uiState.serie?.ownerId?.let { id ->
+      ownerDisplayName = serieDetailsViewModel.getOwnerDisplayName(id)
     }
   }
 
@@ -251,7 +259,7 @@ fun SerieDetailsScreen(
 
             // Owner information
             Text(
-                text = "CREATED BY ${uiState.serie?.ownerId ?: "Unknown"}",
+                text = "Created by $ownerDisplayName",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier =
@@ -319,13 +327,15 @@ fun SerieDetailsScreen(
                     }
               } else {
                 Text(
-                    text = "This serie is full",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "Sorry this serie is full",
+                    style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier =
                         Modifier.fillMaxWidth()
+                            .padding(bottom = Dimens.Padding.extraLarge)
                             .testTag(SerieDetailsScreenTestTags.MESSAGE_FULL_SERIE),
-                    textAlign = TextAlign.Center)
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Bold)
               }
             }
           }
