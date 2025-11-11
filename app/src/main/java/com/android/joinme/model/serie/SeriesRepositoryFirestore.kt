@@ -130,10 +130,12 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
    * @param serieId The unique identifier of the Serie item to delete
    */
   override suspend fun deleteSerie(serieId: String) {
-      val serie = getSerie(serieId)
-      //Delete all events related to the serie
-      serie.eventIds.forEach { eventId -> db.collection(EVENTS_COLLECTION_PATH).document(eventId).delete().await() }
-    //Delete serie
+    val serie = getSerie(serieId)
+    // Delete all events related to the serie
+    serie.eventIds.forEach { eventId ->
+      db.collection(EVENTS_COLLECTION_PATH).document(eventId).delete().await()
+    }
+    // Delete serie
     db.collection(SERIES_COLLECTION_PATH).document(serieId).delete().await()
   }
 

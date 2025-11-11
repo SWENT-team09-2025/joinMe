@@ -233,7 +233,6 @@ class SerieDetailsViewModel(
       false
     }
   }
-    
 
   /**
    * Sets an error message in the UI state.
