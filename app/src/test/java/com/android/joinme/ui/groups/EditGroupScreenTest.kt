@@ -191,8 +191,10 @@ class EditGroupScreenTest {
           .isNotEmpty()
     }
 
-    composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
-    composeTestRule.onNodeWithTag(EditGroupScreenTags.CATEGORY_MENU).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN).performClick()
+    composeTestRule
+        .onNodeWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN_TOUCHABLE_AREA)
+        .assertIsDisplayed()
   }
 
   @Test
@@ -209,16 +211,10 @@ class EditGroupScreenTest {
           .isNotEmpty()
     }
 
-    composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
-    composeTestRule
-        .onNodeWithTag(EditGroupScreenTags.CATEGORY_OPTION_PREFIX + "SOCIAL")
-        .assertIsDisplayed()
-    composeTestRule
-        .onNodeWithTag(EditGroupScreenTags.CATEGORY_OPTION_PREFIX + "ACTIVITY")
-        .assertIsDisplayed()
-    composeTestRule
-        .onNodeWithTag(EditGroupScreenTags.CATEGORY_OPTION_PREFIX + "SPORTS")
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN).performClick()
+    composeTestRule.onNodeWithText("SOCIAL").assertIsDisplayed()
+    composeTestRule.onNodeWithText("ACTIVITY").assertIsDisplayed()
+    composeTestRule.onNodeWithText("SPORTS").assertIsDisplayed()
   }
 
   @Test
@@ -239,10 +235,8 @@ class EditGroupScreenTest {
         .onNodeWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN)
         .assertTextContains("Sports")
 
-    composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
-    composeTestRule
-        .onNodeWithTag(EditGroupScreenTags.CATEGORY_OPTION_PREFIX + "SOCIAL")
-        .performClick()
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN).performClick()
+    composeTestRule.onNodeWithText("SOCIAL").performClick()
 
     composeTestRule
         .onNodeWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN)
@@ -263,10 +257,8 @@ class EditGroupScreenTest {
           .isNotEmpty()
     }
 
-    composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
-    composeTestRule
-        .onNodeWithTag(EditGroupScreenTags.CATEGORY_OPTION_PREFIX + "ACTIVITY")
-        .performClick()
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN).performClick()
+    composeTestRule.onNodeWithText("ACTIVITY").performClick()
 
     composeTestRule
         .onNodeWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN)
@@ -287,12 +279,12 @@ class EditGroupScreenTest {
           .isNotEmpty()
     }
 
-    composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
-    composeTestRule
-        .onNodeWithTag(EditGroupScreenTags.CATEGORY_OPTION_PREFIX + "SOCIAL")
-        .performClick()
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN).performClick()
+    composeTestRule.onNodeWithText("SOCIAL").performClick()
 
-    composeTestRule.onNodeWithTag(EditGroupScreenTags.CATEGORY_MENU).assertDoesNotExist()
+    composeTestRule
+        .onNodeWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN_TOUCHABLE_AREA)
+        .assertDoesNotExist()
   }
 
   @Test
@@ -410,11 +402,9 @@ class EditGroupScreenTest {
         .performTextInput("Updated Team")
     composeTestRule.waitForIdle()
 
-    composeTestRule.onNodeWithContentDescription("Dropdown").performClick()
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN).performClick()
     composeTestRule.waitForIdle()
-    composeTestRule
-        .onNodeWithTag(EditGroupScreenTags.CATEGORY_OPTION_PREFIX + "SOCIAL")
-        .performClick()
+    composeTestRule.onNodeWithText("SOCIAL").performClick()
     composeTestRule.waitForIdle()
 
     composeTestRule

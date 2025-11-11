@@ -1,10 +1,10 @@
 package com.android.joinme.model.event
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.android.joinme.model.map.Location
-import com.android.joinme.ui.theme.ActivityColor
-import com.android.joinme.ui.theme.SocialColor
-import com.android.joinme.ui.theme.SportsColor
+import com.android.joinme.ui.theme.customColors
 import com.google.firebase.Timestamp
 import java.util.Locale
 
@@ -74,11 +74,40 @@ fun Event.isUpcoming(): Boolean {
  *
  * @return A Color object corresponding to the EventType.
  */
+@Composable
 fun EventType.getColor(): Color {
   return when (this) {
-    EventType.SPORTS -> SportsColor // Purple
-    EventType.ACTIVITY -> ActivityColor // Green
-    EventType.SOCIAL -> SocialColor // Red
+    EventType.SPORTS -> MaterialTheme.customColors.sportsContainer
+    EventType.ACTIVITY -> MaterialTheme.customColors.activityContainer
+    EventType.SOCIAL -> MaterialTheme.customColors.socialContainer
+  }
+}
+
+/**
+ * Maps each EventType to a specific "on" color for UI representation.
+ *
+ * @return A Color object corresponding to the EventType.
+ */
+@Composable
+fun EventType.getOnColor(): Color {
+  return when (this) {
+    EventType.SPORTS -> MaterialTheme.customColors.onSports
+    EventType.ACTIVITY -> MaterialTheme.customColors.onActivity
+    EventType.SOCIAL -> MaterialTheme.customColors.onSocial
+  }
+}
+
+/**
+ * Maps each EventType to a specific "on" container color for UI representation.
+ *
+ * @return A Color object corresponding to the EventType.
+ */
+@Composable
+fun EventType.getOnContainerColor(): Color {
+  return when (this) {
+    EventType.SPORTS -> MaterialTheme.customColors.onSportsContainer
+    EventType.ACTIVITY -> MaterialTheme.customColors.onActivityContainer
+    EventType.SOCIAL -> MaterialTheme.customColors.onSocialContainer
   }
 }
 

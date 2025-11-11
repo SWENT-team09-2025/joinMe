@@ -100,5 +100,5 @@ fun CreateSerieScreen(
         true
       },
       onGoBack = onGoBack,
-      saveButtonText = "Next")
+      saveButtonText = "NEXT")
 }

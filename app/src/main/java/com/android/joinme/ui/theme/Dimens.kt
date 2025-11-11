@@ -34,6 +34,13 @@ import androidx.compose.ui.unit.sp
  * - `LoadingIndicator`: Loading spinner dimensions
  * - `TouchTarget`: Accessibility-compliant touch targets
  * - `Elevation`: Shadow and depth values
+ * - `SerieCard`: Dimensions specific to the SerieCard component
+ * - `SerieForm`: Dimensions specific to the Serie form component
+ * - `SignIn`: Sign-in screen specific dimensions
+ * - `History`: History screen specific dimensions
+ * - `Group`: Group feature dimensions (form/edit screens)
+ * - `GroupDetail`: Group detail screen specific dimensions
+ * - `GroupList`: Group list screen specific dimensions
  *
  * Usage example:
  * ```
@@ -141,6 +148,19 @@ object Dimens {
 
     /** 16dp - Standard vertical padding for screen edges */
     val screenVertical: Dp = 16.dp
+
+    // FloatingActionBubbles padding
+    /** 6dp - Small bubble padding */
+    val smallBubble: Dp = 6.dp
+
+    /** 16dp - Medium bubble padding */
+    val mediumBubble: Dp = 16.dp
+
+    /** 32.dp - Large bubble padding */
+    val largeBubble: Dp = 32.dp
+
+    /** 80.dp - Extra large bubble padding */
+    val extraLargeBubble: Dp = 80.dp
   }
 
   /**
@@ -300,6 +320,10 @@ object Dimens {
    * Centralized here to maintain consistency across ViewProfile and EditProfile screens.
    */
   object Profile {
+    // Profile phot blur radius
+    /** 3dp - Standard blur radius for profile photos */
+    val photoBlurRadius: Dp = 3.dp
+
     // Profile photo sizes
     /** 40dp - Small profile photo (list items, comments) */
     val photoSmall: Dp = 40.dp
@@ -435,5 +459,207 @@ object Dimens {
 
     /** 16dp - Extra large elevation (modals) */
     val extraLarge: Dp = 16.dp
+  }
+
+  object NavigationBar {
+    /** 56dp - Standard height for bottom navigation bar */
+    val height: Dp = 56.dp
+  }
+
+  /**
+   * SerieCard dimensions.
+   *
+   * Dimensions specific to the SerieCard component including card height, layer offsets, and
+   * stacking effects.
+   */
+  object SerieCard {
+    /** 100dp - Height of the serie card */
+    val cardHeight: Dp = 100.dp
+    /** 12dp - Bottom padding for card container */
+    val bottomPadding: Dp = 12.dp
+
+    /** 6dp - Horizontal padding for second layer */
+    val secondLayerHorizontalPadding: Dp = 6.dp
+
+    /** 12dp - Horizontal padding for third layer */
+    val thirdLayerHorizontalPadding: Dp = 12.dp
+
+    /** 6dp - Vertical offset for second layer */
+    val secondLayerOffset: Dp = 14.dp
+
+    /** 12dp - Vertical offset for third layer */
+    val thirdLayerOffset: Dp = 20.dp
+
+    /** 2dp - Border width for layers */
+    val layerBorderWidth: Dp = 2.dp
+
+    /** 12dp - Internal padding for card content */
+    val contentPadding: Dp = 12.dp
+
+    /** 6dp - Spacing after top row */
+    val topRowSpacing: Dp = 6.dp
+  }
+
+  object SerieForm {
+    /** 120dp - height for description field */
+    val descriptionField: Dp = 120.dp
+    /** 180.dp - height for maxParticipants field */
+    val maxParticipantsField: Dp = 180.dp
+  }
+
+  /**
+   * Sign-in screen dimensions.
+   *
+   * Dimensions specific to the sign-in screen including logo size, button dimensions, and spacing.
+   */
+  object SignIn {
+    /** 350dp - Size of the app logo on sign-in screen */
+    val logoSize: Dp = 350.dp
+
+    /** 48dp - Height of Google sign-in button */
+    val buttonHeight: Dp = 48.dp
+
+    /** 200dp - Width of Google sign-in button content */
+    val buttonContentWidth: Dp = 200.dp
+
+    /** 30dp - Size of Google logo in button */
+    val googleLogoSize: Dp = 30.dp
+
+    /** 50 - Corner radius for sign-in button (pill shape) */
+    val buttonCornerRadius: Int = 50
+
+    /** 48dp - Size of loading indicator on sign-in screen */
+    val loadingIndicatorSize: Dp = 48.dp
+  }
+
+  /**
+   * History screen dimensions.
+   *
+   * Dimensions specific to the history screen including padding, spacing, and icon sizes.
+   */
+  object History {
+    /** 48dp - Size of top bar action placeholder to center title */
+    val topBarActionSize: Dp = 48.dp
+
+    /** 1dp - Thickness of divider below top bar */
+    val dividerThickness: Dp = 1.dp
+
+    /** 32dp - Horizontal padding for empty state message */
+    val emptyMessagePadding: Dp = 32.dp
+
+    /** 8dp - Vertical content padding for history list */
+    val listVerticalPadding: Dp = 8.dp
+
+    /** 16dp - Horizontal content padding for history list */
+    val listHorizontalPadding: Dp = 16.dp
+
+    /** 6dp - Vertical padding for each card item */
+    val cardVerticalPadding: Dp = 6.dp
+  }
+
+  /**
+   * Event Form Dimensions
+   *
+   * Dimensions specific to the EventForm component including description field height.
+   */
+  object EventForm {
+    /** 150.dp - height for description field */
+    val descriptionField: Dp = 150.dp
+    /** 240.dp - height for suggestions field */
+    val suggestionsField: Dp = 240.dp
+  }
+
+  /**
+   * Show Event Dimensions
+   *
+   * Dimensions specific to the ShowEvent component including description field height.
+   */
+  object ShowEvent {
+    /** 80.dp - height for description field */
+    val minDescriptionField: Dp = 80.dp
+  }
+
+  /**
+   * Group feature dimensions.
+   *
+   * Dimensions specific to group screens including picture sizes, edit controls, and form fields.
+   * Mirrors Profile dimensions for consistency across the app.
+   */
+  object Group {
+    // Group picture blur radius
+    /** 3dp - Standard blur radius for group pictures */
+    val pictureBlurRadius: Dp = 3.dp
+
+    // Group picture sizes
+    /** 140dp - Large group picture (edit/create screen) */
+    val pictureLarge: Dp = 140.dp
+
+    // Group picture section
+    /** 24dp - Vertical padding around group picture section */
+    val picturePadding: Dp = 24.dp
+
+    // Edit picture controls (overlay on picture in edit screen)
+    /** 120dp - Size of edit picture button */
+    val editButtonSize: Dp = 120.dp
+
+    /** 50dp - Size of edit icon container */
+    val editIconContainer: Dp = 50.dp
+
+    /** 56dp - Size of edit icon itself */
+    val editIconSize: Dp = 56.dp
+
+    // Delete picture button (bottom-right corner)
+    /** 40dp - Size of delete picture button */
+    val deleteButtonSize: Dp = 40.dp
+
+    /** 24dp - Size of delete icon */
+    val deleteIconSize: Dp = 24.dp
+
+    // Group form fields
+    /** 120dp - Minimum height for description field */
+    val descriptionMinHeight: Dp = 120.dp
+
+    /** 32dp - Spacing before save button section */
+    val saveButtonTopSpacing: Dp = 32.dp
+  }
+
+  /**
+   * Group detail screen dimensions.
+   *
+   * Dimensions specific to the group detail screen. Most dimensions reuse existing values from
+   * Spacing, Padding, and other objects for consistency.
+   */
+  object GroupDetail {
+    /** 48dp - Size of member profile pictures in members list */
+    val memberProfilePictureSize: Dp = 48.dp
+
+    /** 120dp - Size of group picture on detail screen */
+    val pictureSize: Dp = 120.dp
+
+    /** 175dp - Size of group picture image (larger to fill circle with padding) */
+    val pictureImageSize: Dp = 175.dp
+
+    /** 28dp - Corner radius for group events button (pill shape) */
+    val eventsButtonCornerRadius: Dp = 28.dp
+  }
+
+  /**
+   * Group list screen dimensions.
+   *
+   * Minimal dimensions specific to GroupListScreen FAB positioning. All other spacing reuses
+   * existing Spacing/Padding values.
+   */
+  object GroupList {
+    /** 80dp - Reserved space at bottom for FAB (prevents menu overlap) */
+    val fabReservedSpace: Dp = 80.dp
+  }
+  /**
+   * Event Form Field Dimensions
+   *
+   * Dimensions specific to the EventFormField component.
+   */
+  object EventFormFields {
+    /** 150.dp - height for description field */
+    val descriptionField: Dp = 150.dp
   }
 }

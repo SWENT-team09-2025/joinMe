@@ -1,9 +1,6 @@
 package com.android.joinme.model.event
 
 import com.android.joinme.model.map.Location
-import com.android.joinme.ui.theme.ActivityColor
-import com.android.joinme.ui.theme.SocialColor
-import com.android.joinme.ui.theme.SportsColor
 import com.google.firebase.Timestamp
 import java.util.Calendar
 import java.util.Date
@@ -113,20 +110,5 @@ class EventTest {
     assertFalse(pastEvent.isUpcoming())
     assertFalse(pastEvent.isActive())
     assertTrue(pastEvent.isExpired())
-  }
-
-  @Test
-  fun `getColor testing return colors`() {
-    val sportsColor = EventType.SPORTS.getColor()
-    val activityColor = EventType.ACTIVITY.getColor()
-    val socialColor = EventType.SOCIAL.getColor()
-
-    assertNotEquals(sportsColor, activityColor)
-    assertNotEquals(sportsColor, socialColor)
-    assertNotEquals(activityColor, socialColor)
-
-    assertEquals(SocialColor, socialColor)
-    assertEquals(ActivityColor, activityColor)
-    assertEquals(SportsColor, sportsColor)
   }
 }
