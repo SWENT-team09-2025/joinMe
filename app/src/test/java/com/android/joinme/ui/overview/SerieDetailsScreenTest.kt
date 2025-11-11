@@ -392,11 +392,6 @@ class SerieDetailsScreenTest {
 
     eventIds.forEach { eventId -> fakeEventsRepo.setEvent(createTestEvent(eventId = eventId)) }
 
-  fun ownerViewShowsDeleteButton() {
-    setup()
-    val serie = createTestSerie(ownerId = "owner123")
-    fakeSeriesRepo.setSerie(serie)
-
     val viewModel = createViewModel()
 
     composeTestRule.setContent {
@@ -423,6 +418,72 @@ class SerieDetailsScreenTest {
     fakeSeriesRepo.setSerie(serie)
 
     eventIds.forEach { eventId -> fakeEventsRepo.setEvent(createTestEvent(eventId = eventId)) }
+
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      SerieDetailsScreen(
+          serieId = serie.serieId, serieDetailsViewModel = viewModel, currentUserId = "owner123")
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Verify button is disabled when there are 30 events
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT).assertIsNotEnabled()
+  }
+
+  @Test
+  fun addEventButtonDisabledWhenMoreThan30Events() {
+    setup()
+    val eventIds = (1..35).map { "event$it" }
+    val serie = createTestSerie(ownerId = "owner123", eventIds = eventIds)
+    fakeSeriesRepo.setSerie(serie)
+
+    eventIds.forEach { eventId -> fakeEventsRepo.setEvent(createTestEvent(eventId = eventId)) }
+
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      SerieDetailsScreen(
+          serieId = serie.serieId, serieDetailsViewModel = viewModel, currentUserId = "owner123")
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Verify button is disabled when there are more than 30 events
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT).assertIsNotEnabled()
+  }
+
+  @Test
+  fun ownerViewShowsDeleteButton() {
+    setup()
+    val serie = createTestSerie(ownerId = "owner123")
+    fakeSeriesRepo.setSerie(serie)
+
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      SerieDetailsScreen(
+          serieId = serie.serieId, serieDetailsViewModel = viewModel, currentUserId = "owner123")
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
     // Verify delete button is shown
     composeTestRule
         .onNodeWithTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON)
@@ -474,24 +535,10 @@ class SerieDetailsScreenTest {
 
     composeTestRule.waitUntil(timeoutMillis = 3000) {
       composeTestRule
-          .onAllNodesWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT)
           .onAllNodesWithTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON)
           .fetchSemanticsNodes()
           .isNotEmpty()
     }
-
-    // Verify button is disabled when there are 30 events
-    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT).assertIsNotEnabled()
-  }
-
-  @Test
-  fun addEventButtonDisabledWhenMoreThan30Events() {
-    setup()
-    val eventIds = (1..35).map { "event$it" }
-    val serie = createTestSerie(ownerId = "owner123", eventIds = eventIds)
-    fakeSeriesRepo.setSerie(serie)
-
-    eventIds.forEach { eventId -> fakeEventsRepo.setEvent(createTestEvent(eventId = eventId)) }
 
     // Click delete button
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON).performClick()
@@ -522,14 +569,11 @@ class SerieDetailsScreenTest {
 
     composeTestRule.waitUntil(timeoutMillis = 3000) {
       composeTestRule
-          .onAllNodesWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT)
           .onAllNodesWithTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON)
           .fetchSemanticsNodes()
           .isNotEmpty()
     }
 
-    // Verify button is disabled when there are more than 30 events
-    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT).assertIsNotEnabled()
     // Click delete button
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON).performClick()
 
