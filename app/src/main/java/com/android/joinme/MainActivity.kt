@@ -41,7 +41,7 @@ import com.android.joinme.ui.overview.ShowEventScreen
 import com.android.joinme.ui.profile.EditProfileScreen
 import com.android.joinme.ui.profile.ViewProfileScreen
 import com.android.joinme.ui.signIn.SignInScreen
-import com.android.joinme.ui.theme.SampleAppTheme
+import com.android.joinme.ui.theme.JoinMeTheme
 import com.google.firebase.auth.FirebaseAuth
 import okhttp3.OkHttpClient
 
@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
     val initialEventId = intent?.data?.lastPathSegment
 
     setContent {
-      SampleAppTheme {
+      JoinMeTheme {
         Surface(modifier = Modifier.fillMaxSize()) { JoinMe(initialEventId = initialEventId) }
       }
     }

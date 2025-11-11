@@ -2,6 +2,7 @@ package com.android.joinme.ui.overview
 
 import android.annotation.SuppressLint
 import android.widget.NumberPicker
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,10 +14,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.android.joinme.ui.theme.ButtonSaveColor
-import com.android.joinme.ui.theme.DarkButtonColor
+import com.android.joinme.ui.theme.Dimens
+import com.android.joinme.ui.theme.buttonColors
+import com.android.joinme.ui.theme.customColors
+import com.android.joinme.ui.theme.outlinedTextField
 import java.util.*
 
 /** Data class representing the test tags for serie form fields. */
@@ -138,26 +140,32 @@ fun SerieFormScreen(
     onVisibilityChange: (String) -> Unit,
     onSave: () -> Boolean,
     onGoBack: () -> Unit,
-    saveButtonText: String = "Next"
+    saveButtonText: String = "NEXT"
 ) {
   Scaffold(
       topBar = {
-        TopAppBar(
-            title = { Text(title) },
-            navigationIcon = {
-              IconButton(onClick = onGoBack) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-              }
-            })
+        Column {
+          CenterAlignedTopAppBar(
+              title = { Text(title, style = MaterialTheme.typography.titleLarge) },
+              navigationIcon = {
+                IconButton(onClick = onGoBack) {
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                      contentDescription = "Back")
+                }
+              })
+          HorizontalDivider(
+              thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
+        }
       }) { paddingValues ->
         Column(
             modifier =
                 Modifier.fillMaxSize()
                     .padding(paddingValues)
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = Dimens.Padding.medium)
                     .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)) {
-              Spacer(modifier = Modifier.height(8.dp))
+            verticalArrangement = Arrangement.spacedBy(Dimens.Padding.medium)) {
+              Spacer(modifier = Modifier.height(Dimens.Padding.small))
 
               // Title field
               OutlinedTextField(
@@ -183,7 +191,7 @@ fun SerieFormScreen(
                   label = { Text("Description") },
                   modifier =
                       Modifier.fillMaxWidth()
-                          .height(120.dp)
+                          .height(Dimens.SerieForm.descriptionField)
                           .testTag(testTags.inputSerieDescription),
                   isError = formState.invalidDescriptionMsg != null,
                   supportingText = {
@@ -204,7 +212,9 @@ fun SerieFormScreen(
 
               Box(
                   modifier =
-                      Modifier.width(180.dp).clickable { showMaxParticipantsPicker = true }) {
+                      Modifier.width(Dimens.SerieForm.maxParticipantsField).clickable {
+                        showMaxParticipantsPicker = true
+                      }) {
                     OutlinedTextField(
                         value = formState.maxParticipants,
                         onValueChange = {},
@@ -223,7 +233,7 @@ fun SerieFormScreen(
                                 modifier = Modifier.testTag(testTags.errorMessage))
                           }
                         },
-                        colors = readOnlyTextFieldColors(),
+                        colors = MaterialTheme.customColors.outlinedTextField(),
                         singleLine = true)
                   }
 
@@ -264,7 +274,7 @@ fun SerieFormScreen(
               // Date and Time row
               Row(
                   modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                  horizontalArrangement = Arrangement.spacedBy(Dimens.Padding.medium)) {
                     val context = LocalContext.current
                     val calendar = remember { Calendar.getInstance() }
                     val (year, month, day) =
@@ -308,7 +318,7 @@ fun SerieFormScreen(
                                   modifier = Modifier.testTag(testTags.errorMessage))
                             }
                           },
-                          colors = readOnlyTextFieldColors(),
+                          colors = MaterialTheme.customColors.outlinedTextField(),
                           singleLine = true)
                     }
 
@@ -343,7 +353,7 @@ fun SerieFormScreen(
                                   modifier = Modifier.testTag(testTags.errorMessage))
                             }
                           },
-                          colors = readOnlyTextFieldColors(),
+                          colors = MaterialTheme.customColors.outlinedTextField(),
                           singleLine = true)
                     }
                   }
@@ -380,57 +390,49 @@ fun SerieFormScreen(
 
                     ExposedDropdownMenu(
                         expanded = expandedVisibility,
-                        onDismissRequest = { expandedVisibility = false }) {
-                          visibilityOptions.forEach { option ->
+                        onDismissRequest = { expandedVisibility = false },
+                        modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
+                          visibilityOptions.forEachIndexed { index, option ->
                             DropdownMenuItem(
-                                text = { Text(option) },
+                                text = {
+                                  Text(
+                                      text = option,
+                                      color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                      style = MaterialTheme.typography.headlineSmall)
+                                },
                                 onClick = {
                                   onVisibilityChange(option)
                                   expandedVisibility = false
-                                })
+                                },
+                                colors = MaterialTheme.customColors.dropdownMenu)
+                            if (index < visibilityOptions.lastIndex) {
+                              HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                            }
                           }
                         }
                   }
 
-              Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(Dimens.Padding.medium))
 
               // Save button
               Button(
-                  onClick = { if (onSave()) {} },
+                  onClick = { onSave() },
                   modifier =
-                      Modifier.fillMaxWidth().height(56.dp).testTag(testTags.buttonSaveSerie),
-                  colors =
-                      ButtonDefaults.buttonColors(
-                          containerColor = DarkButtonColor, contentColor = ButtonSaveColor),
+                      Modifier.fillMaxWidth()
+                          .height(Dimens.Button.standardHeight)
+                          .testTag(testTags.buttonSaveSerie),
+                  colors = MaterialTheme.customColors.buttonColors(),
                   enabled = formState.isValid && !formState.isLoading) {
                     if (formState.isLoading) {
                       CircularProgressIndicator(
-                          modifier = Modifier.size(24.dp),
+                          modifier = Modifier.size(Dimens.IconSize.medium),
                           color = MaterialTheme.colorScheme.onPrimary)
                     } else {
                       Text(saveButtonText)
                     }
                   }
 
-              Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
             }
       }
-}
-
-/**
- * Provides consistent colors for read-only (disabled) text fields.
- *
- * This function returns TextFieldColors configured to make disabled fields appear enabled,
- * maintaining visual consistency across read-only input fields like date pickers and number
- * selectors.
- *
- * @return TextFieldColors configured for read-only fields
- */
-@Composable
-private fun readOnlyTextFieldColors(): TextFieldColors {
-  return OutlinedTextFieldDefaults.colors(
-      disabledTextColor = LocalContentColor.current.copy(LocalContentColor.current.alpha),
-      disabledBorderColor = MaterialTheme.colorScheme.outline,
-      disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-      disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant)
 }

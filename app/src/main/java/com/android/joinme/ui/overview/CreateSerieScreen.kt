@@ -105,5 +105,5 @@ fun CreateSerieScreen(
           onGoBack()
         }
       },
-      saveButtonText = "Next")
+      saveButtonText = "NEXT")
 }

@@ -145,17 +145,17 @@ private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
                   onClick = onLogoutClick,
                   shape = RoundedCornerShape(Dimens.CornerRadius.pill),
                   border =
-                      BorderStroke(Dimens.BorderWidth.medium, MaterialTheme.colorScheme.onSurface),
+                      BorderStroke(Dimens.BorderWidth.medium, MaterialTheme.colorScheme.primary),
                   colors =
                       ButtonDefaults.outlinedButtonColors(
-                          contentColor = MaterialTheme.colorScheme.onSurface),
+                          contentColor = MaterialTheme.colorScheme.primary),
                   modifier = Modifier.testTag(ViewProfileTestTags.LOGOUT_BUTTON)) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                         contentDescription = "Logout",
                         modifier = Modifier.size(Dimens.IconSize.medium))
                     Spacer(modifier = Modifier.width(Dimens.Spacing.small))
-                    Text("log out", fontWeight = FontWeight.Medium)
+                    Text("LOG OUT", fontWeight = FontWeight.Medium)
                   }
             }
 

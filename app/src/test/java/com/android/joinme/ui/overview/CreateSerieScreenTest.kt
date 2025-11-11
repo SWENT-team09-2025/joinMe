@@ -586,7 +586,7 @@ class CreateSerieScreenTest {
     composeTestRule.setContent { CreateSerieScreen(onDone = { _ -> }) }
 
     // Verify button displays "Next" text
-    composeTestRule.onNodeWithText("Next").assertExists()
+    composeTestRule.onNodeWithText("NEXT").assertExists()
   }
 
   @Test
@@ -611,7 +611,7 @@ class CreateSerieScreenTest {
     composeTestRule.waitForIdle()
 
     // Initially (not loading), button should show "Next" text
-    composeTestRule.onNodeWithText("Next").assertExists()
+    composeTestRule.onNodeWithText("NEXT").assertExists()
 
     // Click save button - this triggers the loading state briefly
     composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.BUTTON_SAVE_SERIE).performClick()
@@ -948,7 +948,7 @@ class CreateSerieScreenTest {
 
     // Verify the button text is "Next" (navigates to create event for serie)
     // Button may be below the fold, use assertExists()
-    composeTestRule.onNodeWithText("Next").assertExists()
+    composeTestRule.onNodeWithText("NEXT").assertExists()
   }
 
   @Test
