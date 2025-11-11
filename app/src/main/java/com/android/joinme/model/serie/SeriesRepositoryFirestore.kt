@@ -1,10 +1,16 @@
 package com.android.joinme.model.serie
 
+import com.android.joinme.model.event.EventVisibility
+import com.android.joinme.model.event.isActive
+import com.android.joinme.model.event.isExpired
+import com.android.joinme.model.event.isUpcoming
 import com.android.joinme.model.utils.Visibility
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
 
 /** Firestore collection path for series documents */
@@ -37,7 +43,8 @@ enum class SerieFilter {
    * Retrieves all series. TODO: Should filter to show only public series that are upcoming, where
    * the current user is neither a participant nor the owner.
    */
-  SERIES_FOR_SEARCH_SCREEN
+  SERIES_FOR_SEARCH_SCREEN,
+  SERIES_FOR_MAP_SCREEN
 }
 /**
  * Firestore-backed implementation of [SeriesRepository].
@@ -48,9 +55,6 @@ enum class SerieFilter {
  * @property db The FirebaseFirestore instance used for database operations
  */
 class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepository {
-  /** Field name for the owner ID in Firestore documents */
-  private val ownerAttributeName = "ownerId"
-
   /**
    * Generates and returns a new unique identifier for a Serie item.
    *
@@ -74,27 +78,9 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
         Firebase.auth.currentUser?.uid
             ?: throw Exception("SeriesRepositoryFirestore: User not logged in.")
 
-    // Database-level filtering: Fetch events from Firestore with filters applied at the database
-    // level
-    val snapshot =
-        when (serieFilter) {
-          SerieFilter.SERIES_FOR_OVERVIEW_SCREEN -> {
-            db.collection(SERIES_COLLECTION_PATH)
-                .whereArrayContains("participants", userId)
-                .get()
-                .await()
-          }
-          SerieFilter.SERIES_FOR_SEARCH_SCREEN -> {
-            // TODO add a function to know if a serie is upcoming
-            db.collection(SERIES_COLLECTION_PATH).get().await()
-          }
-          SerieFilter.SERIES_FOR_HISTORY_SCREEN -> {
-            // TODO add a function to know if a serie is expired
-            db.collection(SERIES_COLLECTION_PATH).get().await()
-          }
-        }
+    val series = databaseFetching(serieFilter, userId)
 
-    return snapshot.mapNotNull { documentToSerie(it) }
+    return clientSideProcessing(serieFilter, series, userId)
   }
 
   /**
@@ -175,6 +161,98 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
           lastEventEndTime = lastEventEndTime)
     } catch (e: Exception) {
       null
+    }
+  }
+
+  /**
+   * Applies client-side filtering and sorting to series based on the specified filter.
+   *
+   * This method performs in-memory filtering that cannot be efficiently done at the database level,
+   * such as filtering by series state (upcoming, active, expired) and excluding events based on
+   * user relationships.
+   *
+   * @param serieFilter The type of filter to apply.
+   * @param series The list of series to filter and sort.
+   * @param userId The current user's ID.
+   * @return A filtered and sorted list of series according to the specified filter criteria.
+   */
+  private fun clientSideProcessing(
+      serieFilter: SerieFilter,
+      series: List<Serie>,
+      userId: String
+  ): List<Serie> {
+    return when (serieFilter) {
+      SerieFilter.SERIES_FOR_OVERVIEW_SCREEN -> {
+        series
+      }
+      SerieFilter.SERIES_FOR_HISTORY_SCREEN -> {
+        series.filter { serie -> serie.isExpired() }.sortedByDescending { it.date.toDate().time }
+      }
+      SerieFilter.SERIES_FOR_SEARCH_SCREEN -> {
+        // ToDo review search algorithm for series because type are on events not on series
+        series.filter { serie ->
+          serie.isUpcoming() && !serie.participants.contains(userId) && serie.ownerId != userId
+        }
+      }
+      SerieFilter.SERIES_FOR_MAP_SCREEN -> {
+        series.filter { serie ->
+          (serie.isUpcoming() || (serie.isActive() && serie.participants.contains(userId)))
+        }
+      }
+    }
+  }
+
+  /**
+   * Fetches series from Firestore with database-level filtering applied.
+   *
+   * This method performs Firestore queries optimized for each filter type.
+   *
+   * @param serieFilter The type of filter determining which Firestore queries to execute.
+   * @param userId The current user's ID for filtering series.
+   * @return A list of events retrieved from Firestore, converted from document snapshots.
+   */
+  private suspend fun databaseFetching(serieFilter: SerieFilter, userId: String): List<Serie> {
+    return when (serieFilter) {
+      SerieFilter.SERIES_FOR_OVERVIEW_SCREEN,
+      SerieFilter.SERIES_FOR_HISTORY_SCREEN -> {
+        val snapshot =
+            db.collection(SERIES_COLLECTION_PATH)
+                .whereArrayContains("participants", userId)
+                .get()
+                .await()
+        snapshot.mapNotNull { documentToSerie(it) }
+      }
+      SerieFilter.SERIES_FOR_SEARCH_SCREEN -> {
+        val snapshot =
+            db.collection(SERIES_COLLECTION_PATH)
+                .whereEqualTo("visibility", EventVisibility.PUBLIC.name)
+                .get()
+                .await()
+        snapshot.mapNotNull { documentToSerie(it) }
+      }
+      SerieFilter.SERIES_FOR_MAP_SCREEN -> {
+        // Execute both Firestore queries in parallel for better performance
+        coroutineScope {
+          val participantSnapshotDeferred = async {
+            db.collection(SERIES_COLLECTION_PATH)
+                .whereArrayContains("participants", userId)
+                .get()
+                .await()
+          }
+          val publicSnapshotDeferred = async {
+            db.collection(SERIES_COLLECTION_PATH)
+                .whereEqualTo("visibility", EventVisibility.PUBLIC.name)
+                .get()
+                .await()
+          }
+
+          val participantEvents =
+              participantSnapshotDeferred.await().mapNotNull { documentToSerie(it) }
+          val publicEvents = publicSnapshotDeferred.await().mapNotNull { documentToSerie(it) }
+
+          (participantEvents + publicEvents).distinctBy { it.serieId }
+        }
+      }
     }
   }
 }
