@@ -92,7 +92,7 @@ class HistoryViewModel(
                 .filter { item ->
                   when (item) {
                     is EventItem.SingleEvent -> item.event.isExpired()
-                    is EventItem.EventSerie -> item.serie.isExpired(allEvents)
+                    is EventItem.EventSerie -> item.serie.isExpired()
                   }
                 }
                 .sortedByDescending { it.date.toDate().time }

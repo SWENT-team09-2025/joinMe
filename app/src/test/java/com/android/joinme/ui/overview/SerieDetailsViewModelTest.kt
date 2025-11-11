@@ -273,7 +273,7 @@ class SerieDetailsViewModelTest {
   fun uiState_formattedDateTime_returnsFormattedDate() {
     val calendar = Calendar.getInstance()
     calendar.set(2025, Calendar.JANUARY, 15, 18, 30, 0)
-    val serie = createTestSerie().copy(date = Timestamp(calendar.time))
+    val serie = createTestSerie(serieId = "test-serie-1")
     val state = SerieDetailsUIState(serie = serie, isLoading = false)
 
     val formatted = state.formattedDateTime
@@ -290,13 +290,25 @@ class SerieDetailsViewModelTest {
 
   @Test
   fun uiState_formattedDuration_calculatesTotalDuration() {
-    val serie = createTestSerie()
-    val events =
-        listOf(
-            createTestEvent(eventId = "event1", duration = 90), // 1h 30min
-            createTestEvent(eventId = "event2", duration = 120) // 2h
-            )
-    val state = SerieDetailsUIState(serie = serie, events = events, isLoading = false)
+    val calendar = Calendar.getInstance()
+    val startDate = calendar.time
+    calendar.add(Calendar.MINUTE, 210) // 3.5 hours = 210 minutes
+    val endDate = calendar.time
+
+    val serie =
+        Serie(
+            serieId = "test-serie-1",
+            title = "Test Serie",
+            description = "Test",
+            date = Timestamp(startDate),
+            participants = listOf("user1", "user2"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1", "event2"),
+            ownerId = "owner123",
+            lastEventEndTime = Timestamp(endDate))
+
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
 
     val formatted = state.formattedDuration
     // Total: 210 minutes = 3h 30min
@@ -311,9 +323,9 @@ class SerieDetailsViewModelTest {
   }
 
   @Test
-  fun uiState_formattedDuration_returnsZeroWhenNoEvents() {
+  fun uiState_formattedDuration_returnsZeroWhenLastEventEndTimeEqualsDate() {
     val serie = createTestSerie()
-    val state = SerieDetailsUIState(serie = serie, events = emptyList(), isLoading = false)
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
 
     assertEquals("0min", state.formattedDuration)
   }
@@ -336,7 +348,7 @@ class SerieDetailsViewModelTest {
 
   @Test
   fun uiState_visibilityDisplay_returnsPublic() {
-    val serie = createTestSerie().copy(visibility = Visibility.PUBLIC)
+    val serie = createTestSerie()
     val state = SerieDetailsUIState(serie = serie, isLoading = false)
 
     assertEquals("PUBLIC", state.visibilityDisplay)
@@ -344,7 +356,21 @@ class SerieDetailsViewModelTest {
 
   @Test
   fun uiState_visibilityDisplay_returnsPrivate() {
-    val serie = createTestSerie().copy(visibility = Visibility.PRIVATE)
+    val calendar = Calendar.getInstance()
+    calendar.set(2025, Calendar.JANUARY, 15, 18, 30, 0)
+
+    val serie =
+        Serie(
+            serieId = "test-serie-1",
+            title = "Private Serie",
+            description = "Private test",
+            date = Timestamp(calendar.time),
+            participants = listOf("user1", "user2"),
+            maxParticipants = 10,
+            visibility = Visibility.PRIVATE,
+            eventIds = listOf("event1", "event2"),
+            ownerId = "owner123")
+
     val state = SerieDetailsUIState(serie = serie, isLoading = false)
 
     assertEquals("PRIVATE", state.visibilityDisplay)

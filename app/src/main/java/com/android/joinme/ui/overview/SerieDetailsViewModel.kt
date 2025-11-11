@@ -87,7 +87,7 @@ data class SerieDetailsUIState(
    */
   val formattedDuration: String
     get() {
-      return serie?.getFormattedDuration(events) ?: "0min"
+      return serie?.getFormattedDuration() ?: "0min"
     }
 
   /** Gets the participant count string in format "current/max" */
