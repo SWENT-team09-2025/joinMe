@@ -53,21 +53,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
+import com.android.joinme.ui.theme.AvatarBackgroundColor
+import com.android.joinme.ui.theme.AvatarBorderColor
 import com.android.joinme.ui.theme.BorderColor
-import com.android.joinme.ui.theme.ChatAvatarBackgroundColor
-import com.android.joinme.ui.theme.ChatAvatarBorderColor
-import com.android.joinme.ui.theme.ChatLeaveButtonColor
-import com.android.joinme.ui.theme.ChatMessageBubbleColor
-import com.android.joinme.ui.theme.ChatMessageTextColor
-import com.android.joinme.ui.theme.ChatTopBarColor
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.DisabledButtonColor
 import com.android.joinme.ui.theme.FocusedBorderColor
 import com.android.joinme.ui.theme.JoinMeColor
+import com.android.joinme.ui.theme.OnSurfaceColor
 import com.android.joinme.ui.theme.PlaceholderTextColor
+import com.android.joinme.ui.theme.SportsColor
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -134,7 +133,7 @@ fun ChatScreen(
     currentUserName: String,
     viewModel: ChatViewModel,
     onBackClick: () -> Unit = {},
-    topBarColor: androidx.compose.ui.graphics.Color = ChatTopBarColor
+    topBarColor: androidx.compose.ui.graphics.Color = SportsColor
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val snackbarHostState = remember { SnackbarHostState() }
@@ -178,7 +177,8 @@ fun ChatScreen(
               currentUserId = currentUserId,
               currentUserName = currentUserName,
               onSendMessage = { content -> viewModel.sendMessage(content, currentUserName) },
-              paddingValues = paddingValues)
+              paddingValues = paddingValues,
+              categoryColor = topBarColor)
         }
       }
 }
@@ -196,7 +196,7 @@ private fun ChatTopBar(
     chatTitle: String,
     onBackClick: () -> Unit,
     onLeaveClick: () -> Unit,
-    topBarColor: androidx.compose.ui.graphics.Color = ChatTopBarColor
+    topBarColor: androidx.compose.ui.graphics.Color = SportsColor
 ) {
   Surface(
       modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.TOP_BAR),
@@ -212,15 +212,15 @@ private fun ChatTopBar(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = ChatMessageTextColor)
+                        tint = OnSurfaceColor)
                   }
 
               // Avatar
               Box(
                   modifier =
                       Modifier.size(32.dp)
-                          .background(ChatAvatarBorderColor, CircleShape)
-                          .border(2.dp, ChatAvatarBorderColor, CircleShape),
+                          .background(AvatarBorderColor, CircleShape)
+                          .border(2.dp, AvatarBorderColor, CircleShape),
                   contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.Person,
@@ -236,7 +236,7 @@ private fun ChatTopBar(
                   text = chatTitle,
                   style = MaterialTheme.typography.titleMedium,
                   fontWeight = FontWeight.Bold,
-                  color = ChatMessageTextColor,
+                  color = OnSurfaceColor,
                   modifier = Modifier.weight(1f).testTag(ChatScreenTestTags.TITLE))
 
               // Leave button - background color matches top bar
@@ -249,7 +249,7 @@ private fun ChatTopBar(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                         contentDescription = "Leave chat",
-                        tint = ChatMessageTextColor,
+                        tint = OnSurfaceColor,
                         modifier = Modifier.size(20.dp))
                   }
             }
@@ -264,6 +264,7 @@ private fun ChatTopBar(
  * @param currentUserName The display name of the current user
  * @param onSendMessage Callback invoked when sending a new message
  * @param paddingValues Padding from the Scaffold
+ * @param categoryColor The category color for message bubbles and send button
  */
 @Composable
 private fun ChatContent(
@@ -271,7 +272,8 @@ private fun ChatContent(
     currentUserId: String,
     currentUserName: String,
     onSendMessage: (String) -> Unit,
-    paddingValues: PaddingValues
+    paddingValues: PaddingValues,
+    categoryColor: androidx.compose.ui.graphics.Color
 ) {
   var messageText by remember { mutableStateOf("") }
   val listState = rememberLazyListState()
@@ -312,7 +314,9 @@ private fun ChatContent(
               } else {
                 items(messages, key = { it.id }) { message ->
                   MessageItem(
-                      message = message, isCurrentUser = message.senderId == currentUserId)
+                      message = message,
+                      isCurrentUser = message.senderId == currentUserId,
+                      bubbleColor = categoryColor)
                 }
               }
             }
@@ -326,7 +330,8 @@ private fun ChatContent(
                 onSendMessage(messageText)
                 messageText = ""
               }
-            })
+            },
+            sendButtonColor = categoryColor)
       }
 }
 
@@ -335,9 +340,10 @@ private fun ChatContent(
  *
  * @param message The message to display
  * @param isCurrentUser Whether the message was sent by the current user
+ * @param bubbleColor The color for the message bubble
  */
 @Composable
-private fun MessageItem(message: Message, isCurrentUser: Boolean) {
+private fun MessageItem(message: Message, isCurrentUser: Boolean, bubbleColor: androidx.compose.ui.graphics.Color) {
   Row(
       modifier =
           Modifier.fillMaxWidth()
@@ -361,7 +367,7 @@ private fun MessageItem(message: Message, isCurrentUser: Boolean) {
                     topEnd = 16.dp,
                     bottomStart = if (isCurrentUser) 16.dp else 4.dp,
                     bottomEnd = if (isCurrentUser) 4.dp else 16.dp),
-            color = ChatMessageBubbleColor,
+            color = bubbleColor,
             shadowElevation = 2.dp) {
               Column(modifier = Modifier.padding(12.dp)) {
                 // System messages
@@ -369,7 +375,7 @@ private fun MessageItem(message: Message, isCurrentUser: Boolean) {
                   Text(
                       text = message.content,
                       style = MaterialTheme.typography.bodySmall,
-                      color = ChatMessageTextColor.copy(alpha = 0.9f),
+                      color = OnSurfaceColor.copy(alpha = 0.9f),
                       fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
                 } else {
                   // Show sender name for other users
@@ -378,7 +384,7 @@ private fun MessageItem(message: Message, isCurrentUser: Boolean) {
                         text = message.senderName,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = ChatMessageTextColor.copy(alpha = 0.8f))
+                        color = OnSurfaceColor.copy(alpha = 0.8f))
                     Spacer(modifier = Modifier.height(4.dp))
                   }
 
@@ -386,14 +392,14 @@ private fun MessageItem(message: Message, isCurrentUser: Boolean) {
                   Text(
                       text = message.content,
                       style = MaterialTheme.typography.bodyMedium,
-                      color = ChatMessageTextColor)
+                      color = OnSurfaceColor)
 
                   // Timestamp
                   Spacer(modifier = Modifier.height(4.dp))
                   Text(
                       text = formatTimestamp(message.timestamp),
                       style = MaterialTheme.typography.labelSmall,
-                      color = ChatMessageTextColor.copy(alpha = 0.6f))
+                      color = OnSurfaceColor.copy(alpha = 0.6f))
                 }
               }
             }
@@ -417,13 +423,13 @@ private fun UserAvatar(modifier: Modifier = Modifier) {
       modifier =
           modifier
               .size(24.dp)
-              .background(ChatAvatarBackgroundColor, CircleShape)
-              .border(1.5.dp, ChatAvatarBorderColor, CircleShape),
+              .background(AvatarBackgroundColor, CircleShape)
+              .border(1.5.dp, AvatarBorderColor, CircleShape),
       contentAlignment = Alignment.Center) {
         Icon(
             imageVector = Icons.Default.Person,
             contentDescription = "User avatar",
-            tint = ChatMessageTextColor,
+            tint = OnSurfaceColor,
             modifier = Modifier.size(14.dp))
       }
 }
@@ -434,9 +440,10 @@ private fun UserAvatar(modifier: Modifier = Modifier) {
  * @param text Current input text
  * @param onTextChange Callback when text changes
  * @param onSendClick Callback when send button is clicked
+ * @param sendButtonColor The color for the send button
  */
 @Composable
-private fun MessageInput(text: String, onTextChange: (String) -> Unit, onSendClick: () -> Unit) {
+private fun MessageInput(text: String, onTextChange: (String) -> Unit, onSendClick: () -> Unit, sendButtonColor: androidx.compose.ui.graphics.Color) {
   Surface(shadowElevation = Dimens.Elevation.small, color = MaterialTheme.colorScheme.surface) {
     Row(
         modifier =
@@ -470,14 +477,14 @@ private fun MessageInput(text: String, onTextChange: (String) -> Unit, onSendCli
                   Modifier.size(48.dp)
                       .background(
                           color =
-                              if (text.isNotBlank()) ChatMessageBubbleColor
+                              if (text.isNotBlank()) sendButtonColor
                               else DisabledButtonColor,
                           shape = CircleShape)
                       .testTag(ChatScreenTestTags.SEND_BUTTON)) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
                     contentDescription = "Send message",
-                    tint = ChatMessageTextColor)
+                    tint = OnSurfaceColor)
               }
         }
   }
