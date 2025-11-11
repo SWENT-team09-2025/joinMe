@@ -19,6 +19,7 @@ class MapUIStateTest {
     assertNull(state.userLocation)
     assertTrue(state.events.isEmpty())
     assertNull(state.errorMsg)
+    assertTrue(state.series.isEmpty())
     assertFalse(state.isLoading)
   }
 
