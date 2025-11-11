@@ -5,7 +5,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -18,8 +17,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.android.joinme.ui.theme.scrimDark
-import com.android.joinme.ui.theme.scrimLight
+import com.android.joinme.ui.theme.customColors
 
 /**
  * Data class representing a single action bubble option
@@ -145,8 +143,7 @@ fun FloatingActionBubbles(
           label = "scrimAlpha")
 
   // Use semantic scrim colors from Color.kt for consistency
-  val isDarkTheme = isSystemInDarkTheme()
-  val scrimBaseColor = if (isDarkTheme) scrimDark else scrimLight
+  val scrimBaseColor = MaterialTheme.customColors.scrimOverlay
   val scrimColor = scrimBaseColor.copy(alpha = scrimBaseColor.alpha * scrimAlpha)
 
   // Animated visibility for bubbles

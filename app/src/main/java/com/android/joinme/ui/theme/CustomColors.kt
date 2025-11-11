@@ -50,6 +50,7 @@ data class CustomColors(
     val outlinedTextFieldDisabledTrailingIconColor: Color,
     val deleteButton: Color,
     val editIcon: Color,
+    val scrimOverlay: Color
 )
 
 /** Custom light color palette. */
@@ -123,7 +124,10 @@ val lightCustomColors =
         deleteButton = errorLight,
 
         // Edit icon color in group/profile pictures
-        editIcon = onPrimaryLight)
+        editIcon = onPrimaryLight,
+
+        // Scrim overlay color for ShowMultiplesOptionsBubbles
+        scrimOverlay = scrimLight)
 
 /** Custom dark color palette. */
 val darkCustomColors =
@@ -199,7 +203,9 @@ val darkCustomColors =
         deleteButton = errorContainerDark,
 
         // Edit icon color in group/profile pictures
-        editIcon = primaryDark)
+        editIcon = primaryDark,
+        // Scrim overlay color for ShowMultiplesOptionsBubbles
+        scrimOverlay = scrimDark)
 
 internal val LocalCustomColors = staticCompositionLocalOf { lightCustomColors }
 

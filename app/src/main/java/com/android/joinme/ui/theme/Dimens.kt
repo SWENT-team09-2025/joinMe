@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
  * - `History`: History screen specific dimensions
  * - `Group`: Group feature dimensions (form/edit screens)
  * - `GroupDetail`: Group detail screen specific dimensions
+ * - `GroupList`: Group list screen specific dimensions
  *
  * Usage example:
  * ```
@@ -629,6 +630,9 @@ object Dimens {
    * Spacing, Padding, and other objects for consistency.
    */
   object GroupDetail {
+    /** 48dp - Size of member profile pictures in members list */
+    val memberProfilePictureSize: Dp = 48.dp
+
     /** 120dp - Size of group picture on detail screen */
     val pictureSize: Dp = 120.dp
 
@@ -637,9 +641,17 @@ object Dimens {
 
     /** 28dp - Corner radius for group events button (pill shape) */
     val eventsButtonCornerRadius: Dp = 28.dp
+  }
 
-    /** 48dp - Size of member profile pictures in members list */
-    val memberProfilePictureSize: Dp = 48.dp
+  /**
+   * Group list screen dimensions.
+   *
+   * Minimal dimensions specific to GroupListScreen FAB positioning. All other spacing reuses
+   * existing Spacing/Padding values.
+   */
+  object GroupList {
+    /** 80dp - Reserved space at bottom for FAB (prevents menu overlap) */
+    val fabReservedSpace: Dp = 80.dp
   }
   /**
    * Event Form Field Dimensions

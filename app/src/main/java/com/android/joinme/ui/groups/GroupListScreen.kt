@@ -6,7 +6,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +36,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -63,48 +63,10 @@ import com.android.joinme.ui.components.BubbleAlignment
 import com.android.joinme.ui.components.FloatingActionBubbles
 import com.android.joinme.ui.profile.ProfileScreen
 import com.android.joinme.ui.profile.ProfileTopBar
-import com.android.joinme.ui.theme.scrimLight
+import com.android.joinme.ui.theme.Dimens
+import com.android.joinme.ui.theme.customColors
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
-
-/** Dimensions and styling constants for GroupListScreen and its components */
-private object GroupListScreenDimensions {
-  // FAB (Floating Action Button)
-  val fabCornerRadius = 24.dp
-  val fabBottomPadding = 84.dp
-
-  // List Layout
-  val listHorizontalPadding = 16.dp
-  val listVerticalPadding = 12.dp
-  val cardSpacing = 12.dp
-
-  // Card Menu Overlay
-  val menuBubbleSpacing = 8.dp
-  val menuRightPadding = 60.dp
-  val menuHeight = 272.dp // 5 bubbles × 48dp + 4 spacers × 8dp
-  val menuBottomMargin = 80.dp // Space for FAB
-  val menuTopMargin = 80.dp // Space below app bar
-
-  // Scrim Animation
-  const val scrimAnimationDuration = 300 // milliseconds
-  const val scrimZIndex = 1000f
-
-  // GroupCard
-  val cardMinHeight = 86.dp
-  val cardPadding = 12.dp
-  val titleDescriptionSpacing = 4.dp
-  val descriptionMembersSpacing = 6.dp
-  const val descriptionAlpha = 0.8f
-  const val membersAlpha = 0.7f
-
-  // MenuBubble
-  val bubbleCornerRadius = 24.dp
-  val bubbleHeight = 48.dp
-  val bubbleHorizontalPadding = 16.dp
-  val bubbleVerticalPadding = 8.dp
-  val bubbleIconTextSpacing = 8.dp
-  val bubbleIconSize = 20.dp
-}
 
 /**
  * Contains test tags for UI elements in the GroupListScreen.
@@ -207,7 +169,7 @@ fun GroupListScreen(
   var openMenuGroupId by remember { mutableStateOf<String?>(null) }
 
   // State for tracking the position of the clicked three-dot button
-  var menuButtonYPosition by remember { mutableStateOf(0f) }
+  var menuButtonYPosition by remember { mutableFloatStateOf(0f) }
 
   // Define bubble actions for join/create group FAB
   val groupJoinBubbleActions = remember {
@@ -250,10 +212,18 @@ fun GroupListScreen(
                 Icon(
                     Icons.Default.Add,
                     contentDescription = "Join a new group",
-                    tint = MaterialTheme.colorScheme.onPrimary)
+                    tint =
+                        if (showJoinBubbles) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.onPrimary)
               },
-              shape = RoundedCornerShape(GroupListScreenDimensions.fabCornerRadius),
-              text = { Text("Join a new group", color = MaterialTheme.colorScheme.onPrimary) },
+              shape = RoundedCornerShape(Dimens.CornerRadius.pill),
+              text = {
+                Text(
+                    "Join a new group",
+                    color =
+                        if (showJoinBubbles) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.onPrimary)
+              },
               containerColor =
                   if (showJoinBubbles) MaterialTheme.colorScheme.surfaceVariant
                   else MaterialTheme.colorScheme.primary)
@@ -266,15 +236,12 @@ fun GroupListScreen(
           LazyColumn(
               modifier =
                   Modifier.fillMaxSize()
-                      .padding(horizontal = GroupListScreenDimensions.listHorizontalPadding)
+                      .padding(horizontal = Dimens.Spacing.medium)
                       .padding(
-                          bottom =
-                              pd.calculateBottomPadding() +
-                                  GroupListScreenDimensions.fabBottomPadding)
+                          bottom = pd.calculateBottomPadding() + Dimens.GroupList.fabReservedSpace)
                       .padding(top = pd.calculateTopPadding())
                       .testTag(GroupListScreenTestTags.LIST),
-              contentPadding =
-                  PaddingValues(vertical = GroupListScreenDimensions.listVerticalPadding)) {
+              contentPadding = PaddingValues(vertical = Dimens.Spacing.itemSpacing)) {
                 items(groups) { group ->
                   GroupCard(
                       group = group,
@@ -286,7 +253,10 @@ fun GroupListScreen(
                         openMenuGroupId = if (openMenuGroupId == group.id) null else group.id
                         menuButtonYPosition = yPosition
                       })
-                  Spacer(Modifier.height(GroupListScreenDimensions.cardSpacing))
+                  HorizontalDivider(
+                      modifier = Modifier.padding(vertical = Dimens.Spacing.medium),
+                      thickness = Dimens.BorderWidth.thin,
+                      color = MaterialTheme.colorScheme.primary)
                 }
               }
         } else {
@@ -323,12 +293,15 @@ fun GroupListScreen(
         val isOwner = group.ownerId == currentUserId
         val numberOfButtons = if (isOwner) 5 else 3 // 5 if owner, 3 if not
         val dynamicMenuHeight =
-            GroupListScreenDimensions.bubbleHeight.times(numberOfButtons) +
-                GroupListScreenDimensions.menuBubbleSpacing.times(numberOfButtons - 1)
+            Dimens.TouchTarget.minimum.times(numberOfButtons) +
+                Dimens.Spacing.small.times(numberOfButtons - 1)
 
-        // Check if menu would go off-screen
+        // Check if menu would go off-screen (reserve space for FAB at bottom)
         val spaceBelow =
-            screenHeightDp - buttonTopPaddingDp - GroupListScreenDimensions.menuBottomMargin
+            (screenHeightDp.value -
+                    buttonTopPaddingDp.value -
+                    Dimens.GroupList.fabReservedSpace.value)
+                .dp
         val shouldPositionAbove = spaceBelow < dynamicMenuHeight
 
         // Calculate final top position
@@ -336,7 +309,7 @@ fun GroupListScreen(
             if (shouldPositionAbove) {
               // Position menu so bottom aligns with button (menu above button)
               (buttonTopPaddingDp - dynamicMenuHeight).coerceAtLeast(
-                  GroupListScreenDimensions.menuTopMargin)
+                  Dimens.GroupList.fabReservedSpace)
             } else {
               // Normal position (menu below button)
               buttonTopPaddingDp
@@ -346,18 +319,16 @@ fun GroupListScreen(
         val scrimAlpha by
             animateFloatAsState(
                 targetValue = 1f,
-                animationSpec =
-                    tween(durationMillis = GroupListScreenDimensions.scrimAnimationDuration),
+                animationSpec = tween(durationMillis = 300),
                 label = "cardMenuScrimAlpha")
-        val isDarkTheme = isSystemInDarkTheme()
-        val scrimBaseColor = if (isDarkTheme) scrimLight else scrimLight
+        val scrimBaseColor = MaterialTheme.customColors.scrimOverlay
         val scrimColor = scrimBaseColor.copy(alpha = scrimBaseColor.alpha * scrimAlpha)
 
         // Full-screen scrim overlay with menu bubbles
         Box(
             modifier =
                 Modifier.fillMaxSize()
-                    .zIndex(GroupListScreenDimensions.scrimZIndex)
+                    .zIndex(1000f)
                     .background(scrimColor)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -367,10 +338,8 @@ fun GroupListScreen(
               Column(
                   modifier =
                       Modifier.align(Alignment.TopEnd)
-                          .padding(
-                              top = topPaddingDp, end = GroupListScreenDimensions.menuRightPadding),
-                  verticalArrangement =
-                      Arrangement.spacedBy(GroupListScreenDimensions.menuBubbleSpacing),
+                          .padding(top = topPaddingDp, end = Dimens.Spacing.huge),
+                  verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small),
                   horizontalAlignment = Alignment.End) {
                     // View Group Details
                     MenuBubble(
@@ -461,13 +430,13 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: (Float) 
   Card(
       modifier =
           Modifier.fillMaxWidth()
-              .heightIn(min = GroupListScreenDimensions.cardMinHeight)
+              .heightIn(min = Dimens.Profile.bioMinHeight)
               .clickable { onClick() }
               .testTag(GroupListScreenTestTags.cardTag(group.id)),
       colors = CardDefaults.cardColors(containerColor = groupColor, contentColor = groupOnColor),
   ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(GroupListScreenDimensions.cardPadding),
+        modifier = Modifier.fillMaxWidth().padding(Dimens.Spacing.itemSpacing),
         verticalAlignment = Alignment.Top) {
           Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -476,22 +445,22 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: (Float) 
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(GroupListScreenDimensions.titleDescriptionSpacing))
+            Spacer(Modifier.height(Dimens.Spacing.extraSmall))
             if (group.description.isNotBlank()) {
               Text(
                   text = group.description,
                   style = MaterialTheme.typography.bodySmall,
                   maxLines = 2,
                   overflow = TextOverflow.Ellipsis,
-                  color = groupOnColor.copy(alpha = GroupListScreenDimensions.descriptionAlpha))
+                  color = groupOnColor.copy(alpha = 0.8f))
             }
-            Spacer(Modifier.height(GroupListScreenDimensions.descriptionMembersSpacing))
+            Spacer(Modifier.height(Dimens.Spacing.small))
             Text(
                 text = "members: ${group.memberIds.size}",
                 style = MaterialTheme.typography.labelSmall,
-                color = groupOnColor.copy(alpha = GroupListScreenDimensions.membersAlpha))
+                color = groupOnColor.copy(alpha = 0.7f))
           }
-          var buttonYPosition by remember { mutableStateOf(0f) }
+          var buttonYPosition by remember { mutableFloatStateOf(0f) }
 
           IconButton(
               onClick = { onMoreOptions(buttonYPosition) },
@@ -516,24 +485,22 @@ private fun MenuBubble(text: String, icon: ImageVector, onClick: () -> Unit, tes
       onClick = onClick,
       containerColor = MaterialTheme.colorScheme.primaryContainer,
       contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-      shape = RoundedCornerShape(GroupListScreenDimensions.bubbleCornerRadius),
-      modifier = Modifier.height(GroupListScreenDimensions.bubbleHeight).testTag(testTag)) {
+      shape = RoundedCornerShape(Dimens.CornerRadius.pill),
+      modifier = Modifier.height(Dimens.TouchTarget.minimum).testTag(testTag)) {
         Row(
             modifier =
                 Modifier.padding(
-                    horizontal = GroupListScreenDimensions.bubbleHorizontalPadding,
-                    vertical = GroupListScreenDimensions.bubbleVerticalPadding),
+                    horizontal = Dimens.Spacing.medium, vertical = Dimens.Padding.small),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement =
-                Arrangement.spacedBy(GroupListScreenDimensions.bubbleIconTextSpacing)) {
+            horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
               Icon(
                   imageVector = icon,
                   contentDescription = text,
-                  tint = MaterialTheme.colorScheme.onSurface,
-                  modifier = Modifier.size(GroupListScreenDimensions.bubbleIconSize))
+                  tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                  modifier = Modifier.size(Dimens.IconSize.small))
               Text(
                   text = text,
-                  color = MaterialTheme.colorScheme.onSurface,
+                  color = MaterialTheme.colorScheme.onPrimaryContainer,
                   style = MaterialTheme.typography.bodyMedium)
             }
       }
