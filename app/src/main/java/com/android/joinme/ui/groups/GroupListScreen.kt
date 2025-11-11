@@ -41,6 +41,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -64,6 +65,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.model.event.getColor
+import com.android.joinme.model.event.getOnContainerColor
 import com.android.joinme.model.groups.Group
 import com.android.joinme.ui.components.BubbleAction
 import com.android.joinme.ui.components.BubbleAlignment
@@ -269,11 +272,19 @@ fun GroupListScreen(
               icon = {
                 Icon(
                     Icons.Default.Add,
-                    contentDescription = "Join a new group",
-                    tint = MaterialTheme.colorScheme.onPrimary)
+                    contentDescription = "JOIN A NEW GROUP",
+                    tint =
+                        if (showJoinBubbles) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.onPrimary)
               },
               shape = RoundedCornerShape(Dimens.CornerRadius.pill),
-              text = { Text("Join a new group", color = MaterialTheme.colorScheme.onPrimary) },
+              text = {
+                Text(
+                    "JOIN A NEW GROUP",
+                    color =
+                        if (showJoinBubbles) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.onPrimary)
+              },
               containerColor =
                   if (showJoinBubbles) MaterialTheme.colorScheme.surfaceVariant
                   else MaterialTheme.colorScheme.primary)
@@ -286,11 +297,12 @@ fun GroupListScreen(
           LazyColumn(
               modifier =
                   Modifier.fillMaxSize()
-                      .padding(horizontal = Dimens.Padding.medium)
-                      .padding(bottom = pd.calculateBottomPadding() + Dimens.Padding.extraLargeBubble)
+                      .padding(horizontal = Dimens.Spacing.medium)
+                      .padding(
+                          bottom = pd.calculateBottomPadding() + Dimens.GroupList.fabReservedSpace)
                       .padding(top = pd.calculateTopPadding())
                       .testTag(GroupListScreenTestTags.LIST),
-              contentPadding = PaddingValues(vertical = Dimens.Padding.smallMedium)) {
+              contentPadding = PaddingValues(vertical = Dimens.Spacing.itemSpacing)) {
                 items(groups) { group ->
                   GroupCard(
                       group = group,
@@ -302,7 +314,10 @@ fun GroupListScreen(
                         openMenuGroupId = if (openMenuGroupId == group.id) null else group.id
                         menuButtonYPosition = yPosition
                       })
-                  Spacer(Modifier.height(Dimens.Spacing.itemSpacing))
+                  HorizontalDivider(
+                      modifier = Modifier.padding(vertical = Dimens.Spacing.medium),
+                      thickness = Dimens.BorderWidth.thin,
+                      color = MaterialTheme.colorScheme.primary)
                 }
               }
         } else {
@@ -339,11 +354,15 @@ fun GroupListScreen(
         val isOwner = group.ownerId == currentUserId
         val numberOfButtons = 5 // Always show all 5 buttons
         val dynamicMenuHeight =
-            Dimens.Button.minHeight.times(numberOfButtons) +
+            Dimens.TouchTarget.minimum.times(numberOfButtons) +
                 Dimens.Spacing.small.times(numberOfButtons - 1)
 
         // Check if menu would go off-screen
-        val spaceBelow = screenHeightDp - buttonTopPaddingDp - Dimens.Padding.extraLargeBubble
+        val spaceBelow =
+            (screenHeightDp.value -
+                    buttonTopPaddingDp.value -
+                    Dimens.GroupList.fabReservedSpace.value)
+                .dp
         val shouldPositionAbove = spaceBelow < dynamicMenuHeight
 
         // Calculate final top position
@@ -351,7 +370,7 @@ fun GroupListScreen(
             if (shouldPositionAbove) {
               // Position menu so bottom aligns with button (menu above button)
               (buttonTopPaddingDp - dynamicMenuHeight).coerceAtLeast(
-                  Dimens.Padding.extraLargeBubble)
+                  Dimens.GroupList.fabReservedSpace)
             } else {
               // Normal position (menu below button)
               buttonTopPaddingDp
@@ -457,8 +476,8 @@ fun GroupListScreen(
         onDismiss = { showJoinBubbles = false },
         actions = groupJoinBubbleActions,
         bubbleAlignment = BubbleAlignment.BOTTOM_END,
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface)
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
 
     // Leave Group Confirmation Dialog
     groupToLeave?.let { group ->
@@ -559,41 +578,39 @@ fun GroupListScreen(
  */
 @Composable
 private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: (Float) -> Unit) {
+  val groupColor = group.category.getColor()
+  val groupOnColor = group.category.getOnContainerColor()
+
   Card(
       modifier =
           Modifier.fillMaxWidth()
-              .heightIn(min = Dimens.Button.standardHeight)
+              .heightIn(min = Dimens.Profile.bioMinHeight)
               .clickable { onClick() }
               .testTag(GroupListScreenTestTags.cardTag(group.id)),
-      colors =
-          CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+      colors = CardDefaults.cardColors(containerColor = groupColor, contentColor = groupOnColor)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.smallMedium),
+            modifier = Modifier.fillMaxWidth().padding(Dimens.Spacing.itemSpacing),
             verticalAlignment = Alignment.Top) {
               Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = group.name,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer)
-                Spacer(Modifier.height(Dimens.Padding.extraSmall))
+                    overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.height(Dimens.Spacing.extraSmall))
                 if (group.description.isNotBlank()) {
                   Text(
                       text = group.description,
                       style = MaterialTheme.typography.bodySmall,
                       maxLines = 2,
                       overflow = TextOverflow.Ellipsis,
-                      color =
-                          MaterialTheme.colorScheme.onPrimaryContainer.copy(
-                              alpha = DESCRIPTION_ALPHA))
+                      color = groupOnColor.copy(alpha = DESCRIPTION_ALPHA))
                 }
-                Spacer(Modifier.height(Dimens.Spacing.extraSmall))
+                Spacer(Modifier.height(Dimens.Spacing.small))
                 Text(
                     text = "members: ${group.memberIds.size}",
                     style = MaterialTheme.typography.labelSmall,
-                    color =
-                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = MEMBERS_ALPHA))
+                    color = groupOnColor.copy(alpha = MEMBERS_ALPHA))
               }
               var buttonYPosition by remember { mutableFloatStateOf(0f) }
 
@@ -607,7 +624,7 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: (Float) 
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "More options",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                        tint = groupOnColor)
                   }
             }
       }
@@ -618,23 +635,24 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: (Float) 
 private fun MenuBubble(text: String, icon: ImageVector, onClick: () -> Unit, testTag: String = "") {
   FloatingActionButton(
       onClick = onClick,
-      containerColor = MaterialTheme.colorScheme.surface,
+      containerColor = MaterialTheme.colorScheme.primaryContainer,
+      contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
       shape = RoundedCornerShape(Dimens.CornerRadius.pill),
-      modifier = Modifier.height(Dimens.Button.minHeight).testTag(testTag)) {
+      modifier = Modifier.height(Dimens.TouchTarget.minimum).testTag(testTag)) {
         Row(
             modifier =
                 Modifier.padding(
-                    horizontal = Dimens.Padding.medium, vertical = Dimens.Padding.small),
+                    horizontal = Dimens.Spacing.medium, vertical = Dimens.Padding.small),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
               Icon(
                   imageVector = icon,
                   contentDescription = text,
-                  tint = MaterialTheme.colorScheme.onSurface,
-                  modifier = Modifier.size(Dimens.IconSize.smallMedium))
+                  tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                  modifier = Modifier.size(Dimens.IconSize.small))
               Text(
                   text = text,
-                  color = MaterialTheme.colorScheme.onSurface,
+                  color = MaterialTheme.colorScheme.onPrimaryContainer,
                   style = MaterialTheme.typography.bodyMedium)
             }
       }
