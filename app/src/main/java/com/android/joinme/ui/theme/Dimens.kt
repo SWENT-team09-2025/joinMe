@@ -557,6 +557,11 @@ object Dimens {
     val cardVerticalPadding: Dp = 6.dp
   }
 
+  object PinMark {
+    val pinMarkWidth = 80
+    val pinMarkHeight = 120
+  }
+
   /**
    * Event Form Dimensions
    *

@@ -61,6 +61,8 @@ object MapScreenTestTags {
 }
 
 const val SNIPPET_MESSAGE = "Tap to see more & join me"
+const val LOW_SATURATION_THRESHOLD = 0.1f
+const val LOW_VALUE_THRESHOLD = 0.1f
 
 /**
  * Creates a marker icon for Google Maps based on the given color.
@@ -76,12 +78,12 @@ internal fun createMarkerForColor(color: Color): BitmapDescriptor {
   android.graphics.Color.colorToHSV(color.toArgb(), hsv)
 
   // Check if color is black or very dark (low saturation and low value)
-  val isBlackish = hsv[1] < 0.1f && hsv[2] < 0.1f
+  val isBlackish = hsv[1] < LOW_SATURATION_THRESHOLD && hsv[2] < LOW_VALUE_THRESHOLD
 
   return if (isBlackish) {
     // Create custom black marker (3x size to match default markers)
-    val width = 80
-    val height = 120
+    val width = Dimens.PinMark.pinMarkWidth
+    val height = Dimens.PinMark.pinMarkHeight
     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
 
