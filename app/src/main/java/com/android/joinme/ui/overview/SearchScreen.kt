@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.eventItem.EventItem
+import com.android.joinme.model.serie.Serie
 import com.android.joinme.ui.components.EventCard
 import com.android.joinme.ui.components.SerieCard
 import com.android.joinme.ui.navigation.BottomNavigationMenu
@@ -66,13 +67,14 @@ object SearchScreenTestTags {
 /**
  * Search screen composable that displays a search interface with filters.
  *
- * Provides a search text field, filter chips (All, Social, Activity), and a sport category dropdown
- * menu. Users can search for events and apply various filters to narrow down results.
+ * Provides a search text field, filter chips (Social, Activity), and a sport category dropdown
+ * menu. Users can search for events and series and apply various filters to narrow down results.
  *
  * @param searchViewModel ViewModel managing search state and filter logic
  * @param searchQuery Initial search query (currently unused, reserved for future use)
  * @param navigationActions Navigation actions for handling tab navigation
  * @param onSelectEvent Callback invoked when an event is selected from the list
+ * @param onSelectSerie Callback invoked when a serie is selected from the list
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,7 +82,8 @@ fun SearchScreen(
     searchViewModel: SearchViewModel = viewModel(),
     searchQuery: String = "",
     navigationActions: NavigationActions? = null,
-    onSelectEvent: (Event) -> Unit = {}
+    onSelectEvent: (Event) -> Unit = {},
+    onSelectSerie: (Serie) -> Unit = {}
 ) {
   val context = LocalContext.current
   val uiState by searchViewModel.uiState.collectAsState()
@@ -238,9 +241,7 @@ fun SearchScreen(
                         SerieCard(
                             modifier = Modifier.padding(vertical = Dimens.Padding.small),
                             serie = item.serie,
-                            onClick = {
-                              // TODO: Navigate to serie details screen
-                            },
+                            onClick = { onSelectSerie(item.serie) },
                             testTag = "searchSerieItem${item.serie.serieId}")
                       }
                     }
@@ -252,7 +253,8 @@ fun SearchScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally) {
                   Text(
-                      text = "No events or series found. Try adjusting your filters or search query.",
+                      text =
+                          "No events or series found. Try adjusting your filters or search query.",
                       textAlign = TextAlign.Center,
                       style = MaterialTheme.typography.bodyMedium,
                       modifier = Modifier.testTag(SearchScreenTestTags.EMPTY_EVENT_LIST_MSG))
