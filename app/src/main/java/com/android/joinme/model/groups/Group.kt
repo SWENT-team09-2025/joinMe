@@ -24,6 +24,8 @@ data class Group(
     val ownerId: String = "",
     val memberIds: List<String> = emptyList(),
     val eventIds: List<String> = emptyList(),
-    val membersCount: Int = memberIds.size,
     val photoUrl: String? = null
-)
+) {
+  val membersCount: Int
+    get() = memberIds.size
+}

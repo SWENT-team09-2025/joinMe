@@ -22,17 +22,25 @@ class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupReposit
   }
 
   override suspend fun getAllGroups(): List<Group> {
-    val ownerId =
+    val userId =
         Firebase.auth.currentUser?.uid
             ?: throw Exception("GroupRepositoryFirestore: User not logged in.")
 
-    val snapshot =
-        db.collection(GROUPS_COLLECTION_PATH)
-            .whereEqualTo(ownerAttributeName, ownerId)
-            .get()
-            .await()
+    // Get groups where user is the owner
+    val ownerSnapshot =
+        db.collection(GROUPS_COLLECTION_PATH).whereArrayContains("memberIds", userId).get().await()
 
-    return snapshot.mapNotNull { documentToGroup(it) }
+    // Get groups where user is a member
+    val memberSnapshot =
+        db.collection(GROUPS_COLLECTION_PATH).whereArrayContains("memberIds", userId).get().await()
+
+    // Combine both results and remove duplicates
+    val allGroups =
+        (ownerSnapshot.mapNotNull { documentToGroup(it) } +
+                memberSnapshot.mapNotNull { documentToGroup(it) })
+            .distinctBy { it.id }
+
+    return allGroups
   }
 
   override suspend fun getGroup(groupId: String): Group {
@@ -67,6 +75,18 @@ class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupReposit
       throw Exception("GroupRepositoryFirestore: User is not a member of this group")
     }
 
+    val updatedGroup = group.copy(memberIds = updatedMemberIds)
+    editGroup(groupId, updatedGroup)
+  }
+
+  override suspend fun joinGroup(groupId: String, userId: String) {
+    val group = getGroup(groupId)
+
+    if (group.memberIds.contains(userId)) {
+      throw Exception("GroupRepositoryFirestore: User is already a member of this group")
+    }
+
+    val updatedMemberIds = group.memberIds + userId
     val updatedGroup = group.copy(memberIds = updatedMemberIds)
     editGroup(groupId, updatedGroup)
   }

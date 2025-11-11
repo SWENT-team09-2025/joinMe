@@ -55,4 +55,13 @@ interface GroupRepository {
    * @throws Exception if the Group item is not found.
    */
   suspend fun leaveGroup(groupId: String, userId: String)
+
+  /**
+   * Adds a user to a Group's member list.
+   *
+   * @param groupId The unique identifier of the Group to join.
+   * @param userId The ID of the user who wants to join the group.
+   * @throws Exception if the Group item is not found or user is already a member.
+   */
+  suspend fun joinGroup(groupId: String, userId: String)
 }

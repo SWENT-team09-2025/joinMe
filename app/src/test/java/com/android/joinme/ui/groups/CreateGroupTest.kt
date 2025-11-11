@@ -78,6 +78,16 @@ class CreateGroupScreenTest {
       val updatedGroup = group.copy(memberIds = updatedMemberIds)
       editGroup(groupId, updatedGroup)
     }
+
+    override suspend fun joinGroup(groupId: String, userId: String) {
+      val group = getGroup(groupId)
+      if (group.memberIds.contains(userId)) {
+        throw Exception("User is already a member of this group")
+      }
+      val updatedMemberIds = group.memberIds + userId
+      val updatedGroup = group.copy(memberIds = updatedMemberIds)
+      editGroup(groupId, updatedGroup)
+    }
   }
 
   @Test

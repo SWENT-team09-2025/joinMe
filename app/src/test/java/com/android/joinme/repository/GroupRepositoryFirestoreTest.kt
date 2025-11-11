@@ -193,7 +193,7 @@ class GroupRepositoryFirestoreTest {
     val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
     val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
 
-    every { mockCollection.whereEqualTo("ownerId", testUserId) } returns mockQuery
+    every { mockCollection.whereArrayContains("memberIds", testUserId) } returns mockQuery
     every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
     every { mockQuerySnapshot.iterator() } returns
         mutableListOf(mockSnapshot1, mockSnapshot2).iterator()

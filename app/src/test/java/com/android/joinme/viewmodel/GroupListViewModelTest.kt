@@ -88,6 +88,16 @@ class GroupListViewModelTest {
       val updatedGroup = group.copy(memberIds = updatedMemberIds)
       editGroup(groupId, updatedGroup)
     }
+
+    override suspend fun joinGroup(groupId: String, userId: String) {
+      val group = getGroup(groupId)
+      if (group.memberIds.contains(userId)) {
+        throw Exception("User is already a member of this group")
+      }
+      val updatedMemberIds = group.memberIds + userId
+      val updatedGroup = group.copy(memberIds = updatedMemberIds)
+      editGroup(groupId, updatedGroup)
+    }
   }
 
   private lateinit var fakeRepo: FakeGroupRepository
@@ -703,5 +713,218 @@ class GroupListViewModelTest {
 
     assertNotNull(errorMessage)
     assertTrue(errorMessage!!.contains("Failed to leave group"))
+  }
+
+  // =======================================
+  // Join Group Tests
+  // =======================================
+
+  @Test
+  fun joinGroup_addsUserToMembersAndRefreshesState() = runTest {
+    mockFirebaseAuth()
+    val group =
+        Group(
+            id = "1",
+            name = "Test Group",
+            ownerId = "owner1",
+            memberIds = listOf("owner1", "user2"))
+    fakeRepo.setGroups(listOf(group))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+    assertEquals(2, viewModel.uiState.value.groups[0].memberIds.size)
+
+    var successCalled = false
+    viewModel.joinGroup("1", onSuccess = { successCalled = true })
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertEquals(3, state.groups[0].memberIds.size)
+    assertTrue(state.groups[0].memberIds.contains(testUserId))
+    assertTrue(successCalled)
+    assertNull(state.errorMsg)
+
+    cleanupFirebaseAuth()
+  }
+
+  @Test
+  fun joinGroup_callsOnSuccessCallback() = runTest {
+    mockFirebaseAuth()
+    val group = Group(id = "1", name = "Test", ownerId = "owner1", memberIds = listOf("owner1"))
+    fakeRepo.setGroups(listOf(group))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+
+    var successCalled = false
+    viewModel.joinGroup("1", onSuccess = { successCalled = true })
+    advanceUntilIdle()
+
+    assertTrue(successCalled)
+
+    cleanupFirebaseAuth()
+  }
+
+  @Test
+  fun joinGroup_withExistingMember_callsOnErrorCallback() = runTest {
+    mockFirebaseAuth()
+    val group =
+        Group(id = "1", name = "Test", ownerId = "owner1", memberIds = listOf("owner1", testUserId))
+    fakeRepo.setGroups(listOf(group))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+
+    var errorMessage: String? = null
+    viewModel.joinGroup("1", onError = { errorMessage = it })
+    advanceUntilIdle()
+
+    assertNotNull(errorMessage)
+    assertTrue(errorMessage!!.contains("Failed to join group"))
+
+    cleanupFirebaseAuth()
+  }
+
+  @Test
+  fun joinGroup_setsErrorMessageOnFailure() = runTest {
+    mockFirebaseAuth()
+    val group =
+        Group(id = "1", name = "Test", ownerId = "owner1", memberIds = listOf("owner1", testUserId))
+    fakeRepo.setGroups(listOf(group))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+
+    viewModel.joinGroup("1")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Failed to join group"))
+
+    cleanupFirebaseAuth()
+  }
+
+  @Test
+  fun joinGroup_refreshesGroupListAfterJoining() = runTest {
+    mockFirebaseAuth()
+    val group =
+        Group(
+            id = "1",
+            name = "Test Group",
+            ownerId = "owner1",
+            memberIds = listOf("owner1", "user2"))
+    fakeRepo.setGroups(listOf(group))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+
+    viewModel.joinGroup("1")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertEquals(3, state.groups[0].memberIds.size)
+    assertTrue(state.groups[0].memberIds.contains(testUserId))
+
+    cleanupFirebaseAuth()
+  }
+
+  @Test
+  fun joinGroup_withNonExistentGroup_callsOnErrorCallback() = runTest {
+    mockFirebaseAuth()
+    fakeRepo.setGroups(listOf(Group(id = "1", name = "Test", ownerId = "owner1")))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+
+    var errorMessage: String? = null
+    viewModel.joinGroup("non-existent", onError = { errorMessage = it })
+    advanceUntilIdle()
+
+    assertNotNull(errorMessage)
+    assertTrue(errorMessage!!.contains("Failed to join group"))
+
+    cleanupFirebaseAuth()
+  }
+
+  @Test
+  fun joinGroup_updatesGroupMembersCount() = runTest {
+    mockFirebaseAuth()
+    val group =
+        Group(id = "1", name = "Test Group", ownerId = "owner1", memberIds = listOf("owner1"))
+    fakeRepo.setGroups(listOf(group))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+    assertEquals(1, viewModel.uiState.value.groups[0].membersCount)
+
+    viewModel.joinGroup("1")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertEquals(2, state.groups[0].membersCount)
+
+    cleanupFirebaseAuth()
+  }
+
+  @Test
+  fun joinGroup_multipleUsers_addsAllUsersCorrectly() = runTest {
+    mockFirebaseAuth()
+    val group =
+        Group(id = "1", name = "Test Group", ownerId = "owner1", memberIds = listOf("owner1"))
+    fakeRepo.setGroups(listOf(group))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+    assertEquals(1, viewModel.uiState.value.groups[0].memberIds.size)
+
+    // First user joins
+    viewModel.joinGroup("1")
+    advanceUntilIdle()
+    assertEquals(2, viewModel.uiState.value.groups[0].memberIds.size)
+
+    // Simulate another user joining by manually updating the repository
+    cleanupFirebaseAuth()
+    val secondUserId = "second-user-456"
+    mockkStatic(FirebaseAuth::class)
+    val mockAuth = mockk<FirebaseAuth>()
+    val mockUser = mockk<FirebaseUser>()
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns mockUser
+    every { mockUser.uid } returns secondUserId
+
+    val updatedViewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+    updatedViewModel.joinGroup("1")
+    advanceUntilIdle()
+
+    val state = updatedViewModel.uiState.value
+    assertEquals(3, state.groups[0].memberIds.size)
+    assertTrue(state.groups[0].memberIds.contains(testUserId))
+    assertTrue(state.groups[0].memberIds.contains(secondUserId))
+
+    cleanupFirebaseAuth()
+  }
+
+  @Test
+  fun joinGroup_preservesOtherGroupProperties() = runTest {
+    mockFirebaseAuth()
+    val group =
+        Group(
+            id = "test-123",
+            name = "Sports Group",
+            ownerId = "owner1",
+            description = "Weekly soccer games",
+            memberIds = listOf("owner1"),
+            eventIds = listOf("event1", "event2"))
+    fakeRepo.setGroups(listOf(group))
+    viewModel = GroupListViewModel(fakeRepo)
+    advanceUntilIdle()
+
+    viewModel.joinGroup("test-123")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    val updatedGroup = state.groups[0]
+    assertEquals("test-123", updatedGroup.id)
+    assertEquals("Sports Group", updatedGroup.name)
+    assertEquals("owner1", updatedGroup.ownerId)
+    assertEquals("Weekly soccer games", updatedGroup.description)
+    assertEquals(2, updatedGroup.eventIds.size)
+    assertEquals(2, updatedGroup.memberIds.size)
+
+    cleanupFirebaseAuth()
   }
 }

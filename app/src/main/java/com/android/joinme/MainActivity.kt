@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
@@ -20,6 +21,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
+import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.notification.FCMTokenManager
 import com.android.joinme.ui.groups.CreateGroupScreen
 import com.android.joinme.ui.groups.EditGroupScreen
@@ -45,6 +47,7 @@ import com.android.joinme.ui.profile.ViewProfileScreen
 import com.android.joinme.ui.signIn.SignInScreen
 import com.android.joinme.ui.theme.SampleAppTheme
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
 /** Provides a singleton OkHttpClient instance for network operations. */
@@ -65,11 +68,22 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     createNotificationChannel()
 
-    val initialEventId = intent?.data?.lastPathSegment
+    val deepLinkData = intent?.data
+    val initialEventId = if (deepLinkData?.host == "event") deepLinkData.lastPathSegment else null
+    val initialGroupId =
+        when {
+          deepLinkData?.host == "group" -> deepLinkData.lastPathSegment
+          deepLinkData?.host == "joinme.app" &&
+              deepLinkData.pathSegments?.firstOrNull() == "group" ->
+              deepLinkData.pathSegments?.getOrNull(1)
+          else -> null
+        }
 
     setContent {
       SampleAppTheme {
-        Surface(modifier = Modifier.fillMaxSize()) { JoinMe(initialEventId = initialEventId) }
+        Surface(modifier = Modifier.fillMaxSize()) {
+          JoinMe(initialEventId = initialEventId, initialGroupId = initialGroupId)
+        }
       }
     }
   }
@@ -111,10 +125,12 @@ fun JoinMe(
     credentialManager: CredentialManager = CredentialManager.create(context),
     startDestination: String? = null,
     initialEventId: String? = null,
+    initialGroupId: String? = null,
     enableNotificationPermissionRequest: Boolean = true,
 ) {
   val navController = rememberNavController()
   val navigationActions = NavigationActions(navController)
+  val coroutineScope = rememberCoroutineScope()
   val initialDestination =
       startDestination
           ?: if (FirebaseAuth.getInstance().currentUser == null) Screen.Auth.name
@@ -131,6 +147,27 @@ fun JoinMe(
   LaunchedEffect(initialEventId) {
     if (initialEventId != null && FirebaseAuth.getInstance().currentUser != null) {
       navigationActions.navigateTo(Screen.ShowEventScreen(initialEventId))
+    }
+  }
+
+  // Join group if opened from invitation link
+  LaunchedEffect(initialGroupId) {
+    if (initialGroupId != null) {
+      val currentUser = FirebaseAuth.getInstance().currentUser
+      if (currentUser != null) {
+        coroutineScope.launch {
+          try {
+            val groupRepository = GroupRepositoryProvider.repository
+            groupRepository.joinGroup(initialGroupId, currentUser.uid)
+            Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT).show()
+            navigationActions.navigateTo(Screen.GroupDetail(initialGroupId))
+          } catch (e: Exception) {
+            Toast.makeText(context, "Failed to join group: ${e.message}", Toast.LENGTH_LONG).show()
+          }
+        }
+      } else {
+        Toast.makeText(context, "Please sign in to join the group", Toast.LENGTH_SHORT).show()
+      }
     }
   }
 
@@ -322,9 +359,15 @@ fun JoinMe(
 
         GroupListScreen(
             viewModel = groupListViewModel,
-            onJoinWithLink = {
-              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
-            }, // TODO navigate to join with link screen or popup
+            onJoinWithLink = { groupId ->
+              groupListViewModel.joinGroup(
+                  groupId = groupId,
+                  onSuccess = {
+                    Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT)
+                        .show()
+                  },
+                  onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
+            },
             onCreateGroup = { navigationActions.navigateTo(Screen.CreateGroup) },
             onGroup = {
               Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
@@ -342,13 +385,14 @@ fun JoinMe(
                   onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
             },
             onShareGroup = { group ->
+              val deepLink = "joinme://group/${group.id}"
               val shareIntent =
                   Intent().apply {
                     action = Intent.ACTION_SEND
                     putExtra(Intent.EXTRA_SUBJECT, "Join my group on JoinMe!")
                     putExtra(
                         Intent.EXTRA_TEXT,
-                        "Join '${group.name}' on JoinMe!\n\nCategory: ${group.category}\n${if (group.description.isNotBlank()) "Description: ${group.description}\n" else ""}Check it out!")
+                        "Join '${group.name}' on JoinMe!\n\nCategory: ${group.category}\n${if (group.description.isNotBlank()) "Description: ${group.description}\n\n" else "\n"}Click the link to join: $deepLink")
                     type = "text/plain"
                   }
               context.startActivity(Intent.createChooser(shareIntent, "Share Group via"))

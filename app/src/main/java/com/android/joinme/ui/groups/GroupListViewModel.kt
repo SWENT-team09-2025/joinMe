@@ -120,4 +120,28 @@ class GroupListViewModel(
       }
     }
   }
+
+  /**
+   * Adds the current user to a group and refreshes the UI state.
+   *
+   * @param groupId The ID of the group to join.
+   * @param onSuccess Callback invoked when the user successfully joins the group.
+   * @param onError Callback invoked when joining fails, receives error message.
+   */
+  fun joinGroup(groupId: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
+    viewModelScope.launch {
+      try {
+        val currentUserId =
+            FirebaseAuth.getInstance().currentUser?.uid ?: throw Exception("User not authenticated")
+
+        groupRepository.joinGroup(groupId, currentUserId)
+        refreshUIState()
+        onSuccess()
+      } catch (e: Exception) {
+        val errorMsg = "Failed to join group: ${e.message}"
+        setErrorMsg(errorMsg)
+        onError(errorMsg)
+      }
+    }
+  }
 }

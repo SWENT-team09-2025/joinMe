@@ -78,6 +78,16 @@ private class FakeGroupRepository : GroupRepository {
     val updatedGroup = group.copy(memberIds = updatedMemberIds)
     editGroup(groupId, updatedGroup)
   }
+
+  override suspend fun joinGroup(groupId: String, userId: String) {
+    val group = getGroup(groupId)
+    if (group.memberIds.contains(userId)) {
+      throw Exception("User is already a member of this group")
+    }
+    val updatedMemberIds = group.memberIds + userId
+    val updatedGroup = group.copy(memberIds = updatedMemberIds)
+    editGroup(groupId, updatedGroup)
+  }
 }
 
 @RunWith(RobolectricTestRunner::class)
@@ -565,30 +575,6 @@ class GroupListScreenTest {
   }
 
   @Test
-  fun floatingActionBubbles_joinWithLinkClick_triggersCallback() {
-    // Given: Screen with callback tracker
-    var joinWithLinkClicked = false
-
-    composeTestRule.setContent {
-      GroupListScreen(
-          onJoinWithLink = { joinWithLinkClicked = true },
-          onCreateGroup = {},
-          onGroup = {},
-          onBackClick = {},
-          onProfileClick = {},
-          onEditClick = {})
-    }
-
-    // When: User opens bubbles and clicks "Join with link"
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-
-    composeTestRule.onNodeWithTag("groupJoinWithLinkBubble").performClick()
-
-    // Then: Callback was invoked
-    assert(joinWithLinkClicked) { "onJoinWithLink callback should have been called" }
-  }
-
-  @Test
   fun floatingActionBubbles_createGroupClick_triggersCallback() {
     // Given: Screen with callback tracker
     var createGroupClicked = false
@@ -978,18 +964,6 @@ class GroupListScreenTest {
     // Click again to close
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
     composeTestRule.onNodeWithText("Join with link").assertDoesNotExist()
-  }
-
-  @Test
-  fun joinWithLinkBubble_triggersCallback() {
-    var joinClicked = false
-
-    composeTestRule.setContent { GroupListScreen(onJoinWithLink = { joinClicked = true }) }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithText("Join with link").performClick()
-
-    assertTrue(joinClicked)
   }
 
   @Test
@@ -1698,7 +1672,7 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
     composeTestRule.onNodeWithText("Share Group").performClick()
 
-    // Verify "Copy invite link" text is displayed
-    composeTestRule.onNodeWithText("Copy invite link").assertExists()
+    // Verify "Copy Group ID" text is displayed
+    composeTestRule.onNodeWithText("Copy Group ID").assertExists()
   }
 }

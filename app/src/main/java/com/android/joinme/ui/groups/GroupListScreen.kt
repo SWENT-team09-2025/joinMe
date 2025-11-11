@@ -47,6 +47,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -181,7 +182,7 @@ object GroupListScreenTestTags {
 @Composable
 fun GroupListScreen(
     viewModel: GroupListViewModel = viewModel(),
-    onJoinWithLink: () -> Unit = {},
+    onJoinWithLink: (String) -> Unit = {},
     onCreateGroup: () -> Unit = {},
     onGroup: (Group) -> Unit = {},
     onViewGroupDetails: (Group) -> Unit = {},
@@ -225,6 +226,10 @@ fun GroupListScreen(
   // State for non-owner trying to delete (restriction dialog)
   var showOnlyOwnerCanDeleteDialog by remember { mutableStateOf(false) }
 
+  // State for join with link dialog
+  var showJoinWithLinkDialog by remember { mutableStateOf(false) }
+  var groupIdInput by remember { mutableStateOf("") }
+
   // Define bubble actions for join/create group FAB
   val groupJoinBubbleActions = remember {
     listOf(
@@ -232,8 +237,8 @@ fun GroupListScreen(
             text = "Join with link",
             icon = Icons.Default.Link,
             onClick = {
-              Toast.makeText(context, "Not implemented yet", Toast.LENGTH_SHORT).show()
-              onJoinWithLink()
+              showJoinWithLinkDialog = true
+              showJoinBubbles = false
             },
             testTag = GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE),
         BubbleAction(
@@ -525,6 +530,22 @@ fun GroupListScreen(
           onDismiss = { showOnlyOwnerCanDeleteDialog = false },
           confirmButtonTestTag = GroupListScreenTestTags.ONLY_OWNER_CAN_DELETE_OK_BUTTON)
     }
+
+    // Join with Link Dialog
+    if (showJoinWithLinkDialog) {
+      JoinWithLinkDialog(
+          groupIdInput = groupIdInput,
+          onGroupIdChange = { groupIdInput = it },
+          onJoin = {
+            onJoinWithLink(groupIdInput.trim())
+            showJoinWithLinkDialog = false
+            groupIdInput = ""
+          },
+          onDismiss = {
+            showJoinWithLinkDialog = false
+            groupIdInput = ""
+          })
+    }
   } // Close outer Box
 }
 
@@ -779,14 +800,12 @@ private fun ShareGroupDialog(group: Group, onDismiss: () -> Unit, onShareComplet
 
                 Spacer(Modifier.height(24.dp))
 
-                // Copy invite link button
+                // Copy Group ID button
                 Button(
                     onClick = {
-                      // Generate invite link (you can customize this based on your app's deep
-                      // linking)
-                      val inviteLink = "https://joinme.app/invite/${group.id}"
-                      clipboardManager.setText(AnnotatedString(inviteLink))
-                      Toast.makeText(context, "Invite link copied to clipboard", Toast.LENGTH_SHORT)
+                      // Copy group ID to clipboard so users can join with it
+                      clipboardManager.setText(AnnotatedString(group.id))
+                      Toast.makeText(context, "Group ID copied to clipboard!", Toast.LENGTH_SHORT)
                           .show()
                       onShareComplete()
                     },
@@ -808,8 +827,7 @@ private fun ShareGroupDialog(group: Group, onDismiss: () -> Unit, onShareComplet
                                 modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = "Copy invite link",
-                                color = MaterialTheme.colorScheme.onPrimary)
+                                text = "Copy Group ID", color = MaterialTheme.colorScheme.onPrimary)
                           }
                     }
 
@@ -817,10 +835,131 @@ private fun ShareGroupDialog(group: Group, onDismiss: () -> Unit, onShareComplet
 
                 // Helper text
                 Text(
-                    text = "Anyone with this link can join the group",
+                    text = "Anyone with this ID can join the group",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     textAlign = TextAlign.Center)
+              }
+        }
+  }
+}
+
+/**
+ * Join with Link Dialog for entering a Group ID to join.
+ *
+ * @param groupIdInput The current input value
+ * @param onGroupIdChange Callback when input changes
+ * @param onJoin Callback when join button is clicked
+ * @param onDismiss Callback when dialog is dismissed
+ */
+@Composable
+private fun JoinWithLinkDialog(
+    groupIdInput: String,
+    onGroupIdChange: (String) -> Unit,
+    onJoin: () -> Unit,
+    onDismiss: () -> Unit
+) {
+  val context = LocalContext.current
+  val clipboardManager = LocalClipboardManager.current
+
+  Dialog(onDismissRequest = onDismiss) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(Dimens.CornerRadius.extraLarge),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+          Column(
+              modifier = Modifier.padding(Dimens.Padding.large),
+              horizontalAlignment = Alignment.CenterHorizontally) {
+                // Header with close button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically) {
+                      Spacer(Modifier.width(24.dp)) // Balance the close button
+                      Text(
+                          text = "       Join a group",
+                          style = MaterialTheme.typography.titleMedium,
+                          color = MaterialTheme.colorScheme.onSurface)
+                      IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurface)
+                      }
+                    }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Instructions
+                Text(
+                    text = "Enter the Group ID to join",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth())
+
+                Spacer(Modifier.height(16.dp))
+
+                // Group ID input field
+                TextField(
+                    value = groupIdInput,
+                    onValueChange = onGroupIdChange,
+                    label = { Text("Group ID") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth())
+
+                Spacer(Modifier.height(8.dp))
+
+                // Paste button
+                Button(
+                    onClick = {
+                      val clipboardText = clipboardManager.getText()?.text
+                      if (clipboardText != null) {
+                        onGroupIdChange(clipboardText)
+                        Toast.makeText(context, "Pasted from clipboard", Toast.LENGTH_SHORT).show()
+                      } else {
+                        Toast.makeText(context, "Clipboard is empty", Toast.LENGTH_SHORT).show()
+                      }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(Dimens.Button.minHeight),
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary),
+                    shape = RoundedCornerShape(Dimens.CornerRadius.extraLarge)) {
+                      Row(
+                          horizontalArrangement = Arrangement.Center,
+                          verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondary,
+                                modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Paste Group ID",
+                                color = MaterialTheme.colorScheme.onSecondary)
+                          }
+                    }
+
+                Spacer(Modifier.height(24.dp))
+
+                // Join button
+                Button(
+                    onClick = {
+                      if (groupIdInput.trim().isNotEmpty()) {
+                        onJoin()
+                      } else {
+                        Toast.makeText(context, "Please enter a Group ID", Toast.LENGTH_SHORT)
+                            .show()
+                      }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(Dimens.Button.minHeight),
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary),
+                    shape = RoundedCornerShape(Dimens.CornerRadius.extraLarge)) {
+                      Text(text = "Join Group", color = MaterialTheme.colorScheme.onPrimary)
+                    }
               }
         }
   }
