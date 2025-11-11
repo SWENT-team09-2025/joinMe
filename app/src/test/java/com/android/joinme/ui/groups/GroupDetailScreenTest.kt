@@ -379,6 +379,7 @@ class GroupDetailScreenTest {
 
     composeTestRule.onNodeWithText("Alice").assertIsDisplayed()
     composeTestRule.onNodeWithText("Bob").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("membersList").performScrollToNode(hasText("Charlie"))
     composeTestRule.onNodeWithText("Charlie").assertIsDisplayed()
   }
 
@@ -440,8 +441,12 @@ class GroupDetailScreenTest {
       composeTestRule.onAllNodesWithText("Alice").fetchSemanticsNodes().isNotEmpty()
     }
 
+    // Click Alice and Bob (likely visible)
     composeTestRule.onNodeWithText("Alice").performClick()
     composeTestRule.onNodeWithText("Bob").performClick()
+
+    // Scroll to Charlie and click
+    composeTestRule.onNodeWithTag("membersList").performScrollToNode(hasText("Charlie"))
     composeTestRule.onNodeWithText("Charlie").performClick()
 
     assertEquals(listOf("user1", "user2", "user3"), clickedUids)
@@ -726,7 +731,7 @@ class GroupDetailScreenTest {
     }
 
     // The logo image should be displayed
-    composeTestRule.onNodeWithContentDescription("JoinMe App Logo").assertIsDisplayed()
+    composeTestRule.onNodeWithContentDescription("Group picture").assertIsDisplayed()
   }
 
   @Test
@@ -801,6 +806,7 @@ class GroupDetailScreenTest {
     // Verify all members are displayed (using a smaller list that fits on screen)
     composeTestRule.onNodeWithText("User user1").assertIsDisplayed()
     composeTestRule.onNodeWithText("User user2").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("membersList").performScrollToNode(hasText("User user3"))
     composeTestRule.onNodeWithText("User user3").assertIsDisplayed()
   }
 

@@ -2,71 +2,108 @@ package com.android.joinme.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+val primaryLight = Color(0xFF2E0E51)
+val onPrimaryLight = Color(0xFFFFFFFF)
+val primaryContainerLight = Color(0xFF442768)
+val onPrimaryContainerLight = Color(0xFFB191D9)
+val secondaryLight = Color(0xFF665975)
+val onSecondaryLight = Color(0xFFFFFFFF)
+val secondaryContainerLight = Color(0xFFEBD9FB)
+val onSecondaryContainerLight = Color(0xFF6B5D7A)
+val tertiaryLight = Color(0xFFA33F00)
+val onTertiaryLight = Color(0xFFFFFFFF)
+val tertiaryContainerLight = Color(0xFFF27638)
+val onTertiaryContainerLight = Color(0xFF5A1F00)
+val errorLight = Color(0xFFBA1A1A)
+val onErrorLight = Color(0xFFFFFFFF)
+val errorContainerLight = Color(0xFFFFDAD6)
+val onErrorContainerLight = Color(0xFF93000A)
+val backgroundLight = Color(0xFFFEF7FE)
+val onBackgroundLight = Color(0xFF1D1B1F)
+val surfaceLight = Color(0xFFFCF8F8)
+val onSurfaceLight = Color(0xFF1C1B1B)
+val surfaceVariantLight = Color(0xFFE1E2E6)
+val onSurfaceVariantLight = Color(0xFF44474A)
+val outlineLight = Color(0xFF74777B)
+val outlineVariantLight = Color(0xFFC4C7CA)
+val scrimLight = Color(0x66000000)
+val inverseSurfaceLight = Color(0xFF313030)
+val inverseOnSurfaceLight = Color(0xFFF4F0EF)
+val inversePrimaryLight = Color(0xFFD9B9FF)
+val surfaceDimLight = Color(0xFFDDD9D9)
+val surfaceBrightLight = Color(0xFFFCF8F8)
+val surfaceContainerLowestLight = Color(0xFFFFFFFF)
+val surfaceContainerLowLight = Color(0xFFF6F3F2)
+val surfaceContainerLight = Color(0xFFF1EDEC)
+val surfaceContainerHighLight = Color(0xFFEBE7E7)
+val surfaceContainerHighestLight = Color(0xFFE5E2E1)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val primaryDark = Color(0xFFD9B9FF)
+val onPrimaryDark = Color(0xFF3E2162)
+val primaryContainerDark = Color(0xFF442768)
+val onPrimaryContainerDark = Color(0xFFB191D9)
+val secondaryDark = Color(0xFFD1C0E1)
+val onSecondaryDark = Color(0xFF372B45)
+val secondaryContainerDark = Color(0xFF4E415D)
+val onSecondaryContainerDark = Color(0xFFBFAFCF)
+val tertiaryDark = Color(0xFFFFB595)
+val onTertiaryDark = Color(0xFF581E00)
+val tertiaryContainerDark = Color(0xFFF27638)
+val onTertiaryContainerDark = Color(0xFF5A1F00)
+val errorDark = Color(0xFFFFB4AB)
+val onErrorDark = Color(0xFF690005)
+val errorContainerDark = Color(0xFF93000A)
+val onErrorContainerDark = Color(0xFFFFDAD6)
+val backgroundDark = Color(0xFF151217)
+val onBackgroundDark = Color(0xFFE7E0E7)
+val surfaceDark = Color(0xFF141313)
+val onSurfaceDark = Color(0xFFE5E2E1)
+val surfaceVariantDark = Color(0xFF44474A)
+val onSurfaceVariantDark = Color(0xFFC4C7CA)
+val outlineDark = Color(0xFF8E9194)
+val outlineVariantDark = Color(0xFF44474A)
+val scrimDark = Color(0xCC000000)
+val inverseSurfaceDark = Color(0xFFE5E2E1)
+val inverseOnSurfaceDark = Color(0xFF313030)
+val inversePrimaryDark = Color(0xFF6E5094)
+val surfaceDimDark = Color(0xFF141313)
+val surfaceBrightDark = Color(0xFF3A3939)
+val surfaceContainerLowestDark = Color(0xFF0E0E0E)
+val surfaceContainerLowDark = Color(0xFF1C1B1B)
+val surfaceContainerDark = Color(0xFF201F1F)
+val surfaceContainerHighDark = Color(0xFF2A2A2A)
+val surfaceContainerHighestDark = Color(0xFF353434)
 
-val JoinMeColor = Color(0xFF101D26)
-val CreateEventButtonColor = Color(0xFFEDE7F6)
-val OverviewScreenButtonColor = Color(0xFFEDE7F6)
+val activityLight = Color(0xFF006E26)
+val onActivityLight = Color(0xFFFFFFFF)
+val activityContainerLight = Color(0xFF42E465)
+val onActivityContainerLight = Color(0xFFFFFFFF)
+val sportsLight = Color(0xFF5920CB)
+val onSportsLight = Color(0xFFFFFFFF)
+val sportsContainerLight = Color(0xFF7242E4)
+val onSportsContainerLight = Color(0xFFE9DFFF)
+val socialLight = Color(0xFFB02425)
+val onSocialLight = Color(0xFFFFFFFF)
+val socialContainerLight = Color(0xFFD33E3B)
+val onSocialContainerLight = Color(0xFFFFFBFF)
 
-// Event type colors
-val SportsColor = Color(0xFF7E57C2) // Purple for SPORTS
-val ActivityColor = Color(0xFF81C784) // Green for ACTIVITY
-val SocialColor = Color(0xFFE57373) // Red for SOCIAL
+val activityDark = Color(0xFF79FF89)
+val onActivityDark = Color(0xFF003910)
+val activityContainerDark = Color(0xFF42E465)
+val onActivityContainerDark = Color(0xFFFFFFFF)
+val sportsDark = Color(0xFFCFBDFF)
+val onSportsDark = Color(0xFF390093)
+val sportsContainerDark = Color(0xFF7242E4)
+val onSportsContainerDark = Color(0xFFFFFFFF)
+val socialDark = Color(0xFFFFB3AD)
+val onSocialDark = Color(0xFF680009)
+val socialContainerDark = Color(0xFFFA5A53)
+val onSocialContainerDark = Color(0xFFFFFFFF)
 
-// Serie Card colors
-val SerieCardBackgroundColor = Color(0xFF2D2D3D)
-val SerieCardLayer2Color = Color(0xFF232333)
-val SerieCardLayer3Color = Color(0xFF1A1A24)
-val SerieCardLayer2BorderColor = Color(0xFF7E57C2) // Purple border for second layer
-val SerieCardLayer3BorderColor = Color(0xFF5E35B1) // Darker purple for third layer
+val serieContainerLight = Color(0xFF292437)
+val onSerieContainerLight = Color(0xFFFFFFFF)
 
-// Common UI colors
-val DarkButtonColor = Color(0xFF1C1C1E)
-val DeleteButtonColor = Color.Red
-val DividerColor = Color.Gray
-val DescriptionTextColor = Color.DarkGray
-val TopAppBarBackgroundColor = Color.White
+val serieContainerDark = Color(0xFF444444)
+val onSerieContainerDark = Color(0xFFFFFFFF)
 
-// Text colors
-val OnEventCardTextColor = Color.White
-val PlaceholderTextColor = Color.LightGray
-val DisabledTextColor = Color.Gray
-val PasswordMaskTextColor = Color.Gray
-val LabelTextColor = Color.Gray
-
-// Icon colors
-val OnEventCardIconColor = Color.White
-val IconColor = Color.Black
-
-// Border colors
-val BorderColor = Color.LightGray
-val FocusedBorderColor = JoinMeColor
-val ErrorBorderColor = Color.Red
-val DisabledBorderColor = Color.LightGray
-
-// Button colors
-val GoogleSignInButtonColor = Color.White
-val DisabledButtonColor = Color.LightGray
-val ButtonSaveColor = Color.White
-
-// Background colors
-val ScreenBackgroundColor = Color.White
-val MapControlBackgroundColor = Color.White
-val CardBackgroundColor = Color.White
-
-// Profile tab colors
-val ActiveTabColor = JoinMeColor
-val InactiveTabColor = Color.LightGray
-
-// Scrim overlay color
-val ScrimOverlayColorLightTheme = Color(0x4D000000) // 30% opacity black
-val ScrimOverlayColorDarkTheme = Color(0xB3000000) // 70% opacity black
-
-// Transparent color for button overlays and invisible backgrounds
 val TransparentColor = Color.Transparent

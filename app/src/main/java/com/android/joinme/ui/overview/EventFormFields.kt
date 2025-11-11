@@ -1,6 +1,7 @@
 package com.android.joinme.ui.overview
 
 import android.widget.NumberPicker
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,9 +10,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.android.joinme.model.event.EventType
+import com.android.joinme.ui.theme.Dimens
+import com.android.joinme.ui.theme.customColors
+import com.android.joinme.ui.theme.outlinedTextField
 import java.util.Locale
 
 /** Note: This file was created with the help of IA (Claude) */
@@ -53,16 +56,28 @@ fun EventTypeField(
             },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDropdown) },
             modifier = modifier.menuAnchor().fillMaxWidth().testTag(testTag))
-        ExposedDropdownMenu(expanded = showDropdown, onDismissRequest = { showDropdown = false }) {
-          eventTypes.forEach { type ->
-            DropdownMenuItem(
-                text = { Text(type) },
-                onClick = {
-                  onValueChange(type)
-                  showDropdown = false
-                })
-          }
-        }
+        ExposedDropdownMenu(
+            expanded = showDropdown,
+            onDismissRequest = { showDropdown = false },
+            modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
+              eventTypes.forEachIndexed { index, type ->
+                DropdownMenuItem(
+                    text = {
+                      Text(
+                          text = type,
+                          color = MaterialTheme.colorScheme.onPrimaryContainer,
+                          style = MaterialTheme.typography.headlineSmall)
+                    },
+                    onClick = {
+                      onValueChange(type)
+                      showDropdown = false
+                    },
+                    colors = MaterialTheme.customColors.dropdownMenu)
+                if (index < eventTypes.lastIndex) {
+                  HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                }
+              }
+            }
       }
 }
 
@@ -139,7 +154,8 @@ fun EventDescriptionField(
               modifier = Modifier.testTag(errorTestTag))
         }
       },
-      modifier = modifier.fillMaxWidth().height(150.dp).testTag(testTag))
+      modifier =
+          modifier.fillMaxWidth().height(Dimens.EventFormFields.descriptionField).testTag(testTag))
 }
 
 /**
@@ -180,14 +196,7 @@ fun EventDurationField(
         supportingText = {
           errorMessage?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
         },
-        colors =
-            OutlinedTextFieldDefaults.colors(
-                disabledTextColor = LocalContentColor.current.copy(LocalContentColor.current.alpha),
-                disabledBorderColor = MaterialTheme.colorScheme.outline,
-                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant),
+        colors = MaterialTheme.customColors.outlinedTextField(),
         enabled = false,
         modifier = Modifier.fillMaxWidth().testTag(testTag))
   }

@@ -1,6 +1,7 @@
 package com.android.joinme.ui.overview
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,18 +18,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -40,13 +43,15 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.Event
 import com.android.joinme.ui.components.EventCard
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
+import com.android.joinme.ui.navigation.NavigationTestTags
 import com.android.joinme.ui.navigation.Tab
+import com.android.joinme.ui.theme.Dimens
+import com.android.joinme.ui.theme.customColors
 
 object SearchScreenTestTags {
   const val SEARCH_TEXT_FIELD = "searchTextField"
@@ -92,7 +97,18 @@ fun SearchScreen(
   }
 
   Scaffold(
-      topBar = { TopAppBar(title = { Text("Search") }) },
+      topBar = {
+        Column {
+          CenterAlignedTopAppBar(
+              modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
+              title = { Text(text = "Search", style = MaterialTheme.typography.titleLarge) },
+              colors =
+                  TopAppBarDefaults.topAppBarColors(
+                      containerColor = MaterialTheme.colorScheme.surface))
+          HorizontalDivider(
+              color = MaterialTheme.colorScheme.primary, thickness = Dimens.BorderWidth.thin)
+        }
+      },
       bottomBar = {
         BottomNavigationMenu(
             selectedTab = Tab.Search,
@@ -101,13 +117,13 @@ fun SearchScreen(
       }) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
           Column(
-              modifier = Modifier.padding(16.dp),
-              verticalArrangement = Arrangement.spacedBy(8.dp)) {
+              modifier = Modifier.padding(Dimens.Padding.medium),
+              verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
                 OutlinedTextField(
                     value = uiState.query,
                     onValueChange = { searchViewModel.setQuery(it) },
                     placeholder = { Text("Search an event") },
-                    shape = RoundedCornerShape(30.dp),
+                    shape = RoundedCornerShape(Dimens.IconSize.large),
                     leadingIcon = {
                       IconButton(
                           onClick = {
@@ -142,21 +158,24 @@ fun SearchScreen(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
                       FilterChip(
                           selected = filterState.isAllSelected,
                           onClick = { searchViewModel.toggleAll() },
-                          label = { Text("All") })
+                          label = { Text("All") },
+                          colors = MaterialTheme.customColors.filterChip)
 
                       FilterChip(
                           selected = filterState.isSocialSelected,
                           onClick = { searchViewModel.toggleSocial() },
-                          label = { Text("Social") })
+                          label = { Text("Social") },
+                          colors = MaterialTheme.customColors.filterChip)
 
                       FilterChip(
                           selected = filterState.isActivitySelected,
                           onClick = { searchViewModel.toggleActivity() },
-                          label = { Text("Activity") })
+                          label = { Text("Activity") },
+                          colors = MaterialTheme.customColors.filterChip)
 
                       // Dropdown filter
                       Box {
@@ -168,11 +187,14 @@ fun SearchScreen(
                               Icon(
                                   imageVector = Icons.Default.ArrowDropDown,
                                   contentDescription = "Dropdown")
-                            })
+                            },
+                            colors = MaterialTheme.customColors.filterChip)
 
                         DropdownMenu(
                             expanded = uiState.categoryExpanded,
-                            onDismissRequest = { searchViewModel.setCategoryExpanded(false) }) {
+                            onDismissRequest = { searchViewModel.setCategoryExpanded(false) },
+                            modifier =
+                                Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
                               DropdownMenuItem(
                                   text = { Text("Select all") },
                                   onClick = { searchViewModel.toggleSelectAll() },
@@ -180,7 +202,8 @@ fun SearchScreen(
                                     Checkbox(
                                         checked = filterState.isSelectAllChecked,
                                         onCheckedChange = null)
-                                  })
+                                  },
+                                  colors = MaterialTheme.customColors.dropdownMenu)
 
                               // Loop through all sport categories dynamically
                               filterState.sportCategories.forEach { sport ->
@@ -189,7 +212,8 @@ fun SearchScreen(
                                     onClick = { searchViewModel.toggleSport(sport.id) },
                                     trailingIcon = {
                                       Checkbox(checked = sport.isChecked, onCheckedChange = null)
-                                    })
+                                    },
+                                    colors = MaterialTheme.customColors.dropdownMenu)
                               }
                             }
                       }
@@ -198,16 +222,16 @@ fun SearchScreen(
 
           if (events.isNotEmpty()) {
             LazyColumn(
-                contentPadding = PaddingValues(vertical = 8.dp),
+                contentPadding = PaddingValues(vertical = Dimens.Padding.small),
                 modifier =
                     Modifier.fillMaxWidth()
                         .weight(1f)
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = Dimens.Padding.medium)
                         .testTag(SearchScreenTestTags.EVENT_LIST)) {
                   items(events.size) { index ->
                     val event = events[index]
                     EventCard(
-                        modifier = Modifier.padding(vertical = 6.dp),
+                        modifier = Modifier.padding(vertical = Dimens.Padding.small),
                         event = event,
                         onClick = { onSelectEvent(event) },
                         testTag = SearchScreenTestTags.getTestTagForEventItem(event))
@@ -228,9 +252,3 @@ fun SearchScreen(
         }
       }
 }
-
-// @Preview(showBackground = true)
-// @Composable
-// fun SearchScreenPreview() {
-//  SearchScreen(onGoBack = {})
-// }

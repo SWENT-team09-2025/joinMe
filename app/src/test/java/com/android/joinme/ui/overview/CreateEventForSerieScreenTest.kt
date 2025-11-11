@@ -270,7 +270,7 @@ class CreateEventForSerieScreenTest {
     composeTestRule.setContent { CreateEventForSerieScreen(serieId = "testSerieId", onDone = {}) }
 
     // Verify the button text is "Create Event" and not "Save"
-    composeTestRule.onNodeWithText("Create Event").assertIsDisplayed()
+    composeTestRule.onNodeWithText("CREATE EVENT").assertIsDisplayed()
   }
 
   @Test

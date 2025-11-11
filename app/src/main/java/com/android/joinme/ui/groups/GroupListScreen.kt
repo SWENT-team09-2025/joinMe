@@ -6,7 +6,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -72,8 +71,7 @@ import com.android.joinme.ui.components.FloatingActionBubbles
 import com.android.joinme.ui.profile.ProfileScreen
 import com.android.joinme.ui.profile.ProfileTopBar
 import com.android.joinme.ui.theme.Dimens
-import com.android.joinme.ui.theme.ScrimOverlayColorDarkTheme
-import com.android.joinme.ui.theme.ScrimOverlayColorLightTheme
+import com.android.joinme.ui.theme.customColors
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 
@@ -364,9 +362,7 @@ fun GroupListScreen(
                 targetValue = 1f,
                 animationSpec = tween(durationMillis = SCRIM_ANIMATION_DURATION),
                 label = "cardMenuScrimAlpha")
-        val isDarkTheme = isSystemInDarkTheme()
-        val scrimBaseColor =
-            if (isDarkTheme) ScrimOverlayColorDarkTheme else ScrimOverlayColorLightTheme
+        val scrimBaseColor = MaterialTheme.customColors.scrimOverlay
         val scrimColor = scrimBaseColor.copy(alpha = scrimBaseColor.alpha * scrimAlpha)
 
         // Full-screen scrim overlay with menu bubbles

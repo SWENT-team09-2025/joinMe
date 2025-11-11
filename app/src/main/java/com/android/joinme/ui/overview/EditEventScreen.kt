@@ -104,6 +104,5 @@ fun EditEventScreen(
         }
         true
       },
-      onGoBack = onGoBack,
-      saveButtonText = "Save")
+      onGoBack = onGoBack)
 }

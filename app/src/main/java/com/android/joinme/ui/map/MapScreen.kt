@@ -2,6 +2,7 @@ package com.android.joinme.ui.map
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -22,8 +23,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.R
 import com.android.joinme.model.event.getColor
 import com.android.joinme.ui.map.MapScreenTestTags.getTestTagForEventMarker
 import com.android.joinme.ui.map.userLocation.LocationServiceImpl
@@ -31,13 +32,13 @@ import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
 import com.android.joinme.ui.navigation.Screen
 import com.android.joinme.ui.navigation.Tab
-import com.android.joinme.ui.theme.IconColor
-import com.android.joinme.ui.theme.MapControlBackgroundColor
+import com.android.joinme.ui.theme.Dimens
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
@@ -123,8 +124,17 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
   }
 
   // --- Map properties configuration ---
+  val mapStyle =
+      if (isSystemInDarkTheme()) {
+        MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark)
+      } else {
+        null
+      }
+
   val mapProperties =
-      MapProperties(isMyLocationEnabled = locationPermissionsState.allPermissionsGranted)
+      MapProperties(
+          isMyLocationEnabled = locationPermissionsState.allPermissionsGranted,
+          mapStyleOptions = mapStyle)
 
   // --- Composable Structure ---
   Scaffold(
@@ -169,15 +179,15 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
                   },
                   modifier =
                       Modifier.align(Alignment.TopStart)
-                          .padding(16.dp)
+                          .padding(Dimens.Padding.medium)
                           .testTag(MapScreenTestTags.FILTER_BUTTON)
                           .background(
-                              color = MapControlBackgroundColor,
+                              color = MaterialTheme.colorScheme.surface,
                               shape = MaterialTheme.shapes.medium)) {
                     Icon(
                         imageVector = Icons.Filled.Tune,
                         contentDescription = "Filter",
-                        tint = IconColor)
+                        tint = MaterialTheme.colorScheme.onSurface)
                   }
             }
       }
