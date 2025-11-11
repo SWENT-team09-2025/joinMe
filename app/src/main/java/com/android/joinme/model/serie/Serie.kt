@@ -69,7 +69,6 @@ internal constructor(
         eventIds: List<String>,
         ownerId: String,
     ): Serie {
-      val initializedLastEventEndTime = date
       return Serie(
           serieId = serieId,
           title = title,
@@ -80,7 +79,7 @@ internal constructor(
           visibility = visibility,
           eventIds = eventIds,
           ownerId = ownerId,
-          lastEventEndTime = initializedLastEventEndTime)
+          lastEventEndTime = date)
     }
   }
 }
