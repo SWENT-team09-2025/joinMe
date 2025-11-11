@@ -5,6 +5,8 @@ import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepositoryLocal
 import com.android.joinme.model.map.Location
+import com.android.joinme.model.profile.Profile
+import com.android.joinme.model.profile.ProfileRepository
 import com.google.firebase.Timestamp
 import java.util.*
 import kotlinx.coroutines.Dispatchers
@@ -15,20 +17,24 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import org.mockito.Mockito.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ShowEventViewModelTest {
 
   private lateinit var repository: EventsRepositoryLocal
+  private lateinit var profileRepository: ProfileRepository
   private lateinit var viewModel: ShowEventViewModel
   private val testDispatcher = StandardTestDispatcher()
 
   private fun createTestEvent(
-      eventId: String = "test-event-1",
-      ownerId: String = "owner123",
-      participants: List<String> = listOf("user1", "user2"),
-      maxParticipants: Int = 10,
-      daysFromNow: Int = 7 // Future event by default
+    eventId: String = "test-event-1",
+    ownerId: String = "owner123",
+    participants: List<String> = listOf("user1", "user2"),
+    maxParticipants: Int = 10,
+    daysFromNow: Int = 7
   ): Event {
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.DAY_OF_YEAR, daysFromNow)
@@ -37,24 +43,25 @@ class ShowEventViewModelTest {
     calendar.set(Calendar.SECOND, 0)
 
     return Event(
-        eventId = eventId,
-        type = EventType.SPORTS,
-        title = "Basketball Game",
-        description = "Friendly 3v3 basketball match",
-        location = Location(46.5197, 6.6323, "EPFL"),
-        date = Timestamp(calendar.time),
-        duration = 90,
-        participants = participants,
-        maxParticipants = maxParticipants,
-        visibility = EventVisibility.PUBLIC,
-        ownerId = ownerId)
+      eventId = eventId,
+      type = EventType.SPORTS,
+      title = "Basketball Game",
+      description = "Friendly 3v3 basketball match",
+      location = Location(46.5197, 6.6323, "EPFL"),
+      date = Timestamp(calendar.time),
+      duration = 90,
+      participants = participants,
+      maxParticipants = maxParticipants,
+      visibility = EventVisibility.PUBLIC,
+      ownerId = ownerId)
   }
 
   @Before
   fun setup() {
     Dispatchers.setMain(testDispatcher)
     repository = EventsRepositoryLocal()
-    viewModel = ShowEventViewModel(repository)
+    profileRepository = mock(ProfileRepository::class.java)
+    viewModel = ShowEventViewModel(repository, profileRepository)
   }
 
   @After
@@ -67,6 +74,9 @@ class ShowEventViewModelTest {
   fun loadEvent_validEventId_updatesUIState() = runTest {
     val event = createTestEvent()
     repository.addEvent(event)
+
+    val mockProfile = Profile(uid = "owner123", username = "JohnDoe", email = "john@example.com")
+    whenever(profileRepository.getProfile("owner123")).thenReturn(mockProfile)
 
     viewModel.loadEvent(event.eventId)
     advanceUntilIdle()
@@ -82,7 +92,7 @@ class ShowEventViewModelTest {
     assertTrue(state.date.contains("SPORTS:"))
     assertEquals("PUBLIC", state.visibility)
     assertEquals("owner123", state.ownerId)
-    assertTrue(state.ownerName.contains("OWNER123"))
+    assertEquals("Created by JohnDoe", state.ownerName)
     assertEquals(listOf("user1", "user2", "owner123"), state.participants)
     assertFalse(state.isPastEvent)
     assertNull(state.errorMsg)
@@ -100,9 +110,11 @@ class ShowEventViewModelTest {
 
   @Test
   fun loadEvent_pastEvent_marksAsPast() = runTest {
-    // Create an event that happened 7 days ago
     val pastEvent = createTestEvent(eventId = "past-event", daysFromNow = -7)
     repository.addEvent(pastEvent)
+
+    val mockProfile = Profile(uid = "owner123", username = "TestUser", email = "test@example.com")
+    whenever(profileRepository.getProfile("owner123")).thenReturn(mockProfile)
 
     viewModel.loadEvent(pastEvent.eventId)
     advanceUntilIdle()
@@ -114,12 +126,14 @@ class ShowEventViewModelTest {
   @Test
   fun loadEvent_activeEvent_notMarkedAsPast() = runTest {
     val calendar = Calendar.getInstance()
-    // Event started 10 minutes ago and lasts 90 minutes
     calendar.add(Calendar.MINUTE, -10)
 
     val activeEvent =
-        createTestEvent(eventId = "active-event").copy(date = Timestamp(calendar.time))
+      createTestEvent(eventId = "active-event").copy(date = Timestamp(calendar.time))
     repository.addEvent(activeEvent)
+
+    val mockProfile = Profile(uid = "owner123", username = "TestUser", email = "test@example.com")
+    whenever(profileRepository.getProfile("owner123")).thenReturn(mockProfile)
 
     viewModel.loadEvent(activeEvent.eventId)
     advanceUntilIdle()
@@ -128,20 +142,57 @@ class ShowEventViewModelTest {
     assertFalse(state.isPastEvent)
   }
 
+  @Test
+  fun loadEvent_profileNotFound_showsUnknown() = runTest {
+    val event = createTestEvent(ownerId = "unknown-owner")
+    repository.addEvent(event)
+
+    whenever(profileRepository.getProfile("unknown-owner")).thenReturn(null)
+
+    viewModel.loadEvent(event.eventId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("Created by UNKNOWN", state.ownerName)
+  }
+
+  @Test
+  fun loadEvent_profileRepositoryThrows_showsUnknown() = runTest {
+    val event = createTestEvent(ownerId = "error-owner")
+    repository.addEvent(event)
+
+    whenever(profileRepository.getProfile("error-owner")).thenThrow(RuntimeException("Network error"))
+
+    viewModel.loadEvent(event.eventId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("Created by UNKNOWN", state.ownerName)
+  }
+
+  @Test
+  fun loadEvent_emptyOwnerId_showsUnknown() = runTest {
+    val event = createTestEvent(ownerId = "")
+    repository.addEvent(event)
+
+    viewModel.loadEvent(event.eventId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("Created by UNKNOWN", state.ownerName)
+  }
+
   /** --- CLEAR ERROR MESSAGE TESTS --- */
   @Test
   fun clearErrorMsg_removesErrorMessage() = runTest {
     viewModel.loadEvent("non-existent-id")
     advanceUntilIdle()
 
-    // Verify error is set
     var state = viewModel.uiState.first()
     assertNotNull(state.errorMsg)
 
-    // Clear error
     viewModel.clearErrorMsg()
 
-    // Verify error is cleared
     state = viewModel.uiState.first()
     assertNull(state.errorMsg)
   }
@@ -177,10 +228,12 @@ class ShowEventViewModelTest {
     val event = createTestEvent(participants = listOf("user1"))
     repository.addEvent(event)
 
+    val mockProfile = Profile(uid = "owner123", username = "EventOwner", email = "owner@example.com")
+    whenever(profileRepository.getProfile(any())).thenReturn(mockProfile)
+
     viewModel.loadEvent(event.eventId)
     advanceUntilIdle()
 
-    // User2 joins the event
     viewModel.toggleParticipation(event.eventId, "user2")
     advanceUntilIdle()
 
@@ -195,10 +248,12 @@ class ShowEventViewModelTest {
     val event = createTestEvent(participants = listOf("user1", "user2"))
     repository.addEvent(event)
 
+    val mockProfile = Profile(uid = "owner123", username = "EventOwner", email = "owner@example.com")
+    whenever(profileRepository.getProfile(any())).thenReturn(mockProfile)
+
     viewModel.loadEvent(event.eventId)
     advanceUntilIdle()
 
-    // User2 quits the event
     viewModel.toggleParticipation(event.eventId, "user2")
     advanceUntilIdle()
 
@@ -209,14 +264,15 @@ class ShowEventViewModelTest {
 
   @Test
   fun toggleParticipation_eventFull_setsErrorMessage() = runTest {
-    // Create event with max participants already reached
     val event = createTestEvent(participants = listOf("user1", "user2"), maxParticipants = 2)
     repository.addEvent(event)
+
+    val mockProfile = Profile(uid = "owner123", username = "EventOwner", email = "owner@example.com")
+    whenever(profileRepository.getProfile(any())).thenReturn(mockProfile)
 
     viewModel.loadEvent(event.eventId)
     advanceUntilIdle()
 
-    // User3 tries to join
     viewModel.toggleParticipation(event.eventId, "user3")
     advanceUntilIdle()
 
@@ -248,12 +304,11 @@ class ShowEventViewModelTest {
     val state = viewModel.uiState.first()
     assertNull(state.errorMsg)
 
-    // Verify the event was deleted - should throw exception
     try {
       repository.getEvent(event.eventId)
       fail("Expected exception when getting deleted event")
-    } catch (e: Exception) {
-      // Expected - event was deleted
+    } catch (_: Exception) {
+      // Expected
     }
   }
 
@@ -290,22 +345,22 @@ class ShowEventViewModelTest {
   @Test
   fun viewModel_customInitialState_usesProvidedState() {
     val customState =
-        ShowEventUIState(
-            type = "SPORTS",
-            title = "Custom Event",
-            description = "Custom Description",
-            location = "Custom Location",
-            maxParticipants = "5",
-            participantsCount = "3",
-            duration = "30",
-            date = "01/01/2024 10:00",
-            visibility = "PRIVATE",
-            ownerId = "custom-owner",
-            ownerName = "CREATED BY CUSTOM",
-            participants = listOf("user1", "user2", "user3"),
-            isPastEvent = true)
+      ShowEventUIState(
+        type = "SPORTS",
+        title = "Custom Event",
+        description = "Custom Description",
+        location = "Custom Location",
+        maxParticipants = "5",
+        participantsCount = "3",
+        duration = "30",
+        date = "01/01/2024 10:00",
+        visibility = "PRIVATE",
+        ownerId = "custom-owner",
+        ownerName = "Created by CustomUser",
+        participants = listOf("user1", "user2", "user3"),
+        isPastEvent = true)
 
-    val customViewModel = ShowEventViewModel(repository, customState)
+    val customViewModel = ShowEventViewModel(repository, profileRepository, customState)
 
     val state = customViewModel.uiState.value
     assertEquals("SPORTS", state.type)
@@ -318,34 +373,9 @@ class ShowEventViewModelTest {
     assertEquals("01/01/2024 10:00", state.date)
     assertEquals("PRIVATE", state.visibility)
     assertEquals("custom-owner", state.ownerId)
-    assertEquals("CREATED BY CUSTOM", state.ownerName)
+    assertEquals("Created by CustomUser", state.ownerName)
     assertEquals(listOf("user1", "user2", "user3"), state.participants)
     assertTrue(state.isPastEvent)
-  }
-
-  /** --- OWNER NAME DISPLAY TESTS --- */
-  @Test
-  fun loadEvent_ownerWithEmailId_extractsNameFromEmail() = runTest {
-    val event = createTestEvent(ownerId = "john.doe@example.com")
-    repository.addEvent(event)
-
-    viewModel.loadEvent(event.eventId)
-    advanceUntilIdle()
-
-    val state = viewModel.uiState.first()
-    assertTrue(state.ownerName.contains("JOHN.DOE"))
-  }
-
-  @Test
-  fun loadEvent_ownerWithEmptyId_showsUnknown() = runTest {
-    val event = createTestEvent(ownerId = "")
-    repository.addEvent(event)
-
-    viewModel.loadEvent(event.eventId)
-    advanceUntilIdle()
-
-    val state = viewModel.uiState.first()
-    assertTrue(state.ownerName.contains("UNKNOWN"))
   }
 
   /** --- DATE FORMATTING TESTS --- */
@@ -356,6 +386,9 @@ class ShowEventViewModelTest {
 
     val event = createTestEvent().copy(date = Timestamp(calendar.time))
     repository.addEvent(event)
+
+    val mockProfile = Profile(uid = "owner123", username = "TestUser", email = "test@example.com")
+    whenever(profileRepository.getProfile("owner123")).thenReturn(mockProfile)
 
     viewModel.loadEvent(event.eventId)
     advanceUntilIdle()
@@ -372,6 +405,9 @@ class ShowEventViewModelTest {
     val event = createTestEvent().copy(location = null)
     repository.addEvent(event)
 
+    val mockProfile = Profile(uid = "owner123", username = "TestUser", email = "test@example.com")
+    whenever(profileRepository.getProfile("owner123")).thenReturn(mockProfile)
+
     viewModel.loadEvent(event.eventId)
     advanceUntilIdle()
 
@@ -383,6 +419,9 @@ class ShowEventViewModelTest {
   fun loadEvent_eventWithLocation_setsLocationName() = runTest {
     val event = createTestEvent()
     repository.addEvent(event)
+
+    val mockProfile = Profile(uid = "owner123", username = "TestUser", email = "test@example.com")
+    whenever(profileRepository.getProfile("owner123")).thenReturn(mockProfile)
 
     viewModel.loadEvent(event.eventId)
     advanceUntilIdle()
@@ -397,6 +436,9 @@ class ShowEventViewModelTest {
     val event = createTestEvent().copy(type = EventType.SOCIAL)
     repository.addEvent(event)
 
+    val mockProfile = Profile(uid = "owner123", username = "TestUser", email = "test@example.com")
+    whenever(profileRepository.getProfile("owner123")).thenReturn(mockProfile)
+
     viewModel.loadEvent(event.eventId)
     advanceUntilIdle()
 
@@ -408,6 +450,9 @@ class ShowEventViewModelTest {
   fun loadEvent_activityEvent_setsCorrectType() = runTest {
     val event = createTestEvent().copy(type = EventType.ACTIVITY)
     repository.addEvent(event)
+
+    val mockProfile = Profile(uid = "owner123", username = "TestUser", email = "test@example.com")
+    whenever(profileRepository.getProfile("owner123")).thenReturn(mockProfile)
 
     viewModel.loadEvent(event.eventId)
     advanceUntilIdle()
@@ -421,6 +466,9 @@ class ShowEventViewModelTest {
   fun loadEvent_privateEvent_setsCorrectVisibility() = runTest {
     val event = createTestEvent().copy(visibility = EventVisibility.PRIVATE)
     repository.addEvent(event)
+
+    val mockProfile = Profile(uid = "owner123", username = "TestUser", email = "test@example.com")
+    whenever(profileRepository.getProfile("owner123")).thenReturn(mockProfile)
 
     viewModel.loadEvent(event.eventId)
     advanceUntilIdle()
