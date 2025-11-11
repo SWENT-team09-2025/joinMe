@@ -46,4 +46,12 @@ interface EventsRepository {
    * @throws Exception if the Event item is not found.
    */
   suspend fun deleteEvent(eventId: String)
+
+  /**
+   * Retrieves a list of Event items by their unique identifiers.
+   *
+   * @param eventIds The list of unique identifiers of the Event items to retrieve.
+   * @return A list of Event items with the specified identifiers.
+   */
+  suspend fun getEventsByIds(eventIds: List<String>): List<Event>
 }

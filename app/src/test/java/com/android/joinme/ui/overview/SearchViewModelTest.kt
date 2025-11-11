@@ -1,5 +1,6 @@
 package com.android.joinme.ui.overview
 
+import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.filter.FilterRepository
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +44,8 @@ class SearchViewModelTest {
           ) {}
 
           override suspend fun deleteEvent(eventId: String) {}
+
+          override suspend fun getEventsByIds(eventIds: List<String>): List<Event> = emptyList()
         }
 
     viewModel = SearchViewModel(fakeRepository)

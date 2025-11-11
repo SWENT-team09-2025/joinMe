@@ -64,6 +64,10 @@ class SerieDetailsViewModelTest {
       events.remove(eventId)
     }
 
+    override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
+      return events.filter { eventIds.contains(it.key) }.values.toList()
+    }
+
     override suspend fun getEvent(eventId: String): Event =
         events[eventId] ?: throw NoSuchElementException("Event not found")
 

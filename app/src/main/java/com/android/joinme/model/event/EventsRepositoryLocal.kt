@@ -45,4 +45,8 @@ class EventsRepositoryLocal : EventsRepository {
       throw Exception("EventsRepositoryLocal: Event not found")
     }
   }
+
+  override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
+    return events.filter { eventIds.contains(it.eventId) }
+  }
 }

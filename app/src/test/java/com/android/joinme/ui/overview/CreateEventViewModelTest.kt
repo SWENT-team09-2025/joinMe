@@ -41,6 +41,11 @@ class CreateEventViewModelTest {
       /* no-op */
     }
 
+    override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
+      /* no-op */
+      return emptyList()
+    }
+
     override suspend fun getEvent(eventId: String): Event =
         added.find { it.eventId == eventId } ?: throw NoSuchElementException("Event not found")
 
