@@ -141,7 +141,14 @@ fun Serie.isActive(): Boolean {
 fun Serie.isExpired(): Boolean {
   val now = System.currentTimeMillis()
   return try {
-    lastEventEndTime?.toDate()?.time?.let { it < now } ?: false
+    val startTime = date.toDate().time
+    val endTime = lastEventEndTime?.toDate()?.time ?: startTime
+    // Only expired if the serie has actually run (endTime > startTime) and has finished
+    if (endTime <= startTime) {
+      false // Not started yet (no events added)
+    } else {
+      endTime < now
+    }
   } catch (e: Exception) {
     false
   }

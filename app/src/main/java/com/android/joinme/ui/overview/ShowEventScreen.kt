@@ -291,42 +291,46 @@ fun ShowEventScreen(
                             fontWeight = FontWeight.Medium)
                       }
                 } else {
-                  // if event is full, don't display join button
-                  val participantCount = eventUIState.participantsCount.toIntOrNull() ?: 0
-                  val maxParticipants = eventUIState.maxParticipants.toIntOrNull() ?: Int.MAX_VALUE
-                  if ((participantCount < maxParticipants) ||
-                      eventUIState.isParticipant(currentUserId)) {
-                    // Non-owner sees: Join/Quit button
-                    Button(
-                        onClick = {
-                          coroutineScope.launch {
-                            showEventViewModel.toggleParticipation(eventId, currentUserId)
+                  // if event is part of a serie, don't display join/quit button
+                  if (!eventUIState.isPartOfASerie) {
+                    // if event is full, don't display join button
+                    val participantCount = eventUIState.participantsCount.toIntOrNull() ?: 0
+                    val maxParticipants =
+                        eventUIState.maxParticipants.toIntOrNull() ?: Int.MAX_VALUE
+                    if ((participantCount < maxParticipants) ||
+                        eventUIState.isParticipant(currentUserId)) {
+                      // Non-owner sees: Join/Quit button
+                      Button(
+                          onClick = {
+                            coroutineScope.launch {
+                              showEventViewModel.toggleParticipation(eventId, currentUserId)
+                            }
+                          },
+                          modifier =
+                              Modifier.fillMaxWidth()
+                                  .height(Dimens.Button.standardHeight)
+                                  .testTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON),
+                          shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+                          colors = MaterialTheme.customColors.buttonColors()) {
+                            Text(
+                                text =
+                                    if (eventUIState.isParticipant(currentUserId)) "QUIT EVENT"
+                                    else "JOIN EVENT",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Medium)
                           }
-                        },
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .height(Dimens.Button.standardHeight)
-                                .testTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON),
-                        shape = RoundedCornerShape(Dimens.CornerRadius.medium),
-                        colors = MaterialTheme.customColors.buttonColors()) {
-                          Text(
-                              text =
-                                  if (eventUIState.isParticipant(currentUserId)) "QUIT EVENT"
-                                  else "JOIN EVENT",
-                              style = MaterialTheme.typography.headlineSmall,
-                              fontWeight = FontWeight.Medium)
-                        }
-                  } else {
-                    Text(
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .padding(bottom = 50.dp)
-                                .testTag(ShowEventScreenTestTags.FULL_EVENT_MESSAGE),
-                        text = "Sorry the event:\n ${eventUIState.title} \n is full",
-                        fontSize = 16.sp,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold)
+                    } else {
+                      Text(
+                          modifier =
+                              Modifier.fillMaxWidth()
+                                  .padding(bottom = 50.dp)
+                                  .testTag(ShowEventScreenTestTags.FULL_EVENT_MESSAGE),
+                          text = "Sorry the event:\n ${eventUIState.title} \n is full",
+                          fontSize = 16.sp,
+                          textAlign = TextAlign.Center,
+                          color = MaterialTheme.colorScheme.error,
+                          fontWeight = FontWeight.Bold)
+                    }
                   }
                 }
               }

@@ -611,4 +611,87 @@ class ShowEventScreenTest {
         .onNodeWithTag(ShowEventScreenTestTags.EVENT_VISIBILITY)
         .assertTextContains("PRIVATE")
   }
+
+  /** --- SERIE EVENT TESTS --- */
+  @Test
+  fun eventPartOfSerie_nonOwnerDoesNotSeeJoinQuitButton() {
+    val repo = EventsRepositoryLocal()
+    val serieEvent =
+        createTestEvent(ownerId = "owner123", participants = listOf("user1", "owner123"))
+            .copy(isPartOfASerie = true)
+    runBlocking { repo.addEvent(serieEvent) }
+    val viewModel = ShowEventViewModel(repo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = serieEvent.eventId,
+          currentUserId = "user2", // Non-owner
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Join/Quit button should not exist for events that are part of a serie
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON).assertDoesNotExist()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EDIT_BUTTON).assertDoesNotExist()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.DELETE_BUTTON).assertDoesNotExist()
+  }
+
+  @Test
+  fun eventPartOfSerie_ownerStillSeesEditAndDeleteButtons() {
+    val repo = EventsRepositoryLocal()
+    val serieEvent =
+        createTestEvent(ownerId = "owner123", participants = listOf("user1", "owner123"))
+            .copy(isPartOfASerie = true)
+    runBlocking { repo.addEvent(serieEvent) }
+    val viewModel = ShowEventViewModel(repo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = serieEvent.eventId,
+          currentUserId = "owner123", // Owner
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Owner should still see edit and delete buttons even for events in a serie
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EDIT_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.DELETE_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON).assertDoesNotExist()
+  }
+
+  @Test
+  fun standaloneEvent_nonOwnerSeesJoinQuitButton() {
+    val repo = EventsRepositoryLocal()
+    val standaloneEvent =
+        createTestEvent(ownerId = "owner123", participants = listOf("user1", "owner123"))
+            .copy(isPartOfASerie = false)
+    runBlocking { repo.addEvent(standaloneEvent) }
+    val viewModel = ShowEventViewModel(repo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = standaloneEvent.eventId,
+          currentUserId = "user2", // Non-owner
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Standalone events should still show join/quit button
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON).assertIsDisplayed()
+  }
 }
