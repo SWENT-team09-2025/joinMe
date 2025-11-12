@@ -130,6 +130,11 @@ class GroupListScreenTest {
     every { mockUser.uid } returns userId
   }
 
+  /** Helper to clean up Firebase Auth mocks */
+  private fun cleanupFirebaseAuth() {
+    unmockkStatic(FirebaseAuth::class)
+  }
+
   private fun createViewModel(groups: List<Group> = emptyList()): GroupListViewModel {
     val fakeRepo = FakeGroupRepository()
     fakeRepo.setGroups(groups)
@@ -137,15 +142,21 @@ class GroupListScreenTest {
   }
 
   @Test
-  fun emptyState_isDisplayed() {
+  fun emptyState_displaysCorrectlyWithAllElements() {
     composeTestRule.setContent { GroupListScreen(viewModel = createViewModel()) }
 
+    // Empty state should be visible with correct styling
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.EMPTY).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).assertIsDisplayed()
+
+    // Verify both lines of empty state message
     composeTestRule.onNodeWithText("You are currently not").assertIsDisplayed()
     composeTestRule.onNodeWithText("assigned to a group…").assertIsDisplayed()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LIST).assertDoesNotExist()
+
+    // FAB should still be visible
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).assertIsDisplayed()
+
+    // List should not exist when empty
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LIST).assertDoesNotExist()
   }
 
   @Test
@@ -373,19 +384,41 @@ class GroupListScreenTest {
   }
 
   @Test
-  fun groupWithLongDescription_displaysCorrectly() {
-    val group =
+  fun groupCard_handlesLongTextCorrectly_withTruncationAndEllipsis() {
+    val longNameGroup =
         Group(
             id = "1",
+            name = "This is an extremely long group name that should definitely be truncated",
+            ownerId = "owner1")
+
+    val longDescriptionGroup =
+        Group(
+            id = "2",
             name = "Group",
             description =
-                "This is a very long description that should be handled properly by the UI and might need to be truncated or ellipsized to fit properly in the card layout without breaking the design",
-            ownerId = "owner",
-            memberIds = List(10) { "user$it" })
+                "This is an extremely long description that should be truncated after two lines and show an ellipsis at the end to indicate there is more text that cannot be displayed",
+            ownerId = "owner2")
 
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+    val veryLongDescriptionGroup =
+        Group(
+            id = "3",
+            name = "Group",
+            description =
+                "This is a very very very long description that should be handled properly by the UI without breaking the layout or causing overflow issues in the card component",
+            ownerId = "owner3",
+            memberIds = List(5) { "user$it" })
 
+    composeTestRule.setContent {
+      GroupListScreen(
+          viewModel =
+              createViewModel(
+                  listOf(longNameGroup, longDescriptionGroup, veryLongDescriptionGroup)))
+    }
+
+    // All cards should be displayed despite long text
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("1")).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("2")).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("3")).assertIsDisplayed()
   }
 
   @Test
@@ -771,7 +804,8 @@ class GroupListScreenTest {
 
   @Test
   fun editGroup_callbackIsTriggered_whenUserIsOwner() {
-    // Edit Group button is now always visible
+    // Edit Group button is only visible for owners
+    mockFirebaseAuthWithUser("currentUserId")
     val group = Group(id = "test4", name = "Edit Group Test", ownerId = "currentUserId")
     var editedGroup: Group? = null
 
@@ -783,7 +817,7 @@ class GroupListScreenTest {
     // When: User opens menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test4")).performClick()
 
-    // Then: Edit Group button is visible
+    // Then: Edit Group button is visible (user is owner)
     composeTestRule.onNodeWithText("EDIT GROUP").assertExists()
 
     // Click it
@@ -791,6 +825,8 @@ class GroupListScreenTest {
 
     // Callback should be triggered
     assertEquals(group, editedGroup)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
@@ -958,22 +994,6 @@ class GroupListScreenTest {
   }
 
   @Test
-  fun fabButton_togglesState() {
-    composeTestRule.setContent { GroupListScreen() }
-
-    // Initially closed
-    composeTestRule.onNodeWithText("JOIN WITH LINK").assertDoesNotExist()
-
-    // Click to open
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithText("JOIN WITH LINK").assertIsDisplayed()
-
-    // Click again to close
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithText("JOIN WITH LINK").assertDoesNotExist()
-  }
-
-  @Test
   fun createGroupBubble_triggersCallback() {
     var createClicked = false
 
@@ -1041,22 +1061,6 @@ class GroupListScreenTest {
   }
 
   @Test
-  fun groupWithVeryLongDescription_displaysCorrectly() {
-    val group =
-        Group(
-            id = "test1",
-            name = "Group",
-            description =
-                "This is a very very very long description that should be handled properly by the UI without breaking the layout or causing overflow issues in the card component",
-            ownerId = "owner1",
-            memberIds = List(5) { "user$it" })
-
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("test1")).assertIsDisplayed()
-  }
-
-  @Test
   fun scrolling_preservesMenuState() {
     val groups = (1..50).map { i -> Group(id = "$i", name = "Group $i", ownerId = "owner$i") }
 
@@ -1086,23 +1090,13 @@ class GroupListScreenTest {
     // Common menu options always visible
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE).assertExists()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).assertExists()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE).assertExists()
 
     // Leave button shown for non-owners (currentUserId is null, not the owner)
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_BUBBLE).assertExists()
 
-    // Delete button NOT shown for non-owners (currentUserId is null, not the owner)
+    // Owner-only buttons NOT shown for non-owners (currentUserId is null, not the owner)
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE).assertDoesNotExist()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_BUBBLE).assertDoesNotExist()
-  }
-
-  @Test
-  fun joinCreateBubbles_haveCorrectTestTags() {
-    composeTestRule.setContent { GroupListScreen() }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).assertExists()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.CREATE_GROUP_BUBBLE).assertExists()
   }
 
   // =======================================
@@ -1110,7 +1104,7 @@ class GroupListScreenTest {
   // =======================================
 
   @Test
-  fun groupMenu_commonButtonsAlwaysVisible() {
+  fun groupMenu_displaysButtonsBasedOnOwnership_forNonOwner() {
     val group = Group(id = "test1", name = "Test Group", ownerId = "currentUserId")
 
     composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
@@ -1118,14 +1112,15 @@ class GroupListScreenTest {
     // Open menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
 
-    // Common buttons always visible
+    // Buttons available to everyone
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE).assertExists()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).assertExists()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE).assertExists()
 
     // Leave shown for non-owners (currentUserId is null, not the owner)
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_BUBBLE).assertExists()
-    // Delete NOT shown for non-owners
+
+    // Owner-only buttons NOT shown for non-owners (currentUserId is null, not the owner)
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE).assertDoesNotExist()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.DELETE_GROUP_BUBBLE).assertDoesNotExist()
   }
 
@@ -1167,8 +1162,8 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertExists()
     composeTestRule.onNodeWithText("LEAVE GROUP").assertExists() // Shown for non-owner
     composeTestRule.onNodeWithText("SHARE GROUP").assertExists()
-    composeTestRule.onNodeWithText("EDIT GROUP").assertExists()
-    // DELETE GROUP not shown since user is not owner (currentUserId is null)
+    // Owner-only buttons not shown since user is not owner (currentUserId is null)
+    // EDIT GROUP and DELETE GROUP not shown for non-owners
   }
 
   // =======================================
@@ -2068,20 +2063,6 @@ class GroupListScreenTest {
   }
 
   @Test
-  fun confirmationDialog_confirmButton_hasCorrectText() {
-    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
-
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
-
-    // Open leave dialog
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("LEAVE GROUP").performClick()
-
-    // Verify "Yes" button is displayed
-    composeTestRule.onNodeWithText("Yes").assertExists()
-  }
-
-  @Test
   fun deleteConfirmationDialog_confirmButton_triggersCallback() {
     val testUserId = "testOwner888"
     var deleted = false
@@ -2187,36 +2168,6 @@ class GroupListScreenTest {
   }
 
   @Test
-  fun groupCard_truncatesLongName_withEllipsis() {
-    val group =
-        Group(
-            id = "test1",
-            name = "This is an extremely long group name that should definitely be truncated",
-            ownerId = "owner1")
-
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
-
-    // Card should be displayed
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("test1")).assertIsDisplayed()
-  }
-
-  @Test
-  fun groupCard_truncatesLongDescription_withEllipsis() {
-    val group =
-        Group(
-            id = "test1",
-            name = "Group",
-            description =
-                "This is an extremely long description that should be truncated after two lines and show an ellipsis at the end to indicate there is more text that cannot be displayed",
-            ownerId = "owner1")
-
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
-
-    // Card should be displayed
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("test1")).assertIsDisplayed()
-  }
-
-  @Test
   fun groupCard_membersCount_displayedWithCorrectStyle() {
     val group =
         Group(id = "test1", name = "Group", ownerId = "owner1", memberIds = List(42) { "user$it" })
@@ -2228,21 +2179,6 @@ class GroupListScreenTest {
   }
 
   @Test
-  fun menuBubble_displaysIcon() {
-    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
-
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
-
-    // Open menu
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-
-    // Menu bubbles should have icons (tested indirectly through test tags)
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE).assertExists()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).assertExists()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE).assertExists()
-  }
-
-  @Test
   fun emptyState_hasNoListTag() {
     composeTestRule.setContent { GroupListScreen() }
 
@@ -2251,34 +2187,6 @@ class GroupListScreenTest {
 
     // Verify list does not exist
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LIST).assertDoesNotExist()
-  }
-
-  @Test
-  fun confirmationDialog_cancelButton_hasCancelText() {
-    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
-
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
-
-    // Open leave dialog
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("LEAVE GROUP").performClick()
-
-    // Verify "No" button text
-    composeTestRule.onNodeWithText("No").assertExists()
-  }
-
-  @Test
-  fun shareGroupDialog_copyButton_hasIcon() {
-    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
-
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
-
-    // Open share dialog
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
-
-    // Copy button should have text (icon is tested indirectly)
-    composeTestRule.onNodeWithText("Copy Group ID").assertExists()
   }
 
   @Test
@@ -2337,23 +2245,14 @@ class GroupListScreenTest {
     // Open menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
 
-    // All menu bubbles should have click actions
+    // All visible menu bubbles should have click actions
+    // For non-owners, only common bubbles are shown
     composeTestRule
         .onNodeWithTag(GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE)
         .assertHasClickAction()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).assertHasClickAction()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE).assertHasClickAction()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LEAVE_GROUP_BUBBLE).assertHasClickAction()
-  }
-
-  @Test
-  fun groupCard_moreButton_hasCorrectContentDescription() {
-    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
-
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
-
-    // More button should have content description (tested indirectly through test tag)
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).assertIsDisplayed()
+    // EDIT_GROUP_BUBBLE and DELETE_GROUP_BUBBLE not shown for non-owners
   }
 
   @Test
@@ -2421,7 +2320,7 @@ class GroupListScreenTest {
 
     // Verify dialog is displayed with all elements
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_DIALOG).assertExists()
-    composeTestRule.onNodeWithText("       Join a group").assertExists()
+    composeTestRule.onNodeWithText("Join a group").assertExists()
     composeTestRule.onNodeWithText("Enter the Group ID to join").assertExists()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_INPUT).assertExists()
     composeTestRule

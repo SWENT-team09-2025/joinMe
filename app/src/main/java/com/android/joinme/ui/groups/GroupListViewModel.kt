@@ -42,6 +42,10 @@ class GroupListViewModel(
   private val _uiState = MutableStateFlow(GroupListUIState())
   val uiState: StateFlow<GroupListUIState> = _uiState.asStateFlow()
 
+  companion object {
+    private const val ERROR_USER_NOT_AUTHENTICATED = "User not authenticated"
+  }
+
   init {
     getAllGroups()
   }
@@ -89,7 +93,8 @@ class GroupListViewModel(
     viewModelScope.launch {
       try {
         val currentUserId =
-            FirebaseAuth.getInstance().currentUser?.uid ?: throw Exception("User not authenticated")
+            FirebaseAuth.getInstance().currentUser?.uid
+                ?: throw Exception(ERROR_USER_NOT_AUTHENTICATED)
 
         groupRepository.deleteGroup(groupId, currentUserId)
         refreshUIState()
@@ -113,7 +118,8 @@ class GroupListViewModel(
     viewModelScope.launch {
       try {
         val currentUserId =
-            FirebaseAuth.getInstance().currentUser?.uid ?: throw Exception("User not authenticated")
+            FirebaseAuth.getInstance().currentUser?.uid
+                ?: throw Exception(ERROR_USER_NOT_AUTHENTICATED)
 
         groupRepository.leaveGroup(groupId, currentUserId)
         refreshUIState()
@@ -137,7 +143,8 @@ class GroupListViewModel(
     viewModelScope.launch {
       try {
         val currentUserId =
-            FirebaseAuth.getInstance().currentUser?.uid ?: throw Exception("User not authenticated")
+            FirebaseAuth.getInstance().currentUser?.uid
+                ?: throw Exception(ERROR_USER_NOT_AUTHENTICATED)
 
         groupRepository.joinGroup(groupId, currentUserId)
         refreshUIState()

@@ -247,4 +247,333 @@ class MainActivityTest {
       }
     }
   }
+
+  @Test
+  fun mainActivity_launchesWithDifferentDeepLinks_handlesAllCorrectly() {
+    // Test that MainActivity can be launched multiple times with different deep links
+    // This indirectly tests that deep link parsing works correctly
+
+    // Test 1: Event deep link
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val eventIntent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("joinme://event/event-abc")
+          action = Intent.ACTION_VIEW
+        }
+
+    val eventScenario = ActivityScenario.launch<MainActivity>(eventIntent)
+    eventScenario.use {
+      it.onActivity { activity ->
+        assert(activity.intent.data?.host == "event")
+        assert(activity.intent.data?.lastPathSegment == "event-abc")
+      }
+    }
+
+    // Test 2: Group deep link
+    val groupIntent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("joinme://group/group-xyz")
+          action = Intent.ACTION_VIEW
+        }
+
+    val groupScenario = ActivityScenario.launch<MainActivity>(groupIntent)
+    groupScenario.use {
+      it.onActivity { activity ->
+        assert(activity.intent.data?.host == "group")
+        assert(activity.intent.data?.lastPathSegment == "group-xyz")
+      }
+    }
+  }
+
+  @Test
+  fun mainActivity_deepLink_withEmptyPathSegment() {
+    // Create intent with event deep link but empty path
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("joinme://event/")
+          action = Intent.ACTION_VIEW
+        }
+
+    // Launch activity with deep link
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should handle empty path gracefully
+        assert(activity.intent.data != null)
+        assert(!activity.isFinishing)
+
+        // lastPathSegment should be empty string for trailing slash
+        val pathSegment = activity.intent.data?.lastPathSegment
+        assert(pathSegment == "" || pathSegment == null)
+      }
+    }
+  }
+
+  @Test
+  fun mainActivity_deepLink_withMultiplePathSegments() {
+    // Create intent with multiple path segments
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("joinme://event/user/123/event/456")
+          action = Intent.ACTION_VIEW
+        }
+
+    // Launch activity with deep link
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should handle multiple path segments
+        assert(activity.intent.data != null)
+        assert(!activity.isFinishing)
+
+        // lastPathSegment should be the last part
+        assert(activity.intent.data?.lastPathSegment == "456")
+      }
+    }
+  }
+
+  @Test
+  fun mainActivity_deepLink_webGroupLink_withOnlyOnePathSegment() {
+    // Create intent with web-style group deep link but only one segment
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("https://joinme.app/group")
+          action = Intent.ACTION_VIEW
+        }
+
+    // Launch activity with deep link
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should handle missing group ID gracefully
+        assert(activity.intent.data != null)
+        assert(!activity.isFinishing)
+
+        val pathSegments = activity.intent.data?.pathSegments
+        assert(pathSegments?.size == 1)
+        assert(pathSegments?.firstOrNull() == "group")
+        assert(pathSegments?.getOrNull(1) == null)
+      }
+    }
+  }
+
+  @Test
+  fun mainActivity_deepLink_webGroupLink_withExtraPathSegments() {
+    // Create intent with web-style group deep link with extra segments
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("https://joinme.app/group/123/extra/segments")
+          action = Intent.ACTION_VIEW
+        }
+
+    // Launch activity with deep link
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should handle extra path segments
+        assert(activity.intent.data != null)
+        assert(!activity.isFinishing)
+
+        val pathSegments = activity.intent.data?.pathSegments
+        assert(pathSegments != null)
+        assert(pathSegments?.firstOrNull() == "group")
+        assert(pathSegments?.getOrNull(1) == "123")
+      }
+    }
+  }
+
+  @Test
+  fun mainActivity_deepLink_nonGroupWebLink() {
+    // Create intent with web-style deep link that's not a group link
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("https://joinme.app/profile/user123")
+          action = Intent.ACTION_VIEW
+        }
+
+    // Launch activity with deep link
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should handle non-group web links gracefully
+        assert(activity.intent.data != null)
+        assert(!activity.isFinishing)
+
+        val pathSegments = activity.intent.data?.pathSegments
+        assert(pathSegments?.firstOrNull() == "profile")
+        assert(pathSegments?.firstOrNull() != "group")
+      }
+    }
+  }
+
+  @Test
+  fun mainActivity_deepLink_withQueryParameters() {
+    // Create intent with deep link including query parameters
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("joinme://event/event123?source=notification&userId=user456")
+          action = Intent.ACTION_VIEW
+        }
+
+    // Launch activity with deep link
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should handle query parameters
+        assert(activity.intent.data != null)
+        assert(!activity.isFinishing)
+
+        val data = activity.intent.data
+        assert(data?.host == "event")
+        assert(data?.lastPathSegment == "event123")
+        assert(data?.getQueryParameter("source") == "notification")
+        assert(data?.getQueryParameter("userId") == "user456")
+      }
+    }
+  }
+
+  @Test
+  fun mainActivity_deepLink_withFragment() {
+    // Create intent with deep link including fragment
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("joinme://group/group789#details")
+          action = Intent.ACTION_VIEW
+        }
+
+    // Launch activity with deep link
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should handle fragments
+        assert(activity.intent.data != null)
+        assert(!activity.isFinishing)
+
+        val data = activity.intent.data
+        assert(data?.host == "group")
+        assert(data?.lastPathSegment == "group789")
+        assert(data?.fragment == "details")
+      }
+    }
+  }
+
+  @Test
+  fun httpClientProvider_canBeReplacedMultipleTimes() {
+    // Verify HttpClientProvider can be replaced multiple times
+    val original = HttpClientProvider.client
+
+    val client1 = OkHttpClient()
+    HttpClientProvider.client = client1
+    assert(HttpClientProvider.client == client1)
+
+    val client2 = OkHttpClient()
+    HttpClientProvider.client = client2
+    assert(HttpClientProvider.client == client2)
+
+    val client3 = OkHttpClient()
+    HttpClientProvider.client = client3
+    assert(HttpClientProvider.client == client3)
+
+    // Restore original
+    HttpClientProvider.client = original
+  }
+
+  @Test
+  fun mainActivity_notificationChannel_hasCorrectVibrationSettings() {
+    composeTestRule.waitForIdle()
+    val activity = composeTestRule.activity
+    val notificationManager =
+        activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+    val channel = notificationManager.getNotificationChannel("event_notifications")
+    assert(channel != null)
+    // Verify vibration is enabled
+    assert(channel.shouldVibrate())
+    // Verify vibration pattern exists (default pattern when enableVibration(true) is called)
+    assert(channel.vibrationPattern != null || channel.shouldVibrate())
+  }
+
+  @Test
+  fun mainActivity_handlesIntentWithoutAction() {
+    // Create intent without action specified
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("joinme://event/test123")
+          // No action set
+        }
+
+    // Launch activity
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should handle missing action gracefully
+        assert(activity.intent.data != null)
+        assert(!activity.isFinishing)
+      }
+    }
+  }
+
+  @Test
+  fun mainActivity_deepLink_withSpecialCharacters() {
+    // Test deep links with special characters in IDs
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("joinme://event/event-123_test")
+          action = Intent.ACTION_VIEW
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should handle special characters in IDs
+        assert(activity.intent.data != null)
+        assert(!activity.isFinishing)
+
+        assert(activity.intent.data?.host == "event")
+        assert(activity.intent.data?.lastPathSegment == "event-123_test")
+      }
+    }
+  }
+
+  @Test
+  fun mainActivity_deepLink_caseSensitivity() {
+    // Test that host parsing respects case
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("joinme://Event/EventId123")
+          action = Intent.ACTION_VIEW
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should handle different cases
+        assert(activity.intent.data != null)
+        assert(!activity.isFinishing)
+
+        // URI parsing is case-insensitive for scheme/host
+        val host = activity.intent.data?.host?.lowercase()
+        assert(host == "event")
+      }
+    }
+  }
+
+  @Test
+  fun mainActivity_httpClientProvider_isNotNull() {
+    // Verify HttpClientProvider singleton is initialized
+    assert(HttpClientProvider.client != null)
+
+    // Verify it's an OkHttpClient instance
+    assert(HttpClientProvider.client is OkHttpClient)
+  }
 }

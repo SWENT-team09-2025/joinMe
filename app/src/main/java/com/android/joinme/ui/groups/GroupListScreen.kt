@@ -196,7 +196,6 @@ fun GroupListScreen(
   val uiState by viewModel.uiState.collectAsState()
   val groups = uiState.groups
   val currentUserId = uiState.currentUserId
-  val context = LocalContext.current
 
   // State for showing/hiding floating bubbles in the join/create group FAB
   var showJoinBubbles by remember { mutableStateOf(false) }
@@ -422,15 +421,17 @@ fun GroupListScreen(
                         },
                         testTag = GroupListScreenTestTags.SHARE_GROUP_BUBBLE)
 
-                    // Edit Group - Always shown (owners can edit)
-                    MenuBubble(
-                        text = "EDIT GROUP",
-                        icon = Icons.Default.Edit,
-                        onClick = {
-                          onEditGroup(group)
-                          openMenuGroupId = null
-                        },
-                        testTag = GroupListScreenTestTags.EDIT_GROUP_BUBBLE)
+                    // Edit Group - Only shown for owners
+                    if (group.ownerId == currentUserId) {
+                      MenuBubble(
+                          text = "EDIT GROUP",
+                          icon = Icons.Default.Edit,
+                          onClick = {
+                            onEditGroup(group)
+                            openMenuGroupId = null
+                          },
+                          testTag = GroupListScreenTestTags.EDIT_GROUP_BUBBLE)
+                    }
 
                     // Delete Group - Only shown for owners
                     if (group.ownerId == currentUserId) {
@@ -619,6 +620,7 @@ private fun MenuBubble(text: String, icon: ImageVector, onClick: () -> Unit, tes
  */
 @Composable
 private fun CustomConfirmationDialog(
+    modifier: Modifier = Modifier,
     title: String,
     message: String? = null,
     confirmText: String,
@@ -626,8 +628,7 @@ private fun CustomConfirmationDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     confirmButtonTestTag: String = "",
-    cancelButtonTestTag: String = "",
-    modifier: Modifier = Modifier
+    cancelButtonTestTag: String = ""
 ) {
   Dialog(onDismissRequest = onDismiss) {
     Card(
@@ -850,11 +851,13 @@ private fun JoinWithLinkDialog(onJoin: (String) -> Unit, onDismiss: () -> Unit) 
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically) {
-                          Spacer(Modifier.width(24.dp)) // Balance the close button
+                          Spacer(Modifier.width(48.dp)) // Balance the close button
                           Text(
-                              text = "       Join a group",
+                              text = "Join a group",
                               style = MaterialTheme.typography.titleMedium,
-                              color = MaterialTheme.colorScheme.onSurface)
+                              color = MaterialTheme.colorScheme.onSurface,
+                              modifier = Modifier.weight(1f),
+                              textAlign = TextAlign.Center)
                           IconButton(
                               onClick = onDismiss,
                               modifier =

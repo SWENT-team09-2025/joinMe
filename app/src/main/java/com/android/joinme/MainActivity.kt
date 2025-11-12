@@ -132,21 +132,20 @@ fun JoinMe(
   val navController = rememberNavController()
   val navigationActions = NavigationActions(navController)
   val coroutineScope = rememberCoroutineScope()
+  val currentUser = FirebaseAuth.getInstance().currentUser
   val initialDestination =
-      startDestination
-          ?: if (FirebaseAuth.getInstance().currentUser == null) Screen.Auth.name
-          else Screen.Overview.route
+      startDestination ?: if (currentUser == null) Screen.Auth.name else Screen.Overview.route
 
   // Initialize FCM token when user is logged in
   LaunchedEffect(Unit) {
-    if (FirebaseAuth.getInstance().currentUser != null) {
+    if (currentUser != null) {
       FCMTokenManager.initializeFCMToken(context)
     }
   }
 
   // Navigate to event if opened from notification
   LaunchedEffect(initialEventId) {
-    if (initialEventId != null && FirebaseAuth.getInstance().currentUser != null) {
+    if (initialEventId != null && currentUser != null) {
       navigationActions.navigateTo(Screen.ShowEventScreen(initialEventId))
     }
   }
@@ -154,7 +153,6 @@ fun JoinMe(
   // Join group if opened from invitation link
   LaunchedEffect(initialGroupId) {
     if (initialGroupId != null) {
-      val currentUser = FirebaseAuth.getInstance().currentUser
       if (currentUser != null) {
         coroutineScope.launch {
           try {
@@ -334,7 +332,7 @@ fun JoinMe(
     ) {
       composable(Screen.Profile.route) {
         ViewProfileScreen(
-            uid = FirebaseAuth.getInstance().currentUser?.uid ?: "",
+            uid = currentUser?.uid ?: "",
             onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
             onBackClick = { navigationActions.goBack() },
             onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
@@ -348,7 +346,7 @@ fun JoinMe(
 
       composable(Screen.EditProfile.route) {
         EditProfileScreen(
-            uid = FirebaseAuth.getInstance().currentUser?.uid ?: "",
+            uid = currentUser?.uid ?: "",
             onBackClick = { navigationActions.goBack() },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
             onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
