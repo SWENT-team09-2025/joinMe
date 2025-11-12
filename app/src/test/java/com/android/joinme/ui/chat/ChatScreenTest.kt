@@ -1,5 +1,7 @@
 package com.android.joinme.ui.chat
 
+// Implemented with help of Claude AI
+
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -107,9 +109,7 @@ class ChatScreenTest {
           viewModel = viewModel)
     }
 
-    composeTestRule
-        .onNodeWithText("No messages yet. Start the conversation!")
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithText("No messages yet. Start the conversation!").assertIsDisplayed()
   }
 
   @Test
@@ -402,9 +402,7 @@ class ChatScreenTest {
     }
 
     composeTestRule.waitForIdle()
-    composeTestRule
-        .onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("msg123"))
-        .assertExists()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("msg123")).assertExists()
     composeTestRule
         .onNodeWithTag(ChatScreenTestTags.getTestTagForMessageBubble("msg123"))
         .assertExists()
@@ -453,7 +451,11 @@ class ChatScreenTest {
       messagesFlow.value = currentMessages
     }
 
-    override suspend fun markMessageAsRead(conversationId: String, messageId: String, userId: String) {
+    override suspend fun markMessageAsRead(
+        conversationId: String,
+        messageId: String,
+        userId: String
+    ) {
       // No-op for testing
     }
   }

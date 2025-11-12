@@ -25,8 +25,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -53,7 +53,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
@@ -158,7 +157,7 @@ fun ChatScreen(
         ChatTopBar(
             chatTitle = chatTitle,
             onBackClick = onBackClick,
-            onLeaveClick = { /* TODO: Implement leave functionality */ },
+            onLeaveClick = { /* TODO: Implement leave functionality */},
             topBarColor = topBarColor)
       },
       snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -293,8 +292,7 @@ private fun ChatContent(
       ) {
         // Messages list
         LazyColumn(
-            modifier =
-                Modifier.weight(1f).fillMaxWidth().testTag(ChatScreenTestTags.MESSAGE_LIST),
+            modifier = Modifier.weight(1f).fillMaxWidth().testTag(ChatScreenTestTags.MESSAGE_LIST),
             state = listState,
             contentPadding = PaddingValues(Dimens.Padding.medium),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -343,7 +341,11 @@ private fun ChatContent(
  * @param bubbleColor The color for the message bubble
  */
 @Composable
-private fun MessageItem(message: Message, isCurrentUser: Boolean, bubbleColor: androidx.compose.ui.graphics.Color) {
+private fun MessageItem(
+    message: Message,
+    isCurrentUser: Boolean,
+    bubbleColor: androidx.compose.ui.graphics.Color
+) {
   Row(
       modifier =
           Modifier.fillMaxWidth()
@@ -443,7 +445,12 @@ private fun UserAvatar(modifier: Modifier = Modifier) {
  * @param sendButtonColor The color for the send button
  */
 @Composable
-private fun MessageInput(text: String, onTextChange: (String) -> Unit, onSendClick: () -> Unit, sendButtonColor: androidx.compose.ui.graphics.Color) {
+private fun MessageInput(
+    text: String,
+    onTextChange: (String) -> Unit,
+    onSendClick: () -> Unit,
+    sendButtonColor: androidx.compose.ui.graphics.Color
+) {
   Surface(shadowElevation = Dimens.Elevation.small, color = MaterialTheme.colorScheme.surface) {
     Row(
         modifier =
@@ -476,9 +483,7 @@ private fun MessageInput(text: String, onTextChange: (String) -> Unit, onSendCli
               modifier =
                   Modifier.size(48.dp)
                       .background(
-                          color =
-                              if (text.isNotBlank()) sendButtonColor
-                              else DisabledButtonColor,
+                          color = if (text.isNotBlank()) sendButtonColor else DisabledButtonColor,
                           shape = CircleShape)
                       .testTag(ChatScreenTestTags.SEND_BUTTON)) {
                 Icon(
