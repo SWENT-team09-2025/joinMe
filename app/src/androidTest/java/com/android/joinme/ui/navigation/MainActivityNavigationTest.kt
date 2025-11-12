@@ -7,7 +7,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.android.joinme.JoinMe
 import com.android.joinme.model.event.*
 import com.android.joinme.model.serie.Serie
-import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepositoryLocal
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.model.utils.Visibility
@@ -76,21 +75,18 @@ class MainActivityNavigationTest {
     val repoSerie = SeriesRepositoryProvider.repository
     if (repo is EventsRepositoryLocal && repoSerie is SeriesRepositoryLocal) {
       runBlocking {
-        // Clear existing events - create a copy of the list to avoid
-        // ConcurrentModificationException
-        val events = repo.getAllEvents(EventFilter.EVENTS_FOR_OVERVIEW_SCREEN).toList()
-        events.forEach { repo.deleteEvent(it.eventId) }
+        // Clear all data completely using clear() methods
+        repoSerie.clear()
+        repo.clear()
 
         // Add test event
         repo.addEvent(createTestEvent("test-1", "Test Event"))
 
-        // Clear existing series
-        val series = repoSerie.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN).toList()
-        series.forEach { repoSerie.deleteSerie(it.serieId) }
         // Add test serie owned by "unknown" (default currentUserId in SerieDetailsScreen when no
         // auth)
         repoSerie.addSerie(createTestSerie("test-1", "Test Serie", "unknown"))
 
+        // Add test serie with an event
         val serie = createTestSerie("test-serie-5", "Test Serie 5", "unknown")
         repoSerie.addSerie(serie)
 

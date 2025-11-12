@@ -33,7 +33,6 @@ class SearchScreenTest {
     composeTestRule.onNodeWithText("Search").assertIsDisplayed()
     composeTestRule.onNodeWithText("Search an event").assertIsDisplayed()
     composeTestRule.onNodeWithContentDescription("Search").assertIsDisplayed()
-    composeTestRule.onNodeWithText("All").assertIsDisplayed()
     composeTestRule.onNodeWithText("Social").assertIsDisplayed()
     composeTestRule.onNodeWithText("Activity").assertIsDisplayed()
     composeTestRule.onNodeWithText("Sport").assertIsDisplayed()
@@ -47,24 +46,6 @@ class SearchScreenTest {
     composeTestRule.onNodeWithText("Search an event").performTextInput(searchQuery)
 
     composeTestRule.onNodeWithText(searchQuery).assertIsDisplayed()
-  }
-
-  @Test
-  fun searchScreen_allFilterChipToggles() {
-    setupScreen()
-
-    val allChip = composeTestRule.onNodeWithText("All")
-
-    // Initial state - not selected
-    allChip.assertIsDisplayed()
-
-    // Click to select
-    allChip.performClick()
-
-    // Click again to deselect
-    allChip.performClick()
-
-    allChip.assertIsDisplayed()
   }
 
   @Test
@@ -154,14 +135,14 @@ class SearchScreenTest {
   fun searchScreen_multipleFiltersCanBeSelected() {
     setupScreen()
 
-    // Select All filter
-    composeTestRule.onNodeWithText("All").performClick()
+    // Select Activity filter
+    composeTestRule.onNodeWithText("Activity").performClick()
 
     // Select Social filter
     composeTestRule.onNodeWithText("Social").performClick()
 
     // Both should still be displayed
-    composeTestRule.onNodeWithText("All").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Activity").assertIsDisplayed()
     composeTestRule.onNodeWithText("Social").assertIsDisplayed()
   }
 
@@ -219,7 +200,6 @@ class SearchScreenTest {
     setupScreen()
 
     // All filter chips should be visible at the same time
-    composeTestRule.onNodeWithText("All").assertIsDisplayed()
     composeTestRule.onNodeWithText("Social").assertIsDisplayed()
     composeTestRule.onNodeWithText("Activity").assertIsDisplayed()
     composeTestRule.onNodeWithText("Sport").assertIsDisplayed()
@@ -256,23 +236,6 @@ class SearchScreenTest {
   }
 
   @Test
-  fun searchScreen_viewModelIntegration_allFilterUpdates() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
-    setupScreen(viewModel)
-
-    // Initially all filters are selected
-    assert(viewModel.filterState.value.isAllSelected)
-
-    // Click to deselect
-    composeTestRule.onNodeWithText("All").performClick()
-
-    composeTestRule.waitForIdle()
-
-    // After toggle, should be deselected
-    assert(!viewModel.filterState.value.isAllSelected)
-  }
-
-  @Test
   fun searchScreen_viewModelIntegration_socialFilterUpdates() {
     val viewModel = SearchViewModel(EventsRepositoryLocal())
     setupScreen(viewModel)
@@ -281,7 +244,7 @@ class SearchScreenTest {
 
     composeTestRule.waitForIdle()
 
-    assert(!viewModel.filterState.value.isSocialSelected)
+    assert(viewModel.filterState.value.isSocialSelected)
   }
 
   @Test
@@ -293,7 +256,7 @@ class SearchScreenTest {
 
     composeTestRule.waitForIdle()
 
-    assert(!viewModel.filterState.value.isActivitySelected)
+    assert(viewModel.filterState.value.isActivitySelected)
   }
 
   @Test
@@ -301,21 +264,21 @@ class SearchScreenTest {
     val viewModel = SearchViewModel(EventsRepositoryLocal())
     setupScreen(viewModel)
 
-    // Initially basket is checked
+    // Initially basket is unchecked
     val basketSportBefore = viewModel.filterState.value.sportCategories.find { it.id == "basket" }
-    assert(basketSportBefore?.isChecked == true)
+    assert(basketSportBefore?.isChecked == false)
 
     // Open dropdown
     composeTestRule.onNodeWithText("Sport").performClick()
 
-    // Click to deselect basket
+    // Click to select basket
     composeTestRule.onNodeWithText("Basket").performClick()
 
     composeTestRule.waitForIdle()
 
-    // After toggle, basket should be unchecked
+    // After toggle, basket should be checked
     val basketSportAfter = viewModel.filterState.value.sportCategories.find { it.id == "basket" }
-    assert(basketSportAfter?.isChecked == false)
+    assert(basketSportAfter?.isChecked == true)
   }
 
   @Test
@@ -410,7 +373,6 @@ class SearchScreenTest {
     setupScreen()
 
     // All filter chips in same row
-    composeTestRule.onNodeWithText("All").assertIsDisplayed()
     composeTestRule.onNodeWithText("Social").assertIsDisplayed()
     composeTestRule.onNodeWithText("Activity").assertIsDisplayed()
     composeTestRule.onNodeWithText("Sport").assertIsDisplayed()
@@ -421,7 +383,7 @@ class SearchScreenTest {
     setupScreen()
 
     // Select multiple filters
-    composeTestRule.onNodeWithText("All").performClick()
+    composeTestRule.onNodeWithText("Activity").performClick()
     composeTestRule.waitForIdle()
 
     composeTestRule.onNodeWithText("Social").performClick()
@@ -435,8 +397,8 @@ class SearchScreenTest {
     composeTestRule.onNodeWithText("Tennis").performClick()
     composeTestRule.waitForIdle()
 
-    // All should still be displayed
-    composeTestRule.onNodeWithText("All").assertIsDisplayed()
+    // Activity should still be displayed
+    composeTestRule.onNodeWithText("Activity").assertIsDisplayed()
   }
 
   @Test

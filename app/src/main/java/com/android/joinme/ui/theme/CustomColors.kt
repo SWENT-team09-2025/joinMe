@@ -29,6 +29,7 @@ data class CustomColors(
     val onSocialContainer: Color,
     val serieContainer: Color,
     val onSerieContainer: Color,
+    val seriePinMark: Color,
     val containerColor: Color,
     val selectedIconColor: Color,
     val selectedTextColor: Color,
@@ -73,6 +74,9 @@ val lightCustomColors =
         // SERIE CARD COLORS
         serieContainer = serieContainerLight,
         onSerieContainer = onSerieContainerLight,
+
+        // SERIE PIN MARKS COLORS
+        seriePinMark = seriePinMark,
 
         // BOTTOM NAVIGATION BAR COLORS
         containerColor = primaryLight,
@@ -149,6 +153,9 @@ val darkCustomColors =
         // SERIE CARD COLORS
         serieContainer = serieContainerDark,
         onSerieContainer = onSerieContainerDark,
+
+        // SERIE PIN MARKS COLORS
+        seriePinMark = seriePinMark,
 
         // BOTTOM NAVIGATION BAR COLORS
         containerColor = surfaceContainerDark,

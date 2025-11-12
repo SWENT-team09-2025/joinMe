@@ -1,5 +1,9 @@
 package com.android.joinme.model.serie
 
+import com.android.joinme.model.event.Event
+import com.android.joinme.model.event.EventType
+import com.android.joinme.model.event.EventVisibility
+import com.android.joinme.model.event.EventsRepositoryLocal
 import com.android.joinme.model.utils.Visibility
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.runBlocking
@@ -10,11 +14,13 @@ import org.junit.Test
 class SeriesRepositoryLocalTest {
 
   private lateinit var repo: SeriesRepositoryLocal
+  private lateinit var eventsRepo: EventsRepositoryLocal
   private lateinit var sampleSerie: Serie
 
   @Before
   fun setup() {
-    repo = SeriesRepositoryLocal()
+    eventsRepo = EventsRepositoryLocal()
+    repo = SeriesRepositoryLocal(eventsRepo)
     sampleSerie =
         Serie(
             serieId = "1",
@@ -58,10 +64,65 @@ class SeriesRepositoryLocalTest {
   @Test
   fun deleteSerie_removesSuccessfully() {
     runBlocking {
+      // Add events that are referenced by the serie
+      val event1 =
+          Event(
+              eventId = "event1",
+              type = EventType.SPORTS,
+              title = "Event 1",
+              description = "First event",
+              location = null,
+              date = Timestamp.now(),
+              duration = 60,
+              participants = listOf("user1"),
+              maxParticipants = 10,
+              visibility = EventVisibility.PUBLIC,
+              ownerId = "user1")
+      val event2 =
+          Event(
+              eventId = "event2",
+              type = EventType.SPORTS,
+              title = "Event 2",
+              description = "Second event",
+              location = null,
+              date = Timestamp.now(),
+              duration = 60,
+              participants = listOf("user1"),
+              maxParticipants = 10,
+              visibility = EventVisibility.PUBLIC,
+              ownerId = "user1")
+      val event3 =
+          Event(
+              eventId = "event3",
+              type = EventType.SPORTS,
+              title = "Event 3",
+              description = "Third event",
+              location = null,
+              date = Timestamp.now(),
+              duration = 60,
+              participants = listOf("user1"),
+              maxParticipants = 10,
+              visibility = EventVisibility.PUBLIC,
+              ownerId = "user1")
+
+      eventsRepo.addEvent(event1)
+      eventsRepo.addEvent(event2)
+      eventsRepo.addEvent(event3)
+
+      // Add the serie
       repo.addSerie(sampleSerie)
+
+      // Delete the serie
       repo.deleteSerie("1")
-      val all = repo.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN)
-      Assert.assertTrue(all.isEmpty())
+
+      // Verify serie is deleted
+      val allSeries = repo.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN)
+      Assert.assertTrue(allSeries.isEmpty())
+
+      // Verify all associated events are also deleted
+      Assert.assertThrows(Exception::class.java) { runBlocking { eventsRepo.getEvent("event1") } }
+      Assert.assertThrows(Exception::class.java) { runBlocking { eventsRepo.getEvent("event2") } }
+      Assert.assertThrows(Exception::class.java) { runBlocking { eventsRepo.getEvent("event3") } }
     }
   }
 
@@ -151,6 +212,20 @@ class SeriesRepositoryLocalTest {
       repo.addSerie(emptyParticipantsSerie)
       val serie = repo.getSerie("2")
       Assert.assertTrue(serie.participants.isEmpty())
+    }
+  }
+
+  @Test
+  fun clear_removesAllSeriesAndResetsCounter() {
+    runBlocking {
+      repo.addSerie(sampleSerie)
+      repo.addSerie(sampleSerie.copy(serieId = "2"))
+      repo.getNewSerieId() // increment counter
+
+      repo.clear()
+
+      Assert.assertTrue(repo.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN).isEmpty())
+      Assert.assertEquals("0", repo.getNewSerieId())
     }
   }
 }

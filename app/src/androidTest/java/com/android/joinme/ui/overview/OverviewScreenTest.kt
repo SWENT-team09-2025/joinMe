@@ -60,6 +60,10 @@ class EventsRepositoryMock(private val shouldThrowError: Boolean = false) : Even
       throw Exception("Event not found")
     }
   }
+
+  override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
+    return events.filter { eventIds.contains(it.eventId) }
+  }
 }
 
 /** Mock series repository for testing */

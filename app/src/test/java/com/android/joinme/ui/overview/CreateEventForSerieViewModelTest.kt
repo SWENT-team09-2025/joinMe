@@ -54,6 +54,11 @@ class CreateEventForSerieViewModelTest {
       /* no-op */
     }
 
+    override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
+      /* no-op */
+      return emptyList()
+    }
+
     override suspend fun getEvent(eventId: String): Event =
         added.find { it.eventId == eventId } ?: throw NoSuchElementException("Event not found")
 
@@ -545,6 +550,8 @@ class CreateEventForSerieViewModelTest {
           override suspend fun editEvent(eventId: String, newValue: Event) {}
 
           override suspend fun deleteEvent(eventId: String) {}
+
+          override suspend fun getEventsByIds(eventIds: List<String>): List<Event> = emptyList()
 
           override suspend fun getEvent(eventId: String): Event {
             throw NoSuchElementException()

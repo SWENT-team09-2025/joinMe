@@ -508,6 +508,11 @@ class OverviewViewModelTest {
       events.removeIf { it.eventId == eventId }
     }
 
+    override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
+      if (shouldThrow) throw RuntimeException("Event repository error")
+      return events.filter { eventIds.contains(it.eventId) }
+    }
+
     override fun getNewEventId(): String {
       if (shouldThrow) throw RuntimeException("Event repository error")
       return "new_event_id"

@@ -127,4 +127,59 @@ class EventsRepositoryLocalTest {
       Assert.assertEquals(2, allWithSameId.size)
     }
   }
+
+  @Test
+  fun getEventsByIds_returnsMatchingEvents() {
+    runBlocking {
+      val e1 = sampleEvent.copy(eventId = "1", title = "Event 1")
+      val e2 = sampleEvent.copy(eventId = "2", title = "Event 2")
+      val e3 = sampleEvent.copy(eventId = "3", title = "Event 3")
+      repo.addEvent(e1)
+      repo.addEvent(e2)
+      repo.addEvent(e3)
+
+      val result = repo.getEventsByIds(listOf("1", "3"))
+
+      Assert.assertEquals(2, result.size)
+      Assert.assertTrue(result.any { it.eventId == "1" })
+      Assert.assertTrue(result.any { it.eventId == "3" })
+      Assert.assertFalse(result.any { it.eventId == "2" })
+    }
+  }
+
+  @Test
+  fun getEventsByIds_returnsEmptyListWhenNoMatches() {
+    runBlocking {
+      repo.addEvent(sampleEvent.copy(eventId = "1"))
+
+      val result = repo.getEventsByIds(listOf("999", "888"))
+
+      Assert.assertTrue(result.isEmpty())
+    }
+  }
+
+  @Test
+  fun getEventsByIds_returnsEmptyListWhenEmptyInput() {
+    runBlocking {
+      repo.addEvent(sampleEvent)
+
+      val result = repo.getEventsByIds(emptyList())
+
+      Assert.assertTrue(result.isEmpty())
+    }
+  }
+
+  @Test
+  fun clear_removesAllEventsAndResetsCounter() {
+    runBlocking {
+      repo.addEvent(sampleEvent)
+      repo.addEvent(sampleEvent.copy(eventId = "2"))
+      repo.getNewEventId() // increment counter
+
+      repo.clear()
+
+      Assert.assertTrue(repo.getAllEvents(EventFilter.EVENTS_FOR_OVERVIEW_SCREEN).isEmpty())
+      Assert.assertEquals("0", repo.getNewEventId())
+    }
+  }
 }

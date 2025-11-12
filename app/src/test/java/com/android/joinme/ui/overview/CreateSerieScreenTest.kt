@@ -950,4 +950,24 @@ class CreateSerieScreenTest {
     // Button may be below the fold, use assertExists()
     composeTestRule.onNodeWithText("NEXT").assertExists()
   }
+
+  @Test
+  fun backButtonCallsDeleteCreatedSerieIfExists() {
+    val viewModel = CreateSerieViewModel()
+    var backPressed = false
+
+    composeTestRule.setContent {
+      CreateSerieScreen(createSerieViewModel = viewModel, onGoBack = { backPressed = true })
+    }
+
+    // Find and click back button
+    composeTestRule.onNodeWithContentDescription("Back").performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify callback was triggered
+    // Note: We can't verify deleteCreatedSerieIfExists was called without mocking,
+    // but we verify the onGoBack callback is invoked correctly
+    assert(backPressed)
+  }
 }

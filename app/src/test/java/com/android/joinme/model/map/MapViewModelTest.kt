@@ -9,6 +9,7 @@ import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
+import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.ui.map.MapUIState
 import com.android.joinme.ui.map.MapViewModel
 import com.android.joinme.ui.map.userLocation.UserLocationService
@@ -49,6 +50,7 @@ class MapViewModelTest {
   private lateinit var viewModel: MapViewModel
   private lateinit var mockLocationService: UserLocationService
   private lateinit var mockEventsRepository: EventsRepository
+  private lateinit var mockSeriesRepository: SeriesRepository
 
   @Before
   fun setup() {
@@ -68,8 +70,11 @@ class MapViewModelTest {
 
     mockLocationService = mock(UserLocationService::class.java)
     mockEventsRepository = mock(EventsRepository::class.java)
+    mockSeriesRepository = mock(SeriesRepository::class.java)
 
-    viewModel = MapViewModel(eventsRepository = mockEventsRepository)
+    viewModel =
+        MapViewModel(
+            eventsRepository = mockEventsRepository, seriesRepository = mockSeriesRepository)
   }
 
   @After
@@ -82,7 +87,7 @@ class MapViewModelTest {
     val initialState = viewModel.uiState.value
 
     assertNull(initialState.userLocation)
-    assertTrue(initialState.todos.isEmpty())
+    assertTrue(initialState.events.isEmpty())
     assertNull(initialState.errorMsg)
     assertFalse(initialState.isLoading)
   }
@@ -159,6 +164,8 @@ class MapViewModelTest {
         // Mock repository to return test events
         whenever(mockEventsRepository.getAllEvents(EventFilter.EVENTS_FOR_MAP_SCREEN))
             .thenReturn(testEvents)
+        // Mock series repository to return empty list (no series)
+        whenever(mockSeriesRepository.getAllSeries(any())).thenReturn(emptyList())
 
         // Call fetchLocalizableEvents via reflection
         val method = viewModel.javaClass.getDeclaredMethod("fetchLocalizableEvents")
@@ -169,7 +176,7 @@ class MapViewModelTest {
         advanceUntilIdle()
 
         // Verify the state is updated with events
-        assertEquals(testEvents, viewModel.uiState.value.todos)
+        assertEquals(testEvents, viewModel.uiState.value.events)
         assertFalse(viewModel.uiState.value.isLoading)
         assertNull(viewModel.uiState.value.errorMsg)
       }
@@ -180,6 +187,8 @@ class MapViewModelTest {
         // Mock repository to throw exception
         whenever(mockEventsRepository.getAllEvents(any()))
             .thenThrow(RuntimeException("Network error"))
+        // Mock series repository to return empty list
+        whenever(mockSeriesRepository.getAllSeries(any())).thenReturn(emptyList())
 
         // Call fetchLocalizableEvents via reflection
         val method = viewModel.javaClass.getDeclaredMethod("fetchLocalizableEvents")
@@ -190,7 +199,7 @@ class MapViewModelTest {
         advanceUntilIdle()
 
         // Verify error state
-        assertTrue(viewModel.uiState.value.todos.isEmpty())
+        assertTrue(viewModel.uiState.value.events.isEmpty())
         assertFalse(viewModel.uiState.value.isLoading)
         assertNotNull(viewModel.uiState.value.errorMsg)
         assertTrue(viewModel.uiState.value.errorMsg!!.contains("Failed to load events"))

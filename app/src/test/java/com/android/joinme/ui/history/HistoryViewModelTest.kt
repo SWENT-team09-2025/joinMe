@@ -392,6 +392,11 @@ class HistoryViewModelTest {
       if (shouldThrow) throw RuntimeException("Repository error")
     }
 
+    override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
+      if (shouldThrow) throw RuntimeException("Repository error")
+      return fakeEvents.filter { eventIds.contains(it.eventId) }
+    }
+
     override fun getNewEventId(): String {
       if (shouldThrow) throw RuntimeException("Repository error")
       return "new_event_id"
