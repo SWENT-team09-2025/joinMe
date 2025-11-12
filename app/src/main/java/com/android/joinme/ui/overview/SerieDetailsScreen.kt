@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -73,6 +74,9 @@ object SerieDetailsScreenTestTags {
   /** Test tag for the edit serie button */
   const val EDIT_SERIE_BUTTON = "editSerieButton"
 
+  /** Test tag for the delete serie button */
+  const val DELETE_SERIE_BUTTON = "deleteSerieButton"
+
   const val MESSAGE_FULL_SERIE = "messageFullSerie"
 }
 
@@ -106,6 +110,8 @@ fun SerieDetailsScreen(
   val errorMsg = uiState.errorMsg
   val context = LocalContext.current
   val coroutineScope = rememberCoroutineScope()
+  var showDeleteDialog by remember { mutableStateOf(false) }
+
   // Load serie details when the screen is first displayed
   LaunchedEffect(serieId) { serieDetailsViewModel.loadSerieDetails(serieId) }
 
@@ -115,6 +121,29 @@ fun SerieDetailsScreen(
       Toast.makeText(context, errorMsg, Toast.LENGTH_SHORT).show()
       serieDetailsViewModel.clearErrorMsg()
     }
+  }
+
+  // Delete confirmation dialog
+  if (showDeleteDialog) {
+    AlertDialog(
+        onDismissRequest = { showDeleteDialog = false },
+        title = { Text("Delete Serie") },
+        text = {
+          Text("Are you sure you want to delete this serie? This action cannot be undone.")
+        },
+        confirmButton = {
+          TextButton(
+              onClick = {
+                coroutineScope.launch {
+                  serieDetailsViewModel.deleteSerie(serieId)
+                  showDeleteDialog = false
+                  onGoBack()
+                }
+              }) {
+                Text("Delete", color = MaterialTheme.colorScheme.error)
+              }
+        },
+        dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } })
   }
 
   Scaffold(
@@ -264,6 +293,7 @@ fun SerieDetailsScreen(
             if (uiState.isOwner(currentUserId)) {
               Button(
                   onClick = onAddEventClick,
+                  enabled = uiState.events.size < 30,
                   modifier =
                       Modifier.fillMaxWidth()
                           .height(Dimens.Spacing.huge)
@@ -282,6 +312,22 @@ fun SerieDetailsScreen(
                   enabled = uiState.isOwner(currentUserId),
                   colors = MaterialTheme.customColors.buttonColors()) {
                     Text(text = "EDIT SERIE", style = MaterialTheme.typography.headlineSmall)
+                  }
+
+              Button(
+                  onClick = { showDeleteDialog = true },
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .height(Dimens.Spacing.huge)
+                          .testTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON),
+                  shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+                  colors = MaterialTheme.customColors.buttonColors()) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.customColors.deleteButton)
+                    Spacer(modifier = Modifier.width(Dimens.Spacing.small))
+                    Text(text = "DELETE SERIE", style = MaterialTheme.typography.headlineSmall)
                   }
             }
 

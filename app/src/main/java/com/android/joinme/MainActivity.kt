@@ -306,7 +306,10 @@ fun JoinMe(
       composable(Screen.Search.route) {
         SearchScreen(
             navigationActions = navigationActions,
-            onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) })
+            onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
+            onSelectSerie = { serieId ->
+              navigationActions.navigateTo(Screen.SerieDetails(serieId))
+            })
       }
     }
 

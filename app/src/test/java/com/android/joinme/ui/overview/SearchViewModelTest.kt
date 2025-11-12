@@ -1,7 +1,9 @@
 package com.android.joinme.ui.overview
 
+import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.filter.FilterRepository
+import com.android.joinme.model.serie.SerieFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -23,7 +25,7 @@ class SearchViewModelTest {
   fun setup() {
     Dispatchers.setMain(testDispatcher)
     FilterRepository.reset()
-    val fakeRepository =
+    val fakeEventRepository =
         object : com.android.joinme.model.event.EventsRepository {
           override fun getNewEventId(): String = "fake-id"
 
@@ -43,9 +45,33 @@ class SearchViewModelTest {
           ) {}
 
           override suspend fun deleteEvent(eventId: String) {}
+
+          override suspend fun getEventsByIds(eventIds: List<String>): List<Event> = emptyList()
         }
 
-    viewModel = SearchViewModel(fakeRepository)
+    val fakeSeriesRepository =
+        object : com.android.joinme.model.serie.SeriesRepository {
+          override fun getNewSerieId(): String = "fake-serie-id"
+
+          override suspend fun getAllSeries(
+              serieFilter: SerieFilter
+          ): List<com.android.joinme.model.serie.Serie> = emptyList()
+
+          override suspend fun getSerie(serieId: String): com.android.joinme.model.serie.Serie {
+            throw Exception("Not implemented in fake repo")
+          }
+
+          override suspend fun addSerie(serie: com.android.joinme.model.serie.Serie) {}
+
+          override suspend fun editSerie(
+              serieId: String,
+              newValue: com.android.joinme.model.serie.Serie
+          ) {}
+
+          override suspend fun deleteSerie(serieId: String) {}
+        }
+
+    viewModel = SearchViewModel(fakeEventRepository, fakeSeriesRepository)
     testDispatcher.scheduler.advanceUntilIdle()
   }
 
@@ -60,13 +86,12 @@ class SearchViewModelTest {
     val filterState = viewModel.filterState.value
 
     assertEquals("", uiState.query)
-    assertTrue(filterState.isAllSelected)
-    assertTrue(filterState.isSocialSelected)
-    assertTrue(filterState.isActivitySelected)
+    assertFalse(filterState.isSocialSelected)
+    assertFalse(filterState.isActivitySelected)
     assertFalse(uiState.categoryExpanded)
     assertEquals(4, filterState.sportCategories.size)
-    assertEquals(4, filterState.selectedSportsCount)
-    assertTrue(filterState.isSelectAllChecked)
+    assertEquals(0, filterState.selectedSportsCount)
+    assertFalse(filterState.isSelectAllChecked)
   }
 
   @Test
@@ -79,42 +104,11 @@ class SearchViewModelTest {
   }
 
   @Test
-  fun `toggleAll deselects all filters when initially selected`() = runTest {
-    viewModel.toggleAll()
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    val state = viewModel.filterState.value
-    assertFalse(state.isAllSelected)
-    assertFalse(state.isSocialSelected)
-    assertFalse(state.isActivitySelected)
-    assertFalse(state.isSelectAllChecked)
-    assertEquals(0, state.selectedSportsCount)
-    assertTrue(state.sportCategories.none { it.isChecked })
-  }
-
-  @Test
-  fun `toggleAll twice returns to initial state`() = runTest {
-    viewModel.toggleAll()
-    testDispatcher.scheduler.advanceUntilIdle()
-    viewModel.toggleAll()
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    val state = viewModel.filterState.value
-    assertTrue(state.isAllSelected)
-    assertTrue(state.isSocialSelected)
-    assertTrue(state.isActivitySelected)
-    assertTrue(state.isSelectAllChecked)
-    assertEquals(4, state.selectedSportsCount)
-    assertTrue(state.sportCategories.all { it.isChecked })
-  }
-
-  @Test
   fun `toggleSocial updates social selection`() = runTest {
     viewModel.toggleSocial()
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertFalse(viewModel.filterState.value.isSocialSelected)
-    assertFalse(viewModel.filterState.value.isAllSelected)
+    assertTrue(viewModel.filterState.value.isSocialSelected)
   }
 
   @Test
@@ -124,7 +118,7 @@ class SearchViewModelTest {
     viewModel.toggleSocial()
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertTrue(viewModel.filterState.value.isSocialSelected)
+    assertFalse(viewModel.filterState.value.isSocialSelected)
   }
 
   @Test
@@ -132,8 +126,7 @@ class SearchViewModelTest {
     viewModel.toggleActivity()
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertFalse(viewModel.filterState.value.isActivitySelected)
-    assertFalse(viewModel.filterState.value.isAllSelected)
+    assertTrue(viewModel.filterState.value.isActivitySelected)
   }
 
   @Test
@@ -143,29 +136,7 @@ class SearchViewModelTest {
     viewModel.toggleActivity()
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertTrue(viewModel.filterState.value.isActivitySelected)
-  }
-
-  @Test
-  fun `toggleAll is already selected when social, activity and all sports are selected bydefault`() =
-      runTest {
-        assertTrue(viewModel.filterState.value.isAllSelected)
-      }
-
-  @Test
-  fun `toggleAll deselects when social is deselected`() = runTest {
-    viewModel.toggleSocial()
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    assertFalse(viewModel.filterState.value.isAllSelected)
-  }
-
-  @Test
-  fun `toggleAll deselects when activity is deselected`() = runTest {
-    viewModel.toggleActivity()
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    assertFalse(viewModel.filterState.value.isAllSelected)
+    assertFalse(viewModel.filterState.value.isActivitySelected)
   }
 
   @Test
@@ -182,20 +153,7 @@ class SearchViewModelTest {
   }
 
   @Test
-  fun `toggleSelectAll deselects all sports when initially selected`() = runTest {
-    viewModel.toggleSelectAll()
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    val state = viewModel.filterState.value
-    assertFalse(state.isSelectAllChecked)
-    assertEquals(0, state.selectedSportsCount)
-    assertTrue(state.sportCategories.none { it.isChecked })
-  }
-
-  @Test
-  fun `toggleSelectAll twice returns sports to initial state`() = runTest {
-    viewModel.toggleSelectAll()
-    testDispatcher.scheduler.advanceUntilIdle()
+  fun `toggleSelectAll selects all sports when initially unselected`() = runTest {
     viewModel.toggleSelectAll()
     testDispatcher.scheduler.advanceUntilIdle()
 
@@ -206,9 +164,16 @@ class SearchViewModelTest {
   }
 
   @Test
-  fun `toggleSelectAll maintains isAllSelected when social and activity are selected`() = runTest {
-    // All filters are already selected by default
-    assertTrue(viewModel.filterState.value.isAllSelected)
+  fun `toggleSelectAll twice returns sports to initial state`() = runTest {
+    viewModel.toggleSelectAll()
+    testDispatcher.scheduler.advanceUntilIdle()
+    viewModel.toggleSelectAll()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    val state = viewModel.filterState.value
+    assertFalse(state.isSelectAllChecked)
+    assertEquals(0, state.selectedSportsCount)
+    assertTrue(state.sportCategories.none { it.isChecked })
   }
 
   @Test
@@ -219,12 +184,12 @@ class SearchViewModelTest {
     val state = viewModel.filterState.value
     val basketSport = state.sportCategories.find { it.id == "basket" }
     assertNotNull(basketSport)
-    assertFalse(basketSport!!.isChecked)
-    assertEquals(3, state.selectedSportsCount)
+    assertTrue(basketSport!!.isChecked)
+    assertEquals(1, state.selectedSportsCount)
   }
 
   @Test
-  fun `toggleSport twice returns sport to initial checked state`() = runTest {
+  fun `toggleSport twice returns sport to initial unchecked state`() = runTest {
     viewModel.toggleSport("football")
     testDispatcher.scheduler.advanceUntilIdle()
     viewModel.toggleSport("football")
@@ -232,28 +197,8 @@ class SearchViewModelTest {
 
     val state = viewModel.filterState.value
     val footballSport = state.sportCategories.find { it.id == "football" }
-    assertTrue(footballSport!!.isChecked)
-    assertEquals(4, state.selectedSportsCount)
-  }
-
-  @Test
-  fun `isAllSelected remains true when all filters are selected`() = runTest {
-    // All filters are already selected by default
-    assertTrue(viewModel.filterState.value.isAllSelected)
-    assertTrue(viewModel.filterState.value.isSocialSelected)
-    assertTrue(viewModel.filterState.value.isActivitySelected)
-    assertTrue(viewModel.filterState.value.isSelectAllChecked)
-  }
-
-  @Test
-  fun `toggleSport deselects isAllSelected when sport is unchecked`() = runTest {
-    // All filters are already selected by default
-    assertTrue(viewModel.filterState.value.isAllSelected)
-
-    viewModel.toggleSport("basket")
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    assertFalse(viewModel.filterState.value.isAllSelected)
+    assertFalse(footballSport!!.isChecked)
+    assertEquals(0, state.selectedSportsCount)
   }
 
   @Test
@@ -262,7 +207,7 @@ class SearchViewModelTest {
     testDispatcher.scheduler.advanceUntilIdle()
 
     val state = viewModel.filterState.value
-    assertEquals(4, state.selectedSportsCount)
+    assertEquals(0, state.selectedSportsCount)
   }
 
   @Test
@@ -299,36 +244,35 @@ class SearchViewModelTest {
   }
 
   @Test
-  fun `isSelectAllChecked is false when not all sports checked`() = runTest {
+  fun `isSelectAllChecked becomes true when all sports checked`() = runTest {
+    viewModel.toggleSelectAll()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertTrue(viewModel.filterState.value.isSelectAllChecked)
+
     viewModel.toggleSport("basket")
     testDispatcher.scheduler.advanceUntilIdle()
 
     assertFalse(viewModel.filterState.value.isSelectAllChecked)
-
-    viewModel.toggleSport("basket")
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    assertTrue(viewModel.filterState.value.isSelectAllChecked)
   }
 
   @Test
   fun `complex scenario - mixed selections`() = runTest {
-    // Deselect activity and some sports
+    // Select activity and some sports
     viewModel.toggleActivity()
     viewModel.toggleSport("basket")
     viewModel.toggleSport("football")
     testDispatcher.scheduler.advanceUntilIdle()
 
     val state = viewModel.filterState.value
-    assertTrue(state.isSocialSelected)
-    assertFalse(state.isActivitySelected)
+    assertFalse(state.isSocialSelected)
+    assertTrue(state.isActivitySelected)
     assertEquals(2, state.selectedSportsCount)
-    assertFalse(state.isAllSelected)
     assertFalse(state.isSelectAllChecked)
   }
 
   @Test
-  fun `setEvents updates events list and applies filters`() = runTest {
+  fun `setEvents updates eventItems list and applies filters`() = runTest {
     val sampleEvent =
         com.android.joinme.model.event.Event(
             eventId = "1",
@@ -346,13 +290,15 @@ class SearchViewModelTest {
     viewModel.setEvents(listOf(sampleEvent))
     testDispatcher.scheduler.advanceUntilIdle()
 
-    // Since all filters are selected by default, event should be visible
-    assertEquals(1, viewModel.uiState.value.events.size)
-    assertEquals("Basketball", viewModel.uiState.value.events[0].title)
+    // Since no filters are selected by default, all events should be visible
+    assertEquals(1, viewModel.uiState.value.eventItems.size)
+    val item = viewModel.uiState.value.eventItems[0]
+    assertTrue(item is com.android.joinme.model.eventItem.EventItem.SingleEvent)
+    assertEquals("Basketball", item.title)
   }
 
   @Test
-  fun `setEvents with empty list clears events`() = runTest {
+  fun `setEvents with empty list clears eventItems`() = runTest {
     val sampleEvent =
         com.android.joinme.model.event.Event(
             eventId = "1",
@@ -369,10 +315,139 @@ class SearchViewModelTest {
 
     viewModel.setEvents(listOf(sampleEvent))
     testDispatcher.scheduler.advanceUntilIdle()
-    assertEquals(1, viewModel.uiState.value.events.size)
+    assertEquals(1, viewModel.uiState.value.eventItems.size)
 
     viewModel.setEvents(emptyList())
     testDispatcher.scheduler.advanceUntilIdle()
-    assertEquals(0, viewModel.uiState.value.events.size)
+    assertEquals(0, viewModel.uiState.value.eventItems.size)
+  }
+
+  @Test
+  fun `setSeries updates eventItems list with series`() = runTest {
+    val sampleSerie =
+        com.android.joinme.model.serie.Serie(
+            serieId = "serie1",
+            title = "Weekly Basketball",
+            description = "Weekly basketball event",
+            date = com.google.firebase.Timestamp.now(),
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = com.android.joinme.model.utils.Visibility.PUBLIC,
+            eventIds = listOf("event1", "event2"),
+            ownerId = "owner1")
+
+    viewModel.setSeries(listOf(sampleSerie))
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    // Series should be visible
+    assertEquals(1, viewModel.uiState.value.eventItems.size)
+    val item = viewModel.uiState.value.eventItems[0]
+    assertTrue(item is com.android.joinme.model.eventItem.EventItem.EventSerie)
+    assertEquals("Weekly Basketball", item.title)
+  }
+
+  @Test
+  fun `eventItems contains both events and series`() = runTest {
+    val sampleEvent =
+        com.android.joinme.model.event.Event(
+            eventId = "1",
+            type = com.android.joinme.model.event.EventType.SPORTS,
+            title = "Basketball Game",
+            description = "Test event",
+            location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
+            date = com.google.firebase.Timestamp.now(),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    val sampleSerie =
+        com.android.joinme.model.serie.Serie(
+            serieId = "serie1",
+            title = "Weekly Basketball",
+            description = "Weekly basketball event",
+            date = com.google.firebase.Timestamp.now(),
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = com.android.joinme.model.utils.Visibility.PUBLIC,
+            eventIds = listOf("event1", "event2"),
+            ownerId = "owner1")
+
+    viewModel.setEvents(listOf(sampleEvent))
+    viewModel.setSeries(listOf(sampleSerie))
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    // Both event and serie should be visible
+    assertEquals(2, viewModel.uiState.value.eventItems.size)
+    assertTrue(
+        viewModel.uiState.value.eventItems.any {
+          it is com.android.joinme.model.eventItem.EventItem.SingleEvent
+        })
+    assertTrue(
+        viewModel.uiState.value.eventItems.any {
+          it is com.android.joinme.model.eventItem.EventItem.EventSerie
+        })
+  }
+
+  @Test
+  fun `search query filters both events and series`() = runTest {
+    val event1 =
+        com.android.joinme.model.event.Event(
+            eventId = "1",
+            type = com.android.joinme.model.event.EventType.SPORTS,
+            title = "Basketball Game",
+            description = "Test event",
+            location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
+            date = com.google.firebase.Timestamp.now(),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    val event2 =
+        com.android.joinme.model.event.Event(
+            eventId = "2",
+            type = com.android.joinme.model.event.EventType.SOCIAL,
+            title = "Dinner Party",
+            description = "Social event",
+            location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
+            date = com.google.firebase.Timestamp.now(),
+            duration = 120,
+            participants = emptyList(),
+            maxParticipants = 20,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    val serie =
+        com.android.joinme.model.serie.Serie(
+            serieId = "serie1",
+            title = "Weekly Basketball",
+            description = "Weekly basketball series",
+            date = com.google.firebase.Timestamp.now(),
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = com.android.joinme.model.utils.Visibility.PUBLIC,
+            eventIds = listOf("event1", "event2"),
+            ownerId = "owner1")
+
+    viewModel.setEvents(listOf(event1, event2))
+    viewModel.setSeries(listOf(serie))
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    // Initially all items should be visible (3 items)
+    assertEquals(3, viewModel.uiState.value.eventItems.size)
+
+    // Apply search query for "Basketball"
+    viewModel.setQuery("Basketball")
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    // Only items containing "Basketball" should be visible (event1 and serie)
+    assertEquals(2, viewModel.uiState.value.eventItems.size)
+    assertTrue(
+        viewModel.uiState.value.eventItems.all {
+          it.title.contains("Basketball", ignoreCase = true)
+        })
   }
 }

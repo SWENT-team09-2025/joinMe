@@ -76,6 +76,15 @@ class EventsRepositoryFirestore(
     return clientSideProcessing(eventFilter, events, userId)
   }
 
+  override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
+    if (eventIds.isEmpty()) return emptyList()
+    if (eventIds.size > 30) throw Exception("EventsRepositoryFirestore: Too many event IDs")
+
+    val snapshot = db.collection(EVENTS_COLLECTION_PATH).whereIn("eventId", eventIds).get().await()
+
+    return snapshot.mapNotNull { documentToEvent(it) }
+  }
+
   override suspend fun getEvent(eventId: String): Event {
     val document = db.collection(EVENTS_COLLECTION_PATH).document(eventId).get().await()
     return documentToEvent(document)

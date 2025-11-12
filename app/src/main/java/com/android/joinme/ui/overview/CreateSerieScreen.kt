@@ -99,6 +99,11 @@ fun CreateSerieScreen(
         }
         true
       },
-      onGoBack = onGoBack,
+      onGoBack = {
+        coroutineScope.launch {
+          createSerieViewModel.deleteCreatedSerieIfExists()
+          onGoBack()
+        }
+      },
       saveButtonText = "NEXT")
 }

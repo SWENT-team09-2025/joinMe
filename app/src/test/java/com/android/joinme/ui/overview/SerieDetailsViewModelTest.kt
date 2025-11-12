@@ -64,6 +64,10 @@ class SerieDetailsViewModelTest {
       events.remove(eventId)
     }
 
+    override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
+      return events.filter { eventIds.contains(it.key) }.values.toList()
+    }
+
     override suspend fun getEvent(eventId: String): Event =
         events[eventId] ?: throw NoSuchElementException("Event not found")
 
@@ -501,7 +505,7 @@ class SerieDetailsViewModelTest {
 
     val errorEventsRepository =
         object : FakeEventsRepository() {
-          override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
+          override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
             throw Exception("Events fetch error")
           }
         }
@@ -519,8 +523,17 @@ class SerieDetailsViewModelTest {
   /** --- JOIN SERIE TESTS --- */
   @Test
   fun joinSerie_validUser_joinsSuccessfully() = runTest {
-    val serie = createTestSerie(participants = listOf("user1", "owner123"), maxParticipants = 10)
+    val serie =
+        createTestSerie(
+            participants = listOf("user1", "owner123"),
+            maxParticipants = 10,
+            eventIds = listOf("event1", "event2"))
+    val event1 = createTestEvent(eventId = "event1", duration = 90)
+    val event2 = createTestEvent(eventId = "event2", duration = 60)
+
     seriesRepository.addSerie(serie)
+    eventsRepository.addEvent(event1)
+    eventsRepository.addEvent(event2)
 
     viewModel.loadSerieDetails(serie.serieId)
     advanceUntilIdle()
@@ -536,9 +549,15 @@ class SerieDetailsViewModelTest {
     assertEquals(3, state.serie!!.participants.size)
     assertNull(state.errorMsg)
 
-    // Verify repository was updated
+    // Verify serie repository was updated
     val updatedSerie = seriesRepository.getSerie(serie.serieId)
     assertTrue(updatedSerie.participants.contains(testUserId))
+
+    // Verify events repository was updated - user should be added to all events
+    val updatedEvent1 = eventsRepository.getEvent("event1")
+    assertTrue(updatedEvent1.participants.contains(testUserId))
+    val updatedEvent2 = eventsRepository.getEvent("event2")
+    assertTrue(updatedEvent2.participants.contains(testUserId))
   }
 
   @Test
@@ -684,11 +703,94 @@ class SerieDetailsViewModelTest {
     assertEquals("2/10", state.participantsCount) // user1 + test-user-id
   }
 
+  @Test
+  fun joinSerie_addsUserToAllEventsInSerie() = runTest {
+    // Create a serie with 3 events
+    val serie =
+        createTestSerie(
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            eventIds = listOf("event1", "event2", "event3"))
+    val event1 =
+        createTestEvent(eventId = "event1", duration = 90)
+            .copy(participants = listOf("user1", "user2"))
+    val event2 =
+        createTestEvent(eventId = "event2", duration = 60).copy(participants = listOf("user1"))
+    val event3 =
+        createTestEvent(eventId = "event3", duration = 120)
+            .copy(participants = listOf("user2", "user3"))
+
+    seriesRepository.addSerie(serie)
+    eventsRepository.addEvent(event1)
+    eventsRepository.addEvent(event2)
+    eventsRepository.addEvent(event3)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    // Verify testUserId is not in any event initially
+    assertFalse(event1.participants.contains(testUserId))
+    assertFalse(event2.participants.contains(testUserId))
+    assertFalse(event3.participants.contains(testUserId))
+
+    // Join the serie
+    val result = viewModel.joinSerie(testUserId)
+    advanceUntilIdle()
+
+    assertTrue(result)
+
+    // Verify testUserId was added to ALL events
+    val updatedEvent1 = eventsRepository.getEvent("event1")
+    assertTrue(updatedEvent1.participants.contains(testUserId))
+    assertEquals(3, updatedEvent1.participants.size) // user1, user2, test-user-id
+
+    val updatedEvent2 = eventsRepository.getEvent("event2")
+    assertTrue(updatedEvent2.participants.contains(testUserId))
+    assertEquals(2, updatedEvent2.participants.size) // user1, test-user-id
+
+    val updatedEvent3 = eventsRepository.getEvent("event3")
+    assertTrue(updatedEvent3.participants.contains(testUserId))
+    assertEquals(3, updatedEvent3.participants.size) // user2, user3, test-user-id
+  }
+
+  @Test
+  fun joinSerie_withNoEvents_stillJoinsSerieSuccessfully() = runTest {
+    // Serie with no events
+    val serie =
+        createTestSerie(
+            participants = listOf("user1"), maxParticipants = 10, eventIds = emptyList())
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val result = viewModel.joinSerie(testUserId)
+    advanceUntilIdle()
+
+    assertTrue(result)
+
+    val state = viewModel.uiState.first()
+    assertTrue(state.serie!!.participants.contains(testUserId))
+    assertNull(state.errorMsg)
+  }
+
   /** --- QUIT SERIE TESTS --- */
   @Test
   fun quitSerie_regularParticipant_quitsSuccessfully() = runTest {
-    val serie = createTestSerie(participants = listOf(testUserId, "user1", "owner123"))
+    val serie =
+        createTestSerie(
+            participants = listOf(testUserId, "user1", "owner123"),
+            eventIds = listOf("event1", "event2"))
+    val event1 =
+        createTestEvent(eventId = "event1", duration = 90)
+            .copy(participants = listOf(testUserId, "user1"))
+    val event2 =
+        createTestEvent(eventId = "event2", duration = 60)
+            .copy(participants = listOf(testUserId, "user2"))
+
     seriesRepository.addSerie(serie)
+    eventsRepository.addEvent(event1)
+    eventsRepository.addEvent(event2)
 
     viewModel.loadSerieDetails(serie.serieId)
     advanceUntilIdle()
@@ -706,9 +808,17 @@ class SerieDetailsViewModelTest {
     assertEquals(2, state.serie!!.participants.size)
     assertNull(state.errorMsg)
 
-    // Verify repository was updated
+    // Verify serie repository was updated
     val updatedSerie = seriesRepository.getSerie(serie.serieId)
     assertFalse(updatedSerie.participants.contains(testUserId))
+
+    // Verify events repository was updated - user should be removed from all events
+    val updatedEvent1 = eventsRepository.getEvent("event1")
+    assertFalse(updatedEvent1.participants.contains(testUserId))
+    assertTrue(updatedEvent1.participants.contains("user1")) // Other participants remain
+    val updatedEvent2 = eventsRepository.getEvent("event2")
+    assertFalse(updatedEvent2.participants.contains(testUserId))
+    assertTrue(updatedEvent2.participants.contains("user2")) // Other participants remain
   }
 
   @Test
@@ -816,6 +926,81 @@ class SerieDetailsViewModelTest {
     assertNull(state.errorMsg)
   }
 
+  @Test
+  fun quitSerie_removesUserFromAllEventsInSerie() = runTest {
+    // Create a serie with 3 events where testUserId is a participant
+    val serie =
+        createTestSerie(
+            participants = listOf(testUserId, "user1", "owner123"),
+            maxParticipants = 10,
+            eventIds = listOf("event1", "event2", "event3"))
+    val event1 =
+        createTestEvent(eventId = "event1", duration = 90)
+            .copy(participants = listOf(testUserId, "user1", "user2"))
+    val event2 =
+        createTestEvent(eventId = "event2", duration = 60)
+            .copy(participants = listOf(testUserId, "user1"))
+    val event3 =
+        createTestEvent(eventId = "event3", duration = 120)
+            .copy(participants = listOf(testUserId, "user2", "user3"))
+
+    seriesRepository.addSerie(serie)
+    eventsRepository.addEvent(event1)
+    eventsRepository.addEvent(event2)
+    eventsRepository.addEvent(event3)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    // Verify testUserId is in all events initially
+    assertTrue(event1.participants.contains(testUserId))
+    assertTrue(event2.participants.contains(testUserId))
+    assertTrue(event3.participants.contains(testUserId))
+
+    // Quit the serie
+    val result = viewModel.quitSerie(testUserId)
+    advanceUntilIdle()
+
+    assertTrue(result)
+
+    // Verify testUserId was removed from ALL events
+    val updatedEvent1 = eventsRepository.getEvent("event1")
+    assertFalse(updatedEvent1.participants.contains(testUserId))
+    assertEquals(2, updatedEvent1.participants.size) // user1, user2
+
+    val updatedEvent2 = eventsRepository.getEvent("event2")
+    assertFalse(updatedEvent2.participants.contains(testUserId))
+    assertEquals(1, updatedEvent2.participants.size) // user1
+
+    val updatedEvent3 = eventsRepository.getEvent("event3")
+    assertFalse(updatedEvent3.participants.contains(testUserId))
+    assertEquals(2, updatedEvent3.participants.size) // user2, user3
+  }
+
+  @Test
+  fun quitSerie_withNoEvents_stillQuitsSerieSuccessfully() = runTest {
+    // Serie with no events
+    val serie =
+        createTestSerie(
+            ownerId = "owner123",
+            participants = listOf(testUserId, "user1"),
+            maxParticipants = 10,
+            eventIds = emptyList())
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val result = viewModel.quitSerie(testUserId)
+    advanceUntilIdle()
+
+    assertTrue(result)
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.serie!!.participants.contains(testUserId))
+    assertNull(state.errorMsg)
+  }
+
   /** --- ERROR MESSAGE HANDLING TESTS --- */
   @Test
   fun setErrorMsg_setsErrorMessageInState() {
@@ -882,8 +1067,17 @@ class SerieDetailsViewModelTest {
 
   @Test
   fun joinAndQuitSerie_workflow_worksCorrectly() = runTest {
-    val serie = createTestSerie(participants = listOf("user1", "owner123"), maxParticipants = 10)
+    val serie =
+        createTestSerie(
+            participants = listOf("user1", "owner123"),
+            maxParticipants = 10,
+            eventIds = listOf("event1", "event2"))
+    val event1 = createTestEvent(eventId = "event1", duration = 90)
+    val event2 = createTestEvent(eventId = "event2", duration = 60)
+
     seriesRepository.addSerie(serie)
+    eventsRepository.addEvent(event1)
+    eventsRepository.addEvent(event2)
 
     viewModel.loadSerieDetails(serie.serieId)
     advanceUntilIdle()
@@ -901,6 +1095,12 @@ class SerieDetailsViewModelTest {
     assertTrue(state.isParticipant(testUserId))
     assertFalse(state.canJoin(testUserId))
 
+    // Verify user was added to all events
+    var updatedEvent1 = eventsRepository.getEvent("event1")
+    assertTrue(updatedEvent1.participants.contains(testUserId))
+    var updatedEvent2 = eventsRepository.getEvent("event2")
+    assertTrue(updatedEvent2.participants.contains(testUserId))
+
     // Quit the serie
     val quitResult = viewModel.quitSerie(testUserId)
     advanceUntilIdle()
@@ -909,6 +1109,12 @@ class SerieDetailsViewModelTest {
     state = viewModel.uiState.first()
     assertFalse(state.isParticipant(testUserId))
     assertTrue(state.canJoin(testUserId))
+
+    // Verify user was removed from all events
+    updatedEvent1 = eventsRepository.getEvent("event1")
+    assertFalse(updatedEvent1.participants.contains(testUserId))
+    updatedEvent2 = eventsRepository.getEvent("event2")
+    assertFalse(updatedEvent2.participants.contains(testUserId))
   }
 
   @Test

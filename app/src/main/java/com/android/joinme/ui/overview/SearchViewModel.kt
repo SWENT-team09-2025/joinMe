@@ -7,8 +7,14 @@ import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.event.isUpcoming
+import com.android.joinme.model.eventItem.EventItem
 import com.android.joinme.model.filter.FilterRepository
 import com.android.joinme.model.filter.FilterState
+import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.serie.SerieFilter
+import com.android.joinme.model.serie.SeriesRepository
+import com.android.joinme.model.serie.SeriesRepositoryProvider
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,35 +25,42 @@ import kotlinx.coroutines.launch
  *
  * @property query The current search query text
  * @property categoryExpanded Whether the sport category dropdown menu is expanded
- * @property events List of events to display after applying filters
+ * @property eventItems List of event items (events and series) to display after applying filters
  * @property errorMsg Error message to display if fetching events fails
  */
 data class SearchUIState(
     val query: String = "",
     val categoryExpanded: Boolean = false,
-    val events: List<Event> = emptyList(),
+    val eventItems: List<EventItem> = emptyList(),
     val errorMsg: String? = null,
 )
 
 /**
  * ViewModel for the Search screen.
  *
- * Manages the search query and delegates filter management to FilterRepository. Fetches events from
- * the repository and applies filters to display relevant results. Filter state is shared across the
- * application through FilterRepository.
+ * Manages the search query and delegates filter management to FilterRepository. Fetches events and
+ * series from the repositories and applies filters to display relevant results. Filter state is
+ * shared across the application through FilterRepository.
  *
  * @property eventRepository Repository for fetching event data
+ * @property seriesRepository Repository for fetching series data
  * @property filterRepository Repository for managing filter state (defaults to FilterRepository
  *   singleton)
  */
 class SearchViewModel(
     private val eventRepository: EventsRepository? = null,
+    private val seriesRepository: SeriesRepository? = null,
     private val filterRepository: FilterRepository = FilterRepository
 ) : ViewModel() {
 
-  private val repo: EventsRepository by lazy {
+  private val eventRepo: EventsRepository by lazy {
     eventRepository ?: EventsRepositoryProvider.getRepository(isOnline = true)
   }
+
+  private val seriesRepo: SeriesRepository by lazy {
+    seriesRepository ?: SeriesRepositoryProvider.repository
+  }
+
   // Search UI state
   private val _uiState = MutableStateFlow(SearchUIState())
   val uiState: StateFlow<SearchUIState> = _uiState.asStateFlow()
@@ -55,11 +68,12 @@ class SearchViewModel(
   // Expose filter state from FilterRepository
   val filterState: StateFlow<FilterState> = filterRepository.filterState
 
-  // Store all events fetched from repository
+  // Store all events and series fetched from repositories
   private var allEvents: List<Event> = emptyList()
+  private var allSeries: List<Serie> = emptyList()
 
   init {
-    // Observe filter changes and apply them to events
+    // Observe filter changes and apply them to events and series
     viewModelScope.launch { filterRepository.filterState.collect { applyFiltersToUIState() } }
   }
 
@@ -81,11 +95,6 @@ class SearchViewModel(
   fun setQuery(query: String) {
     _uiState.value = _uiState.value.copy(query = query)
     applyFiltersToUIState()
-  }
-
-  /** Toggles the "All" filter. Delegates to FilterRepository. */
-  fun toggleAll() {
-    filterRepository.toggleAll()
   }
 
   /** Toggles the "Social" filter. Delegates to FilterRepository. */
@@ -132,50 +141,99 @@ class SearchViewModel(
   }
 
   /**
-   * Refreshes the UI state by fetching all events from the repository.
+   * Sets the series list (for testing purposes).
    *
-   * This method triggers a fetch of all events from the repository and applies the current filters
-   * to update the displayed events list. It should be called when the screen first loads or when
-   * the user wants to refresh the event data.
+   * @param series The list of series to display
+   */
+  fun setSeries(series: List<Serie>) {
+    allSeries = series
+    applyFiltersToUIState()
+  }
+
+  /**
+   * Refreshes the UI state by fetching all events and series from the repositories.
    *
-   * If fetching events fails, an error message is set in the UI state which can be displayed to the
+   * This method triggers a fetch of all events and series from the repositories and applies the
+   * current filters to update the displayed items list. It should be called when the screen first
+   * loads or when the user wants to refresh the data.
+   *
+   * If fetching data fails, an error message is set in the UI state which can be displayed to the
    * user.
    *
-   * @see getAllEvents
+   * @see getAllEventsAndSeries
    * @see applyFiltersToUIState
    */
   fun refreshUIState() {
-    getAllEvents()
+    getAllEventsAndSeries()
   }
 
-  /** Fetches all events from the repository and updates the UI state. */
-  private fun getAllEvents() {
+  /**
+   * Fetches all events and series from the repositories and updates the UI state.
+   *
+   * This method fetches both events and series in parallel, filters them, and updates the UI state
+   * with the combined results.
+   */
+  private fun getAllEventsAndSeries() {
     viewModelScope.launch {
       try {
-        allEvents =
-            repo.getAllEvents(EventFilter.EVENTS_FOR_SEARCH_SCREEN).filter { it.isUpcoming() }
+        // Fetch events and series in parallel
+        val eventsDeferred = async {
+          eventRepo.getAllEvents(EventFilter.EVENTS_FOR_SEARCH_SCREEN).filter { it.isUpcoming() }
+        }
+        val seriesDeferred = async { seriesRepo.getAllSeries(SerieFilter.SERIES_FOR_SEARCH_SCREEN) }
+
+        allEvents = eventsDeferred.await()
+        allSeries = seriesDeferred.await()
         applyFiltersToUIState()
       } catch (e: Exception) {
-        setErrorMsg("Failed to load events: ${e.message}")
+        setErrorMsg("Failed to load events and series: ${e.message}")
       }
     }
   }
 
-  /** Applies filters and search query to all events and updates the UI state. */
+  /**
+   * Applies filters and search query to all events and series, then updates the UI state.
+   *
+   * This method combines events and series into a single list of EventItems, applies category
+   * filters, search query filters, and sorts the results by date. Events that belong to series are
+   * excluded - only the serie card is shown for those events.
+   */
   private fun applyFiltersToUIState() {
-    // First apply category filters (Social, Activity, Sports)
-    var filteredEvents = filterRepository.applyFilters(allEvents)
+    // Apply category filters (Social, Activity, Sports) to events
+    val filteredEvents = filterRepository.applyFilters(allEvents)
 
-    // Then apply search query filter if query is not empty
+    // Identify events that belong to series
+    val serieEventIds = allSeries.flatMap { it.eventIds }.toSet()
+
+    // Filter out standalone events (events not in any serie)
+    val standaloneEvents = filteredEvents.filterNot { it.eventId in serieEventIds }
+
+    // Convert standalone events and all series to EventItems
+    val eventItems = mutableListOf<EventItem>()
+    eventItems.addAll(standaloneEvents.map { EventItem.SingleEvent(it) })
+    eventItems.addAll(allSeries.map { EventItem.EventSerie(it) })
+
+    // Apply search query filter if query is not empty
     val query = _uiState.value.query
-    if (query.isNotBlank()) {
-      filteredEvents =
-          filteredEvents.filter {
-            it.title.contains(query, ignoreCase = true) ||
-                it.description.contains(query, ignoreCase = true)
+    val filteredItems =
+        if (query.isNotBlank()) {
+          eventItems.filter { item ->
+            when (item) {
+              is EventItem.SingleEvent ->
+                  item.event.title.contains(query, ignoreCase = true) ||
+                      item.event.description.contains(query, ignoreCase = true)
+              is EventItem.EventSerie ->
+                  item.serie.title.contains(query, ignoreCase = true) ||
+                      item.serie.description.contains(query, ignoreCase = true)
+            }
           }
-    }
+        } else {
+          eventItems
+        }
 
-    _uiState.value = _uiState.value.copy(events = filteredEvents)
+    // Sort by date (most recent first)
+    val sortedItems = filteredItems.sortedBy { it.date }
+
+    _uiState.value = _uiState.value.copy(eventItems = sortedItems)
   }
 }
