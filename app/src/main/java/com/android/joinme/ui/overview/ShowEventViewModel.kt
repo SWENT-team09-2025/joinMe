@@ -31,6 +31,7 @@ data class ShowEventUIState(
     val ownerName: String = "",
     val participants: List<String> = emptyList(),
     val isPastEvent: Boolean = false,
+    val isPartOfASerie: Boolean = false,
     val serieId: String? = null,
     val errorMsg: String? = null,
 ) {
@@ -108,6 +109,7 @@ class ShowEventViewModel(
                 ownerName = ownerDisplayName,
                 participants = event.participants,
                 isPastEvent = isPast,
+                isPartOfASerie = event.isPartOfASerie,
                 serieId = serieId)
       } catch (e: Exception) {
         setErrorMsg("Failed to load Event: ${e.message}")

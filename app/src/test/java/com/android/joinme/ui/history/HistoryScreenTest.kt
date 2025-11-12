@@ -725,7 +725,7 @@ class HistoryScreenTest {
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.DAY_OF_MONTH, -daysAgo) // Date in the past
     val serieDate = Timestamp(calendar.time)
-    calendar.add(Calendar.HOUR, -1) // Ended 1 hour before the start (so it's expired)
+    calendar.add(Calendar.HOUR, 1) // Ended 1 hour after the start (so it's expired)
     val serieEndDate = Timestamp(calendar.time)
 
     return Serie(
