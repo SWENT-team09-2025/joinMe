@@ -104,7 +104,6 @@ class MainActivityTest {
     assert(activity.hasWindowFocus() || !activity.isFinishing)
   }
 
-
   @Test
   fun mainActivity_basicPropertiesAreValid() {
     composeTestRule.waitForIdle()
@@ -128,7 +127,6 @@ class MainActivityTest {
         activity.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
     assert(notificationManager != null)
   }
-
 
   // ========== Deep Link Tests ==========
 

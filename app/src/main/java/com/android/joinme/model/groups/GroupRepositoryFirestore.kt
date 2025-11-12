@@ -29,7 +29,7 @@ class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupReposit
     val snapshot =
         db.collection(GROUPS_COLLECTION_PATH).whereArrayContains("memberIds", userId).get().await()
 
-    return snapshot.mapNotNull { documentToGroup(it) }
+    return snapshot.mapNotNull { documentToGroup(it) }.distinctBy { it.id }
   }
 
   override suspend fun getGroup(groupId: String): Group {

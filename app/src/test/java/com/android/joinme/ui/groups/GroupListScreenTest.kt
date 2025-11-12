@@ -1260,9 +1260,7 @@ class GroupListScreenTest {
     val listViewModel = GroupListViewModel(fakeRepo)
 
     // Display the GroupListScreen
-    composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel)
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = listViewModel) }
     composeTestRule.waitForIdle()
 
     // Open menu for the created group
@@ -1294,9 +1292,7 @@ class GroupListScreenTest {
     val listViewModel = GroupListViewModel(fakeRepo)
 
     // Display the GroupListScreen
-    composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel)
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = listViewModel) }
     composeTestRule.waitForIdle()
 
     // Open menu for the created group
@@ -1334,9 +1330,7 @@ class GroupListScreenTest {
     // Create ViewModel AFTER mocking Firebase Auth
     val listViewModel = GroupListViewModel(fakeRepo)
 
-    composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel)
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = listViewModel) }
     composeTestRule.waitForIdle()
 
     // Open menu and click Delete Group
@@ -1368,9 +1362,7 @@ class GroupListScreenTest {
     // Create ViewModel AFTER mocking Firebase Auth
     val listViewModel = GroupListViewModel(fakeRepo)
 
-    composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel)
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = listViewModel) }
     composeTestRule.waitForIdle()
 
     // Open menu and click Delete Group
@@ -1405,9 +1397,7 @@ class GroupListScreenTest {
     val listViewModel = GroupListViewModel(fakeRepo)
 
     composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = listViewModel,
-          onDeleteGroup = { deletedGroup = it })
+      GroupListScreen(viewModel = listViewModel, onDeleteGroup = { deletedGroup = it })
     }
     composeTestRule.waitForIdle()
 
@@ -1445,9 +1435,7 @@ class GroupListScreenTest {
     val listViewModel = GroupListViewModel(fakeRepo)
 
     composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = listViewModel,
-          onDeleteGroup = { deletedGroup = it })
+      GroupListScreen(viewModel = listViewModel, onDeleteGroup = { deletedGroup = it })
     }
     composeTestRule.waitForIdle()
 
@@ -1481,9 +1469,7 @@ class GroupListScreenTest {
             memberIds = listOf(ownerUserId, testUserId))
     fakeRepo.setGroups(listOf(group))
 
-    composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel)
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = listViewModel) }
     composeTestRule.waitForIdle()
 
     // Open menu
@@ -1513,9 +1499,7 @@ class GroupListScreenTest {
     // Create ViewModel AFTER mocking Firebase Auth
     val listViewModel = GroupListViewModel(fakeRepo)
 
-    composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel)
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = listViewModel) }
     composeTestRule.waitForIdle()
 
     // Open menu
@@ -1540,9 +1524,7 @@ class GroupListScreenTest {
             memberIds = listOf(ownerUserId, testUserId))
     fakeRepo.setGroups(listOf(group))
 
-    composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel)
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = listViewModel) }
     composeTestRule.waitForIdle()
 
     // Open menu
@@ -2006,9 +1988,7 @@ class GroupListScreenTest {
     // Create ViewModel AFTER mocking Firebase Auth
     val listViewModel = GroupListViewModel(fakeRepo)
 
-    composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel)
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = listViewModel) }
     composeTestRule.waitForIdle()
 
     // Open delete dialog
@@ -2122,9 +2102,7 @@ class GroupListScreenTest {
     val listViewModel = GroupListViewModel(fakeRepo)
 
     composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = listViewModel,
-          onDeleteGroup = { deleted = true })
+      GroupListScreen(viewModel = listViewModel, onDeleteGroup = { deleted = true })
     }
     composeTestRule.waitForIdle()
 
@@ -2165,9 +2143,7 @@ class GroupListScreenTest {
     // Create ViewModel AFTER mocking Firebase Auth
     val listViewModel = GroupListViewModel(fakeRepo)
 
-    composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel)
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = listViewModel) }
     composeTestRule.waitForIdle()
 
     // Open delete dialog which has a message
@@ -2324,9 +2300,7 @@ class GroupListScreenTest {
     // Create ViewModel AFTER mocking Firebase Auth
     val listViewModel = GroupListViewModel(fakeRepo)
 
-    composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel)
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = listViewModel) }
     composeTestRule.waitForIdle()
 
     // Open delete dialog

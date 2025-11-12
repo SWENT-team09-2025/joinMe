@@ -69,8 +69,7 @@ class GroupListViewModel(
         val allGroups = groupRepository.getAllGroups()
 
         _uiState.value =
-            GroupListUIState(
-                groups = allGroups, isLoading = false, currentUserId = currentUserId)
+            GroupListUIState(groups = allGroups, isLoading = false, currentUserId = currentUserId)
       } catch (e: Exception) {
         setErrorMsg("Failed to load groups: ${e.message}")
         _uiState.value = _uiState.value.copy(isLoading = false)

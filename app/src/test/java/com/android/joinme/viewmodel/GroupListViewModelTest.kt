@@ -133,6 +133,7 @@ class GroupListViewModelTest {
 
   @Test
   fun init_loadsGroupsAutomatically() = runTest {
+    mockFirebaseAuth()
     val testGroups =
         listOf(
             Group(
@@ -150,10 +151,13 @@ class GroupListViewModelTest {
     assertEquals("Group 2", state.groups[1].name)
     assertNull(state.errorMsg)
     assertFalse(state.isLoading)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun init_withEmptyRepository_returnsEmptyList() = runTest {
+    mockFirebaseAuth()
     fakeRepo.setGroups(emptyList())
 
     viewModel = GroupListViewModel(fakeRepo)
@@ -163,10 +167,13 @@ class GroupListViewModelTest {
     assertTrue(state.groups.isEmpty())
     assertNull(state.errorMsg)
     assertFalse(state.isLoading)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun init_withRepositoryError_setsErrorMessage() = runTest {
+    mockFirebaseAuth()
     fakeRepo.shouldThrowError = true
     fakeRepo.errorMessage = "Network error"
 
@@ -177,10 +184,13 @@ class GroupListViewModelTest {
     assertTrue(state.groups.isEmpty())
     assertEquals("Failed to load groups: Network error", state.errorMsg)
     assertFalse(state.isLoading)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun refreshUIState_reloadsGroups() = runTest {
+    mockFirebaseAuth()
     fakeRepo.setGroups(listOf(Group(id = "1", name = "Initial Group", ownerId = "owner1")))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
@@ -197,10 +207,13 @@ class GroupListViewModelTest {
     assertEquals("Updated Group 1", state.groups[0].name)
     assertEquals("Updated Group 2", state.groups[1].name)
     assertNull(state.errorMsg)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun refreshUIState_afterError_canRecover() = runTest {
+    mockFirebaseAuth()
     fakeRepo.shouldThrowError = true
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
@@ -215,10 +228,13 @@ class GroupListViewModelTest {
     assertEquals(1, state.groups.size)
     assertEquals("Recovered Group", state.groups[0].name)
     assertNull(state.errorMsg)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun refreshUIState_withError_setsErrorMessage() = runTest {
+    mockFirebaseAuth()
     fakeRepo.setGroups(listOf(Group(id = "1", name = "Initial", ownerId = "owner1")))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
@@ -232,10 +248,13 @@ class GroupListViewModelTest {
     assertEquals("Failed to load groups: Network error", state.errorMsg)
     // Groups are preserved on error
     assertEquals(1, state.groups.size)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun multipleRefreshCalls_workCorrectly() = runTest {
+    mockFirebaseAuth()
     fakeRepo.setGroups(listOf(Group(id = "1", name = "First", ownerId = "owner1")))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
@@ -255,10 +274,13 @@ class GroupListViewModelTest {
     val state = viewModel.uiState.value
     assertEquals(1, state.groups.size)
     assertEquals("Fourth", state.groups[0].name)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun clearErrorMsg_removesErrorMessage() = runTest {
+    mockFirebaseAuth()
     fakeRepo.shouldThrowError = true
     fakeRepo.errorMessage = "Test error message"
     viewModel = GroupListViewModel(fakeRepo)
@@ -268,10 +290,13 @@ class GroupListViewModelTest {
     viewModel.clearErrorMsg()
 
     assertNull(viewModel.uiState.value.errorMsg)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun clearErrorMsg_doesNotAffectOtherState() = runTest {
+    mockFirebaseAuth()
     fakeRepo.shouldThrowError = true
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
@@ -282,10 +307,13 @@ class GroupListViewModelTest {
     assertNull(state.errorMsg)
     assertTrue(state.groups.isEmpty())
     assertFalse(state.isLoading)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun clearErrorMsg_whenNoError_doesNothing() = runTest {
+    mockFirebaseAuth()
     fakeRepo.setGroups(listOf(Group(id = "1", name = "Test", ownerId = "owner1")))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
@@ -296,10 +324,13 @@ class GroupListViewModelTest {
     val state = viewModel.uiState.value
     assertNull(state.errorMsg)
     assertEquals(1, state.groups.size)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun loadGroups_preservesAllGroupProperties() = runTest {
+    mockFirebaseAuth()
     val testGroup =
         Group(
             id = "test-123",
@@ -322,10 +353,13 @@ class GroupListViewModelTest {
     assertEquals(42, loadedGroup.membersCount)
     assertEquals(42, loadedGroup.memberIds.size)
     assertEquals(2, loadedGroup.eventIds.size)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun loadGroups_withMultipleGroups_maintainsOrder() = runTest {
+    mockFirebaseAuth()
     val groups =
         listOf(
             Group(id = "1", name = "First", ownerId = "owner1", memberIds = List(10) { "user$it" }),
@@ -342,10 +376,13 @@ class GroupListViewModelTest {
     assertEquals("First", state.groups[0].name)
     assertEquals("Second", state.groups[1].name)
     assertEquals("Third", state.groups[2].name)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun loadGroups_withManyGroups_loadsAll() = runTest {
+    mockFirebaseAuth()
     val manyGroups =
         (1..100).map {
           Group(
@@ -363,10 +400,13 @@ class GroupListViewModelTest {
     assertEquals(100, state.groups.size)
     assertEquals("Group 1", state.groups[0].name)
     assertEquals("Group 100", state.groups[99].name)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun loadGroups_withSpecialCharacters_handlesCorrectly() = runTest {
+    mockFirebaseAuth()
     val groups =
         listOf(
             Group(
@@ -394,10 +434,13 @@ class GroupListViewModelTest {
     assertEquals("Café & Brunch", state.groups[0].name)
     assertEquals("Chess Game", state.groups[1].name)
     assertEquals("Group with emojis", state.groups[2].name)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun loadGroups_withZeroMembers_handlesCorrectly() = runTest {
+    mockFirebaseAuth()
     val group = Group(id = "1", name = "Empty Group", ownerId = "owner1", memberIds = emptyList())
     fakeRepo.setGroups(listOf(group))
 
@@ -406,10 +449,13 @@ class GroupListViewModelTest {
 
     val state = viewModel.uiState.value
     assertEquals(0, state.groups[0].membersCount)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun loadGroups_withEmptyDescription_handlesCorrectly() = runTest {
+    mockFirebaseAuth()
     val group =
         Group(
             id = "1",
@@ -424,10 +470,13 @@ class GroupListViewModelTest {
 
     val state = viewModel.uiState.value
     assertEquals("", state.groups[0].description)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun errorMessage_isPreservedCorrectly() = runTest {
+    mockFirebaseAuth()
     fakeRepo.shouldThrowError = true
     fakeRepo.errorMessage = "Connection timeout after 30 seconds"
 
@@ -437,10 +486,13 @@ class GroupListViewModelTest {
     assertEquals(
         "Failed to load groups: Connection timeout after 30 seconds",
         viewModel.uiState.value.errorMsg)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun successfulLoad_afterError_clearsErrorAndSetsGroups() = runTest {
+    mockFirebaseAuth()
     fakeRepo.shouldThrowError = true
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
@@ -455,10 +507,13 @@ class GroupListViewModelTest {
     assertNull(state.errorMsg)
     assertEquals(1, state.groups.size)
     assertEquals("Success", state.groups[0].name)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun uiState_afterLoading_hasConsistentState() = runTest {
+    mockFirebaseAuth()
     fakeRepo.setGroups(listOf(Group(id = "1", name = "Test", ownerId = "owner1")))
 
     viewModel = GroupListViewModel(fakeRepo)
@@ -469,10 +524,13 @@ class GroupListViewModelTest {
     assertNull(state.errorMsg)
     assertNotNull(state.groups)
     assertEquals(1, state.groups.size)
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun uiState_afterError_hasConsistentState() = runTest {
+    mockFirebaseAuth()
     fakeRepo.shouldThrowError = true
 
     viewModel = GroupListViewModel(fakeRepo)
@@ -482,10 +540,13 @@ class GroupListViewModelTest {
     assertFalse(state.isLoading)
     assertNotNull(state.errorMsg)
     assertTrue(state.groups.isEmpty())
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun refreshUIState_preservesGroupsOnError() = runTest {
+    mockFirebaseAuth()
     fakeRepo.setGroups(listOf(Group(id = "1", name = "Test", ownerId = "owner1")))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
@@ -499,6 +560,8 @@ class GroupListViewModelTest {
     // Groups are preserved on error to show stale data
     assertEquals(1, state.groups.size)
     assertNotNull(state.errorMsg)
+
+    cleanupFirebaseAuth()
   }
 
   // =======================================
@@ -550,6 +613,7 @@ class GroupListViewModelTest {
 
   @Test
   fun deleteGroup_withNonExistentGroup_callsOnErrorCallback() = runTest {
+    mockFirebaseAuth()
     fakeRepo.setGroups(listOf(Group(id = "1", name = "Test", ownerId = "owner1")))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
@@ -560,10 +624,13 @@ class GroupListViewModelTest {
 
     assertNotNull(errorMessage)
     assertTrue(errorMessage!!.contains("Failed to delete group"))
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun deleteGroup_setsErrorMessageOnFailure() = runTest {
+    mockFirebaseAuth()
     fakeRepo.setGroups(listOf(Group(id = "1", name = "Test", ownerId = "owner1")))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
@@ -574,6 +641,8 @@ class GroupListViewModelTest {
     val state = viewModel.uiState.value
     assertNotNull(state.errorMsg)
     assertTrue(state.errorMsg!!.contains("Failed to delete group"))
+
+    cleanupFirebaseAuth()
   }
 
   @Test
@@ -648,6 +717,7 @@ class GroupListViewModelTest {
 
   @Test
   fun leaveGroup_withNonMember_callsOnErrorCallback() = runTest {
+    mockFirebaseAuth()
     val group =
         Group(id = "1", name = "Test", ownerId = "owner1", memberIds = listOf("owner1", "user1"))
     fakeRepo.setGroups(listOf(group))
@@ -660,10 +730,13 @@ class GroupListViewModelTest {
 
     assertNotNull(errorMessage)
     assertTrue(errorMessage!!.contains("Failed to leave group"))
+
+    cleanupFirebaseAuth()
   }
 
   @Test
   fun leaveGroup_setsErrorMessageOnFailure() = runTest {
+    mockFirebaseAuth()
     val group =
         Group(id = "1", name = "Test", ownerId = "owner1", memberIds = listOf("owner1", "user1"))
     fakeRepo.setGroups(listOf(group))
@@ -676,6 +749,8 @@ class GroupListViewModelTest {
     val state = viewModel.uiState.value
     assertNotNull(state.errorMsg)
     assertTrue(state.errorMsg!!.contains("Failed to leave group"))
+
+    cleanupFirebaseAuth()
   }
 
   @Test
@@ -703,6 +778,7 @@ class GroupListViewModelTest {
 
   @Test
   fun leaveGroup_withNonExistentGroup_callsOnErrorCallback() = runTest {
+    mockFirebaseAuth()
     fakeRepo.setGroups(listOf(Group(id = "1", name = "Test", ownerId = "owner1")))
     viewModel = GroupListViewModel(fakeRepo)
     advanceUntilIdle()
@@ -713,6 +789,8 @@ class GroupListViewModelTest {
 
     assertNotNull(errorMessage)
     assertTrue(errorMessage!!.contains("Failed to leave group"))
+
+    cleanupFirebaseAuth()
   }
 
   // =======================================
