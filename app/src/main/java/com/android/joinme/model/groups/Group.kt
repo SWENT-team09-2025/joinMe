@@ -26,6 +26,7 @@ data class Group(
     val eventIds: List<String> = emptyList(),
     val photoUrl: String? = null
 ) {
+  /** The total number of members in the group, calculated from the size of memberIds. */
   val membersCount: Int
     get() = memberIds.size
 }

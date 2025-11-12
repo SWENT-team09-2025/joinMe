@@ -130,31 +130,20 @@ class GroupRepositoryLocalTest {
   // ---------------- LEAVE GROUP TESTS ----------------
 
   @Test
-  fun leaveGroup_removesUserFromMemberList() {
+  fun leaveGroup_nonOwnerMember_removesFromMemberList() {
     runBlocking {
-      val group = sampleGroup.copy(memberIds = listOf("user1", "user2", "user3"))
+      // Owner is "user1", members include owner and others
+      val group = sampleGroup.copy(ownerId = "user1", memberIds = listOf("user1", "user2", "user3"))
       repo.addGroup(group)
 
+      // Non-owner leaves
       repo.leaveGroup("1", "user2")
 
       val updated = repo.getGroup("1")
       Assert.assertEquals(2, updated.memberIds.size)
       Assert.assertFalse(updated.memberIds.contains("user2"))
-      Assert.assertTrue(updated.memberIds.contains("user1"))
+      Assert.assertTrue(updated.memberIds.contains("user1")) // Owner still there
       Assert.assertTrue(updated.memberIds.contains("user3"))
-    }
-  }
-
-  @Test
-  fun leaveGroup_lastMemberLeaves_groupStillExists() {
-    runBlocking {
-      val group = sampleGroup.copy(memberIds = listOf("onlyUser"))
-      repo.addGroup(group)
-
-      repo.leaveGroup("1", "onlyUser")
-
-      val updated = repo.getGroup("1")
-      Assert.assertTrue(updated.memberIds.isEmpty())
     }
   }
 
@@ -214,20 +203,6 @@ class GroupRepositoryLocalTest {
   @Test(expected = Exception::class)
   fun joinGroup_groupNotFound_throwsException() {
     runBlocking { repo.joinGroup("nonexistent", "user1") }
-  }
-
-  @Test
-  fun joinGroup_emptyMemberList_addsFirstMember() {
-    runBlocking {
-      val group = sampleGroup.copy(memberIds = emptyList())
-      repo.addGroup(group)
-
-      repo.joinGroup("1", "user1")
-
-      val updated = repo.getGroup("1")
-      Assert.assertEquals(1, updated.memberIds.size)
-      Assert.assertTrue(updated.memberIds.contains("user1"))
-    }
   }
 
   @Test

@@ -15,7 +15,6 @@ const val GROUPS_COLLECTION_PATH = "groups"
  * objects.
  */
 class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupRepository {
-  private val ownerAttributeName = "ownerId"
 
   override fun getNewGroupId(): String {
     return db.collection(GROUPS_COLLECTION_PATH).document().id
@@ -26,21 +25,11 @@ class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupReposit
         Firebase.auth.currentUser?.uid
             ?: throw Exception("GroupRepositoryFirestore: User not logged in.")
 
-    // Get groups where user is the owner
-    val ownerSnapshot =
+    // Get all groups where user is a member (includes groups where they are owner)
+    val snapshot =
         db.collection(GROUPS_COLLECTION_PATH).whereArrayContains("memberIds", userId).get().await()
 
-    // Get groups where user is a member
-    val memberSnapshot =
-        db.collection(GROUPS_COLLECTION_PATH).whereArrayContains("memberIds", userId).get().await()
-
-    // Combine both results and remove duplicates
-    val allGroups =
-        (ownerSnapshot.mapNotNull { documentToGroup(it) } +
-                memberSnapshot.mapNotNull { documentToGroup(it) })
-            .distinctBy { it.id }
-
-    return allGroups
+    return snapshot.mapNotNull { documentToGroup(it) }
   }
 
   override suspend fun getGroup(groupId: String): Group {

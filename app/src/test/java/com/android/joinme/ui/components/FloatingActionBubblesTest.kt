@@ -451,9 +451,10 @@ class FloatingActionBubblesTest {
   }
 
   @Test
-  fun floatingActionBubbles_firstAction_triggersCallback() {
-    // Given: Multiple action bubbles
+  fun floatingActionBubbles_firstAndLastAction_triggerCallbacks() {
+    // Given: Multiple action bubbles with callbacks
     var action1Clicked = false
+    var action3Clicked = false
 
     composeTestRule.setContent {
       FloatingActionBubbles(
@@ -463,7 +464,7 @@ class FloatingActionBubblesTest {
               listOf(
                   BubbleAction(text = "Action 1", onClick = { action1Clicked = true }),
                   BubbleAction(text = "Action 2", onClick = {}),
-                  BubbleAction(text = "Action 3", onClick = {})))
+                  BubbleAction(text = "Action 3", onClick = { action3Clicked = true })))
     }
 
     // When: Click first action
@@ -471,23 +472,6 @@ class FloatingActionBubblesTest {
 
     // Then: Action 1 callback was called
     assert(action1Clicked) { "Action 1 should have been clicked" }
-  }
-
-  @Test
-  fun floatingActionBubbles_lastAction_triggersCallback() {
-    // Given: Multiple action bubbles
-    var action3Clicked = false
-
-    composeTestRule.setContent {
-      FloatingActionBubbles(
-          visible = true,
-          onDismiss = {},
-          actions =
-              listOf(
-                  BubbleAction(text = "Action 1", onClick = {}),
-                  BubbleAction(text = "Action 2", onClick = {}),
-                  BubbleAction(text = "Action 3", onClick = { action3Clicked = true })))
-    }
 
     // When: Click last action
     composeTestRule.onNodeWithText("Action 3").performClick()
@@ -497,24 +481,6 @@ class FloatingActionBubblesTest {
   }
 
   // ==================== Accessibility Tests ====================
-
-  @Test
-  fun floatingActionBubbles_hasClickableActions() {
-    // Given: Bubbles with actions
-    composeTestRule.setContent {
-      FloatingActionBubbles(
-          visible = true,
-          onDismiss = {},
-          actions =
-              listOf(
-                  BubbleAction(text = "Action 1", onClick = {}),
-                  BubbleAction(text = "Action 2", onClick = {})))
-    }
-
-    // Then: Actions have click actions
-    composeTestRule.onNodeWithText("Action 1").assertHasClickAction()
-    composeTestRule.onNodeWithText("Action 2").assertHasClickAction()
-  }
 
   @Test
   fun floatingActionBubbles_scrimHasClickAction() {

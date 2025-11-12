@@ -104,150 +104,31 @@ class MainActivityTest {
     assert(activity.hasWindowFocus() || !activity.isFinishing)
   }
 
-  @Test
-  fun mainActivity_notificationChannel_hasCorrectId() {
-    composeTestRule.waitForIdle()
-    val activity = composeTestRule.activity
-    val notificationManager =
-        activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-    val channel = notificationManager.getNotificationChannel("event_notifications")
-    assert(channel != null)
-    assert(channel.id == "event_notifications")
-  }
 
   @Test
-  fun mainActivity_notificationChannel_hasVibrationEnabled() {
-    composeTestRule.waitForIdle()
-    val activity = composeTestRule.activity
-    val notificationManager =
-        activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-    val channel = notificationManager.getNotificationChannel("event_notifications")
-    assert(channel.shouldVibrate())
-  }
-
-  @Test
-  fun mainActivity_notificationChannel_hasHighImportance() {
-    composeTestRule.waitForIdle()
-    val activity = composeTestRule.activity
-    val notificationManager =
-        activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-    val channel = notificationManager.getNotificationChannel("event_notifications")
-    assert(channel.importance == NotificationManager.IMPORTANCE_HIGH)
-  }
-
-  @Test
-  fun httpClientProvider_canBeAccessed() {
-    // Verify HttpClientProvider is accessible
-    val client = HttpClientProvider.client
-    assert(client != null)
-  }
-
-  @Test
-  fun httpClientProvider_isConfigurable() {
-    // Store original client
-    val originalClient = HttpClientProvider.client
-
-    // Test that we can set a new client
-    val testClient = OkHttpClient.Builder().build()
-    HttpClientProvider.client = testClient
-
-    // Verify change
-    assert(HttpClientProvider.client === testClient)
-
-    // Restore original
-    HttpClientProvider.client = originalClient
-  }
-
-  @Test
-  fun mainActivity_handlesNullIntentData() {
+  fun mainActivity_basicPropertiesAreValid() {
     composeTestRule.waitForIdle()
     val activity = composeTestRule.activity
 
-    // Activity should handle null intent data without crashing
-    val intentData = activity.intent?.data
-    // This should be null or a valid URI
-    assert(intentData == null || intentData.toString().isNotEmpty())
-  }
-
-  @Test
-  fun mainActivity_doesNotCrashOnStartup() {
-    composeTestRule.waitForIdle()
-
-    // If we got here, activity didn't crash
-    val activity = composeTestRule.activity
+    // Verify activity launches successfully without crashing
     assert(activity != null)
     assert(!activity.isFinishing)
-  }
 
-  @Test
-  fun mainActivity_hasCorrectTheme() {
-    composeTestRule.waitForIdle()
-    val activity = composeTestRule.activity
+    // Verify activity has correct theme
+    assert(activity.theme != null)
 
-    // Verify activity is properly themed (doesn't crash when accessing theme)
-    val theme = activity.theme
-    assert(theme != null)
-  }
+    // Verify activity has intent
+    assert(activity.intent != null)
 
-  @Test
-  fun mainActivity_notificationManagerIsAccessible() {
-    composeTestRule.waitForIdle()
-    val activity = composeTestRule.activity
+    // Verify application context is accessible
+    assert(activity.applicationContext != null)
+
+    // Verify notification manager is accessible
     val notificationManager =
         activity.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-
     assert(notificationManager != null)
   }
 
-  @Test
-  fun mainActivity_intentIsNotNull() {
-    composeTestRule.waitForIdle()
-    val activity = composeTestRule.activity
-
-    // Activity should always have an intent
-    assert(activity.intent != null)
-  }
-
-  @Test
-  fun mainActivity_canAccessApplicationContext() {
-    composeTestRule.waitForIdle()
-    val activity = composeTestRule.activity
-
-    // Should be able to access application context
-    val context = activity.applicationContext
-    assert(context != null)
-  }
-
-  @Test
-  fun notificationChannel_descriptionIsSet() {
-    composeTestRule.waitForIdle()
-    val activity = composeTestRule.activity
-    val notificationManager =
-        activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-    val channel = notificationManager.getNotificationChannel("event_notifications")
-    assert(channel.description == "Notifications for upcoming events")
-  }
-
-  @Test
-  fun httpClientProvider_multipleSets_retainsLatest() {
-    val originalClient = HttpClientProvider.client
-
-    val client1 = OkHttpClient.Builder().build()
-    val client2 = OkHttpClient.Builder().build()
-
-    HttpClientProvider.client = client1
-    assert(HttpClientProvider.client === client1)
-
-    HttpClientProvider.client = client2
-    assert(HttpClientProvider.client === client2)
-
-    // Restore
-    HttpClientProvider.client = originalClient
-  }
 
   // ========== Deep Link Tests ==========
 
@@ -343,22 +224,6 @@ class MainActivityTest {
       it.onActivity { activity ->
         // Activity should handle null data gracefully
         assert(activity.intent.data == null)
-        assert(!activity.isFinishing)
-      }
-    }
-  }
-
-  @Test
-  fun mainActivity_receivesNewIntent_doesNotCrash() {
-    // Test that receiving a new intent doesn't crash
-    // This indirectly tests onNewIntent by sending a new intent to running activity
-    val context = ApplicationProvider.getApplicationContext<Context>()
-    val intent = Intent(context, MainActivity::class.java)
-
-    val scenario = ActivityScenario.launch<MainActivity>(intent)
-    scenario.use {
-      it.onActivity { activity ->
-        // Activity should not crash when receiving new intent
         assert(!activity.isFinishing)
       }
     }

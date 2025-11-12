@@ -75,8 +75,6 @@ import com.android.joinme.ui.profile.ProfileScreen
 import com.android.joinme.ui.profile.ProfileTopBar
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.customColors
-import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
 
 /** Dimensions and styling constants for GroupListScreen and its components */
 // Constants for GroupListScreen
@@ -177,8 +175,6 @@ object GroupListScreenTestTags {
  * @param onBackClick Callback invoked when the user taps the back button in the top bar.
  * @param onProfileClick Callback invoked when the user taps the profile icon in the top bar.
  * @param onEditClick Callback invoked when the user taps the edit icon in the top bar.
- * @param testCurrentUserId Optional user ID for testing. When provided, this overrides Firebase
- *   Auth's current user ID.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -194,14 +190,11 @@ fun GroupListScreen(
     onDeleteGroup: (Group) -> Unit = {},
     onBackClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
-    onEditClick: () -> Unit = {},
-    testCurrentUserId: String? = null // For testing: allows injecting a test user ID
+    onEditClick: () -> Unit = {}
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val groups = uiState.groups
-  val currentUserId =
-      testCurrentUserId
-          ?: Firebase.auth.currentUser?.uid // Use test ID if provided, otherwise Firebase Auth
+  val currentUserId = uiState.currentUserId
   val context = LocalContext.current
 
   // State for showing/hiding floating bubbles in the join/create group FAB

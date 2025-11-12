@@ -17,11 +17,13 @@ import kotlinx.coroutines.launch
  * @property groups The list of groups to display.
  * @property isLoading Indicates whether the screen is currently loading data.
  * @property errorMsg An error message to be shown when fetching groups fails
+ * @property currentUserId The ID of the currently authenticated user
  */
 data class GroupListUIState(
     val groups: List<Group> = emptyList(),
     val isLoading: Boolean = true,
     val errorMsg: String? = null,
+    val currentUserId: String? = null
 )
 
 /**
@@ -63,9 +65,12 @@ class GroupListViewModel(
     viewModelScope.launch {
       _uiState.value = _uiState.value.copy(isLoading = true)
       try {
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
         val allGroups = groupRepository.getAllGroups()
 
-        _uiState.value = GroupListUIState(groups = allGroups, isLoading = false)
+        _uiState.value =
+            GroupListUIState(
+                groups = allGroups, isLoading = false, currentUserId = currentUserId)
       } catch (e: Exception) {
         setErrorMsg("Failed to load groups: ${e.message}")
         _uiState.value = _uiState.value.copy(isLoading = false)

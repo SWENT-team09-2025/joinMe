@@ -15,6 +15,13 @@ import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.ui.components.FloatingActionBubblesTestTags
 import com.google.firebase.FirebaseApp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -104,6 +111,22 @@ class GroupListScreenTest {
     if (FirebaseApp.getApps(context).isEmpty()) {
       FirebaseApp.initializeApp(context)
     }
+  }
+
+  @After
+  fun tearDown() {
+    // Clean up Firebase Auth mocks
+    unmockkStatic(FirebaseAuth::class)
+  }
+
+  /** Helper to mock Firebase Auth with a logged-in user */
+  private fun mockFirebaseAuthWithUser(userId: String) {
+    mockkStatic(FirebaseAuth::class)
+    val mockAuth = mockk<FirebaseAuth>()
+    val mockUser = mockk<FirebaseUser>()
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns mockUser
+    every { mockUser.uid } returns userId
   }
 
   private fun createViewModel(groups: List<Group> = emptyList()): GroupListViewModel {
@@ -1217,9 +1240,12 @@ class GroupListScreenTest {
 
   @Test
   fun leaveGroupButton_showsCannotLeaveGroup_whenOwner() {
-    val fakeRepo = FakeGroupRepository()
-    val listViewModel = GroupListViewModel(fakeRepo)
     val testUserId = "testOwner123"
+
+    // Mock Firebase Auth BEFORE creating ViewModel
+    mockFirebaseAuthWithUser(testUserId)
+
+    val fakeRepo = FakeGroupRepository()
 
     // Create a group directly in the repository where the test user is the owner
     val group =
@@ -1230,9 +1256,12 @@ class GroupListScreenTest {
             memberIds = listOf(testUserId, "user2"))
     fakeRepo.setGroups(listOf(group))
 
-    // Display the GroupListScreen with testCurrentUserId set to match the owner
+    // Create ViewModel AFTER mocking Firebase Auth
+    val listViewModel = GroupListViewModel(fakeRepo)
+
+    // Display the GroupListScreen
     composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel, testCurrentUserId = testUserId)
+      GroupListScreen(viewModel = listViewModel)
     }
     composeTestRule.waitForIdle()
 
@@ -1245,9 +1274,12 @@ class GroupListScreenTest {
 
   @Test
   fun leaveGroupButton_notShown_whenOwner() {
-    val fakeRepo = FakeGroupRepository()
-    val listViewModel = GroupListViewModel(fakeRepo)
     val testUserId = "testOwner456"
+
+    // Mock Firebase Auth BEFORE creating ViewModel
+    mockFirebaseAuthWithUser(testUserId)
+
+    val fakeRepo = FakeGroupRepository()
 
     // Create a group directly in the repository where the test user is the owner
     val group =
@@ -1258,9 +1290,12 @@ class GroupListScreenTest {
             memberIds = listOf(testUserId, "user2", "user3"))
     fakeRepo.setGroups(listOf(group))
 
-    // Display the GroupListScreen with testCurrentUserId set to match the owner
+    // Create ViewModel AFTER mocking Firebase Auth
+    val listViewModel = GroupListViewModel(fakeRepo)
+
+    // Display the GroupListScreen
     composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel, testCurrentUserId = testUserId)
+      GroupListScreen(viewModel = listViewModel)
     }
     composeTestRule.waitForIdle()
 
@@ -1280,9 +1315,12 @@ class GroupListScreenTest {
 
   @Test
   fun deleteGroupButton_showsConfirmationDialog_whenOwner() {
-    val fakeRepo = FakeGroupRepository()
-    val listViewModel = GroupListViewModel(fakeRepo)
     val testUserId = "testOwner789"
+
+    // Mock Firebase Auth BEFORE creating ViewModel
+    mockFirebaseAuthWithUser(testUserId)
+
+    val fakeRepo = FakeGroupRepository()
 
     // Create a group where the test user is the owner
     val group =
@@ -1293,8 +1331,11 @@ class GroupListScreenTest {
             memberIds = listOf(testUserId, "user2"))
     fakeRepo.setGroups(listOf(group))
 
+    // Create ViewModel AFTER mocking Firebase Auth
+    val listViewModel = GroupListViewModel(fakeRepo)
+
     composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel, testCurrentUserId = testUserId)
+      GroupListScreen(viewModel = listViewModel)
     }
     composeTestRule.waitForIdle()
 
@@ -1309,9 +1350,12 @@ class GroupListScreenTest {
 
   @Test
   fun deleteGroupDialog_showsCorrectWarningMessage_whenOwner() {
-    val fakeRepo = FakeGroupRepository()
-    val listViewModel = GroupListViewModel(fakeRepo)
     val testUserId = "testOwner790"
+
+    // Mock Firebase Auth BEFORE creating ViewModel
+    mockFirebaseAuthWithUser(testUserId)
+
+    val fakeRepo = FakeGroupRepository()
 
     val group =
         Group(
@@ -1321,8 +1365,11 @@ class GroupListScreenTest {
             memberIds = listOf(testUserId))
     fakeRepo.setGroups(listOf(group))
 
+    // Create ViewModel AFTER mocking Firebase Auth
+    val listViewModel = GroupListViewModel(fakeRepo)
+
     composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel, testCurrentUserId = testUserId)
+      GroupListScreen(viewModel = listViewModel)
     }
     composeTestRule.waitForIdle()
 
@@ -1338,10 +1385,13 @@ class GroupListScreenTest {
 
   @Test
   fun deleteGroupDialog_cancelButton_dismissesDialog_whenOwner() {
-    val fakeRepo = FakeGroupRepository()
-    val listViewModel = GroupListViewModel(fakeRepo)
     val testUserId = "testOwner791"
     var deletedGroup: Group? = null
+
+    // Mock Firebase Auth BEFORE creating ViewModel
+    mockFirebaseAuthWithUser(testUserId)
+
+    val fakeRepo = FakeGroupRepository()
 
     val group =
         Group(
@@ -1351,10 +1401,12 @@ class GroupListScreenTest {
             memberIds = listOf(testUserId, "user2"))
     fakeRepo.setGroups(listOf(group))
 
+    // Create ViewModel AFTER mocking Firebase Auth
+    val listViewModel = GroupListViewModel(fakeRepo)
+
     composeTestRule.setContent {
       GroupListScreen(
           viewModel = listViewModel,
-          testCurrentUserId = testUserId,
           onDeleteGroup = { deletedGroup = it })
     }
     composeTestRule.waitForIdle()
@@ -1373,10 +1425,13 @@ class GroupListScreenTest {
 
   @Test
   fun deleteGroupDialog_confirmButton_triggersCallback_whenOwner() {
-    val fakeRepo = FakeGroupRepository()
-    val listViewModel = GroupListViewModel(fakeRepo)
     val testUserId = "testOwner792"
     var deletedGroup: Group? = null
+
+    // Mock Firebase Auth BEFORE creating ViewModel
+    mockFirebaseAuthWithUser(testUserId)
+
+    val fakeRepo = FakeGroupRepository()
 
     val group =
         Group(
@@ -1386,10 +1441,12 @@ class GroupListScreenTest {
             memberIds = listOf(testUserId))
     fakeRepo.setGroups(listOf(group))
 
+    // Create ViewModel AFTER mocking Firebase Auth
+    val listViewModel = GroupListViewModel(fakeRepo)
+
     composeTestRule.setContent {
       GroupListScreen(
           viewModel = listViewModel,
-          testCurrentUserId = testUserId,
           onDeleteGroup = { deletedGroup = it })
     }
     composeTestRule.waitForIdle()
@@ -1425,7 +1482,7 @@ class GroupListScreenTest {
     fakeRepo.setGroups(listOf(group))
 
     composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel, testCurrentUserId = testUserId)
+      GroupListScreen(viewModel = listViewModel)
     }
     composeTestRule.waitForIdle()
 
@@ -1438,9 +1495,12 @@ class GroupListScreenTest {
 
   @Test
   fun deleteGroupButton_shown_whenOwner() {
-    val fakeRepo = FakeGroupRepository()
-    val listViewModel = GroupListViewModel(fakeRepo)
     val testUserId = "testUser124"
+
+    // Mock Firebase Auth BEFORE creating ViewModel
+    mockFirebaseAuthWithUser(testUserId)
+
+    val fakeRepo = FakeGroupRepository()
 
     val group =
         Group(
@@ -1450,8 +1510,11 @@ class GroupListScreenTest {
             memberIds = listOf(testUserId))
     fakeRepo.setGroups(listOf(group))
 
+    // Create ViewModel AFTER mocking Firebase Auth
+    val listViewModel = GroupListViewModel(fakeRepo)
+
     composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel, testCurrentUserId = testUserId)
+      GroupListScreen(viewModel = listViewModel)
     }
     composeTestRule.waitForIdle()
 
@@ -1478,7 +1541,7 @@ class GroupListScreenTest {
     fakeRepo.setGroups(listOf(group))
 
     composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel, testCurrentUserId = testUserId)
+      GroupListScreen(viewModel = listViewModel)
     }
     composeTestRule.waitForIdle()
 
@@ -1925,9 +1988,12 @@ class GroupListScreenTest {
 
   @Test
   fun deleteGroupDialog_hasYesAndNoButtons_whenOwner() {
-    val fakeRepo = FakeGroupRepository()
-    val listViewModel = GroupListViewModel(fakeRepo)
     val testUserId = "testOwner999"
+
+    // Mock Firebase Auth BEFORE creating ViewModel
+    mockFirebaseAuthWithUser(testUserId)
+
+    val fakeRepo = FakeGroupRepository()
 
     val group =
         Group(
@@ -1937,8 +2003,11 @@ class GroupListScreenTest {
             memberIds = listOf(testUserId))
     fakeRepo.setGroups(listOf(group))
 
+    // Create ViewModel AFTER mocking Firebase Auth
+    val listViewModel = GroupListViewModel(fakeRepo)
+
     composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel, testCurrentUserId = testUserId)
+      GroupListScreen(viewModel = listViewModel)
     }
     composeTestRule.waitForIdle()
 
@@ -2033,10 +2102,13 @@ class GroupListScreenTest {
 
   @Test
   fun deleteConfirmationDialog_confirmButton_triggersCallback() {
-    val fakeRepo = FakeGroupRepository()
-    val listViewModel = GroupListViewModel(fakeRepo)
     val testUserId = "testOwner888"
     var deleted = false
+
+    // Mock Firebase Auth BEFORE creating ViewModel
+    mockFirebaseAuthWithUser(testUserId)
+
+    val fakeRepo = FakeGroupRepository()
 
     val group =
         Group(
@@ -2046,10 +2118,12 @@ class GroupListScreenTest {
             memberIds = listOf(testUserId))
     fakeRepo.setGroups(listOf(group))
 
+    // Create ViewModel AFTER mocking Firebase Auth
+    val listViewModel = GroupListViewModel(fakeRepo)
+
     composeTestRule.setContent {
       GroupListScreen(
           viewModel = listViewModel,
-          testCurrentUserId = testUserId,
           onDeleteGroup = { deleted = true })
     }
     composeTestRule.waitForIdle()
@@ -2073,9 +2147,12 @@ class GroupListScreenTest {
 
   @Test
   fun customConfirmationDialog_displaysMessage_whenProvided() {
-    val fakeRepo = FakeGroupRepository()
-    val listViewModel = GroupListViewModel(fakeRepo)
     val testUserId = "testOwner"
+
+    // Mock Firebase Auth BEFORE creating ViewModel
+    mockFirebaseAuthWithUser(testUserId)
+
+    val fakeRepo = FakeGroupRepository()
 
     val group =
         Group(
@@ -2085,8 +2162,11 @@ class GroupListScreenTest {
             memberIds = listOf(testUserId))
     fakeRepo.setGroups(listOf(group))
 
+    // Create ViewModel AFTER mocking Firebase Auth
+    val listViewModel = GroupListViewModel(fakeRepo)
+
     composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel, testCurrentUserId = testUserId)
+      GroupListScreen(viewModel = listViewModel)
     }
     composeTestRule.waitForIdle()
 
@@ -2226,9 +2306,12 @@ class GroupListScreenTest {
 
   @Test
   fun deleteDialog_hasWarningMessage() {
-    val fakeRepo = FakeGroupRepository()
-    val listViewModel = GroupListViewModel(fakeRepo)
     val testUserId = "testOwner"
+
+    // Mock Firebase Auth BEFORE creating ViewModel
+    mockFirebaseAuthWithUser(testUserId)
+
+    val fakeRepo = FakeGroupRepository()
 
     val group =
         Group(
@@ -2238,8 +2321,11 @@ class GroupListScreenTest {
             memberIds = listOf(testUserId))
     fakeRepo.setGroups(listOf(group))
 
+    // Create ViewModel AFTER mocking Firebase Auth
+    val listViewModel = GroupListViewModel(fakeRepo)
+
     composeTestRule.setContent {
-      GroupListScreen(viewModel = listViewModel, testCurrentUserId = testUserId)
+      GroupListScreen(viewModel = listViewModel)
     }
     composeTestRule.waitForIdle()
 
