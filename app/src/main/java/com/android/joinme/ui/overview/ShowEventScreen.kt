@@ -329,20 +329,7 @@ fun ShowEventScreen(
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Medium)
                           }
-                        },
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .height(Dimens.Button.standardHeight)
-                                .testTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON),
-                        shape = RoundedCornerShape(Dimens.CornerRadius.medium),
-                        colors = MaterialTheme.customColors.buttonColors()) {
-                          Text(
-                              text =
-                                  if (eventUIState.isParticipant(currentUserId)) "QUIT EVENT"
-                                  else "JOIN EVENT",
-                              style = MaterialTheme.typography.headlineSmall,
-                              fontWeight = FontWeight.Medium)
-                        }
+                    }
                   } else {
                     Text(
                         modifier =
