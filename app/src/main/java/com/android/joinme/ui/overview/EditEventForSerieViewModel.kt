@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** Note: This file was written using the help of IA (Claude) */
+/** Note: This file was co-written using the help of IA (Claude) */
 
 /**
  * ViewModel for the EditEventForSerie screen.
@@ -163,7 +163,11 @@ class EditEventForSerieViewModel(
     val millisecondsPerMinute = 60 * 1000L
     val lastEventEndTime =
         lastEvent.date.toDate().time + (lastEvent.duration * millisecondsPerMinute)
-    val lastEventEndTimestamp = Timestamp(java.util.Date(lastEventEndTime))
+    val secondsPerMs = 1000L
+    val nanosPerMs = 1000000
+    val seconds = lastEventEndTime / secondsPerMs
+    val nanos = ((lastEventEndTime % secondsPerMs) * nanosPerMs).toInt()
+    val lastEventEndTimestamp = Timestamp(seconds, nanos)
 
     // Update the serie with the new lastEventEndTime
     val updatedSerie = serie.copy(lastEventEndTime = lastEventEndTimestamp)
