@@ -24,6 +24,11 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
 
+/**
+ * Test tags for UI testing of the Serie Details screen components.
+ *
+ * Provides consistent identifiers for testing individual UI elements.
+ */
 object SerieDetailsScreenTestTags {
   const val SCREEN = "serieDetailsScreen"
   const val SERIE_TITLE = "serieTitle"
@@ -44,6 +49,23 @@ object SerieDetailsScreenTestTags {
   const val MESSAGE_FULL_SERIE = "messageFullSerie"
 }
 
+/**
+ * Screen for displaying the details of a serie.
+ *
+ * Shows serie information including title, date, visibility, participants count, duration,
+ * description, and a list of associated events. Provides buttons for adding events (owner only) and
+ * quitting the serie.
+ *
+ * @param serieId The unique identifier of the serie to display
+ * @param serieDetailsViewModel ViewModel managing the screen state and business logic
+ * @param onGoBack Callback invoked when the back button is pressed
+ * @param onEventCardClick Callback invoked when an event card is clicked, receives the event ID
+ * @param onAddEventClick Callback invoked when the "Add event" button is clicked
+ * @param onQuitSerieSuccess Callback invoked when the user successfully quits the serie
+ * @param onEditSerieClick Callback invoked when the "Edit serie" button is clicked, receives the
+ *   serie ID
+ * @param currentUserId The ID of the currently logged-in user
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SerieDetailsScreen(
