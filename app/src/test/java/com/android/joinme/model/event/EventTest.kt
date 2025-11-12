@@ -111,4 +111,51 @@ class EventTest {
     assertFalse(pastEvent.isActive())
     assertTrue(pastEvent.isExpired())
   }
+
+  @Test
+  fun `isPartOfASerie defaults to false`() {
+    assertFalse(sampleEvent.isPartOfASerie)
+  }
+
+  @Test
+  fun `event can be part of a serie`() {
+    val serieEvent = sampleEvent.copy(isPartOfASerie = true)
+    assertTrue(serieEvent.isPartOfASerie)
+  }
+
+  @Test
+  fun `isPartOfASerie property is correctly set`() {
+    val standaloneEvent =
+        Event(
+            eventId = "456",
+            type = EventType.SOCIAL,
+            title = "Bar Night",
+            description = "Casual bar outing",
+            location = sampleLocation,
+            date = sampleTimestamp,
+            duration = 120,
+            participants = listOf("Charlie", "Dave"),
+            maxParticipants = 15,
+            visibility = EventVisibility.PRIVATE,
+            ownerId = "owner456",
+            isPartOfASerie = false)
+
+    val serieEvent =
+        Event(
+            eventId = "789",
+            type = EventType.ACTIVITY,
+            title = "Weekly Bowling",
+            description = "Regular bowling session",
+            location = sampleLocation,
+            date = sampleTimestamp,
+            duration = 90,
+            participants = listOf("Eve", "Frank"),
+            maxParticipants = 8,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner789",
+            isPartOfASerie = true)
+
+    assertFalse(standaloneEvent.isPartOfASerie)
+    assertTrue(serieEvent.isPartOfASerie)
+  }
 }
