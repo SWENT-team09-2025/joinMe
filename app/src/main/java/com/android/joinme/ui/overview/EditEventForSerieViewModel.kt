@@ -150,9 +150,8 @@ class EditEventForSerieViewModel(
    */
   private suspend fun updateSerieLastEventEndTime(serie: Serie) {
     // Get all events in the serie, sorted by date
-    val allEvents = eventRepository.getAllEvents(EventFilter.EVENTS_FOR_OVERVIEW_SCREEN)
-    val serieEvents =
-        allEvents.filter { it.eventId in serie.eventIds }.sortedBy { it.date.toDate().time }
+    val allEvents = eventRepository.getEventsByIds(serie.eventIds)
+    val serieEvents = allEvents.sortedBy { it.date.toDate().time }
 
     if (serieEvents.isEmpty()) {
       return
