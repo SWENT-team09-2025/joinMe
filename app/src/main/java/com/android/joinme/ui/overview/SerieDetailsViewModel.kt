@@ -177,7 +177,7 @@ class SerieDetailsViewModel(
         val updatedParticipants = serie.participants + currentUserId
         val events = eventsRepository.getEventsByIds(serie.eventIds)
         events.forEach { event ->
-          val updatedEventParticipants = event.participants + currentUserId
+          val updatedEventParticipants = (event.participants + currentUserId).distinct()
           val updatedEvent = event.copy(participants = updatedEventParticipants)
           eventsRepository.editEvent(event.eventId, updatedEvent)
         }
