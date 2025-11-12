@@ -175,6 +175,12 @@ class SerieDetailsViewModel(
       // Add user to participants
       if (_uiState.value.canJoin(currentUserId)) {
         val updatedParticipants = serie.participants + currentUserId
+        val events = eventsRepository.getEventsByIds(serie.eventIds)
+        events.forEach { event ->
+          val updatedEventParticipants = event.participants + currentUserId
+          val updatedEvent = event.copy(participants = updatedEventParticipants)
+          eventsRepository.editEvent(event.eventId, updatedEvent)
+        }
         val updatedSerie = serie.copy(participants = updatedParticipants)
 
         // Update in repository
@@ -220,6 +226,12 @@ class SerieDetailsViewModel(
     return try {
       // Remove user from participants
       val updatedParticipants = serie.participants.filter { it != currentUserId }
+      val events = eventsRepository.getEventsByIds(serie.eventIds)
+      events.forEach { event ->
+        val updatedEventParticipants = event.participants.filter { it != currentUserId }
+        val updatedEvent = event.copy(participants = updatedEventParticipants)
+        eventsRepository.editEvent(event.eventId, updatedEvent)
+      }
       val updatedSerie = serie.copy(participants = updatedParticipants)
 
       // Update in repository
