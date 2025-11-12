@@ -64,21 +64,26 @@ object ShowEventScreenTestTags {
  * toasts when operations fail.
  *
  * @param eventId The unique identifier of the event to display
+ * @param serieId Optional serie ID if the event belongs to a serie
  * @param currentUserId The ID of the currently authenticated user (defaults to Firebase auth user)
  * @param showEventViewModel ViewModel managing event state and operations
  * @param onGoBack Callback invoked when the user navigates back
  * @param onEditEvent Callback invoked when the owner wants to edit the event, receives the event ID
+ * @param onEditEventForSerie Callback invoked when the owner wants to edit an event in a serie,
+ *   receives serieId and eventId
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShowEventScreen(
     eventId: String,
+    serieId: String? = null,
     currentUserId: String = Firebase.auth.currentUser?.uid ?: "unknown",
     showEventViewModel: ShowEventViewModel = viewModel(),
     onGoBack: () -> Unit = {},
-    onEditEvent: (String) -> Unit = {}
+    onEditEvent: (String) -> Unit = {},
+    onEditEventForSerie: (String, String) -> Unit = { _, _ -> }
 ) {
-  LaunchedEffect(eventId) { showEventViewModel.loadEvent(eventId) }
+  LaunchedEffect(eventId, serieId) { showEventViewModel.loadEvent(eventId, serieId) }
 
   val eventUIState by showEventViewModel.uiState.collectAsState()
   val errorMsg = eventUIState.errorMsg
@@ -259,7 +264,14 @@ fun ShowEventScreen(
                 if (eventUIState.isOwner(currentUserId)) {
                   // Owner sees: Edit and Delete buttons
                   Button(
-                      onClick = { onEditEvent(eventId) },
+                      onClick = {
+                        val currentSerieId = eventUIState.serieId
+                        if (currentSerieId != null) {
+                          onEditEventForSerie(currentSerieId, eventId)
+                        } else {
+                          onEditEvent(eventId)
+                        }
+                      },
                       modifier =
                           Modifier.fillMaxWidth()
                               .height(Dimens.Button.standardHeight)
