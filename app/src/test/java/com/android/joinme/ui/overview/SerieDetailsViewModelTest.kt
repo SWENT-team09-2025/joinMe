@@ -6,6 +6,8 @@ import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.map.Location
+import com.android.joinme.model.profile.Profile
+import com.android.joinme.model.profile.ProfileRepository
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepository
@@ -20,6 +22,8 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import org.mockito.Mockito.mock
+import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SerieDetailsViewModelTest {
@@ -79,6 +83,7 @@ class SerieDetailsViewModelTest {
 
   private lateinit var seriesRepository: FakeSeriesRepository
   private lateinit var eventsRepository: FakeEventsRepository
+  private lateinit var profileRepository: ProfileRepository
   private lateinit var viewModel: SerieDetailsViewModel
   private val testDispatcher = StandardTestDispatcher()
   private val testUserId = "test-user-id"
@@ -134,7 +139,8 @@ class SerieDetailsViewModelTest {
 
     seriesRepository = FakeSeriesRepository()
     eventsRepository = FakeEventsRepository()
-    viewModel = SerieDetailsViewModel(seriesRepository, eventsRepository)
+    profileRepository = mock(ProfileRepository::class.java)
+    viewModel = SerieDetailsViewModel(seriesRepository, eventsRepository, profileRepository)
   }
 
   @After
@@ -431,7 +437,7 @@ class SerieDetailsViewModelTest {
           }
         }
 
-    val errorViewModel = SerieDetailsViewModel(errorRepository, eventsRepository)
+    val errorViewModel = SerieDetailsViewModel(errorRepository, eventsRepository, profileRepository)
 
     errorViewModel.loadSerieDetails("test-serie-1")
     advanceUntilIdle()
@@ -510,7 +516,8 @@ class SerieDetailsViewModelTest {
           }
         }
 
-    val errorViewModel = SerieDetailsViewModel(seriesRepository, errorEventsRepository)
+    val errorViewModel =
+        SerieDetailsViewModel(seriesRepository, errorEventsRepository, profileRepository)
 
     errorViewModel.loadSerieDetails(serie.serieId)
     advanceUntilIdle()
@@ -651,7 +658,7 @@ class SerieDetailsViewModelTest {
           }
         }
 
-    val errorViewModel = SerieDetailsViewModel(errorRepository, eventsRepository)
+    val errorViewModel = SerieDetailsViewModel(errorRepository, eventsRepository, profileRepository)
 
     errorViewModel.loadSerieDetails(serie.serieId)
     advanceUntilIdle()
@@ -890,7 +897,7 @@ class SerieDetailsViewModelTest {
           }
         }
 
-    val errorViewModel = SerieDetailsViewModel(errorRepository, eventsRepository)
+    val errorViewModel = SerieDetailsViewModel(errorRepository, eventsRepository, profileRepository)
 
     errorViewModel.loadSerieDetails(serie.serieId)
     advanceUntilIdle()
@@ -1171,5 +1178,42 @@ class SerieDetailsViewModelTest {
     val state = viewModel.uiState.first()
     assertEquals("3/3", state.participantsCount)
     assertFalse(state.canJoin(testUserId)) // Serie is now full
+  }
+
+  /** --- GET OWNER DISPLAY NAME TESTS --- */
+  @Test
+  fun getOwnerDisplayName_withValidOwnerId_returnsUsername() = runTest {
+    val mockProfile = Profile(uid = "owner123", username = "JohnDoe", email = "john@example.com")
+    whenever(profileRepository.getProfile("owner123")).thenReturn(mockProfile)
+
+    val displayName = viewModel.getOwnerDisplayName("owner123")
+
+    assertEquals("JohnDoe", displayName)
+  }
+
+  @Test
+  fun getOwnerDisplayName_withProfileNotFound_returnsUnknown() = runTest {
+    whenever(profileRepository.getProfile("unknown-owner")).thenReturn(null)
+
+    val displayName = viewModel.getOwnerDisplayName("unknown-owner")
+
+    assertEquals("UNKNOWN", displayName)
+  }
+
+  @Test
+  fun getOwnerDisplayName_withEmptyOwnerId_returnsUnknown() = runTest {
+    val displayName = viewModel.getOwnerDisplayName("")
+
+    assertEquals("UNKNOWN", displayName)
+  }
+
+  @Test
+  fun getOwnerDisplayName_withRepositoryError_returnsUnknown() = runTest {
+    whenever(profileRepository.getProfile("error-owner"))
+        .thenThrow(RuntimeException("Network error"))
+
+    val displayName = viewModel.getOwnerDisplayName("error-owner")
+
+    assertEquals("UNKNOWN", displayName)
   }
 }
