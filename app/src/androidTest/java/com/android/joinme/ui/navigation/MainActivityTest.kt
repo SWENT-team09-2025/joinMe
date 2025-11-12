@@ -11,7 +11,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.android.joinme.HttpClientProvider
 import com.android.joinme.MainActivity
 import com.android.joinme.model.groups.Group
-import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.notification.FCMTokenManager
 import com.google.firebase.auth.FirebaseAuth
@@ -587,7 +586,8 @@ class MainActivityTest {
 
   @Test
   fun mainActivity_groupDeepLink_joinsGroup_whenUserAuthenticated() = runBlocking {
-    // This test covers: if (initialGroupId != null) { if (currentUser != null) { try { joinGroup() } } }
+    // This test covers: if (initialGroupId != null) { if (currentUser != null) { try { joinGroup()
+    // } } }
 
     val groupRepository = GroupRepositoryProvider.repository
     val currentUser = FirebaseAuth.getInstance().currentUser
@@ -599,14 +599,14 @@ class MainActivityTest {
 
     // Create a test group
     val testGroupId = groupRepository.getNewGroupId()
-    val testGroup = Group(
-        id = testGroupId,
-        name = "Test Group for Deep Link Join",
-        description = "Testing successful group join",
-        category = com.android.joinme.model.event.EventType.SPORTS,
-        ownerId = currentUser.uid,
-        memberIds = listOf(currentUser.uid)
-    )
+    val testGroup =
+        Group(
+            id = testGroupId,
+            name = "Test Group for Deep Link Join",
+            description = "Testing successful group join",
+            category = com.android.joinme.model.event.EventType.SPORTS,
+            ownerId = currentUser.uid,
+            memberIds = listOf(currentUser.uid))
     groupRepository.addGroup(testGroup)
 
     try {
@@ -622,11 +622,7 @@ class MainActivityTest {
       val scenario = ActivityScenario.launch<MainActivity>(intent)
       Thread.sleep(3000) // Wait for LaunchedEffect to complete
 
-      scenario.use {
-        it.onActivity { activity ->
-          assert(!activity.isFinishing)
-        }
-      }
+      scenario.use { it.onActivity { activity -> assert(!activity.isFinishing) } }
 
       // Verify user was added to group
       val updatedGroup = groupRepository.getGroup(testGroupId)
@@ -643,7 +639,8 @@ class MainActivityTest {
 
   @Test
   fun mainActivity_groupDeepLink_handlesError_whenJoinFails() = runBlocking {
-    // This test covers: if (initialGroupId != null) { if (currentUser != null) { catch (e: Exception) { Toast } } }
+    // This test covers: if (initialGroupId != null) { if (currentUser != null) { catch (e:
+    // Exception) { Toast } } }
 
     val currentUser = FirebaseAuth.getInstance().currentUser
 
