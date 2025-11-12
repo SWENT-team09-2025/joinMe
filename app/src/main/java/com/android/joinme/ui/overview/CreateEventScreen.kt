@@ -12,6 +12,7 @@ object CreateEventScreenTestTags {
   const val INPUT_EVENT_DESCRIPTION = "inputEventDescription"
   const val INPUT_EVENT_LOCATION = "inputEventLocation"
   const val INPUT_EVENT_LOCATION_SUGGESTIONS = "inputEventLocationSuggestions"
+  const val FOR_EACH_INPUT_EVENT_LOCATION_SUGGESTION = "inputEventLocationSuggestions"
   const val INPUT_EVENT_MAX_PARTICIPANTS = "inputEventMaxParticipants"
   const val INPUT_EVENT_DURATION = "inputEventDuration"
   const val INPUT_EVENT_DATE = "inputEventDate"
@@ -47,6 +48,8 @@ fun CreateEventScreen(
           inputEventLocation = CreateEventScreenTestTags.INPUT_EVENT_LOCATION,
           inputEventLocationSuggestions =
               CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS,
+          forEachInputEventLocationSuggestion =
+              CreateEventScreenTestTags.FOR_EACH_INPUT_EVENT_LOCATION_SUGGESTION,
           inputEventMaxParticipants = CreateEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS,
           inputEventDuration = CreateEventScreenTestTags.INPUT_EVENT_DURATION,
           inputEventDate = CreateEventScreenTestTags.INPUT_EVENT_DATE,

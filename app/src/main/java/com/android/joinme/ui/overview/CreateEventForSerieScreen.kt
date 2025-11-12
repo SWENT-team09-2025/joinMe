@@ -14,6 +14,7 @@ object CreateEventForSerieScreenTestTags {
   const val INPUT_EVENT_DESCRIPTION = "inputEventDescription"
   const val INPUT_EVENT_LOCATION = "inputEventLocation"
   const val INPUT_EVENT_LOCATION_SUGGESTIONS = "inputEventLocationSuggestions"
+  const val FOR_EACH_INPUT_EVENT_LOCATION_SUGGESTION = "inputEventLocationSuggestions"
   const val INPUT_EVENT_DURATION = "inputEventDuration"
   const val BUTTON_SAVE_EVENT = "buttonSaveEvent"
   const val ERROR_MESSAGE = "errorMessage"
@@ -57,6 +58,8 @@ fun CreateEventForSerieScreen(
           inputEventLocation = CreateEventForSerieScreenTestTags.INPUT_EVENT_LOCATION,
           inputEventLocationSuggestions =
               CreateEventForSerieScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS,
+          forEachInputEventLocationSuggestion =
+              CreateEventForSerieScreenTestTags.FOR_EACH_INPUT_EVENT_LOCATION_SUGGESTION,
           inputEventDuration = CreateEventForSerieScreenTestTags.INPUT_EVENT_DURATION,
           buttonSaveEvent = CreateEventForSerieScreenTestTags.BUTTON_SAVE_EVENT,
           errorMessage = CreateEventForSerieScreenTestTags.ERROR_MESSAGE)
