@@ -37,6 +37,7 @@ import com.android.joinme.ui.navigation.Screen
 import com.android.joinme.ui.overview.CreateEventForSerieScreen
 import com.android.joinme.ui.overview.CreateEventScreen
 import com.android.joinme.ui.overview.CreateSerieScreen
+import com.android.joinme.ui.overview.EditEventForSerieScreen
 import com.android.joinme.ui.overview.EditEventScreen
 import com.android.joinme.ui.overview.EditSerieScreen
 import com.android.joinme.ui.overview.OverviewScreen
@@ -249,12 +250,17 @@ fun JoinMe(
       }
       composable(Screen.ShowEventScreen.route) { navBackStackEntry ->
         val eventId = navBackStackEntry.arguments?.getString("eventId")
+        val serieId = navBackStackEntry.arguments?.getString("serieId")
 
         eventId?.let {
           ShowEventScreen(
               eventId = eventId,
+              serieId = serieId,
               onGoBack = { navigationActions.goBack() },
-              onEditEvent = { id -> navigationActions.navigateTo(Screen.EditEvent(id)) })
+              onEditEvent = { id -> navigationActions.navigateTo(Screen.EditEvent(id)) },
+              onEditEventForSerie = { sId, eId ->
+                navigationActions.navigateTo(Screen.EditEventForSerie(sId, eId))
+              })
         } ?: run { Toast.makeText(context, "Event UID is null", Toast.LENGTH_SHORT).show() }
       }
       composable(Screen.SerieDetails.route) { navBackStackEntry ->
@@ -265,7 +271,7 @@ fun JoinMe(
               serieId = serieId,
               onGoBack = { navigationActions.goBack() },
               onEventCardClick = { eventId ->
-                navigationActions.navigateTo(Screen.ShowEventScreen(eventId))
+                navigationActions.navigateTo(Screen.ShowEventScreen(eventId, serieId))
               },
               onAddEventClick = {
                 navigationActions.navigateTo(Screen.CreateEventForSerie(serieId))
@@ -293,6 +299,21 @@ fun JoinMe(
               onDone = { navigationActions.navigateTo(Screen.Overview) },
               onGoBack = { navigationActions.goBack() })
         } ?: run { Toast.makeText(context, "Serie ID is null", Toast.LENGTH_SHORT).show() }
+      }
+
+      composable(Screen.EditEventForSerie.route) { navBackStackEntry ->
+        val serieId = navBackStackEntry.arguments?.getString("serieId")
+        val eventId = navBackStackEntry.arguments?.getString("eventId")
+
+        if (serieId != null && eventId != null) {
+          EditEventForSerieScreen(
+              serieId = serieId,
+              eventId = eventId,
+              onDone = { navigationActions.navigateTo(Screen.Overview) },
+              onGoBack = { navigationActions.goBack() })
+        } else {
+          Toast.makeText(context, "Serie ID or Event ID is null", Toast.LENGTH_SHORT).show()
+        }
       }
     }
 

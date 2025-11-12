@@ -29,6 +29,8 @@ data class ShowEventUIState(
     val ownerName: String = "",
     val participants: List<String> = emptyList(),
     val isPastEvent: Boolean = false,
+    val isPartOfASerie: Boolean = false,
+    val serieId: String? = null,
     val errorMsg: String? = null,
 ) {
   /**
@@ -71,8 +73,9 @@ class ShowEventViewModel(
    * Loads an Event by its ID and updates the UI state.
    *
    * @param eventId The ID of the Event to be loaded.
+   * @param serieId Optional serie ID if the event belongs to a serie.
    */
-  fun loadEvent(eventId: String) {
+  fun loadEvent(eventId: String, serieId: String? = null) {
     viewModelScope.launch {
       try {
         val event = repository.getEvent(eventId)
@@ -102,7 +105,9 @@ class ShowEventViewModel(
                 ownerId = event.ownerId,
                 ownerName = ownerDisplayName,
                 participants = event.participants,
-                isPastEvent = isPast)
+                isPastEvent = isPast,
+                isPartOfASerie = event.isPartOfASerie,
+                serieId = serieId)
       } catch (e: Exception) {
         setErrorMsg("Failed to load Event: ${e.message}")
       }

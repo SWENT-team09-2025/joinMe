@@ -140,6 +140,45 @@ class NavigationActionsTest {
   }
 
   @Test
+  fun `navigateTo ShowEventScreen with eventId and serieId navigates to correct route`() {
+    val eventId = "test-event-789"
+    val serieId = "test-serie-123"
+    every { navController.currentDestination?.route } returns Screen.SerieDetails(serieId).route
+
+    actions.navigateTo(Screen.ShowEventScreen(eventId, serieId))
+
+    verify {
+      navController.navigate(
+          eq("show_event/$eventId?serieId=$serieId"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `ShowEventScreen route companion object matches pattern with optional serieId`() {
+    assertEquals("show_event/{eventId}?serieId={serieId}", Screen.ShowEventScreen.Companion.route)
+  }
+
+  @Test
+  fun `ShowEventScreen instance route contains eventId without serieId`() {
+    val eventId = "event-123"
+    val screen = Screen.ShowEventScreen(eventId)
+    assertEquals("show_event/$eventId", screen.route)
+  }
+
+  @Test
+  fun `ShowEventScreen instance route contains eventId and serieId when provided`() {
+    val eventId = "event-456"
+    val serieId = "serie-789"
+    val screen = Screen.ShowEventScreen(eventId, serieId)
+    assertEquals("show_event/$eventId?serieId=$serieId", screen.route)
+  }
+
+  @Test
   fun `navigateTo Groups screen navigates correctly`() {
     every { navController.currentDestination?.route } returns Screen.Profile.route
 
@@ -579,6 +618,69 @@ class NavigationActionsTest {
     verify {
       navController.navigate(
           eq("create_event_for_serie/$serieId"), any<NavOptionsBuilder.() -> Unit>())
+    }
+  }
+
+  // ========== Edit Event For Serie Navigation Tests ==========
+
+  @Test
+  fun `navigateTo EditEventForSerie with serieId and eventId navigates to correct route`() {
+    val serieId = "test-serie-123"
+    val eventId = "test-event-456"
+    every { navController.currentDestination?.route } returns
+        Screen.ShowEventScreen(eventId, serieId).route
+
+    actions.navigateTo(Screen.EditEventForSerie(serieId, eventId))
+
+    verify {
+      navController.navigate(
+          eq("edit_event_for_serie/$serieId/$eventId"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `EditEventForSerie route companion object matches pattern`() {
+    assertEquals(
+        "edit_event_for_serie/{serieId}/{eventId}", Screen.EditEventForSerie.Companion.route)
+  }
+
+  @Test
+  fun `EditEventForSerie instance route contains serieId and eventId`() {
+    val serieId = "my-serie-789"
+    val eventId = "my-event-123"
+    val screen = Screen.EditEventForSerie(serieId, eventId)
+    assertEquals("edit_event_for_serie/$serieId/$eventId", screen.route)
+  }
+
+  @Test
+  fun `EditEventForSerie screen has correct name`() {
+    val screen = Screen.EditEventForSerie("serie-id", "event-id")
+    assertEquals("Edit Event for Serie", screen.name)
+    assertFalse(screen.isTopLevelDestination)
+  }
+
+  @Test
+  fun `navigateTo EditEventForSerie from ShowEventScreen works correctly`() {
+    val serieId = "serie-edit-456"
+    val eventId = "event-edit-789"
+    every { navController.currentDestination?.route } returns
+        Screen.ShowEventScreen(eventId, serieId).route
+
+    actions.navigateTo(Screen.EditEventForSerie(serieId, eventId))
+
+    verify {
+      navController.navigate(
+          eq("edit_event_for_serie/$serieId/$eventId"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
     }
   }
 }
