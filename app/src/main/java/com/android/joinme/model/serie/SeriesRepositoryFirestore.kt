@@ -1,6 +1,6 @@
 package com.android.joinme.model.serie
 
-import com.android.joinme.model.event.EventVisibility
+import com.android.joinme.model.event.EVENTS_COLLECTION_PATH
 import com.android.joinme.model.event.isActive
 import com.android.joinme.model.event.isExpired
 import com.android.joinme.model.event.isUpcoming
@@ -32,18 +32,25 @@ enum class SerieFilter {
   /**
    * Filter for the history screen.
    *
-   * Retrieves all series where the current user is a participant. TODO: Should filter to show only
-   * expired series.
+   * Retrieves all series where the current user is a participant. expired series.
    */
   SERIES_FOR_HISTORY_SCREEN,
 
   /**
    * Filter for the search screen.
    *
-   * Retrieves all series. TODO: Should filter to show only public series that are upcoming, where
-   * the current user is neither a participant nor the owner.
+   * Retrieves all series. the current user is neither a participant nor the owner.
    */
   SERIES_FOR_SEARCH_SCREEN,
+
+  /**
+   * Filter for the map screen.
+   *
+   * Retrieves all upcoming series:
+   * - Series owned by the current user
+   * - Series joined by the current user
+   * - Public series not joined by the current user
+   */
   SERIES_FOR_MAP_SCREEN
 }
 /**
@@ -123,6 +130,12 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
    * @param serieId The unique identifier of the Serie item to delete
    */
   override suspend fun deleteSerie(serieId: String) {
+    val serie = getSerie(serieId)
+    // Delete all events related to the serie
+    serie.eventIds.forEach { eventId ->
+      db.collection(EVENTS_COLLECTION_PATH).document(eventId).delete().await()
+    }
+    // Delete serie
     db.collection(SERIES_COLLECTION_PATH).document(serieId).delete().await()
   }
 
@@ -225,7 +238,7 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
       SerieFilter.SERIES_FOR_SEARCH_SCREEN -> {
         val snapshot =
             db.collection(SERIES_COLLECTION_PATH)
-                .whereEqualTo("visibility", EventVisibility.PUBLIC.name)
+                .whereEqualTo("visibility", Visibility.PUBLIC.name)
                 .get()
                 .await()
         snapshot.mapNotNull { documentToSerie(it) }
@@ -241,7 +254,7 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
           }
           val publicSnapshotDeferred = async {
             db.collection(SERIES_COLLECTION_PATH)
-                .whereEqualTo("visibility", EventVisibility.PUBLIC.name)
+                .whereEqualTo("visibility", Visibility.PUBLIC.name)
                 .get()
                 .await()
           }

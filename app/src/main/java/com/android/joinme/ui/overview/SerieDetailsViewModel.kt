@@ -3,14 +3,12 @@ package com.android.joinme.ui.overview
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.Event
-import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.model.serie.getFormattedDuration
-import com.android.joinme.model.serie.getSerieEvents
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -129,10 +127,8 @@ class SerieDetailsViewModel(
       _uiState.value = _uiState.value.copy(isLoading = true, errorMsg = null)
 
       try {
-        // ... (this logic is unchanged)
         val serie = seriesRepository.getSerie(serieId)
-        val allEvents = eventsRepository.getAllEvents(EventFilter.EVENTS_FOR_OVERVIEW_SCREEN)
-        val serieEvents = serie.getSerieEvents(allEvents)
+        val serieEvents = eventsRepository.getEventsByIds(serie.eventIds)
 
         _uiState.value =
             _uiState.value.copy(
@@ -253,5 +249,18 @@ class SerieDetailsViewModel(
    */
   fun clearErrorMsg() {
     _uiState.value = _uiState.value.copy(errorMsg = null)
+  }
+
+  /**
+   * Deletes the serie from the repository.
+   *
+   * @param serieId The unique identifier of the serie to delete
+   */
+  suspend fun deleteSerie(serieId: String) {
+    try {
+      seriesRepository.deleteSerie(serieId)
+    } catch (e: Exception) {
+      setErrorMsg("Failed to delete serie: ${e.message}")
+    }
   }
 }

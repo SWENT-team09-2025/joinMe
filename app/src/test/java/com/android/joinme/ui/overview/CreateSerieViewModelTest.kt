@@ -45,7 +45,7 @@ class CreateSerieViewModelTest {
     }
 
     override suspend fun deleteSerie(serieId: String) {
-      /* no-op */
+      added.removeIf { it.serieId == serieId }
     }
 
     override suspend fun getSerie(serieId: String): Serie =
@@ -557,5 +557,130 @@ class CreateSerieViewModelTest {
     assertNotNull(serie.date)
     assertFalse(vm.uiState.value.isLoading)
     assertNull(vm.uiState.value.errorMsg)
+  }
+
+  // ---------- Duplicate prevention tests ----------
+
+  /** Helper function to set up a valid serie form for duplicate prevention tests */
+  private fun setupValidSerieForm() {
+    vm.setTitle("Test Serie")
+    vm.setDescription("Test description")
+    vm.setDate("25/12/2025")
+    vm.setTime("18:00")
+    vm.setMaxParticipants("10")
+    vm.setVisibility("PUBLIC")
+  }
+
+  @Test
+  fun createSerie_calledTwice_returnsSameId_withoutCreatingDuplicate() = runTest {
+    setupValidSerieForm()
+
+    // Initially, createdSerieId should be null
+    assertNull(vm.uiState.value.createdSerieId)
+
+    // First call - creates the serie
+    val firstSerieId = vm.createSerie()
+    advanceUntilIdle()
+
+    assertNotNull(firstSerieId)
+    assertEquals("fake-serie-id-1", firstSerieId)
+    assertEquals("fake-serie-id-1", vm.uiState.value.createdSerieId)
+    assertEquals(1, repo.added.size)
+
+    // Second call - should return the same ID without creating a duplicate
+    val secondSerieId = vm.createSerie()
+    advanceUntilIdle()
+
+    assertNotNull(secondSerieId)
+    assertEquals("fake-serie-id-1", secondSerieId)
+    assertEquals(firstSerieId, secondSerieId)
+    // Verify no duplicate was created
+    assertEquals(1, repo.added.size)
+  }
+
+  @Test
+  fun createSerie_afterFailure_doesNotStoreCreatedSerieId() = runTest {
+    // Don't fill all fields - form is invalid
+    vm.setTitle("Test Serie")
+
+    assertFalse(vm.uiState.value.isValid)
+
+    val serieId = vm.createSerie()
+    advanceUntilIdle()
+
+    // Creation should fail
+    assertNull(serieId)
+    // createdSerieId should remain null
+    assertNull(vm.uiState.value.createdSerieId)
+    assertTrue(repo.added.isEmpty())
+  }
+
+  @Test
+  fun createSerie_storesCreatedSerieId_forRenavigation() = runTest {
+    setupValidSerieForm()
+
+    val serieId = vm.createSerie()
+    advanceUntilIdle()
+
+    // Verify createdSerieId is stored to prevent duplicate creation on re-navigation
+    assertNotNull(serieId)
+    assertEquals("fake-serie-id-1", vm.uiState.value.createdSerieId)
+  }
+
+  // ---------- Delete created serie on goBack tests ----------
+
+  @Test
+  fun deleteCreatedSerieIfExists_withNoCreatedSerie_doesNothing() = runTest {
+    // No serie created, createdSerieId is null
+    assertNull(vm.uiState.value.createdSerieId)
+
+    vm.deleteCreatedSerieIfExists()
+    advanceUntilIdle()
+
+    // No exceptions should be thrown
+    assertTrue(repo.added.isEmpty())
+  }
+
+  @Test
+  fun deleteCreatedSerieIfExists_withSerieWithNoEvents_deletesSerie() = runTest {
+    setupValidSerieForm()
+
+    // Create serie
+    val serieId = vm.createSerie()
+    advanceUntilIdle()
+
+    assertNotNull(serieId)
+    assertEquals(1, repo.added.size)
+
+    // Delete it (simulating going back before creating event)
+    vm.deleteCreatedSerieIfExists()
+    advanceUntilIdle()
+
+    // Serie should be deleted
+    assertTrue(repo.added.isEmpty())
+  }
+
+  @Test
+  fun deleteCreatedSerieIfExists_withSerieWithEvents_doesNotDelete() = runTest {
+    setupValidSerieForm()
+
+    // Create serie
+    val serieId = vm.createSerie()
+    advanceUntilIdle()
+
+    assertNotNull(serieId)
+    assertEquals(1, repo.added.size)
+
+    // Simulate adding an event to the serie
+    val serie = repo.added.first()
+    val updatedSerie = serie.copy(eventIds = listOf("event-1"))
+    repo.added[0] = updatedSerie
+
+    // Try to delete (should not delete because serie has events)
+    vm.deleteCreatedSerieIfExists()
+    advanceUntilIdle()
+
+    // Serie should NOT be deleted
+    assertEquals(1, repo.added.size)
   }
 }

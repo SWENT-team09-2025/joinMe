@@ -1,12 +1,19 @@
 package com.android.joinme.model.serie
 
+import com.android.joinme.model.event.EventsRepository
+import com.android.joinme.model.event.EventsRepositoryLocal
+
 /**
  * Local in-memory implementation of SeriesRepository.
  *
  * This implementation stores Serie objects in a mutable list and is primarily used for testing and
  * offline functionality. Data is not persisted and will be lost when the application is closed.
+ *
+ * @property eventsRepository Repository for managing events associated with series
  */
-class SeriesRepositoryLocal : SeriesRepository {
+class SeriesRepositoryLocal(
+    private val eventsRepository: EventsRepository = EventsRepositoryLocal()
+) : SeriesRepository {
   /** In-memory storage for Serie objects */
   private val series: MutableList<Serie> = mutableListOf()
 
@@ -75,10 +82,16 @@ class SeriesRepositoryLocal : SeriesRepository {
   /**
    * Deletes a Serie item from the local storage.
    *
+   * Also deletes all events associated with this serie.
+   *
    * @param serieId The unique identifier of the Serie item to delete
    * @throws Exception if the Serie item is not found in local storage
    */
   override suspend fun deleteSerie(serieId: String) {
+    val serie = getSerie(serieId)
+    // Delete all events related to the serie
+    serie.eventIds.forEach { eventId -> eventsRepository.deleteEvent(eventId) }
+    // Delete serie
     val index = series.indexOfFirst { it.serieId == serieId }
     if (index != -1) {
       series.removeAt(index)

@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+/** Note: This file was written with the help of AI (Claude) */
+
 /**
  * UI state for the CreateSerie screen.
  *
@@ -40,6 +42,7 @@ data class CreateSerieUIState(
     override val visibility: String = "",
     val isLoading: Boolean = false,
     override val errorMsg: String? = null,
+    val createdSerieId: String? = null, // Stores the ID of the created serie to prevent duplicates
 
     // validation messages
     override val invalidTitleMsg: String? = null,
@@ -95,11 +98,13 @@ class CreateSerieViewModel(
    * Creates a new serie and adds it to the repository.
    *
    * This function performs the following steps:
-   * 1. Validates that all form fields are valid
-   * 2. Checks that the user is authenticated (must be signed in)
-   * 3. Parses the date and time into a single Timestamp
-   * 4. Creates a Serie object with the current user as owner
-   * 5. Saves the serie to the repository
+   * 1. Returns the existing serie ID if already created (prevents duplicates)
+   * 2. Validates that all form fields are valid
+   * 3. Checks that the user is authenticated (must be signed in)
+   * 4. Parses the date and time into a single Timestamp
+   * 5. Creates a Serie object with the current user as owner
+   * 6. Saves the serie to the repository
+   * 7. Stores the serie ID in state to prevent duplicate creation
    *
    * The loading state is set to true at the start and false upon completion. If any error occurs
    * during the process (validation failure, authentication check failure, date parsing error, or
@@ -110,6 +115,12 @@ class CreateSerieViewModel(
    */
   suspend fun createSerie(): String? {
     val state = _uiState.value
+
+    // If serie was already created, return the existing ID
+    state.createdSerieId?.let {
+      return it
+    }
+
     if (!state.isValid) {
       setErrorMsg("At least one field is not valid")
       return null
@@ -148,6 +159,8 @@ class CreateSerieViewModel(
       repository.addSerie(serie)
       clearErrorMsg()
       setLoadingState(false)
+      // Store the created serie ID to prevent duplicates
+      _uiState.value = _uiState.value.copy(createdSerieId = serieId)
       serieId
     } catch (e: Exception) {
       setErrorMsg("Failed to create serie: ${e.message}")
@@ -156,6 +169,24 @@ class CreateSerieViewModel(
     }
   }
 
-  // All field validation methods (setTitle, setDescription, setMaxParticipants,
-  // setDate, setTime, setVisibility) are inherited from BaseSerieFormViewModel
+  /**
+   * Deletes the created serie if the user goes back without completing the flow.
+   *
+   * This should be called when the user navigates back from CreateSerieScreen after creating a
+   * serie but before completing the event creation.
+   */
+  suspend fun deleteCreatedSerieIfExists() {
+    val serieId = _uiState.value.createdSerieId
+    if (serieId != null) {
+      try {
+        val serie = repository.getSerie(serieId)
+        // Only delete if the serie has no events
+        if (serie.eventIds.isEmpty()) {
+          repository.deleteSerie(serieId)
+        }
+      } catch (e: Exception) {
+        // Serie doesn't exist or error occurred, ignore
+      }
+    }
+  }
 }
