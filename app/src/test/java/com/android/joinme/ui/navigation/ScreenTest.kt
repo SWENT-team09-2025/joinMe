@@ -64,16 +64,23 @@ class ScreenTest {
     assertFalse(Screen.EditGroup("test-id").isTopLevelDestination)
     assertFalse(Screen.GroupDetail("test-id").isTopLevelDestination)
     assertFalse(Screen.CreateEventForSerie("test-id").isTopLevelDestination)
+    assertFalse(Screen.SerieDetails("test-id").isTopLevelDestination)
+    assertFalse(Screen.EditSerie("test-id").isTopLevelDestination)
+    assertFalse(Screen.EditEventForSerie("test-serie-id", "test-event-id").isTopLevelDestination)
   }
 
   @Test
   fun parametrizedScreens_haveCorrectRouteFormat() {
     // Verifies that routes with parameters follow the correct format
     assertEquals("edit_event/{eventId}", Screen.EditEvent.Companion.route)
-    assertEquals("show_event/{eventId}", Screen.ShowEventScreen.Companion.route)
+    assertEquals("show_event/{eventId}?serieId={serieId}", Screen.ShowEventScreen.Companion.route)
     assertEquals("edit_group/{groupId}", Screen.EditGroup.Companion.route)
     assertEquals("groupId/{groupId}", Screen.GroupDetail.Companion.route)
     assertEquals("create_event_for_serie/{serieId}", Screen.CreateEventForSerie.Companion.route)
+    assertEquals("serie_details/{serieId}", Screen.SerieDetails.Companion.route)
+    assertEquals("edit_serie/{serieId}", Screen.EditSerie.Companion.route)
+    assertEquals(
+        "edit_event_for_serie/{serieId}/{eventId}", Screen.EditEventForSerie.Companion.route)
   }
 
   @Test
@@ -88,18 +95,27 @@ class ScreenTest {
     val editGroup = Screen.EditGroup(testGroupId)
     val groupDetail = Screen.GroupDetail(testGroupId)
     val createEventForSerie = Screen.CreateEventForSerie(testSerieId)
+    val serieDetails = Screen.SerieDetails(testSerieId)
+    val editSerie = Screen.EditSerie(testSerieId)
+    val editEventForSerie = Screen.EditEventForSerie(testSerieId, testEventId)
 
     assertEquals("edit_event/$testEventId", editEvent.route)
     assertEquals("show_event/$testEventId", showEvent.route)
     assertEquals("edit_group/$testGroupId", editGroup.route)
     assertEquals("groupId/$testGroupId", groupDetail.route)
     assertEquals("create_event_for_serie/$testSerieId", createEventForSerie.route)
+    assertEquals("serie_details/$testSerieId", serieDetails.route)
+    assertEquals("edit_serie/$testSerieId", editSerie.route)
+    assertEquals("edit_event_for_serie/$testSerieId/$testEventId", editEventForSerie.route)
 
     assertTrue(editEvent.name.isNotEmpty())
     assertTrue(showEvent.name.isNotEmpty())
     assertTrue(editGroup.name.isNotEmpty())
     assertTrue(groupDetail.name.isNotEmpty())
     assertTrue(createEventForSerie.name.isNotEmpty())
+    assertTrue(serieDetails.name.isNotEmpty())
+    assertTrue(editSerie.name.isNotEmpty())
+    assertTrue(editEventForSerie.name.isNotEmpty())
   }
 
   @Test
@@ -146,5 +162,87 @@ class ScreenTest {
 
     val topLevelCount = allScreens.count { it.isTopLevelDestination }
     assertEquals(4, topLevelCount)
+  }
+
+  // ========== ShowEventScreen with SerieId Tests ==========
+
+  @Test
+  fun showEventScreen_withSerieId_generatesCorrectRoute() {
+    val testEventId = "test-event-123"
+    val testSerieId = "test-serie-456"
+
+    val showEventWithSerie = Screen.ShowEventScreen(testEventId, testSerieId)
+    assertEquals("show_event/$testEventId?serieId=$testSerieId", showEventWithSerie.route)
+  }
+
+  @Test
+  fun showEventScreen_withoutSerieId_generatesCorrectRoute() {
+    val testEventId = "test-event-123"
+
+    val showEventWithoutSerie = Screen.ShowEventScreen(testEventId, null)
+    assertEquals("show_event/$testEventId", showEventWithoutSerie.route)
+  }
+
+  @Test
+  fun showEventScreen_withSerieId_hasCorrectName() {
+    val showEventWithSerie = Screen.ShowEventScreen("test-event", "test-serie")
+    assertEquals("Show Event", showEventWithSerie.name)
+  }
+
+  // ========== SerieDetails Tests ==========
+
+  @Test
+  fun serieDetails_hasCorrectRoutePattern() {
+    assertEquals("serie_details/{serieId}", Screen.SerieDetails.Companion.route)
+  }
+
+  @Test
+  fun serieDetails_generatesCorrectRoute() {
+    val testSerieId = "test-serie-123"
+    val serieDetails = Screen.SerieDetails(testSerieId)
+    assertEquals("serie_details/$testSerieId", serieDetails.route)
+    assertEquals("Serie Details", serieDetails.name)
+  }
+
+  // ========== EditSerie Tests ==========
+
+  @Test
+  fun editSerie_hasCorrectRoutePattern() {
+    assertEquals("edit_serie/{serieId}", Screen.EditSerie.Companion.route)
+  }
+
+  @Test
+  fun editSerie_generatesCorrectRoute() {
+    val testSerieId = "test-serie-456"
+    val editSerie = Screen.EditSerie(testSerieId)
+    assertEquals("edit_serie/$testSerieId", editSerie.route)
+    assertEquals("Edit Serie", editSerie.name)
+  }
+
+  // ========== EditEventForSerie Tests ==========
+
+  @Test
+  fun editEventForSerie_hasCorrectRoutePattern() {
+    assertEquals(
+        "edit_event_for_serie/{serieId}/{eventId}", Screen.EditEventForSerie.Companion.route)
+  }
+
+  @Test
+  fun editEventForSerie_generatesCorrectRoute() {
+    val testSerieId = "test-serie-789"
+    val testEventId = "test-event-321"
+    val editEventForSerie = Screen.EditEventForSerie(testSerieId, testEventId)
+    assertEquals("edit_event_for_serie/$testSerieId/$testEventId", editEventForSerie.route)
+    assertEquals("Edit Event for Serie", editEventForSerie.name)
+  }
+
+  @Test
+  fun editEventForSerie_requiresBothIds() {
+    val testSerieId = "serie-1"
+    val testEventId = "event-1"
+    val editEventForSerie = Screen.EditEventForSerie(testSerieId, testEventId)
+
+    assertTrue(editEventForSerie.route.contains(testSerieId))
+    assertTrue(editEventForSerie.route.contains(testEventId))
   }
 }

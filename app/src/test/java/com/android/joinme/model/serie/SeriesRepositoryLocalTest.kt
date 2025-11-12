@@ -214,4 +214,18 @@ class SeriesRepositoryLocalTest {
       Assert.assertTrue(serie.participants.isEmpty())
     }
   }
+
+  @Test
+  fun clear_removesAllSeriesAndResetsCounter() {
+    runBlocking {
+      repo.addSerie(sampleSerie)
+      repo.addSerie(sampleSerie.copy(serieId = "2"))
+      repo.getNewSerieId() // increment counter
+
+      repo.clear()
+
+      Assert.assertTrue(repo.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN).isEmpty())
+      Assert.assertEquals("0", repo.getNewSerieId())
+    }
+  }
 }
