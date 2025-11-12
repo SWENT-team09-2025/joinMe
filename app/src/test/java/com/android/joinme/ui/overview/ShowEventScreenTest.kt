@@ -2,21 +2,14 @@ package com.android.joinme.ui.overview
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.android.joinme.model.event.Event
-import com.android.joinme.model.event.EventType
-import com.android.joinme.model.event.EventVisibility
-import com.android.joinme.model.event.EventsRepositoryLocal
+import com.android.joinme.model.event.*
 import com.android.joinme.model.map.Location
-import com.android.joinme.model.profile.ProfileRepository
 import com.google.firebase.Timestamp
-import java.util.Calendar
-import kotlinx.coroutines.flow.MutableStateFlow
-import org.junit.Before
+import java.util.*
+import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mockito.mock
-import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
@@ -24,230 +17,728 @@ class ShowEventScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
 
-  private lateinit var mockViewModel: ShowEventViewModel
-  private lateinit var mockRepository: EventsRepositoryLocal
-  private lateinit var mockProfileRepository: ProfileRepository
-  private lateinit var uiStateFlow: MutableStateFlow<ShowEventUIState>
-
-  private val testEventId = "test-event-1"
-  private val testUserId = "user123"
-  private val testOwnerId = "owner456"
-
-  @Before
-  fun setup() {
-    mockRepository = EventsRepositoryLocal()
-    mockProfileRepository = mock(ProfileRepository::class.java)
-    uiStateFlow = MutableStateFlow(ShowEventUIState())
-    mockViewModel = mock(ShowEventViewModel::class.java)
-    whenever(mockViewModel.uiState).thenReturn(uiStateFlow)
-  }
-
   private fun createTestEvent(
-      eventId: String = testEventId,
-      ownerId: String = testOwnerId,
-      participants: List<String> = listOf(ownerId, "user1"),
-      isPast: Boolean = false
+      eventId: String = "test-event-1",
+      ownerId: String = "owner123",
+      participants: List<String> = listOf("user1", "user2", "owner123"),
+      maxParticipants: Int = 10,
+      daysFromNow: Int = 7 // Future event by default
   ): Event {
     val calendar = Calendar.getInstance()
-    if (isPast) {
-      calendar.add(Calendar.DAY_OF_YEAR, -7)
-    } else {
-      calendar.add(Calendar.DAY_OF_YEAR, 7)
-    }
+    calendar.add(Calendar.DAY_OF_YEAR, daysFromNow)
+    calendar.set(Calendar.HOUR_OF_DAY, 14)
+    calendar.set(Calendar.MINUTE, 30)
+    calendar.set(Calendar.SECOND, 0)
 
     return Event(
         eventId = eventId,
         type = EventType.SPORTS,
         title = "Basketball Game",
-        description = "Friendly basketball match",
+        description = "Friendly 3v3 basketball match",
         location = Location(46.5197, 6.6323, "EPFL"),
         date = Timestamp(calendar.time),
         duration = 90,
         participants = participants,
-        maxParticipants = 10,
+        maxParticipants = maxParticipants,
         visibility = EventVisibility.PUBLIC,
         ownerId = ownerId)
   }
 
+  /** --- FULL EVENT TEST --- */
   @Test
-  fun showEventScreen_displaysEventDetails() {
-    uiStateFlow.value =
-        ShowEventUIState(
-            type = "SPORTS",
-            title = "Basketball Game",
-            description = "Friendly basketball match",
-            location = "EPFL",
-            maxParticipants = "10",
-            participantsCount = "5",
-            duration = "90",
-            date = "SPORTS: 25/12/2024 14:30",
-            visibility = "PUBLIC",
-            ownerId = testOwnerId,
-            ownerName = "Created by John Doe",
-            participants = listOf(testOwnerId, "user1"),
-            isPastEvent = false)
+  fun joinButtonIsDisabledWhenEventIsFullForNotParticipants() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent(maxParticipants = 1)
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
 
     composeTestRule.setContent {
       ShowEventScreen(
-          eventId = testEventId, currentUserId = testUserId, showEventViewModel = mockViewModel)
+          eventId = event.eventId,
+          currentUserId = "user3",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
+    }
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON).assertDoesNotExist()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.FULL_EVENT_MESSAGE).assertExists()
+  }
+
+  /** --- BASIC RENDERING --- */
+  @Test
+  fun allElementsAreDisplayed() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          currentUserId = "user3",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
     }
 
-    composeTestRule
-        .onNodeWithTag(ShowEventScreenTestTags.EVENT_TITLE)
-        .assertTextEquals("Basketball Game")
-    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_TYPE).assertTextEquals("SPORTS")
-    composeTestRule
-        .onNodeWithTag(ShowEventScreenTestTags.EVENT_DESCRIPTION)
-        .assertTextEquals("Friendly basketball match")
-    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_LOCATION).assertTextEquals("EPFL")
-    composeTestRule
-        .onNodeWithTag(ShowEventScreenTestTags.EVENT_VISIBILITY)
-        .assertTextEquals("PUBLIC")
-    composeTestRule
-        .onNodeWithTag(ShowEventScreenTestTags.EVENT_MEMBERS)
-        .assertTextEquals("MEMBERS : 5/10")
-    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_DURATION).assertTextEquals("90min")
-    composeTestRule
-        .onNodeWithTag(ShowEventScreenTestTags.EVENT_DATE)
-        .assertTextEquals("SPORTS: 25/12/2024 14:30")
-    composeTestRule
-        .onNodeWithTag(ShowEventScreenTestTags.EVENT_OWNER)
-        .assertTextEquals("Created by John Doe")
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.SCREEN).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_TITLE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_TYPE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_DATE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_VISIBILITY).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_DESCRIPTION).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_LOCATION).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_MEMBERS).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_DURATION).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_OWNER).assertIsDisplayed()
   }
 
   @Test
-  fun showEventScreen_ownerSeesEditAndDeleteButtons() {
-    uiStateFlow.value =
-        ShowEventUIState(
-            type = "SPORTS",
-            title = "Basketball Game",
-            ownerId = testOwnerId,
-            ownerName = "Created by EventOwner",
-            isPastEvent = false)
+  fun eventDataIsDisplayedCorrectly() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
 
     composeTestRule.setContent {
       ShowEventScreen(
-          eventId = testEventId, currentUserId = testOwnerId, showEventViewModel = mockViewModel)
+          eventId = event.eventId,
+          currentUserId = "user3",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
     }
 
-    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EDIT_BUTTON).assertExists()
-    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.DELETE_BUTTON).assertExists()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(ShowEventScreenTestTags.EVENT_TITLE)
+        .assertTextContains("Basketball Game")
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_TYPE).assertTextContains("SPORTS")
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_DATE).assertExists()
+    composeTestRule
+        .onNodeWithTag(ShowEventScreenTestTags.EVENT_VISIBILITY)
+        .assertTextContains("PUBLIC")
+    composeTestRule
+        .onNodeWithTag(ShowEventScreenTestTags.EVENT_DESCRIPTION)
+        .assertTextContains("Friendly 3v3 basketball match")
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_LOCATION).assertTextContains("EPFL")
+    composeTestRule
+        .onNodeWithTag(ShowEventScreenTestTags.EVENT_MEMBERS)
+        .assertTextContains("MEMBERS : 3/10")
+    composeTestRule
+        .onNodeWithTag(ShowEventScreenTestTags.EVENT_DURATION)
+        .assertTextContains("90min")
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_OWNER).assertExists()
+  }
+
+  /** --- OWNER VIEW --- */
+  @Test
+  fun ownerSeesEditAndDeleteButtons() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent(ownerId = "owner123")
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          currentUserId = "owner123", // Current user is the owner
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EDIT_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.DELETE_BUTTON).assertIsDisplayed()
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON).assertDoesNotExist()
   }
 
   @Test
-  fun showEventScreen_participantSeesQuitButton() {
-    uiStateFlow.value =
-        ShowEventUIState(
-            type = "SPORTS",
-            title = "Basketball Game",
-            ownerId = testOwnerId,
-            ownerName = "Created by EventOwner",
-            participants = listOf(testOwnerId, testUserId),
-            isPastEvent = false,
-            maxParticipants = "10",
-            participantsCount = "2")
+  fun clickingEditButton_callsOnEditEvent_whenNoSerieId() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent(ownerId = "owner123")
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
+
+    var editEventCalled = false
+    var editEventId = ""
 
     composeTestRule.setContent {
       ShowEventScreen(
-          eventId = testEventId, currentUserId = testUserId, showEventViewModel = mockViewModel)
+          eventId = event.eventId,
+          serieId = null,
+          currentUserId = "owner123",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = { id ->
+            editEventCalled = true
+            editEventId = id
+          })
     }
 
-    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON).assertExists()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EDIT_BUTTON).performClick()
+
+    assert(editEventCalled)
+    assert(editEventId == event.eventId)
+  }
+
+  @Test
+  fun clickingEditButton_callsOnEditEventForSerie_whenSerieIdExists() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent(ownerId = "owner123")
+    runBlocking { repo.addEvent(event) }
+    val serieId = "test-serie-123"
+    val viewModel = ShowEventViewModel(repo)
+
+    var editEventForSerieCalled = false
+    var capturedSerieId = ""
+    var capturedEventId = ""
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          serieId = serieId,
+          currentUserId = "owner123",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {},
+          onEditEventForSerie = { sId, eId ->
+            editEventForSerieCalled = true
+            capturedSerieId = sId
+            capturedEventId = eId
+          })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EDIT_BUTTON).performClick()
+
+    assert(editEventForSerieCalled)
+    assert(capturedSerieId == serieId)
+    assert(capturedEventId == event.eventId)
+  }
+
+  @Test
+  fun clickingDeleteButton_showsConfirmationDialog() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent(ownerId = "owner123")
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          currentUserId = "owner123",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.DELETE_BUTTON).performClick()
+
+    // Check for dialog elements
+    composeTestRule.onNodeWithText("Delete Event").assertIsDisplayed()
     composeTestRule
-        .onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON)
-        .assertTextContains("QUIT EVENT")
+        .onNodeWithText("Are you sure you want to delete this event? This action cannot be undone.")
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithText("Delete").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Cancel").assertIsDisplayed()
+  }
+
+  @Test
+  fun confirmingDelete_deletesEventAndCallsOnGoBack() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent(ownerId = "owner123")
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
+
+    var goBackCalled = false
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          currentUserId = "owner123",
+          showEventViewModel = viewModel,
+          onGoBack = { goBackCalled = true },
+          onEditEvent = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Click delete
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.DELETE_BUTTON).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Confirm delete
+    composeTestRule.onNodeWithText("Delete").performClick()
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify callback was called
+    assert(goBackCalled)
+
+    // Verify event was deleted
+    runBlocking {
+      try {
+        repo.getEvent(event.eventId)
+        assert(false) { "Event should have been deleted" }
+      } catch (e: Exception) {
+        // Expected - event was deleted
+      }
+    }
+  }
+
+  @Test
+  fun cancelingDelete_doesNotDeleteEvent() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent(ownerId = "owner123")
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          currentUserId = "owner123",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Click delete
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.DELETE_BUTTON).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Cancel delete
+    composeTestRule.onNodeWithText("Cancel").performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify dialog is closed
+    composeTestRule.onNodeWithText("Delete Event").assertDoesNotExist()
+
+    // Verify event still exists
+    runBlocking {
+      val existingEvent = repo.getEvent(event.eventId)
+      assert(existingEvent.eventId == event.eventId)
+    }
+  }
+
+  /** --- NON-OWNER VIEW --- */
+  @Test
+  fun nonOwnerSeesJoinQuitButton() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent(ownerId = "owner123", participants = listOf("user1", "owner123"))
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          currentUserId = "user2", // Not the owner
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON).assertIsDisplayed()
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EDIT_BUTTON).assertDoesNotExist()
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.DELETE_BUTTON).assertDoesNotExist()
   }
 
   @Test
-  fun showEventScreen_nonParticipantSeesJoinButton() {
-    uiStateFlow.value =
-        ShowEventUIState(
-            type = "SPORTS",
-            title = "Basketball Game",
-            ownerId = testOwnerId,
-            ownerName = "Created by EventOwner",
-            participants = listOf(testOwnerId),
-            isPastEvent = false,
-            maxParticipants = "10",
-            participantsCount = "1")
+  fun nonParticipantSeesJoinButton() {
+    val repo = EventsRepositoryLocal()
+    val event =
+        createTestEvent(ownerId = "owner123", participants = listOf("user1", "user2", "owner123"))
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
 
     composeTestRule.setContent {
       ShowEventScreen(
-          eventId = testEventId, currentUserId = testUserId, showEventViewModel = mockViewModel)
+          eventId = event.eventId,
+          currentUserId = "user3", // Not a participant
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
     }
 
-    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON).assertExists()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
     composeTestRule
         .onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON)
         .assertTextContains("JOIN EVENT")
   }
 
   @Test
-  fun showEventScreen_pastEvent_hidesActionButtons() {
-    uiStateFlow.value =
-        ShowEventUIState(
-            type = "SPORTS",
-            title = "Basketball Game",
-            ownerId = testOwnerId,
-            ownerName = "Created by EventOwner",
-            participants = listOf(testOwnerId),
-            isPastEvent = true)
+  fun participantSeesQuitButton() {
+    val repo = EventsRepositoryLocal()
+    val event =
+        createTestEvent(ownerId = "owner123", participants = listOf("user1", "user2", "owner123"))
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
 
     composeTestRule.setContent {
       ShowEventScreen(
-          eventId = testEventId, currentUserId = testUserId, showEventViewModel = mockViewModel)
+          eventId = event.eventId,
+          currentUserId = "user2", // Is a participant
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
     }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON)
+        .assertTextContains("QUIT EVENT")
+  }
+
+  @Test
+  fun clickingJoinButton_addsUserToParticipants() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent(ownerId = "owner123", participants = listOf("user1", "owner123"))
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          currentUserId = "user2",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify initial state
+    composeTestRule
+        .onNodeWithTag(ShowEventScreenTestTags.EVENT_MEMBERS)
+        .assertTextContains("MEMBERS : 2/10")
+    composeTestRule
+        .onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON)
+        .assertTextContains("JOIN EVENT")
+
+    // Click join
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON).performClick()
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify user was added
+    composeTestRule
+        .onNodeWithTag(ShowEventScreenTestTags.EVENT_MEMBERS)
+        .assertTextContains("MEMBERS : 3/10")
+    composeTestRule
+        .onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON)
+        .assertTextContains("QUIT EVENT")
+  }
+
+  @Test
+  fun clickingQuitButton_removesUserFromParticipants() {
+    val repo = EventsRepositoryLocal()
+    val event =
+        createTestEvent(ownerId = "owner123", participants = listOf("user1", "user2", "owner123"))
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          currentUserId = "user2",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify initial state
+    composeTestRule
+        .onNodeWithTag(ShowEventScreenTestTags.EVENT_MEMBERS)
+        .assertTextContains("MEMBERS : 3/10")
+    composeTestRule
+        .onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON)
+        .assertTextContains("QUIT EVENT")
+
+    // Click quit
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON).performClick()
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify user was removed
+    composeTestRule
+        .onNodeWithTag(ShowEventScreenTestTags.EVENT_MEMBERS)
+        .assertTextContains("MEMBERS : 2/10")
+    composeTestRule
+        .onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON)
+        .assertTextContains("JOIN EVENT")
+  }
+
+  /** --- PAST EVENT TESTS --- */
+  @Test
+  fun pastEvent_doesNotShowAnyButtons() {
+    val repo = EventsRepositoryLocal()
+    // Create an event that happened 7 days ago
+    val pastEvent = createTestEvent(ownerId = "owner123", daysFromNow = -7)
+    runBlocking { repo.addEvent(pastEvent) }
+    val viewModel = ShowEventViewModel(repo)
+
+    // Test for owner view
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = pastEvent.eventId,
+          currentUserId = "owner123",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
 
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EDIT_BUTTON).assertDoesNotExist()
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.DELETE_BUTTON).assertDoesNotExist()
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON).assertDoesNotExist()
   }
 
+  /** --- NAVIGATION TESTS --- */
   @Test
-  fun showEventScreen_fullEvent_showsFullMessage() {
-    uiStateFlow.value =
-        ShowEventUIState(
-            type = "SPORTS",
-            title = "Basketball Game",
-            ownerId = testOwnerId,
-            ownerName = "Created by EventOwner",
-            participants = listOf(testOwnerId, "user1"),
-            maxParticipants = "2",
-            participantsCount = "2",
-            isPastEvent = false)
+  fun clickingBackButton_callsOnGoBack() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
+
+    var goBackCalled = false
 
     composeTestRule.setContent {
       ShowEventScreen(
-          eventId = testEventId, currentUserId = testUserId, showEventViewModel = mockViewModel)
+          eventId = event.eventId,
+          currentUserId = "user1",
+          showEventViewModel = viewModel,
+          onGoBack = { goBackCalled = true },
+          onEditEvent = {})
     }
 
-    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.FULL_EVENT_MESSAGE).assertExists()
-    composeTestRule
-        .onNodeWithTag(ShowEventScreenTestTags.FULL_EVENT_MESSAGE)
-        .assertTextEquals("Sorry this event is full")
-    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON).assertDoesNotExist()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Click back button (it's in the TopAppBar, find by content description)
+    composeTestRule.onNodeWithContentDescription("Back").performClick()
+
+    assert(goBackCalled)
+  }
+
+  /** --- EVENT TYPE TESTS --- */
+  @Test
+  fun socialEvent_displaysCorrectType() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent().copy(type = EventType.SOCIAL)
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          currentUserId = "user1",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_TYPE).assertTextContains("SOCIAL")
   }
 
   @Test
-  fun showEventScreen_displaysOwnerName() {
-    uiStateFlow.value =
-        ShowEventUIState(
-            type = "SPORTS",
-            title = "Basketball Game",
-            ownerId = "owner123",
-            ownerName = "Created by Alice Johnson",
-            isPastEvent = false)
+  fun activityEvent_displaysCorrectType() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent().copy(type = EventType.ACTIVITY)
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
 
     composeTestRule.setContent {
       ShowEventScreen(
-          eventId = testEventId, currentUserId = testUserId, showEventViewModel = mockViewModel)
+          eventId = event.eventId,
+          currentUserId = "user1",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
     }
 
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_TYPE).assertTextContains("ACTIVITY")
+  }
+
+  /** --- VISIBILITY TESTS --- */
+  @Test
+  fun privateEvent_displaysCorrectVisibility() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent().copy(visibility = EventVisibility.PRIVATE)
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          currentUserId = "user1",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
     composeTestRule
-        .onNodeWithTag(ShowEventScreenTestTags.EVENT_OWNER)
-        .assertTextEquals("Created by Alice Johnson")
+        .onNodeWithTag(ShowEventScreenTestTags.EVENT_VISIBILITY)
+        .assertTextContains("PRIVATE")
+  }
+
+  /** --- SERIE ID TESTS --- */
+  @Test
+  fun ownerSeesEditButton_withSerieId() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent(ownerId = "owner123")
+    runBlocking { repo.addEvent(event) }
+    val serieId = "test-serie-456"
+    val viewModel = ShowEventViewModel(repo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          serieId = serieId,
+          currentUserId = "owner123",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {},
+          onEditEventForSerie = { _, _ -> })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EDIT_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.DELETE_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun editButton_doesNotCallOnEditEvent_whenSerieIdIsProvided() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent(ownerId = "owner123")
+    runBlocking { repo.addEvent(event) }
+    val serieId = "test-serie-789"
+    val viewModel = ShowEventViewModel(repo)
+
+    var editEventCalled = false
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          serieId = serieId,
+          currentUserId = "owner123",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = { editEventCalled = true },
+          onEditEventForSerie = { _, _ -> })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EDIT_BUTTON).performClick()
+
+    // onEditEvent should NOT be called when serieId is provided
+    assert(!editEventCalled)
+  }
+
+  @Test
+  fun editButton_callsCorrectCallback_basedOnSerieIdPresence() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent(ownerId = "owner123")
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
+
+    // Test without serieId - should call onEditEvent
+    var editEventCalled = false
+    var editEventForSerieCalled = false
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          serieId = null,
+          currentUserId = "owner123",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = { editEventCalled = true },
+          onEditEventForSerie = { _, _ -> editEventForSerieCalled = true })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EDIT_BUTTON).performClick()
+
+    assert(editEventCalled)
+    assert(!editEventForSerieCalled)
   }
 }

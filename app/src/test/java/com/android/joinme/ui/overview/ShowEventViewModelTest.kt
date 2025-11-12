@@ -95,7 +95,36 @@ class ShowEventViewModelTest {
     assertEquals("Created by JohnDoe", state.ownerName)
     assertEquals(listOf("user1", "user2", "owner123"), state.participants)
     assertFalse(state.isPastEvent)
+    assertNull(state.serieId)
     assertNull(state.errorMsg)
+  }
+
+  @Test
+  fun loadEvent_validEventIdWithSerieId_updatesUIStateWithSerieId() = runTest {
+    val event = createTestEvent()
+    repository.addEvent(event)
+    val serieId = "test-serie-123"
+
+    viewModel.loadEvent(event.eventId, serieId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("SPORTS", state.type)
+    assertEquals("Basketball Game", state.title)
+    assertEquals(serieId, state.serieId)
+    assertNull(state.errorMsg)
+  }
+
+  @Test
+  fun loadEvent_validEventIdWithoutSerieId_serieIdIsNull() = runTest {
+    val event = createTestEvent()
+    repository.addEvent(event)
+
+    viewModel.loadEvent(event.eventId, null)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertNull(state.serieId)
   }
 
   @Test
@@ -343,6 +372,7 @@ class ShowEventViewModelTest {
     assertEquals("", state.ownerName)
     assertTrue(state.participants.isEmpty())
     assertFalse(state.isPastEvent)
+    assertNull(state.serieId)
     assertNull(state.errorMsg)
   }
 
@@ -362,7 +392,8 @@ class ShowEventViewModelTest {
             ownerId = "custom-owner",
             ownerName = "Created by CustomUser",
             participants = listOf("user1", "user2", "user3"),
-            isPastEvent = true)
+            isPastEvent = true,
+            serieId = "custom-serie-123")
 
     val customViewModel = ShowEventViewModel(repository, profileRepository, customState)
 
@@ -380,6 +411,7 @@ class ShowEventViewModelTest {
     assertEquals("Created by CustomUser", state.ownerName)
     assertEquals(listOf("user1", "user2", "user3"), state.participants)
     assertTrue(state.isPastEvent)
+    assertEquals("custom-serie-123", state.serieId)
   }
 
   /** --- DATE FORMATTING TESTS --- */
@@ -479,5 +511,74 @@ class ShowEventViewModelTest {
 
     val state = viewModel.uiState.first()
     assertEquals("PRIVATE", state.visibility)
+  }
+
+  /** --- SERIE ID TESTS --- */
+  @Test
+  fun loadEvent_withSerieId_storesSerieIdInState() = runTest {
+    val event = createTestEvent()
+    repository.addEvent(event)
+    val serieId = "serie-abc-123"
+
+    viewModel.loadEvent(event.eventId, serieId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals(serieId, state.serieId)
+    assertNull(state.errorMsg)
+  }
+
+  @Test
+  fun loadEvent_withoutSerieId_serieIdRemainsNull() = runTest {
+    val event = createTestEvent()
+    repository.addEvent(event)
+
+    viewModel.loadEvent(event.eventId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertNull(state.serieId)
+  }
+
+  @Test
+  fun loadEvent_withDifferentSerieIds_updatesSerieIdCorrectly() = runTest {
+    val event = createTestEvent()
+    repository.addEvent(event)
+
+    // First load with serieId1
+    val serieId1 = "serie-1"
+    viewModel.loadEvent(event.eventId, serieId1)
+    advanceUntilIdle()
+
+    var state = viewModel.uiState.first()
+    assertEquals(serieId1, state.serieId)
+
+    // Second load with serieId2
+    val serieId2 = "serie-2"
+    viewModel.loadEvent(event.eventId, serieId2)
+    advanceUntilIdle()
+
+    state = viewModel.uiState.first()
+    assertEquals(serieId2, state.serieId)
+  }
+
+  @Test
+  fun loadEvent_afterLoadingWithSerieId_canLoadWithoutSerieId() = runTest {
+    val event = createTestEvent()
+    repository.addEvent(event)
+
+    // First load with serieId
+    viewModel.loadEvent(event.eventId, "serie-123")
+    advanceUntilIdle()
+
+    var state = viewModel.uiState.first()
+    assertEquals("serie-123", state.serieId)
+
+    // Second load without serieId
+    viewModel.loadEvent(event.eventId, null)
+    advanceUntilIdle()
+
+    state = viewModel.uiState.first()
+    assertNull(state.serieId)
   }
 }
