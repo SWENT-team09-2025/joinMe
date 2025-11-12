@@ -1,3 +1,4 @@
+// Implemented with help of Claude AI
 package com.android.joinme.viewmodel
 
 import com.android.joinme.model.groups.Group

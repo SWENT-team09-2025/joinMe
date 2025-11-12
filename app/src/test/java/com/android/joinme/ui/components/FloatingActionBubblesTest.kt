@@ -1,3 +1,4 @@
+// Implemented with help of Claude AI
 package com.android.joinme.ui.components
 
 import androidx.compose.material.icons.Icons

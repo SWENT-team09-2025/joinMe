@@ -1,3 +1,4 @@
+// Implemented with help of Claude AI
 package com.android.joinme.model.groups
 
 import com.android.joinme.model.event.EventType
