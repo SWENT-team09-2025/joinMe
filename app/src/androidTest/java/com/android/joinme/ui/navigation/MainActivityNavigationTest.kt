@@ -641,7 +641,11 @@ class MainActivityNavigationTest {
             Screen.CreateGroup.route,
             Screen.EditGroup.Companion.route,
             Screen.EditProfile.route,
-            Screen.GroupDetail.Companion.route)
+            Screen.GroupDetail.Companion.route,
+            Screen.SerieDetails.Companion.route,
+            Screen.EditSerie.Companion.route,
+            Screen.CreateEventForSerie.Companion.route,
+            Screen.EditEventForSerie.Companion.route)
 
     // Verify all routes are non-empty
     routes.forEach { route -> assert(route.isNotEmpty()) }
@@ -736,11 +740,15 @@ class MainActivityNavigationTest {
 
     composeTestRule.onNodeWithTag("serieItemtest-1").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.mainClock.advanceTimeBy(2000) // Wait longer for serie data to load
     composeTestRule.waitForIdle()
 
     // Verify we're on SerieDetails screen
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.SCREEN).assertExists()
+
+    // Wait for serie data to load and buttons to appear
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
 
     // Verify Edit Serie button exists (should be visible since user is owner)
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON).assertExists()
@@ -899,5 +907,72 @@ class MainActivityNavigationTest {
     // Verify we're back on SerieDetails (not Overview)
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.SCREEN).assertExists()
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.SERIE_TITLE).assertExists()
+  }
+
+  // ========== Show Event with Serie ID Tests ==========
+
+  @Test
+  fun showEventScreen_withSerieId_routeIsCorrect() {
+    composeTestRule.waitForIdle()
+
+    // Verify ShowEventScreen route with serieId parameter
+    val eventId = "test-event-123"
+    val serieId = "test-serie-456"
+    val screen = Screen.ShowEventScreen(eventId, serieId)
+
+    assert(screen.route == "show_event/$eventId?serieId=$serieId")
+  }
+
+  @Test
+  fun showEventScreen_withoutSerieId_routeIsCorrect() {
+    composeTestRule.waitForIdle()
+
+    // Verify ShowEventScreen route without serieId parameter
+    val eventId = "test-event-123"
+    val screen = Screen.ShowEventScreen(eventId, null)
+
+    assert(screen.route == "show_event/$eventId")
+  }
+
+  @Test
+  fun showEventScreen_companionRouteIncludesOptionalSerieId() {
+    composeTestRule.waitForIdle()
+
+    // Verify companion route pattern includes optional serieId
+    assert(Screen.ShowEventScreen.Companion.route == "show_event/{eventId}?serieId={serieId}")
+  }
+
+  // ========== Edit Event For Serie Navigation Tests ==========
+
+  @Test
+  fun editEventForSerie_routeIsConfiguredCorrectly() {
+    composeTestRule.waitForIdle()
+
+    // Verify EditEventForSerie route configuration
+    val serieId = "test-serie-123"
+    val eventId = "test-event-456"
+    val screen = Screen.EditEventForSerie(serieId, eventId)
+
+    assert(screen.route == "edit_event_for_serie/$serieId/$eventId")
+    assert(Screen.EditEventForSerie.Companion.route == "edit_event_for_serie/{serieId}/{eventId}")
+    assert(!screen.isTopLevelDestination)
+  }
+
+  @Test
+  fun editEventForSerie_hasCorrectScreenName() {
+    composeTestRule.waitForIdle()
+
+    // Verify the Screen object has correct name
+    val screen = Screen.EditEventForSerie("test-serie-id", "test-event-id")
+    assert(screen.name == "Edit Event for Serie")
+  }
+
+  @Test
+  fun editEventForSerie_isNotTopLevelDestination() {
+    composeTestRule.waitForIdle()
+
+    // Verify EditEventForSerie is not a top-level destination
+    val screen = Screen.EditEventForSerie("test-serie-id", "test-event-id")
+    assert(!screen.isTopLevelDestination)
   }
 }

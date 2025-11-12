@@ -85,14 +85,32 @@ sealed class Screen(
   }
 
   /**
+   * Screen for editing an existing event within a serie
+   *
+   * @param serieId The ID of the serie containing the event
+   * @param eventId The ID of the event to edit
+   */
+  data class EditEventForSerie(val serieId: String, val eventId: String) :
+      Screen(route = "edit_event_for_serie/${serieId}/${eventId}", name = "Edit Event for Serie") {
+    companion object {
+      const val route = "edit_event_for_serie/{serieId}/{eventId}"
+    }
+  }
+
+  /**
    * Screen for viewing event details
    *
    * @param eventId The ID of the event to display
+   * @param serieId Optional ID of the serie if the event belongs to one
    */
-  data class ShowEventScreen(val eventId: String) :
-      Screen(route = "show_event/${eventId}", name = "Show Event") {
+  data class ShowEventScreen(val eventId: String, val serieId: String? = null) :
+      Screen(
+          route =
+              if (serieId != null) "show_event/${eventId}?serieId=${serieId}"
+              else "show_event/${eventId}",
+          name = "Show Event") {
     companion object {
-      const val route = "show_event/{eventId}"
+      const val route = "show_event/{eventId}?serieId={serieId}"
     }
   }
 

@@ -165,7 +165,7 @@ class ShowEventScreenTest {
   }
 
   @Test
-  fun clickingEditButton_callsOnEditEvent() {
+  fun clickingEditButton_callsOnEditEvent_whenNoSerieId() {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent(ownerId = "owner123")
     runBlocking { repo.addEvent(event) }
@@ -177,6 +177,7 @@ class ShowEventScreenTest {
     composeTestRule.setContent {
       ShowEventScreen(
           eventId = event.eventId,
+          serieId = null,
           currentUserId = "owner123",
           showEventViewModel = viewModel,
           onGoBack = {},
@@ -194,6 +195,44 @@ class ShowEventScreenTest {
 
     assert(editEventCalled)
     assert(editEventId == event.eventId)
+  }
+
+  @Test
+  fun clickingEditButton_callsOnEditEventForSerie_whenSerieIdExists() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent(ownerId = "owner123")
+    runBlocking { repo.addEvent(event) }
+    val serieId = "test-serie-123"
+    val viewModel = ShowEventViewModel(repo)
+
+    var editEventForSerieCalled = false
+    var capturedSerieId = ""
+    var capturedEventId = ""
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          serieId = serieId,
+          currentUserId = "owner123",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {},
+          onEditEventForSerie = { sId, eId ->
+            editEventForSerieCalled = true
+            capturedSerieId = sId
+            capturedEventId = eId
+          })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EDIT_BUTTON).performClick()
+
+    assert(editEventForSerieCalled)
+    assert(capturedSerieId == serieId)
+    assert(capturedEventId == event.eventId)
   }
 
   @Test
@@ -610,5 +649,96 @@ class ShowEventScreenTest {
     composeTestRule
         .onNodeWithTag(ShowEventScreenTestTags.EVENT_VISIBILITY)
         .assertTextContains("PRIVATE")
+  }
+
+  /** --- SERIE ID TESTS --- */
+  @Test
+  fun ownerSeesEditButton_withSerieId() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent(ownerId = "owner123")
+    runBlocking { repo.addEvent(event) }
+    val serieId = "test-serie-456"
+    val viewModel = ShowEventViewModel(repo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          serieId = serieId,
+          currentUserId = "owner123",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {},
+          onEditEventForSerie = { _, _ -> })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EDIT_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.DELETE_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun editButton_doesNotCallOnEditEvent_whenSerieIdIsProvided() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent(ownerId = "owner123")
+    runBlocking { repo.addEvent(event) }
+    val serieId = "test-serie-789"
+    val viewModel = ShowEventViewModel(repo)
+
+    var editEventCalled = false
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          serieId = serieId,
+          currentUserId = "owner123",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = { editEventCalled = true },
+          onEditEventForSerie = { _, _ -> })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EDIT_BUTTON).performClick()
+
+    // onEditEvent should NOT be called when serieId is provided
+    assert(!editEventCalled)
+  }
+
+  @Test
+  fun editButton_callsCorrectCallback_basedOnSerieIdPresence() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent(ownerId = "owner123")
+    runBlocking { repo.addEvent(event) }
+    val viewModel = ShowEventViewModel(repo)
+
+    // Test without serieId - should call onEditEvent
+    var editEventCalled = false
+    var editEventForSerieCalled = false
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          serieId = null,
+          currentUserId = "owner123",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = { editEventCalled = true },
+          onEditEventForSerie = { _, _ -> editEventForSerieCalled = true })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EDIT_BUTTON).performClick()
+
+    assert(editEventCalled)
+    assert(!editEventForSerieCalled)
   }
 }
