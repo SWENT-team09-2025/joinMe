@@ -121,9 +121,12 @@ class EditEventForSerieViewModel(
 
       eventRepository.editEvent(eventId, updatedEvent)
 
-      // If duration changed, recalculate and update all subsequent events
+      // If duration changed, update subsequent events and serie's lastEventEndTime
       if (durationChanged) {
         updateSubsequentEventDates(serie, eventId, oldDuration, newDuration)
+        // Always update the serie's lastEventEndTime when duration changes,
+        // even if there are no subsequent events (the edited event could be the last one)
+        updateSerieLastEventEndTime(serie)
       }
 
       clearErrorMsg()
@@ -134,6 +137,37 @@ class EditEventForSerieViewModel(
       _uiState.value = _uiState.value.copy(isLoading = false)
       false
     }
+  }
+
+  /**
+   * Updates the serie's lastEventEndTime field based on the actual end time of the last event.
+   *
+   * This function recalculates the end time of the last event in the serie (date + duration) and
+   * updates the serie's lastEventEndTime field in the repository. This ensures that the total
+   * duration displayed in SerieDetailsScreen is accurate.
+   *
+   * @param serie The serie to update
+   */
+  private suspend fun updateSerieLastEventEndTime(serie: Serie) {
+    // Get all events in the serie, sorted by date
+    val allEvents = eventRepository.getAllEvents(EventFilter.EVENTS_FOR_OVERVIEW_SCREEN)
+    val serieEvents =
+        allEvents.filter { it.eventId in serie.eventIds }.sortedBy { it.date.toDate().time }
+
+    if (serieEvents.isEmpty()) {
+      return
+    }
+
+    // Calculate the end time of the last event
+    val lastEvent = serieEvents.last()
+    val millisecondsPerMinute = 60 * 1000L
+    val lastEventEndTime =
+        lastEvent.date.toDate().time + (lastEvent.duration * millisecondsPerMinute)
+    val lastEventEndTimestamp = Timestamp(java.util.Date(lastEventEndTime))
+
+    // Update the serie with the new lastEventEndTime
+    val updatedSerie = serie.copy(lastEventEndTime = lastEventEndTimestamp)
+    serieRepository.editSerie(serie.serieId, updatedSerie)
   }
 
   /**

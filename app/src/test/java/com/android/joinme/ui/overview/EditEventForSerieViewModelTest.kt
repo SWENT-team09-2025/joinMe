@@ -643,6 +643,136 @@ class EditEventForSerieViewModelTest {
     assertEquals(expectedEvent3Time, updatedEvent3.date.toDate().time)
   }
 
+  // ---------- Serie lastEventEndTime Update ----------
+
+  @Test
+  fun editEventForSerie_durationChanged_updatesSerieLastEventEndTime() = runTest {
+    // Create a serie with 2 events
+    val baseTime = 1000000000000L
+    val event1 =
+        Event(
+            eventId = "event1",
+            type = EventType.SPORTS,
+            title = "Event 1",
+            description = "Desc",
+            location = Location(1.0, 1.0, "Stadium"),
+            date = Timestamp(java.util.Date(baseTime)),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "user1")
+    val event2 =
+        Event(
+            eventId = "event2",
+            type = EventType.SPORTS,
+            title = "Event 2",
+            description = "Desc",
+            location = Location(1.0, 1.0, "Stadium"),
+            date = Timestamp(java.util.Date(baseTime + 60 * 60 * 1000)),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "user1")
+
+    eventRepo.addTestEvent(event1)
+    eventRepo.addTestEvent(event2)
+
+    val serie =
+        Serie(
+            serieId = "serie1",
+            title = "Serie",
+            description = "Description",
+            date = Timestamp(java.util.Date(baseTime)),
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1", "event2"),
+            ownerId = "user1")
+    serieRepo.addTestSerie(serie)
+
+    // Edit event2: increase duration from 60 to 90 (30 min increase)
+    vm.loadEvent("event2")
+    advanceUntilIdle()
+    vm.setDuration("90")
+
+    val success = vm.editEventForSerie("serie1", "event2")
+    advanceUntilIdle()
+
+    assertTrue(success)
+
+    // Serie's lastEventEndTime should be updated to event2's new end time
+    val updatedSerie = serieRepo.getSerie("serie1")
+    val expectedLastEventEndTime = baseTime + 60 * 60 * 1000 + 90 * 60 * 1000
+    assertEquals(expectedLastEventEndTime, updatedSerie.lastEventEndTime?.toDate()?.time)
+  }
+
+  @Test
+  fun editEventForSerie_singleEvent_updatesLastEventEndTimeOnlyWhenDurationChanges() = runTest {
+    // Test that lastEventEndTime is updated when duration changes, but not when only other fields
+    // change
+    val baseTime = 1000000000000L
+    val event1 =
+        Event(
+            eventId = "event1",
+            type = EventType.SPORTS,
+            title = "Event 1",
+            description = "Desc",
+            location = Location(1.0, 1.0, "Stadium"),
+            date = Timestamp(java.util.Date(baseTime)),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "user1")
+
+    eventRepo.addTestEvent(event1)
+
+    val initialLastEventEndTime = Timestamp(java.util.Date(baseTime + 60 * 60 * 1000))
+    val serie =
+        Serie(
+            serieId = "serie1",
+            title = "Serie",
+            description = "Description",
+            date = Timestamp(java.util.Date(baseTime)),
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "user1")
+    serieRepo.addTestSerie(serie.copy(lastEventEndTime = initialLastEventEndTime))
+
+    // First: Edit duration from 60 to 120
+    vm.loadEvent("event1")
+    advanceUntilIdle()
+    vm.setDuration("120")
+
+    var success = vm.editEventForSerie("serie1", "event1")
+    advanceUntilIdle()
+
+    assertTrue(success)
+
+    // Serie's lastEventEndTime should be updated to event1's new end time
+    var updatedSerie = serieRepo.getSerie("serie1")
+    val expectedLastEventEndTime = baseTime + 120 * 60 * 1000
+    assertEquals(expectedLastEventEndTime, updatedSerie.lastEventEndTime?.toDate()?.time)
+
+    // Second: Edit title only (duration remains 120)
+    vm.loadEvent("event1")
+    advanceUntilIdle()
+    vm.setTitle("New Title")
+
+    success = vm.editEventForSerie("serie1", "event1")
+    advanceUntilIdle()
+
+    assertTrue(success)
+
+    // Serie's lastEventEndTime should remain unchanged (still 120 min after start)
+    updatedSerie = serieRepo.getSerie("serie1")
+    assertEquals(expectedLastEventEndTime, updatedSerie.lastEventEndTime?.toDate()?.time)
+  }
+
   // ---------- Loading State ----------
 
   @Test
