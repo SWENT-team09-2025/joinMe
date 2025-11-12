@@ -168,4 +168,18 @@ class EventsRepositoryLocalTest {
       Assert.assertTrue(result.isEmpty())
     }
   }
+
+  @Test
+  fun clear_removesAllEventsAndResetsCounter() {
+    runBlocking {
+      repo.addEvent(sampleEvent)
+      repo.addEvent(sampleEvent.copy(eventId = "2"))
+      repo.getNewEventId() // increment counter
+
+      repo.clear()
+
+      Assert.assertTrue(repo.getAllEvents(EventFilter.EVENTS_FOR_OVERVIEW_SCREEN).isEmpty())
+      Assert.assertEquals("0", repo.getNewEventId())
+    }
+  }
 }

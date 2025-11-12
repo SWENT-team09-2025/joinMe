@@ -99,4 +99,10 @@ class SeriesRepositoryLocal(
       throw Exception("SeriesRepositoryLocal: Serie not found")
     }
   }
+
+  /** Clears all series from the repository. Useful for testing. */
+  fun clear() {
+    series.clear()
+    counter = 0
+  }
 }
