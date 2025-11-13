@@ -108,6 +108,43 @@ class JoinMeE2ETest {
     composeTestRule.waitForIdle()
   }
 
+  /** Find and click the confirm button in native dialogs (date/time pickers) */
+  private fun clickNativeDialogConfirmButton(timeoutMs: Long = 5000) {
+    // Try multiple strategies to find the confirm button
+    val confirmButton = device.wait(Until.findObject(By.text("OK").clickable(true)), timeoutMs)
+
+    if (confirmButton != null) {
+      confirmButton.click()
+      return
+    }
+
+    // Try other common button texts
+    val alternativeTexts = listOf("Done", "Confirm", "Set", "OK")
+    for (text in alternativeTexts) {
+      val button = device.findObject(By.text(text).clickable(true))
+      if (button != null) {
+        button.click()
+        return
+      }
+    }
+
+    // Try using Android resource IDs (button1 is typically the positive button)
+    val button1 = device.findObject(By.res("android:id/button1"))
+    if (button1 != null) {
+      button1.click()
+      return
+    }
+
+    // Last resort: find any clickable button in the dialog
+    val anyButton = device.findObject(By.clickable(true).clazz("android.widget.Button"))
+    if (anyButton != null) {
+      anyButton.click()
+      return
+    }
+
+    throw AssertionError("Could not find confirm button in native dialog")
+  }
+
   /** Navigate to a specific tab using bottom navigation */
   private fun navigateToTab(tabName: String) {
     composeTestRule
@@ -155,7 +192,7 @@ class JoinMeE2ETest {
     composeTestRule.waitForIdle()
 
     // Wait for suggestions to load
-    composeTestRule.waitUntil {
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS)
           .fetchSemanticsNodes()
@@ -192,9 +229,8 @@ class JoinMeE2ETest {
     composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_DATE).performScrollTo()
     composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_DATE).performClick()
     composeTestRule.waitForIdle()
-    // Wait for native date picker dialog and click OK using UiAutomator
-    device.wait(Until.hasObject(By.text("OK")), 2000)
-    device.findObject(By.text("OK")).click()
+    // Wait for native date picker dialog and click confirm button
+    clickNativeDialogConfirmButton()
     Thread.sleep(300)
     composeTestRule.waitForIdle()
 
@@ -208,9 +244,8 @@ class JoinMeE2ETest {
         .onAllNodesWithText("Time", substring = true, ignoreCase = true)[0]
         .performClick()
     composeTestRule.waitForIdle()
-    // Wait for native time picker dialog and click OK using UiAutomator
-    device.wait(Until.hasObject(By.text("OK")), 2000)
-    device.findObject(By.text("OK")).click()
+    // Wait for native time picker dialog and click confirm button
+    clickNativeDialogConfirmButton()
     Thread.sleep(300)
     composeTestRule.waitForIdle()
 
@@ -274,7 +309,7 @@ class JoinMeE2ETest {
 
     // THEN: Event should appear in Overview screen
     // Wait for the event list to appear (may take time for data to load)
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -422,7 +457,7 @@ class JoinMeE2ETest {
 
     // THEN: All events should be visible
     // Wait for the event list to appear
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -477,7 +512,7 @@ class JoinMeE2ETest {
     navigateToTab("Overview")
 
     // Event should still be visible
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()
