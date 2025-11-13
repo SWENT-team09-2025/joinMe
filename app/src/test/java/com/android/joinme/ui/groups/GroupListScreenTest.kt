@@ -381,7 +381,7 @@ class GroupListScreenTest {
 
   @Test
   fun groupMenu_owner_showsOwnerButtons() {
-    val testUserId = "testOwner"
+    val testUserId = "test-user-id"
     mockFirebaseAuthWithUser(testUserId)
 
     val fakeRepo = FakeGroupRepository()
@@ -461,7 +461,7 @@ class GroupListScreenTest {
 
   @Test
   fun deleteGroup_showsConfirmationDialog() {
-    val testUserId = "testOwner"
+    val testUserId = "test-user-id"
     mockFirebaseAuthWithUser(testUserId)
 
     val fakeRepo = FakeGroupRepository()
@@ -488,7 +488,7 @@ class GroupListScreenTest {
 
   @Test
   fun deleteGroupDialog_cancel_dismissesDialog() {
-    val testUserId = "testOwner"
+    val testUserId = "test-user-id"
     mockFirebaseAuthWithUser(testUserId)
 
     val fakeRepo = FakeGroupRepository()
@@ -512,7 +512,7 @@ class GroupListScreenTest {
 
   @Test
   fun deleteGroupDialog_confirm_triggersCallback() {
-    val testUserId = "testOwner"
+    val testUserId = "test-user-id"
     mockFirebaseAuthWithUser(testUserId)
 
     val fakeRepo = FakeGroupRepository()

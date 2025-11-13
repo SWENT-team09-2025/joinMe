@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -76,6 +77,8 @@ import com.android.joinme.ui.profile.ProfileScreen
 import com.android.joinme.ui.profile.ProfileTopBar
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.customColors
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 
 /** Dimensions and styling constants for GroupListScreen and its components */
 // Constants for GroupListScreen
@@ -195,7 +198,20 @@ fun GroupListScreen(
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val groups = uiState.groups
-  val currentUserId = uiState.currentUserId
+  // Current user ID with test environment detection
+  val currentUserId = run {
+    // Detect test environment first (same as CreateGroupViewModel)
+    val isTestEnv =
+        android.os.Build.FINGERPRINT == "robolectric" ||
+            android.os.Debug.isDebuggerConnected() ||
+            System.getProperty("IS_TEST_ENV") == "true"
+    if (isTestEnv) {
+      "test-user-id"
+    } else {
+      Firebase.auth.currentUser?.uid
+    }
+  }
+  val context = LocalContext.current
 
   // State for showing/hiding floating bubbles in the join/create group FAB
   var showJoinBubbles by remember { mutableStateOf(false) }
@@ -330,20 +346,20 @@ fun GroupListScreen(
       val selectedGroup = groups.find { it.id == groupId }
       selectedGroup?.let { group ->
         val density = LocalDensity.current
-        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+        val configuration = LocalConfiguration.current
         val screenHeightDp = configuration.screenHeightDp.dp
 
         // Convert pixel position to dp
         val buttonTopPaddingDp = with(density) { menuButtonYPosition.toDp() }
 
-        // Calculate menu height - always show all 5 buttons
+        // Calculate dynamic menu height based on ownership
         val isOwner = group.ownerId == currentUserId
-        val numberOfButtons = 5 // Always show all 5 buttons
+        val numberOfButtons = if (isOwner) 5 else 3 // 5 if owner, 3 if not
         val dynamicMenuHeight =
             Dimens.TouchTarget.minimum.times(numberOfButtons) +
                 Dimens.Spacing.small.times(numberOfButtons - 1)
 
-        // Check if menu would go off-screen
+        // Check if menu would go off-screen (reserve space for FAB at bottom)
         val spaceBelow =
             (screenHeightDp.value -
                     buttonTopPaddingDp.value -

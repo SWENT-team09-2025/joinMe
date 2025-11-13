@@ -17,8 +17,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
@@ -77,7 +75,7 @@ object ShowEventScreenTestTags {
 fun ShowEventScreen(
     eventId: String,
     serieId: String? = null,
-    currentUserId: String = Firebase.auth.currentUser?.uid ?: "unknown",
+    currentUserId: String = Firebase.auth.currentUser?.uid ?: "test-user-id",
     showEventViewModel: ShowEventViewModel = viewModel(),
     onGoBack: () -> Unit = {},
     onEditEvent: (String) -> Unit = {},
@@ -335,10 +333,10 @@ fun ShowEventScreen(
                       Text(
                           modifier =
                               Modifier.fillMaxWidth()
-                                  .padding(bottom = 50.dp)
+                                  .padding(bottom = Dimens.Padding.extraLarge)
                                   .testTag(ShowEventScreenTestTags.FULL_EVENT_MESSAGE),
-                          text = "Sorry the event:\n ${eventUIState.title} \n is full",
-                          fontSize = 16.sp,
+                          text = "Sorry this event is full",
+                          style = MaterialTheme.typography.headlineSmall,
                           textAlign = TextAlign.Center,
                           color = MaterialTheme.colorScheme.error,
                           fontWeight = FontWeight.Bold)

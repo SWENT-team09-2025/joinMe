@@ -25,6 +25,7 @@ data class EventForSerieFormTestTags(
     val inputEventDescription: String,
     val inputEventLocation: String,
     val inputEventLocationSuggestions: String,
+    val forEachInputEventLocationSuggestion: String,
     val inputEventDuration: String,
     val buttonSaveEvent: String,
     val errorMessage: String
@@ -81,6 +82,7 @@ fun EventForSerieFormScreen(
           inputEventDescription = testTags.inputEventDescription,
           inputEventLocation = testTags.inputEventLocation,
           inputEventLocationSuggestions = testTags.inputEventLocationSuggestions,
+          forEachInputEventLocationSuggestion = testTags.inputEventLocationSuggestions,
           inputEventMaxParticipants = "",
           inputEventDuration = testTags.inputEventDuration,
           inputEventDate = "",

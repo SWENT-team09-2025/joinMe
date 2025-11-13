@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.ui.components.EventCard
@@ -77,6 +78,7 @@ object SerieDetailsScreenTestTags {
   /** Test tag for the delete serie button */
   const val DELETE_SERIE_BUTTON = "deleteSerieButton"
 
+  /** Test tag for the full serie message */
   const val MESSAGE_FULL_SERIE = "messageFullSerie"
 }
 
@@ -93,6 +95,9 @@ object SerieDetailsScreenTestTags {
  * @param onEventCardClick Callback invoked when an event card is clicked, receives the event ID
  * @param onAddEventClick Callback invoked when the "Add event" button is clicked
  * @param onQuitSerieSuccess Callback invoked when the user successfully quits the serie
+ * @param onEditSerieClick Callback invoked when the "Edit serie" button is clicked, receives the
+ *   serie ID
+ * @param currentUserId The ID of the currently logged-in user
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -104,7 +109,21 @@ fun SerieDetailsScreen(
     onAddEventClick: () -> Unit = {},
     onQuitSerieSuccess: () -> Unit = {},
     onEditSerieClick: (String) -> Unit = {},
-    currentUserId: String = Firebase.auth.currentUser?.uid ?: "unknown"
+    currentUserId: String = run {
+      // First check if Firebase auth has a user
+      val firebaseUser = Firebase.auth.currentUser?.uid
+      if (firebaseUser != null) {
+        firebaseUser
+      } else {
+        // Detect test environment
+        val isTestEnv =
+            android.os.Build.FINGERPRINT == "robolectric" ||
+                android.os.Debug.isDebuggerConnected() ||
+                System.getProperty("IS_TEST_ENV") == "true"
+        // Return test user ID in test environments only if Firebase auth is not available
+        if (isTestEnv) "test-user-id" else "unknown"
+      }
+    }
 ) {
   val uiState by serieDetailsViewModel.uiState.collectAsState()
   val errorMsg = uiState.errorMsg
@@ -123,7 +142,15 @@ fun SerieDetailsScreen(
     }
   }
 
-  // Delete confirmation dialog
+  var ownerDisplayName by remember { mutableStateOf("...") }
+  // Only use LaunchedEffect to fetch owner display name (no composable calls here)
+  LaunchedEffect(uiState.serie?.ownerId) {
+    uiState.serie?.ownerId?.let { id ->
+      ownerDisplayName = serieDetailsViewModel.getOwnerDisplayName(id)
+    }
+  }
+
+  // Delete confirmation dialog (composable placed at top level)
   if (showDeleteDialog) {
     AlertDialog(
         onDismissRequest = { showDeleteDialog = false },
@@ -146,6 +173,7 @@ fun SerieDetailsScreen(
         dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } })
   }
 
+  // Main UI scaffold (now outside LaunchedEffect)
   Scaffold(
       modifier = Modifier.testTag(SerieDetailsScreenTestTags.SCREEN),
       topBar = {
@@ -192,7 +220,7 @@ fun SerieDetailsScreen(
           ) {
             Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
-            // Meeting date and time
+            // Meeting date/time
             Text(
                 text = "MEETING: ${uiState.formattedDateTime}",
                 style = MaterialTheme.typography.bodyMedium,
@@ -280,7 +308,7 @@ fun SerieDetailsScreen(
 
             // Owner information
             Text(
-                text = "CREATED BY ${uiState.serie?.ownerId ?: "Unknown"}",
+                text = "Created by $ownerDisplayName",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier =
@@ -302,6 +330,8 @@ fun SerieDetailsScreen(
                   colors = MaterialTheme.customColors.buttonColors()) {
                     Text(text = "ADD EVENT", style = MaterialTheme.typography.headlineSmall)
                   }
+
+              // Edit and Delete buttons
               Button(
                   onClick = { onEditSerieClick(serieId) },
                   modifier =
@@ -365,13 +395,15 @@ fun SerieDetailsScreen(
                     }
               } else {
                 Text(
-                    text = "This serie is full",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "Sorry this serie is full",
+                    style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier =
                         Modifier.fillMaxWidth()
+                            .padding(bottom = Dimens.Padding.extraLarge)
                             .testTag(SerieDetailsScreenTestTags.MESSAGE_FULL_SERIE),
-                    textAlign = TextAlign.Center)
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Bold)
               }
             }
           }

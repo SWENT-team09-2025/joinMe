@@ -12,6 +12,7 @@ object EditEventScreenTestTags {
   const val INPUT_EVENT_DESCRIPTION = "inputEventDescription"
   const val INPUT_EVENT_LOCATION = "inputEventLocation"
   const val INPUT_EVENT_LOCATION_SUGGESTIONS = "inputEventLocationSuggestions"
+  const val FOR_EACH_INPUT_EVENT_LOCATION_SUGGESTION = "inputEventLocationSuggestions"
   const val INPUT_EVENT_MAX_PARTICIPANTS = "inputEventMaxParticipants"
   const val INPUT_EVENT_DURATION = "inputEventDuration"
   const val INPUT_EVENT_DATE = "inputEventDate"
@@ -50,6 +51,8 @@ fun EditEventScreen(
           inputEventDescription = EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION,
           inputEventLocation = EditEventScreenTestTags.INPUT_EVENT_LOCATION,
           inputEventLocationSuggestions = EditEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS,
+          forEachInputEventLocationSuggestion =
+              EditEventScreenTestTags.FOR_EACH_INPUT_EVENT_LOCATION_SUGGESTION,
           inputEventMaxParticipants = EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS,
           inputEventDuration = EditEventScreenTestTags.INPUT_EVENT_DURATION,
           inputEventDate = EditEventScreenTestTags.INPUT_EVENT_DATE,
