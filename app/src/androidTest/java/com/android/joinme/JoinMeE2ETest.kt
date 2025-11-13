@@ -17,7 +17,6 @@ import com.android.joinme.ui.navigation.Screen
 import com.android.joinme.ui.overview.CreateEventScreenTestTags
 import com.android.joinme.ui.overview.OverviewScreenTestTags
 import com.android.joinme.ui.overview.SearchScreenTestTags
-import com.android.joinme.ui.profile.ViewProfileTestTags
 import com.android.joinme.utils.FakeJwtGenerator
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
@@ -342,14 +341,8 @@ class JoinMeE2ETest {
 
     navigateToTab("Profile")
     composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
+      composeTestRule.onNodeWithContentDescription("Profile").isDisplayed()
     }
-    composeTestRule
-        .onNodeWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
-        .assertIsDisplayed()
 
     navigateToTab("Overview")
     composeTestRule
@@ -415,14 +408,8 @@ class JoinMeE2ETest {
 
     // THEN: Profile screen should be displayed
     composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
+      composeTestRule.onNodeWithContentDescription("Profile").isDisplayed()
     }
-    composeTestRule
-        .onNodeWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
-        .assertIsDisplayed()
   }
 
   @Test
@@ -499,14 +486,8 @@ class JoinMeE2ETest {
     // Navigate to Profile
     navigateToTab("Profile")
     composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
+      composeTestRule.onNodeWithContentDescription("Profile").isDisplayed()
     }
-    composeTestRule
-        .onNodeWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
-        .assertIsDisplayed()
 
     // Return to Overview
     navigateToTab("Overview")
