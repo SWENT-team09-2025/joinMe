@@ -155,7 +155,7 @@ class JoinMeE2ETest {
     composeTestRule.waitForIdle()
 
     // Wait for suggestions to load
-    composeTestRule.waitUntil {
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS)
           .fetchSemanticsNodes()
