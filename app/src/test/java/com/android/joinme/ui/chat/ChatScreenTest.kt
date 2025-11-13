@@ -14,8 +14,8 @@ import androidx.compose.ui.test.performTextInput
 import com.android.joinme.model.chat.ChatRepository
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
-import com.android.joinme.ui.theme.SocialColor
-import com.android.joinme.ui.theme.SportsColor
+import com.android.joinme.ui.theme.socialContainerLight
+import com.android.joinme.ui.theme.sportsContainerLight
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before
@@ -56,7 +56,7 @@ class ChatScreenTest {
           currentUserId = "user1",
           currentUserName = "Alice",
           viewModel = viewModel,
-          topBarColor = SportsColor)
+          topBarColor = sportsContainerLight)
     }
 
     composeTestRule.onNodeWithTag(ChatScreenTestTags.TITLE).assertIsDisplayed()
@@ -343,7 +343,7 @@ class ChatScreenTest {
           currentUserId = "user1",
           currentUserName = "Alice",
           viewModel = viewModel,
-          topBarColor = SocialColor)
+          topBarColor = socialContainerLight)
     }
 
     // Verify screen displays without errors

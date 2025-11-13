@@ -56,16 +56,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
-import com.android.joinme.ui.theme.AvatarBackgroundColor
-import com.android.joinme.ui.theme.AvatarBorderColor
-import com.android.joinme.ui.theme.BorderColor
 import com.android.joinme.ui.theme.Dimens
-import com.android.joinme.ui.theme.DisabledButtonColor
-import com.android.joinme.ui.theme.FocusedBorderColor
-import com.android.joinme.ui.theme.JoinMeColor
-import com.android.joinme.ui.theme.OnSurfaceColor
-import com.android.joinme.ui.theme.PlaceholderTextColor
-import com.android.joinme.ui.theme.SportsColor
+import com.android.joinme.ui.theme.customColors
+import com.android.joinme.ui.theme.sportsContainerLight
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -132,7 +125,7 @@ fun ChatScreen(
     currentUserName: String,
     viewModel: ChatViewModel,
     onBackClick: () -> Unit = {},
-    topBarColor: androidx.compose.ui.graphics.Color = SportsColor
+    topBarColor: androidx.compose.ui.graphics.Color = MaterialTheme.customColors.sportsContainer
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val snackbarHostState = remember { SnackbarHostState() }
@@ -168,7 +161,7 @@ fun ChatScreen(
               contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(
                     modifier = Modifier.testTag(ChatScreenTestTags.LOADING_INDICATOR),
-                    color = JoinMeColor)
+                    color = MaterialTheme.colorScheme.primary)
               }
         } else {
           ChatContent(
@@ -195,7 +188,7 @@ private fun ChatTopBar(
     chatTitle: String,
     onBackClick: () -> Unit,
     onLeaveClick: () -> Unit,
-    topBarColor: androidx.compose.ui.graphics.Color = SportsColor
+    topBarColor: androidx.compose.ui.graphics.Color = sportsContainerLight
 ) {
   Surface(
       modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.TOP_BAR),
@@ -211,15 +204,15 @@ private fun ChatTopBar(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = OnSurfaceColor)
+                        tint = MaterialTheme.colorScheme.onSurface)
                   }
 
               // Avatar
               Box(
                   modifier =
                       Modifier.size(32.dp)
-                          .background(AvatarBorderColor, CircleShape)
-                          .border(2.dp, AvatarBorderColor, CircleShape),
+                          .background(MaterialTheme.colorScheme.surface, CircleShape)
+                          .border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape),
                   contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.Person,
@@ -235,7 +228,7 @@ private fun ChatTopBar(
                   text = chatTitle,
                   style = MaterialTheme.typography.titleMedium,
                   fontWeight = FontWeight.Bold,
-                  color = OnSurfaceColor,
+                  color = MaterialTheme.colorScheme.onSurface,
                   modifier = Modifier.weight(1f).testTag(ChatScreenTestTags.TITLE))
 
               // Leave button - background color matches top bar
@@ -248,7 +241,7 @@ private fun ChatTopBar(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                         contentDescription = "Leave chat",
-                        tint = OnSurfaceColor,
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(20.dp))
                   }
             }
@@ -304,7 +297,7 @@ private fun ChatContent(
                         Text(
                             text = "No messages yet. Start the conversation!",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = PlaceholderTextColor,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.testTag(ChatScreenTestTags.EMPTY_MESSAGE))
                       }
@@ -377,7 +370,7 @@ private fun MessageItem(
                   Text(
                       text = message.content,
                       style = MaterialTheme.typography.bodySmall,
-                      color = OnSurfaceColor.copy(alpha = 0.9f),
+                      color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
                       fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
                 } else {
                   // Show sender name for other users
@@ -386,7 +379,7 @@ private fun MessageItem(
                         text = message.senderName,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = OnSurfaceColor.copy(alpha = 0.8f))
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f))
                     Spacer(modifier = Modifier.height(4.dp))
                   }
 
@@ -394,14 +387,14 @@ private fun MessageItem(
                   Text(
                       text = message.content,
                       style = MaterialTheme.typography.bodyMedium,
-                      color = OnSurfaceColor)
+                      color = MaterialTheme.colorScheme.onSurface)
 
                   // Timestamp
                   Spacer(modifier = Modifier.height(4.dp))
                   Text(
                       text = formatTimestamp(message.timestamp),
                       style = MaterialTheme.typography.labelSmall,
-                      color = OnSurfaceColor.copy(alpha = 0.6f))
+                      color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                 }
               }
             }
@@ -425,13 +418,13 @@ private fun UserAvatar(modifier: Modifier = Modifier) {
       modifier =
           modifier
               .size(24.dp)
-              .background(AvatarBackgroundColor, CircleShape)
-              .border(1.5.dp, AvatarBorderColor, CircleShape),
+              .background(MaterialTheme.colorScheme.surface, CircleShape)
+              .border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape),
       contentAlignment = Alignment.Center) {
         Icon(
             imageVector = Icons.Default.Person,
             contentDescription = "User avatar",
-            tint = OnSurfaceColor,
+            tint = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.size(14.dp))
       }
 }
@@ -463,17 +456,19 @@ private fun MessageInput(
               onValueChange = onTextChange,
               modifier = Modifier.weight(1f).testTag(ChatScreenTestTags.MESSAGE_INPUT),
               placeholder = {
-                Text(text = "Type your message here...", color = PlaceholderTextColor)
+                Text(
+                    text = "Type your message here...",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
               },
               shape = RoundedCornerShape(24.dp),
               colors =
                   OutlinedTextFieldDefaults.colors(
-                      focusedBorderColor = FocusedBorderColor,
-                      unfocusedBorderColor = BorderColor,
-                      disabledBorderColor = BorderColor,
+                      focusedBorderColor = MaterialTheme.colorScheme.primary,
+                      unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                      disabledBorderColor = MaterialTheme.colorScheme.outline,
                       focusedTextColor = MaterialTheme.colorScheme.onSurface,
                       unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                      cursorColor = FocusedBorderColor),
+                      cursorColor = MaterialTheme.colorScheme.primary),
               maxLines = 4)
 
           // Send button
@@ -483,13 +478,15 @@ private fun MessageInput(
               modifier =
                   Modifier.size(48.dp)
                       .background(
-                          color = if (text.isNotBlank()) sendButtonColor else DisabledButtonColor,
+                          color =
+                              if (text.isNotBlank()) sendButtonColor
+                              else MaterialTheme.colorScheme.surfaceVariant,
                           shape = CircleShape)
                       .testTag(ChatScreenTestTags.SEND_BUTTON)) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
                     contentDescription = "Send message",
-                    tint = OnSurfaceColor)
+                    tint = MaterialTheme.colorScheme.onSurface)
               }
         }
   }
