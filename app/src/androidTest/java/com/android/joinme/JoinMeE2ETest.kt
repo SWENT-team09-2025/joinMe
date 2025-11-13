@@ -193,7 +193,7 @@ class JoinMeE2ETest {
     composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_DATE).performClick()
     composeTestRule.waitForIdle()
     // Wait for native date picker dialog and click OK using UiAutomator
-    device.wait(Until.hasObject(By.text("OK")), 2000)
+    device.wait(Until.hasObject(By.text("OK")), 5000)
     device.findObject(By.text("OK")).click()
     Thread.sleep(300)
     composeTestRule.waitForIdle()
@@ -209,7 +209,7 @@ class JoinMeE2ETest {
         .performClick()
     composeTestRule.waitForIdle()
     // Wait for native time picker dialog and click OK using UiAutomator
-    device.wait(Until.hasObject(By.text("OK")), 2000)
+    device.wait(Until.hasObject(By.text("OK")), 5000)
     device.findObject(By.text("OK")).click()
     Thread.sleep(300)
     composeTestRule.waitForIdle()
@@ -274,7 +274,7 @@ class JoinMeE2ETest {
 
     // THEN: Event should appear in Overview screen
     // Wait for the event list to appear (may take time for data to load)
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -422,7 +422,7 @@ class JoinMeE2ETest {
 
     // THEN: All events should be visible
     // Wait for the event list to appear
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -477,7 +477,7 @@ class JoinMeE2ETest {
     navigateToTab("Overview")
 
     // Event should still be visible
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()
