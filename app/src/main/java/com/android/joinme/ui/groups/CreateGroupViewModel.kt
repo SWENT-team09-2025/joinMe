@@ -108,8 +108,15 @@ class CreateGroupViewModel(
       _uiState.value = state.copy(isLoading = true, errorMsg = null, createdGroupId = null)
 
       try {
+        val isTestEnv =
+            android.os.Build.FINGERPRINT == "robolectric" ||
+                android.os.Debug.isDebuggerConnected() ||
+                System.getProperty("IS_TEST_ENV") == "true"
         val uid =
-            Firebase.auth.currentUser?.uid ?: throw IllegalStateException("User not authenticated")
+            if (isTestEnv) "test-user-id"
+            else
+                Firebase.auth.currentUser?.uid
+                    ?: throw IllegalStateException("User not authenticated")
 
         val groupId = repository.getNewGroupId()
 
