@@ -13,14 +13,14 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.android.joinme.ui.theme.*
+import com.android.joinme.ui.theme.Dimens
+import com.android.joinme.ui.theme.buttonColors
+import com.android.joinme.ui.theme.customColors
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
@@ -45,6 +45,7 @@ object ShowEventScreenTestTags {
   const val JOIN_QUIT_BUTTON = "joinQuitButton"
   const val EDIT_BUTTON = "editButton"
   const val DELETE_BUTTON = "deleteButton"
+  const val FULL_EVENT_MESSAGE = "fullEventMessage"
 }
 
 /**
@@ -61,21 +62,26 @@ object ShowEventScreenTestTags {
  * toasts when operations fail.
  *
  * @param eventId The unique identifier of the event to display
+ * @param serieId Optional serie ID if the event belongs to a serie
  * @param currentUserId The ID of the currently authenticated user (defaults to Firebase auth user)
  * @param showEventViewModel ViewModel managing event state and operations
  * @param onGoBack Callback invoked when the user navigates back
  * @param onEditEvent Callback invoked when the owner wants to edit the event, receives the event ID
+ * @param onEditEventForSerie Callback invoked when the owner wants to edit an event in a serie,
+ *   receives serieId and eventId
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShowEventScreen(
     eventId: String,
-    currentUserId: String = Firebase.auth.currentUser?.uid ?: "unknown",
+    serieId: String? = null,
+    currentUserId: String = Firebase.auth.currentUser?.uid ?: "test-user-id",
     showEventViewModel: ShowEventViewModel = viewModel(),
     onGoBack: () -> Unit = {},
-    onEditEvent: (String) -> Unit = {}
+    onEditEvent: (String) -> Unit = {},
+    onEditEventForSerie: (String, String) -> Unit = { _, _ -> }
 ) {
-  LaunchedEffect(eventId) { showEventViewModel.loadEvent(eventId) }
+  LaunchedEffect(eventId, serieId) { showEventViewModel.loadEvent(eventId, serieId) }
 
   val eventUIState by showEventViewModel.uiState.collectAsState()
   val errorMsg = eventUIState.errorMsg
@@ -109,7 +115,7 @@ fun ShowEventScreen(
                   onGoBack()
                 }
               }) {
-                Text("Delete", color = Color.Red)
+                Text("Delete", color = MaterialTheme.colorScheme.error)
               }
         },
         dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } })
@@ -118,47 +124,53 @@ fun ShowEventScreen(
   Scaffold(
       modifier = Modifier.testTag(ShowEventScreenTestTags.SCREEN),
       topBar = {
-        TopAppBar(
-            title = {
-              Box(
-                  modifier = Modifier.fillMaxWidth().offset(x = (-24).dp),
-                  contentAlignment = Alignment.Center) {
-                    Text(
-                        text = eventUIState.title.ifBlank { "Task title" },
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_TITLE))
-                  }
-            },
-            navigationIcon = {
-              IconButton(onClick = onGoBack) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-              }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White))
+        Column {
+          CenterAlignedTopAppBar(
+              title = {
+                Text(
+                    text = eventUIState.title.ifBlank { "Task title" },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_TITLE))
+              },
+              navigationIcon = {
+                IconButton(onClick = onGoBack) {
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                      contentDescription = "Back",
+                      tint = MaterialTheme.colorScheme.primary)
+                }
+              },
+              colors =
+                  TopAppBarDefaults.topAppBarColors(
+                      containerColor = MaterialTheme.colorScheme.surface))
+          HorizontalDivider(
+              color = MaterialTheme.colorScheme.primary, thickness = Dimens.BorderWidth.thin)
+        }
       }) { paddingValues ->
         Column(
             modifier =
                 Modifier.fillMaxSize()
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)) {
-              Spacer(modifier = Modifier.height(8.dp))
+                    .padding(horizontal = Dimens.Padding.medium)
+                    .padding(bottom = Dimens.Padding.medium),
+            verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium)) {
+              Spacer(modifier = Modifier.height(Dimens.Spacing.small))
 
               // Date display
               Text(
                   text = eventUIState.date,
-                  fontSize = 16.sp,
+                  style = MaterialTheme.typography.titleMedium,
                   fontWeight = FontWeight.Bold,
+                  color = MaterialTheme.colorScheme.onSurface,
                   modifier =
                       Modifier.fillMaxWidth()
                           .testTag(ShowEventScreenTestTags.EVENT_DATE)
-                          .padding(vertical = 8.dp),
-                  textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                          .padding(vertical = Dimens.Padding.small),
+                  textAlign = TextAlign.Center)
 
-              Spacer(modifier = Modifier.height(8.dp))
+              Spacer(modifier = Modifier.height(Dimens.Spacing.small))
 
               // Visibility and Type row
               Row(
@@ -167,41 +179,45 @@ fun ShowEventScreen(
                   verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = eventUIState.visibility,
-                        fontSize = 16.sp,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_VISIBILITY))
 
                     Text(
                         text = eventUIState.type,
-                        fontSize = 16.sp,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Medium,
-                        color = Purple40, // Purple color for event type
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_TYPE))
                   }
 
-              HorizontalDivider(thickness = 1.dp, color = Color.Gray)
+              HorizontalDivider(
+                  thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
 
               // Description
               Text(
                   text = eventUIState.description,
-                  fontSize = 14.sp,
-                  color = Color.DarkGray,
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
                   modifier =
                       Modifier.fillMaxWidth()
-                          .heightIn(min = 80.dp)
+                          .heightIn(min = Dimens.ShowEvent.minDescriptionField)
                           .testTag(ShowEventScreenTestTags.EVENT_DESCRIPTION))
 
-              HorizontalDivider(thickness = 1.dp, color = Color.Gray)
+              HorizontalDivider(
+                  thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
 
               // Location
               Text(
                   text = eventUIState.location,
-                  fontSize = 14.sp,
-                  color = Color.DarkGray,
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
                   modifier =
                       Modifier.fillMaxWidth().testTag(ShowEventScreenTestTags.EVENT_LOCATION))
 
-              HorizontalDivider(thickness = 1.dp, color = Color.Gray)
+              HorizontalDivider(
+                  thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
 
               // Members and Duration row
               Row(
@@ -210,29 +226,33 @@ fun ShowEventScreen(
                     Text(
                         text =
                             "MEMBERS : ${eventUIState.participantsCount}/${eventUIState.maxParticipants}",
-                        fontSize = 14.sp,
+                        style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_MEMBERS))
 
                     Text(
                         text = "${eventUIState.duration}min",
-                        fontSize = 14.sp,
+                        style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_DURATION))
                   }
 
-              HorizontalDivider(thickness = 1.dp, color = Color.Gray)
+              HorizontalDivider(
+                  thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
 
               // Owner display
               Text(
                   text = eventUIState.ownerName,
-                  fontSize = 14.sp,
+                  style = MaterialTheme.typography.bodyMedium,
                   fontWeight = FontWeight.Medium,
+                  color = MaterialTheme.colorScheme.onSurface,
                   modifier =
                       Modifier.fillMaxWidth()
                           .testTag(ShowEventScreenTestTags.EVENT_OWNER)
-                          .padding(vertical = 8.dp),
-                  textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                          .padding(vertical = Dimens.Padding.small),
+                  textAlign = TextAlign.Center)
 
               Spacer(modifier = Modifier.weight(1f))
 
@@ -242,55 +262,86 @@ fun ShowEventScreen(
                 if (eventUIState.isOwner(currentUserId)) {
                   // Owner sees: Edit and Delete buttons
                   Button(
-                      onClick = { onEditEvent(eventId) },
+                      onClick = {
+                        val currentSerieId = eventUIState.serieId
+                        if (currentSerieId != null) {
+                          onEditEventForSerie(currentSerieId, eventId)
+                        } else {
+                          onEditEvent(eventId)
+                        }
+                      },
                       modifier =
                           Modifier.fillMaxWidth()
-                              .height(56.dp)
+                              .height(Dimens.Button.standardHeight)
                               .testTag(ShowEventScreenTestTags.EDIT_BUTTON),
-                      shape = RoundedCornerShape(8.dp),
-                      colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1C1C1E))) {
-                        Text(text = "EDIT EVENT", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+                      colors = MaterialTheme.customColors.buttonColors()) {
+                        Text(
+                            text = "EDIT EVENT",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Medium)
                       }
 
                   OutlinedButton(
                       onClick = { showDeleteDialog = true },
                       modifier =
                           Modifier.fillMaxWidth()
-                              .height(56.dp)
+                              .height(Dimens.Button.standardHeight)
                               .testTag(ShowEventScreenTestTags.DELETE_BUTTON),
-                      shape = RoundedCornerShape(8.dp),
-                      colors =
-                          ButtonDefaults.outlinedButtonColors(
-                              contentColor = Color.Red, containerColor = Color.White)) {
+                      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+                      colors = MaterialTheme.customColors.buttonColors()) {
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "Delete",
-                            tint = Color.Red)
-                        Spacer(modifier = Modifier.width(8.dp))
+                            tint = MaterialTheme.customColors.deleteButton)
+                        Spacer(modifier = Modifier.width(Dimens.Spacing.small))
                         Text(
-                            text = "DELETE EVENT", fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                      }
-                } else {
-                  // Non-owner sees: Join/Quit button
-                  Button(
-                      onClick = {
-                        coroutineScope.launch {
-                          showEventViewModel.toggleParticipation(eventId, currentUserId)
-                        }
-                      },
-                      modifier =
-                          Modifier.fillMaxWidth()
-                              .height(56.dp)
-                              .testTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON),
-                      shape = RoundedCornerShape(8.dp),
-                      colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1C1C1E))) {
-                        Text(
-                            text =
-                                if (eventUIState.isParticipant(currentUserId)) "QUIT EVENT"
-                                else "JOIN EVENT",
-                            fontSize = 16.sp,
+                            text = "DELETE EVENT",
+                            style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Medium)
                       }
+                } else {
+                  // if event is part of a serie, don't display join/quit button
+                  if (!eventUIState.isPartOfASerie) {
+                    // if event is full, don't display join button
+                    val participantCount = eventUIState.participantsCount.toIntOrNull() ?: 0
+                    val maxParticipants =
+                        eventUIState.maxParticipants.toIntOrNull() ?: Int.MAX_VALUE
+                    if ((participantCount < maxParticipants) ||
+                        eventUIState.isParticipant(currentUserId)) {
+                      // Non-owner sees: Join/Quit button
+                      Button(
+                          onClick = {
+                            coroutineScope.launch {
+                              showEventViewModel.toggleParticipation(eventId, currentUserId)
+                            }
+                          },
+                          modifier =
+                              Modifier.fillMaxWidth()
+                                  .height(Dimens.Button.standardHeight)
+                                  .testTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON),
+                          shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+                          colors = MaterialTheme.customColors.buttonColors()) {
+                            Text(
+                                text =
+                                    if (eventUIState.isParticipant(currentUserId)) "QUIT EVENT"
+                                    else "JOIN EVENT",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Medium)
+                          }
+                    } else {
+                      Text(
+                          modifier =
+                              Modifier.fillMaxWidth()
+                                  .padding(bottom = Dimens.Padding.extraLarge)
+                                  .testTag(ShowEventScreenTestTags.FULL_EVENT_MESSAGE),
+                          text = "Sorry this event is full",
+                          style = MaterialTheme.typography.headlineSmall,
+                          textAlign = TextAlign.Center,
+                          color = MaterialTheme.colorScheme.error,
+                          fontWeight = FontWeight.Bold)
+                    }
+                  }
                 }
               }
             }

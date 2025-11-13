@@ -7,6 +7,8 @@ import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.event.displayString
 import com.android.joinme.model.event.isActive
 import com.android.joinme.model.event.isUpcoming
+import com.android.joinme.model.profile.ProfileRepository
+import com.android.joinme.model.profile.ProfileRepositoryProvider
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +31,8 @@ data class ShowEventUIState(
     val ownerName: String = "",
     val participants: List<String> = emptyList(),
     val isPastEvent: Boolean = false,
+    val isPartOfASerie: Boolean = false,
+    val serieId: String? = null,
     val errorMsg: String? = null,
 ) {
   /**
@@ -52,6 +56,7 @@ data class ShowEventUIState(
 class ShowEventViewModel(
     private val repository: EventsRepository =
         EventsRepositoryProvider.getRepository(isOnline = true),
+    private val profileRepository: ProfileRepository = ProfileRepositoryProvider.repository,
     initialState: ShowEventUIState = ShowEventUIState()
 ) : ViewModel() {
 
@@ -71,8 +76,9 @@ class ShowEventViewModel(
    * Loads an Event by its ID and updates the UI state.
    *
    * @param eventId The ID of the Event to be loaded.
+   * @param serieId Optional serie ID if the event belongs to a serie.
    */
-  fun loadEvent(eventId: String) {
+  fun loadEvent(eventId: String, serieId: String? = null) {
     viewModelScope.launch {
       try {
         val event = repository.getEvent(eventId)
@@ -82,8 +88,8 @@ class ShowEventViewModel(
         val formattedDate =
             "${event.type.displayString().uppercase()}: ${dateFormat.format(event.date.toDate())}"
 
-        // Get owner name (you might want to fetch this from a user repository)
-        val ownerDisplayName = "CREATED BY ${getOwnerDisplayName(event.ownerId)}"
+        // Get owner name
+        val ownerDisplayName = "Created by ${getOwnerDisplayName(event.ownerId)}"
 
         // Check if the event is past (not active and not upcoming)
         val isPast = !event.isActive() && !event.isUpcoming()
@@ -102,7 +108,9 @@ class ShowEventViewModel(
                 ownerId = event.ownerId,
                 ownerName = ownerDisplayName,
                 participants = event.participants,
-                isPastEvent = isPast)
+                isPastEvent = isPast,
+                isPartOfASerie = event.isPartOfASerie,
+                serieId = serieId)
       } catch (e: Exception) {
         setErrorMsg("Failed to load Event: ${e.message}")
       }
@@ -110,18 +118,19 @@ class ShowEventViewModel(
   }
 
   /**
-   * Gets the display name for the event owner. This is a placeholder that can be replaced with
-   * actual user repository calls.
+   * Fetches the display name of the serie owner given their user ID.
    *
-   * @param ownerId The ID of the owner.
-   * @return The display name for the owner.
+   * @param ownerId The user ID of the serie owner
+   * @return The display name of the owner, or "UNKNOWN" if not found or if an error occurs
    */
-  private fun getOwnerDisplayName(ownerId: String): String {
-    // TODO: Replace with actual user repository call to get user name
-    // For now, return "YOU" if it's the current user, or extract name from ID
-    return if (ownerId.isNotEmpty()) {
-      ownerId.substringBefore("@").uppercase()
-    } else {
+  private suspend fun getOwnerDisplayName(ownerId: String): String {
+    if (ownerId.isEmpty()) {
+      return "UNKNOWN"
+    }
+    return try {
+      val profile = profileRepository.getProfile(ownerId)
+      profile?.username ?: "UNKNOWN"
+    } catch (_: Exception) {
       "UNKNOWN"
     }
   }

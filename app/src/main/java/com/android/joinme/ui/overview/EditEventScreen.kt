@@ -11,9 +11,12 @@ object EditEventScreenTestTags {
   const val INPUT_EVENT_TITLE = "inputEventTitle"
   const val INPUT_EVENT_DESCRIPTION = "inputEventDescription"
   const val INPUT_EVENT_LOCATION = "inputEventLocation"
+  const val INPUT_EVENT_LOCATION_SUGGESTIONS = "inputEventLocationSuggestions"
+  const val FOR_EACH_INPUT_EVENT_LOCATION_SUGGESTION = "inputEventLocationSuggestions"
   const val INPUT_EVENT_MAX_PARTICIPANTS = "inputEventMaxParticipants"
   const val INPUT_EVENT_DURATION = "inputEventDuration"
   const val INPUT_EVENT_DATE = "inputEventDate"
+  const val INPUT_EVENT_TIME = "inputEventTime"
   const val INPUT_EVENT_VISIBILITY = "inputEventVisibility"
   const val EVENT_SAVE = "eventSave"
   const val ERROR_MESSAGE = "errorMessage"
@@ -47,9 +50,13 @@ fun EditEventScreen(
           inputEventTitle = EditEventScreenTestTags.INPUT_EVENT_TITLE,
           inputEventDescription = EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION,
           inputEventLocation = EditEventScreenTestTags.INPUT_EVENT_LOCATION,
+          inputEventLocationSuggestions = EditEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS,
+          forEachInputEventLocationSuggestion =
+              EditEventScreenTestTags.FOR_EACH_INPUT_EVENT_LOCATION_SUGGESTION,
           inputEventMaxParticipants = EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS,
           inputEventDuration = EditEventScreenTestTags.INPUT_EVENT_DURATION,
           inputEventDate = EditEventScreenTestTags.INPUT_EVENT_DATE,
+          inputEventTime = EditEventScreenTestTags.INPUT_EVENT_TIME,
           inputEventVisibility = EditEventScreenTestTags.INPUT_EVENT_VISIBILITY,
           buttonSaveEvent = EditEventScreenTestTags.EVENT_SAVE,
           errorMessage = EditEventScreenTestTags.ERROR_MESSAGE)
@@ -65,10 +72,18 @@ fun EditEventScreen(
           date = eventUIState.date,
           time = eventUIState.time,
           visibility = eventUIState.visibility,
+          locationQuery = eventUIState.locationQuery,
+          selectedLocation = eventUIState.selectedLocation,
+          locationSuggestions = eventUIState.locationSuggestions,
           isValid = eventUIState.isValid,
+          invalidTypeMsg = eventUIState.invalidTypeMsg,
           invalidTitleMsg = eventUIState.invalidTitleMsg,
           invalidDescriptionMsg = eventUIState.invalidDescriptionMsg,
-          invalidLocationMsg = eventUIState.invalidLocationMsg)
+          invalidLocationMsg = eventUIState.invalidLocationMsg,
+          invalidMaxParticipantsMsg = eventUIState.invalidMaxParticipantsMsg,
+          invalidDurationMsg = eventUIState.invalidDurationMsg,
+          invalidDateMsg = eventUIState.invalidDateMsg,
+          invalidVisibilityMsg = eventUIState.invalidVisibilityMsg)
 
   EventFormScreen(
       title = "Edit Event",
@@ -77,7 +92,8 @@ fun EditEventScreen(
       onTypeChange = { editEventViewModel.setType(it) },
       onTitleChange = { editEventViewModel.setTitle(it) },
       onDescriptionChange = { editEventViewModel.setDescription(it) },
-      onLocationChange = { editEventViewModel.setLocation(it) },
+      onLocationQueryChange = { editEventViewModel.setLocationQuery(it) },
+      onSelectLocationChange = { editEventViewModel.selectLocation(it) },
       onMaxParticipantsChange = { editEventViewModel.setMaxParticipants(it) },
       onDurationChange = { editEventViewModel.setDuration(it) },
       onDateChange = { editEventViewModel.setDate(it) },
@@ -91,6 +107,5 @@ fun EditEventScreen(
         }
         true
       },
-      onGoBack = onGoBack,
-      saveButtonText = "Save")
+      onGoBack = onGoBack)
 }

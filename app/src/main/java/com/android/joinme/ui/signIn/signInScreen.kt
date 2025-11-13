@@ -25,20 +25,17 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
+import com.android.joinme.ui.theme.Dimens
 
 object SignInScreenTestTags {
   const val APP_LOGO = "appLogo"
-  const val LOGIN_TITLE = "loginTitle"
   const val LOGIN_BUTTON = "loginButton"
 }
 
@@ -72,6 +69,8 @@ fun SignInScreen(
   // A surface container using the 'background' color from the theme
   Scaffold(
       modifier = Modifier.fillMaxSize(),
+      contentColor = MaterialTheme.colorScheme.onSurface,
+      containerColor = MaterialTheme.colorScheme.surface,
       content = { padding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(padding),
@@ -80,15 +79,16 @@ fun SignInScreen(
         ) {
           // App Logo Image
           Image(
-              painter = painterResource(id = R.drawable.app_logo), // Ensure this drawable exists
+              painter = painterResource(id = R.drawable.app_logo),
               contentDescription = "App Logo",
-              modifier = Modifier.size(350.dp).testTag(SignInScreenTestTags.APP_LOGO))
+              modifier =
+                  Modifier.size(Dimens.SignIn.logoSize).testTag(SignInScreenTestTags.APP_LOGO))
 
-          Spacer(modifier = Modifier.height(16.dp))
+          Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
           // Authenticate With Google Button
           if (uiState.isLoading) {
-            CircularProgressIndicator(modifier = Modifier.size(48.dp))
+            CircularProgressIndicator(modifier = Modifier.size(Dimens.SignIn.loadingIndicatorSize))
           } else {
             GoogleSignInButton(onSignInClick = { authViewModel.signIn(context, credentialManager) })
           }
@@ -100,31 +100,33 @@ fun SignInScreen(
 fun GoogleSignInButton(onSignInClick: () -> Unit) {
   Button(
       onClick = onSignInClick,
-      colors = ButtonDefaults.buttonColors(containerColor = Color.White), // Button color
-      shape = RoundedCornerShape(50), // Circular edges for the button
-      border = BorderStroke(1.dp, Color.LightGray),
+      colors =
+          ButtonDefaults.buttonColors(
+              containerColor = MaterialTheme.colorScheme.surface,
+              contentColor = MaterialTheme.colorScheme.primary),
+      shape = RoundedCornerShape(Dimens.SignIn.buttonCornerRadius),
+      border = BorderStroke(Dimens.BorderWidth.thin, MaterialTheme.colorScheme.primary),
       modifier =
-          Modifier.padding(8.dp)
-              .height(48.dp) // Adjust height as needed
+          Modifier.padding(Dimens.Padding.small)
+              .height(Dimens.SignIn.buttonHeight)
               .testTag(SignInScreenTestTags.LOGIN_BUTTON)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.width(200.dp)) {
+            modifier = Modifier.width(Dimens.SignIn.buttonContentWidth)) {
               // Load the Google logo from resources
               Image(
-                  painter =
-                      painterResource(id = R.drawable.google_logo), // Ensure this drawable exists
+                  painter = painterResource(id = R.drawable.google_logo),
                   contentDescription = "Google Logo",
                   modifier =
-                      Modifier.size(30.dp) // Size of the Google logo
-                          .padding(end = 8.dp))
+                      Modifier.size(Dimens.SignIn.googleLogoSize)
+                          .padding(end = Dimens.Padding.small))
 
               // Text for the button
               Text(
                   text = "Sign in with Google",
-                  color = MaterialTheme.colorScheme.primary, // Text color
-                  fontSize = 16.sp, // Font size
+                  color = MaterialTheme.colorScheme.primary,
+                  style = MaterialTheme.typography.bodyLarge,
                   fontWeight = FontWeight.Medium)
             }
       }

@@ -2,21 +2,31 @@ package com.android.joinme.ui.overview
 
 import android.annotation.SuppressLint
 import android.widget.NumberPicker
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
+import com.android.joinme.model.map.Location
+import com.android.joinme.ui.theme.Dimens
+import com.android.joinme.ui.theme.buttonColors
+import com.android.joinme.ui.theme.customColors
+import com.android.joinme.ui.theme.outlinedTextField
 import java.util.Locale
 
 /** Data class representing the test tags for event form fields. */
@@ -25,9 +35,12 @@ data class EventFormTestTags(
     val inputEventTitle: String,
     val inputEventDescription: String,
     val inputEventLocation: String,
+    val inputEventLocationSuggestions: String,
+    val forEachInputEventLocationSuggestion: String,
     val inputEventMaxParticipants: String,
     val inputEventDuration: String,
     val inputEventDate: String,
+    val inputEventTime: String,
     val inputEventVisibility: String,
     val buttonSaveEvent: String,
     val errorMessage: String
@@ -44,10 +57,18 @@ data class EventFormState(
     val date: String,
     val time: String,
     val visibility: String,
+    val locationQuery: String,
+    val locationSuggestions: List<Location>,
+    val selectedLocation: Location?,
     val isValid: Boolean,
+    val invalidTypeMsg: String?,
     val invalidTitleMsg: String?,
     val invalidDescriptionMsg: String?,
-    val invalidLocationMsg: String?
+    val invalidLocationMsg: String?,
+    val invalidMaxParticipantsMsg: String?,
+    val invalidDurationMsg: String?,
+    val invalidDateMsg: String?,
+    val invalidVisibilityMsg: String?
 )
 
 /**
@@ -59,7 +80,7 @@ data class EventFormState(
  * @param onTypeChange Callback when event type changes
  * @param onTitleChange Callback when title changes
  * @param onDescriptionChange Callback when description changes
- * @param onLocationChange Callback when location changes
+ * @param onLocationQueryChange Callback when location changes
  * @param onMaxParticipantsChange Callback when max participants changes
  * @param onDurationChange Callback when duration changes
  * @param onDateChange Callback when date changes
@@ -67,7 +88,7 @@ data class EventFormState(
  * @param onVisibilityChange Callback when visibility changes
  * @param onSave Callback when save button is clicked, returns true if save was successful
  * @param onGoBack Callback when back button is clicked
- * @param saveButtonText Text to display on the save button (default: "Save")
+ * @param saveButtonText Text to display on the save button (default: "SAVE")
  */
 @SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,7 +100,8 @@ fun EventFormScreen(
     onTypeChange: (String) -> Unit,
     onTitleChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
-    onLocationChange: (String) -> Unit,
+    onLocationQueryChange: (String) -> Unit,
+    onSelectLocationChange: (Location) -> Unit,
     onMaxParticipantsChange: (String) -> Unit,
     onDurationChange: (String) -> Unit,
     onDateChange: (String) -> Unit,
@@ -87,7 +109,7 @@ fun EventFormScreen(
     onVisibilityChange: (String) -> Unit,
     onSave: () -> Boolean,
     onGoBack: () -> Unit,
-    saveButtonText: String = "Save"
+    saveButtonText: String = "SAVE"
 ) {
   val eventTypes = EventType.values().map { it.name.uppercase(Locale.ROOT) }
   val visibilities = listOf(EventVisibility.PUBLIC.name, EventVisibility.PRIVATE.name)
@@ -97,23 +119,30 @@ fun EventFormScreen(
 
   Scaffold(
       topBar = {
-        TopAppBar(
-            title = { Text(title) },
-            navigationIcon = {
-              IconButton(onClick = onGoBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = "Back")
-              }
-            })
+        Column {
+          TopAppBar(
+              title = { Text(title) },
+              navigationIcon = {
+                IconButton(onClick = onGoBack) {
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                      contentDescription = "Back")
+                }
+              },
+              colors =
+                  TopAppBarDefaults.topAppBarColors(
+                      containerColor = MaterialTheme.colorScheme.surface))
+          HorizontalDivider(
+              color = MaterialTheme.colorScheme.outlineVariant, thickness = Dimens.BorderWidth.thin)
+        }
       }) { paddingValues ->
         Column(
             modifier =
                 Modifier.fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
+                    .padding(Dimens.Padding.medium)
                     .padding(paddingValues),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            verticalArrangement = Arrangement.spacedBy(Dimens.Padding.small)) {
               // Type dropdown
               ExposedDropdownMenuBox(
                   expanded = showTypeDropdown,
@@ -124,6 +153,14 @@ fun EventFormScreen(
                         readOnly = true,
                         label = { Text("Event Type") },
                         placeholder = { Text("Select event type") },
+                        isError = formState.invalidTypeMsg != null,
+                        supportingText = {
+                          if (formState.invalidTypeMsg != null) {
+                            Text(
+                                text = formState.invalidTypeMsg,
+                                color = MaterialTheme.colorScheme.error)
+                          }
+                        },
                         trailingIcon = {
                           ExposedDropdownMenuDefaults.TrailingIcon(expanded = showTypeDropdown)
                         },
@@ -131,14 +168,24 @@ fun EventFormScreen(
                             Modifier.menuAnchor().fillMaxWidth().testTag(testTags.inputEventType))
                     ExposedDropdownMenu(
                         expanded = showTypeDropdown,
-                        onDismissRequest = { showTypeDropdown = false }) {
-                          eventTypes.forEach { type ->
+                        onDismissRequest = { showTypeDropdown = false },
+                        modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
+                          eventTypes.forEachIndexed { index, type ->
                             DropdownMenuItem(
-                                text = { Text(type) },
+                                text = {
+                                  Text(
+                                      text = type,
+                                      color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                      style = MaterialTheme.typography.headlineSmall)
+                                },
                                 onClick = {
                                   onTypeChange(type)
                                   showTypeDropdown = false
-                                })
+                                },
+                                colors = MaterialTheme.customColors.dropdownMenu)
+                            if (index < eventTypes.lastIndex) {
+                              HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                            }
                           }
                         }
                   }
@@ -177,30 +224,23 @@ fun EventFormScreen(
                   },
                   modifier =
                       Modifier.fillMaxWidth()
-                          .height(150.dp)
+                          .height(Dimens.EventForm.descriptionField)
                           .testTag(testTags.inputEventDescription))
 
               // Location
-              OutlinedTextField(
-                  value = formState.location,
-                  onValueChange = onLocationChange,
-                  label = { Text("Location") },
-                  placeholder = { Text("Enter location name") },
+              LocationField(
+                  query = formState.locationQuery,
+                  suggestions = formState.locationSuggestions,
                   isError = formState.invalidLocationMsg != null,
-                  supportingText = {
-                    formState.invalidLocationMsg?.let {
-                      Text(
-                          it,
-                          color = MaterialTheme.colorScheme.error,
-                          modifier = Modifier.testTag(testTags.errorMessage))
-                    }
-                  },
-                  modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventLocation))
+                  supportingText = formState.invalidLocationMsg,
+                  onQueryChange = { selection -> onLocationQueryChange(selection) },
+                  onSuggestionSelected = { name -> onSelectLocationChange(name) },
+                  testTags = testTags)
 
               // Max Participants and Duration pickers
               Row(
                   modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                  horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium)) {
                     var showParticipantsDialog by remember { mutableStateOf(false) }
                     var tempParticipants by remember {
                       mutableIntStateOf(formState.maxParticipants.toIntOrNull() ?: 1)
@@ -215,6 +255,14 @@ fun EventFormScreen(
                               readOnly = true,
                               label = { Text("Max Participants") },
                               placeholder = { Text("Select number") },
+                              isError = formState.invalidMaxParticipantsMsg != null,
+                              supportingText = {
+                                if (formState.invalidMaxParticipantsMsg != null) {
+                                  Text(
+                                      text = formState.invalidMaxParticipantsMsg,
+                                      color = MaterialTheme.colorScheme.error)
+                                }
+                              },
                               colors =
                                   OutlinedTextFieldDefaults.colors(
                                       disabledTextColor =
@@ -283,19 +331,15 @@ fun EventFormScreen(
                           readOnly = true,
                           label = { Text("Duration (min)") },
                           placeholder = { Text("Select duration") },
-                          colors =
-                              OutlinedTextFieldDefaults.colors(
-                                  disabledTextColor =
-                                      LocalContentColor.current.copy(
-                                          LocalContentColor.current.alpha),
-                                  disabledBorderColor = MaterialTheme.colorScheme.outline,
-                                  disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledPlaceholderColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledLeadingIconColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledTrailingIconColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant),
+                          isError = formState.invalidDurationMsg != null,
+                          supportingText = {
+                            if (formState.invalidDurationMsg != null) {
+                              Text(
+                                  text = formState.invalidDurationMsg,
+                                  color = MaterialTheme.colorScheme.error)
+                            }
+                          },
+                          colors = MaterialTheme.customColors.outlinedTextField(),
                           enabled = false,
                           modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventDuration))
                     }
@@ -338,7 +382,7 @@ fun EventFormScreen(
               // Date and Time pickers
               Row(
                   modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                  horizontalArrangement = Arrangement.spacedBy(Dimens.Padding.medium)) {
                     val context = LocalContext.current
                     val calendar = remember { java.util.Calendar.getInstance() }
                     val (year, month, day) =
@@ -372,19 +416,15 @@ fun EventFormScreen(
                           readOnly = true,
                           label = { Text("Date") },
                           placeholder = { Text("Select date") },
-                          colors =
-                              OutlinedTextFieldDefaults.colors(
-                                  disabledTextColor =
-                                      LocalContentColor.current.copy(
-                                          LocalContentColor.current.alpha),
-                                  disabledBorderColor = MaterialTheme.colorScheme.outline,
-                                  disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledPlaceholderColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledLeadingIconColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledTrailingIconColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant),
+                          isError = formState.invalidDateMsg != null,
+                          supportingText = {
+                            if (formState.invalidDateMsg != null) {
+                              Text(
+                                  text = formState.invalidDateMsg,
+                                  color = MaterialTheme.colorScheme.error)
+                            }
+                          },
+                          colors = MaterialTheme.customColors.outlinedTextField(),
                           enabled = false,
                           modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventDate))
                     }
@@ -408,21 +448,9 @@ fun EventFormScreen(
                           readOnly = true,
                           label = { Text("Time") },
                           placeholder = { Text("Select time") },
-                          colors =
-                              OutlinedTextFieldDefaults.colors(
-                                  disabledTextColor =
-                                      LocalContentColor.current.copy(
-                                          LocalContentColor.current.alpha),
-                                  disabledBorderColor = MaterialTheme.colorScheme.outline,
-                                  disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledPlaceholderColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledLeadingIconColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant,
-                                  disabledTrailingIconColor =
-                                      MaterialTheme.colorScheme.onSurfaceVariant),
+                          colors = MaterialTheme.customColors.outlinedTextField(),
                           enabled = false,
-                          modifier = Modifier.fillMaxWidth())
+                          modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventTime))
                     }
                   }
 
@@ -436,6 +464,14 @@ fun EventFormScreen(
                         readOnly = true,
                         label = { Text("Event Visibility") },
                         placeholder = { Text("Select visibility") },
+                        isError = formState.invalidVisibilityMsg != null,
+                        supportingText = {
+                          if (formState.invalidVisibilityMsg != null) {
+                            Text(
+                                text = formState.invalidVisibilityMsg,
+                                color = MaterialTheme.colorScheme.error)
+                          }
+                        },
                         trailingIcon = {
                           ExposedDropdownMenuDefaults.TrailingIcon(
                               expanded = showVisibilityDropdown)
@@ -446,27 +482,134 @@ fun EventFormScreen(
                                 .testTag(testTags.inputEventVisibility))
                     ExposedDropdownMenu(
                         expanded = showVisibilityDropdown,
-                        onDismissRequest = { showVisibilityDropdown = false }) {
-                          visibilities.forEach { vis ->
+                        onDismissRequest = { showVisibilityDropdown = false },
+                        modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
+                          visibilities.forEachIndexed { index, vis ->
                             DropdownMenuItem(
-                                text = { Text(vis) },
+                                text = {
+                                  Text(
+                                      text = vis,
+                                      color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                      style = MaterialTheme.typography.headlineSmall)
+                                },
                                 onClick = {
                                   onVisibilityChange(vis)
                                   showVisibilityDropdown = false
-                                })
+                                },
+                                colors = MaterialTheme.customColors.dropdownMenu)
+                            if (index < visibilities.lastIndex) {
+                              HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                            }
                           }
                         }
                   }
 
-              Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
               // Save button
               Button(
-                  onClick = { if (onSave()) {} },
+                  onClick = { onSave() },
                   modifier = Modifier.fillMaxWidth().testTag(testTags.buttonSaveEvent),
-                  enabled = formState.isValid) {
-                    Text(saveButtonText)
+                  enabled = formState.isValid,
+                  colors = MaterialTheme.customColors.buttonColors()) {
+                    Text(saveButtonText, style = MaterialTheme.typography.titleSmall)
                   }
             }
       }
+}
+
+/**
+ * A composable text field with real-time location suggestions.
+ *
+ * Displays an `OutlinedTextField` where users can type a location name. As the user types, a
+ * dropdown list of matching suggestions appears below the field. Selecting a suggestion fills the
+ * field and hides the dropdown.
+ *
+ * This component is used in Create/Edit Event screens to allow users to easily search and select
+ * real-world locations from Nominatim autocomplete results.
+ *
+ * ### Behavior
+ * - The dropdown menu appears when the query is non-empty and suggestions are available.
+ * - Selecting a suggestion hides the menu and updates the field.
+ * - The menu will not immediately reopen after a selection (managed by [suppressNextOpen]).
+ *
+ * @param query The current text input value of the location field.
+ * @param suggestions A list of [Location] suggestions returned by the repository.
+ * @param isError Whether the field should display an error state.
+ * @param supportingText Optional helper or error message displayed below the field.
+ * @param onQueryChange Callback triggered when the user changes the query text.
+ * @param onSuggestionSelected Callback invoked when a suggestion is selected from the dropdown.
+ * @param modifier Optional [Modifier] for layout customization.
+ * @param testTags [EventFormTestTags] providing identifiers for UI testing (e.g., text field and
+ *   dropdown).
+ */
+@Composable
+fun LocationField(
+    query: String,
+    suggestions: List<Location>,
+    isError: Boolean,
+    supportingText: String?,
+    onQueryChange: (String) -> Unit,
+    onSuggestionSelected: (Location) -> Unit,
+    modifier: Modifier = Modifier,
+    testTags: EventFormTestTags
+) {
+  var showSuggestions by remember { mutableStateOf(false) }
+  var suppressNextOpen by remember { mutableStateOf(false) }
+
+  LaunchedEffect(query, suggestions) {
+    if (!suppressNextOpen) {
+      showSuggestions = query.isNotBlank() && suggestions.isNotEmpty()
+    } else {
+      suppressNextOpen = false
+    }
+  }
+
+  Box(modifier = modifier) {
+    Column {
+      OutlinedTextField(
+          value = query,
+          onValueChange = { onQueryChange(it) },
+          label = { Text("Location") },
+          isError = isError,
+          singleLine = true,
+          supportingText = {
+            if (supportingText != null) {
+              Text(text = supportingText, color = MaterialTheme.colorScheme.error)
+            }
+          },
+          modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventLocation))
+
+      if (showSuggestions) {
+        Spacer(Modifier.height(Dimens.Spacing.small))
+        Surface(
+            shape = RoundedCornerShape(Dimens.CornerRadius.large),
+            tonalElevation = Dimens.Elevation.medium,
+            modifier =
+                Modifier.fillMaxWidth()
+                    .heightIn(max = Dimens.EventForm.suggestionsField)
+                    .border(
+                        width = Dimens.BorderWidth.thin,
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        shape = RoundedCornerShape(Dimens.CornerRadius.large))) {
+              LazyColumn(modifier = Modifier.testTag(testTags.inputEventLocationSuggestions)) {
+                itemsIndexed(suggestions) { index, loc ->
+                  ListItem(
+                      headlineContent = { Text(loc.name) },
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .clickable {
+                                showSuggestions = false
+                                suppressNextOpen = true
+                                onSuggestionSelected(loc)
+                              }
+                              .padding(horizontal = Dimens.Padding.extraSmall)
+                              .testTag(testTags.forEachInputEventLocationSuggestion))
+                  HorizontalDivider(Modifier, thickness = Dimens.BorderWidth.thin)
+                }
+              }
+            }
+      }
+    }
+  }
 }

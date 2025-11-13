@@ -2,27 +2,43 @@ package com.android.joinme.ui.navigation
 
 import androidx.navigation.NavHostController
 
+/**
+ * Sealed class representing all navigation destinations in the JoinMe application.
+ *
+ * Each screen defines its route (used for navigation) and name (displayed in UI). Top-level
+ * destinations are marked with isTopLevelDestination=true and appear in the bottom navigation bar.
+ *
+ * @param route The navigation route used by NavController
+ * @param name The human-readable name of the screen
+ * @param isTopLevelDestination Whether this screen appears in bottom navigation (default: false)
+ */
 sealed class Screen(
     val route: String,
     val name: String,
     val isTopLevelDestination: Boolean = false
 ) {
+  // ============================================================================
+  // Authentication
+  // ============================================================================
+
+  /** Authentication screen for user sign-in/sign-up */
   object Auth : Screen(route = "auth", name = "Authentication")
 
+  // ============================================================================
+  // Events, Series & History
+  // ============================================================================
+
+  /** Main overview screen showing upcoming events (Top-level destination) */
   object Overview : Screen(route = "overview", name = "Overview", isTopLevelDestination = true)
 
-  object Search : Screen(route = "search", name = "Search", isTopLevelDestination = true)
-
-  object Map : Screen(route = "map", name = "Map", isTopLevelDestination = true)
-
-  object Profile : Screen(route = "profile", name = "Profile", isTopLevelDestination = true)
-
+  /** Screen for creating a new event */
   object CreateEvent : Screen(route = "create_event", name = "Create a new task")
 
-  object EditProfile : Screen(route = "edit_profile", name = "Edit Profile")
-
-  object History : Screen(route = "history", name = "History")
-
+  /**
+   * Screen for editing an existing event
+   *
+   * @param eventId The ID of the event to edit
+   */
   data class EditEvent(val eventId: String) :
       Screen(route = "edit_event/${eventId}", name = "Edit Event") {
     companion object {
@@ -30,10 +46,123 @@ sealed class Screen(
     }
   }
 
-  data class ShowEventScreen(val eventId: String) :
-      Screen(route = "show_event/${eventId}", name = "Show Event") {
+  /** Screen for creating a new serie */
+  object CreateSerie : Screen(route = "create_serie", name = "Create a new serie")
+
+  /**
+   * Screen for viewing serie details
+   *
+   * @param serieId The ID of the serie to display
+   */
+  data class SerieDetails(val serieId: String) :
+      Screen(route = "serie_details/${serieId}", name = "Serie Details") {
     companion object {
-      const val route = "show_event/{eventId}"
+      const val route = "serie_details/{serieId}"
+    }
+  }
+  /**
+   * Screen for editing an existing serie
+   *
+   * @param serieId The ID of the serie to edit
+   */
+  data class EditSerie(val serieId: String) :
+      Screen(route = "edit_serie/${serieId}", name = "Edit Serie") {
+    companion object {
+      const val route = "edit_serie/{serieId}"
+    }
+  }
+
+  /**
+   * Screen for creating a new event for an existing serie
+   *
+   * @param serieId The ID of the serie to add the event to
+   */
+  data class CreateEventForSerie(val serieId: String) :
+      Screen(route = "create_event_for_serie/${serieId}", name = "Create Event for Serie") {
+    companion object {
+      const val route = "create_event_for_serie/{serieId}"
+    }
+  }
+
+  /**
+   * Screen for editing an existing event within a serie
+   *
+   * @param serieId The ID of the serie containing the event
+   * @param eventId The ID of the event to edit
+   */
+  data class EditEventForSerie(val serieId: String, val eventId: String) :
+      Screen(route = "edit_event_for_serie/${serieId}/${eventId}", name = "Edit Event for Serie") {
+    companion object {
+      const val route = "edit_event_for_serie/{serieId}/{eventId}"
+    }
+  }
+
+  /**
+   * Screen for viewing event details
+   *
+   * @param eventId The ID of the event to display
+   * @param serieId Optional ID of the serie if the event belongs to one
+   */
+  data class ShowEventScreen(val eventId: String, val serieId: String? = null) :
+      Screen(
+          route =
+              if (serieId != null) "show_event/${eventId}?serieId=${serieId}"
+              else "show_event/${eventId}",
+          name = "Show Event") {
+    companion object {
+      const val route = "show_event/{eventId}?serieId={serieId}"
+    }
+  }
+
+  /** History screen showing past events */
+  object History : Screen(route = "history", name = "History")
+
+  // ============================================================================
+  // Search
+  // ============================================================================
+
+  /** Search screen for finding events (Top-level destination) */
+  object Search : Screen(route = "search", name = "Search", isTopLevelDestination = true)
+
+  // ============================================================================
+  // Map
+  // ============================================================================
+
+  /** Map screen showing events geographically (Top-level destination) */
+  object Map : Screen(route = "map", name = "Map", isTopLevelDestination = true)
+
+  // ============================================================================
+  // Profile & Groups
+  // ============================================================================
+
+  /** User profile view screen (Top-level destination) */
+  object Profile : Screen(route = "profile", name = "Profile", isTopLevelDestination = true)
+
+  /** Profile editing screen */
+  object EditProfile : Screen(route = "edit_profile", name = "Edit Profile")
+
+  /** Groups list screen showing user's groups */
+  object Groups : Screen(route = "groups", name = "Groups")
+
+  /** Screen for creating a new group */
+  object CreateGroup : Screen(route = "create_group", name = "Create Group")
+
+  /**
+   * Screen for editing an existing group
+   *
+   * @param groupId The ID of the group to edit
+   */
+  data class EditGroup(val groupId: String) :
+      Screen(route = "edit_group/${groupId}", name = "Edit Group") {
+    companion object {
+      const val route = "edit_group/{groupId}"
+    }
+  }
+
+  data class GroupDetail(val groupId: String) :
+      Screen(route = "groupId/${groupId}", name = "Group Detail") {
+    companion object {
+      const val route = "groupId/{groupId}"
     }
   }
 }
@@ -54,6 +183,9 @@ open class NavigationActions(
   /**
    * Navigate to the specified screen.
    *
+   * Handles special behavior for top-level destinations (bottom nav items) by using singleTop
+   * launch mode and restoring state. Non-auth screens restore their state when navigated to.
+   *
    * @param screen The screen to navigate to
    */
   open fun navigateTo(screen: Screen) {
@@ -66,27 +198,19 @@ open class NavigationActions(
         launchSingleTop = true
         popUpTo(screen.route) { inclusive = true }
       }
-      //      restoreState = true
-      //      restoreState = true
-      //      if (screen.isTopLevelDestination) {
-      //        // Pop up to the start destination of the graph to
-      //        // avoid building up a large stack of destinations
-      //        popUpTo(navController.graph.findStartDestination().id) {
-      //          saveState = true
-      //          inclusive = true
-      //        }
-      //        // Avoid multiple copies of the same destination when reselecting same item
-      //        launchSingleTop = true
-      //      }
-      //
+
       if (screen !is Screen.Auth) {
-        // Restore state when reselecting a previously selected item
+        // Restore state when navigating to a previously selected item
         restoreState = true
       }
     }
   }
 
-  /** Navigate back to the previous screen. */
+  /**
+   * Navigate back to the previous screen.
+   *
+   * Pops the current destination from the back stack.
+   */
   open fun goBack() {
     navController.popBackStack()
   }
@@ -94,7 +218,7 @@ open class NavigationActions(
   /**
    * Get the current route of the navigation controller.
    *
-   * @return The current route
+   * @return The current route, or empty string if no destination is active
    */
   open fun currentRoute(): String {
     return navController.currentDestination?.route ?: ""

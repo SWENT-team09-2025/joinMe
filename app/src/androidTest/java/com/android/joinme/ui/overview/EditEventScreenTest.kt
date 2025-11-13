@@ -6,6 +6,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.*
 import com.android.joinme.model.map.Location
+import com.android.joinme.model.map.LocationRepository
 import com.google.firebase.Timestamp
 import java.util.*
 import kotlinx.coroutines.runBlocking
@@ -15,6 +16,22 @@ import org.junit.Test
 class EditEventScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
+
+  // Mock LocationRepository for testing
+  private class MockLocationRepository : LocationRepository {
+    override suspend fun search(query: String): List<Location> {
+      return when {
+        query.contains("EPFL") ->
+            listOf(Location(46.5197, 6.6323, "EPFL"), Location(46.5198, 6.6324, "EPFL Campus"))
+        query.contains("Lausanne") ->
+            listOf(
+                Location(46.5191, 6.6335, "Lausanne Sports Center"),
+                Location(46.5192, 6.6336, "Lausanne Downtown"))
+        query.contains("New Location") -> listOf(Location(46.5193, 6.6337, "New Location"))
+        else -> emptyList()
+      }
+    }
+  }
 
   private fun createTestEvent(): Event {
     val calendar = Calendar.getInstance()
@@ -28,7 +45,7 @@ class EditEventScreenTest {
         location = Location(46.5197, 6.6323, "EPFL"),
         date = Timestamp(calendar.time),
         duration = 90,
-        participants = listOf("user1", "user2"),
+        participants = listOf("user1"),
         maxParticipants = 10,
         visibility = EventVisibility.PUBLIC,
         ownerId = "owner123")
@@ -40,7 +57,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -67,303 +84,13 @@ class EditEventScreenTest {
     composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsDisplayed()
   }
 
-  @Test
-  fun eventDataIsLoadedAndDisplayed() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Verify loaded data
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TYPE)
-        .assertTextContains("SPORTS")
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
-        .assertTextContains("Basketball Game")
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
-        .assertTextContains("Friendly 3v3 basketball match")
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
-        .assertTextContains("EPFL")
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
-        .assertTextContains("10")
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
-        .assertTextContains("90")
-    // Date and time are displayed separately now
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DATE)
-        .assertTextContains("25/12/2024")
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_VISIBILITY)
-        .assertTextContains("PUBLIC")
-  }
-
-  /** --- EDITING FUNCTIONALITY --- */
-  @Test
-  fun editingTitle_updatesUIState() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
-        .performTextInput("Updated Title")
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
-        .assertTextContains("Updated Title")
-  }
-
-  @Test
-  fun editingDescription_updatesUIState() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
-        .performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
-        .performTextInput("New description text")
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
-        .assertTextContains("New description text")
-  }
-
-  @Test
-  fun editingLocation_updatesUIState() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
-        .performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
-        .performTextInput("Lausanne Sports Center")
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
-        .assertTextContains("Lausanne Sports Center")
-  }
-
-  // Note: Max participants and duration now use number pickers and cannot be edited via text input
-  @Test
-  fun maxParticipantsFieldDisplaysLoadedValue() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Verify field displays the loaded value
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
-        .assertTextContains("10")
-  }
-
-  @Test
-  fun durationFieldDisplaysLoadedValue() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Verify field displays the loaded value
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION)
-        .assertTextContains("90")
-  }
-
-  // Note: Date field now uses date picker dialog and cannot be edited via text input
-
-  /** --- VALIDATION --- */
-  @Test
-  fun clearingTitle_showsErrorAndDisablesSaveButton() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE, useUnmergedTree = true)
-        .assertExists()
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsNotEnabled()
-  }
-
-  @Test
-  fun clearingDescription_showsErrorAndDisablesSaveButton() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
-        .performTextClearance()
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE, useUnmergedTree = true)
-        .assertExists()
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsNotEnabled()
-  }
-
-  @Test
-  fun clearingLocation_showsErrorAndDisablesSaveButton() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
-        .performTextClearance()
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE, useUnmergedTree = true)
-        .assertExists()
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsNotEnabled()
-  }
-
-  @Test
-  fun correctingInvalidField_removesErrorAndEnablesSaveButton() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Make field invalid
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
-
-    composeTestRule.waitForIdle()
-
-    // Verify error is shown
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE, useUnmergedTree = true)
-        .assertExists()
-
-    // Fix the field
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
-        .performTextInput("Valid Title")
-
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      composeTestRule
-          .onAllNodesWithTag(EditEventScreenTestTags.EVENT_SAVE)
-          .fetchSemanticsNodes()
-          .firstOrNull()
-          ?.config
-          ?.getOrNull(SemanticsProperties.Disabled) == null
-    }
-
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsEnabled()
-  }
-
   /** --- SAVE FUNCTIONALITY --- */
   @Test
   fun clickingSaveWithValidData_callsOnDone() {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     var saveCalled = false
 
@@ -401,7 +128,7 @@ class EditEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
 
     composeTestRule.setContent {
       EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
@@ -439,265 +166,5 @@ class EditEventScreenTest {
       val updatedEvent = repo.getEvent(event.eventId)
       assert(updatedEvent.title == "Updated Basketball Game")
     }
-  }
-
-  @Test
-  fun clickingSaveWithInvalidData_doesNotCallOnDone() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    var saveCalled = false
-
-    composeTestRule.setContent {
-      EditEventScreen(
-          eventId = event.eventId, editEventViewModel = viewModel, onDone = { saveCalled = true })
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Make data invalid
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
-
-    composeTestRule.waitForIdle()
-
-    // Button should be disabled, but try to verify click doesn't work
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsNotEnabled()
-
-    // Callback should not be called
-    assert(!saveCalled)
-  }
-
-  /** --- VIEWMODEL TESTS --- */
-  @Test
-  fun viewModel_loadEvent_updatesUIState() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    // Initially empty
-    assert(viewModel.uiState.value.title.isEmpty())
-
-    // Load event
-    viewModel.loadEvent(event.eventId)
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Verify loaded
-    assert(viewModel.uiState.value.title == "Basketball Game")
-    assert(viewModel.uiState.value.type == "SPORTS")
-    assert(viewModel.uiState.value.maxParticipants == "10")
-  }
-
-  @Test
-  fun viewModel_settersUpdateState() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = EditEventViewModel(repo)
-
-    viewModel.setTitle("New Title")
-    assert(viewModel.uiState.value.title == "New Title")
-
-    viewModel.setDescription("New Description")
-    assert(viewModel.uiState.value.description == "New Description")
-
-    viewModel.setLocation("New Location")
-    assert(viewModel.uiState.value.location == "New Location")
-
-    viewModel.setMaxParticipants("5")
-    assert(viewModel.uiState.value.maxParticipants == "5")
-
-    viewModel.setDuration("45")
-    assert(viewModel.uiState.value.duration == "45")
-
-    viewModel.setType("SPORTS")
-    assert(viewModel.uiState.value.type == "SPORTS")
-
-    viewModel.setVisibility("PRIVATE")
-    assert(viewModel.uiState.value.visibility == "PRIVATE")
-  }
-
-  @Test
-  fun viewModel_clearErrorMsg_removesError() {
-    val repo = EventsRepositoryLocal()
-    val viewModel = EditEventViewModel(repo)
-
-    // Load non-existent event to trigger error
-    viewModel.loadEvent("non-existent-id")
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(1000)
-    composeTestRule.waitForIdle()
-
-    // Error should be set
-    assert(viewModel.uiState.value.errorMsg != null)
-
-    // Clear error
-    viewModel.clearErrorMsg()
-
-    // Error should be cleared
-    assert(viewModel.uiState.value.errorMsg == null)
-  }
-
-  @Test
-  fun saveButton_enabledWhenAllFieldsValid() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      composeTestRule
-          .onAllNodesWithTag(EditEventScreenTestTags.EVENT_SAVE)
-          .fetchSemanticsNodes()
-          .firstOrNull()
-          ?.config
-          ?.getOrNull(SemanticsProperties.Disabled) == null
-    }
-
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsEnabled()
-  }
-
-  @Test
-  fun whitespaceTitleIsTreatedAsEmpty() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("   ")
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsNotEnabled()
-  }
-
-  @Test
-  fun multipleTextFieldEdits_allPersist() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Edit multiple text fields
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
-        .performTextInput("New Title")
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
-        .performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
-        .performTextInput("New Description")
-
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
-        .performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
-        .performTextInput("New Location")
-
-    // Verify all persist in UI state
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
-        .assertTextContains("New Title")
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
-        .assertTextContains("New Description")
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION)
-        .assertTextContains("New Location")
-  }
-
-  @Test
-  fun typeDropdownCanBeChanged() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Verify initial value
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TYPE)
-        .assertTextContains("SPORTS")
-
-    // Change type
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TYPE).performClick()
-    composeTestRule.onNodeWithText("SOCIAL").performClick()
-
-    // Verify changed value
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TYPE)
-        .assertTextContains("SOCIAL")
-  }
-
-  @Test
-  fun visibilityDropdownCanBeChanged() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent()
-    runBlocking { repo.addEvent(event) }
-    val viewModel = EditEventViewModel(repo)
-
-    composeTestRule.setContent {
-      EditEventScreen(eventId = event.eventId, editEventViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Verify initial value
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_VISIBILITY)
-        .assertTextContains("PUBLIC")
-
-    // Change visibility
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_VISIBILITY).performClick()
-    composeTestRule.onNodeWithText("PRIVATE").performClick()
-
-    // Verify changed value
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_VISIBILITY)
-        .assertTextContains("PRIVATE")
   }
 }

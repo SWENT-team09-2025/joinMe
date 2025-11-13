@@ -24,11 +24,17 @@ object EventsRepositoryProvider {
    * @param context required for initializing Firebase if needed
    */
   fun getRepository(isOnline: Boolean, context: Context? = null): EventsRepository {
-    // ✅ detect instrumented test environment
     val isTestEnv =
         android.os.Build.FINGERPRINT == "robolectric" ||
             android.os.Debug.isDebuggerConnected() ||
-            System.getProperty("IS_TEST_ENV") == "true"
+            System.getProperty("IS_TEST_ENV") == "true" ||
+            try {
+              // Check if we're running in an instrumented test by looking for the test runner
+              Class.forName("androidx.test.runner.AndroidJUnitRunner")
+              true
+            } catch (e: ClassNotFoundException) {
+              false
+            }
 
     return if (isTestEnv || !isOnline) localRepo else getFirestoreRepo(context)
   }
@@ -40,7 +46,7 @@ object EventsRepositoryProvider {
       if (apps.isEmpty()) {
         FirebaseApp.initializeApp(ctx)
       }
-      firestoreRepo = EventsRepositoryFirestore(Firebase.firestore)
+      firestoreRepo = EventsRepositoryFirestore(Firebase.firestore, ctx)
     }
     return firestoreRepo!!
   }

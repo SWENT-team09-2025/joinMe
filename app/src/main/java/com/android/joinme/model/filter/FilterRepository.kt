@@ -19,7 +19,6 @@ data class SportCategory(val id: String, val name: String, val isChecked: Boolea
 /**
  * Represents the current state of event filters.
  *
- * @property isAllSelected Whether all filters (Social, Activity, and all sports) are selected
  * @property isSocialSelected Whether the Social event type filter is selected
  * @property isActivitySelected Whether the Activity event type filter is selected
  * @property sportCategories List of sport categories with their selection states
@@ -27,11 +26,10 @@ data class SportCategory(val id: String, val name: String, val isChecked: Boolea
  * @property isSelectAllChecked Computed property indicating if all sports are selected
  */
 data class FilterState(
-    val isAllSelected: Boolean = true,
-    val isSocialSelected: Boolean = true,
-    val isActivitySelected: Boolean = true,
+    val isSocialSelected: Boolean = false,
+    val isActivitySelected: Boolean = false,
     val sportCategories: List<SportCategory> =
-        Sports.ALL.map { SportCategory(it.id, it.name, isChecked = true) },
+        Sports.ALL.map { SportCategory(it.id, it.name, isChecked = false) },
 ) {
   val selectedSportsCount: Int
     get() = sportCategories.count { it.isChecked }
@@ -45,51 +43,31 @@ data class FilterState(
  *
  * This singleton provides a centralized source of truth for event filters (Social, Activity,
  * Sports) that can be shared across multiple screens (e.g., SearchScreen, MapScreen). It maintains
- * filter state and provides methods to toggle individual filters while keeping the "All" filter in
- * sync.
+ * filter state and provides methods to toggle individual filters. When no filters are selected, all
+ * events are shown by default.
  */
 object FilterRepository {
 
   private val _filterState = MutableStateFlow(FilterState())
   val filterState: StateFlow<FilterState> = _filterState.asStateFlow()
 
-  /** Resets all filters to their default state (all selected). */
+  /** Resets all filters to their default state (none selected, showing everything). */
   fun reset() {
     _filterState.value = FilterState()
-  }
-
-  /** Toggles the "All" filter and updates related filters. */
-  fun toggleAll() {
-    val newAllSelected = !_filterState.value.isAllSelected
-    _filterState.value =
-        _filterState.value.copy(
-            isAllSelected = newAllSelected,
-            isSocialSelected = newAllSelected,
-            isActivitySelected = newAllSelected,
-            sportCategories =
-                _filterState.value.sportCategories.map { it.copy(isChecked = newAllSelected) })
   }
 
   /** Toggles the "Social" filter. */
   fun toggleSocial() {
     val state = _filterState.value
     val newSocialSelected = !state.isSocialSelected
-    _filterState.value =
-        state.copy(
-            isSocialSelected = newSocialSelected,
-            isAllSelected =
-                newSocialSelected && state.isActivitySelected && state.isSelectAllChecked)
+    _filterState.value = state.copy(isSocialSelected = newSocialSelected)
   }
 
   /** Toggles the "Activity" filter. */
   fun toggleActivity() {
     val state = _filterState.value
     val newActivitySelected = !state.isActivitySelected
-    _filterState.value =
-        state.copy(
-            isActivitySelected = newActivitySelected,
-            isAllSelected =
-                state.isSocialSelected && newActivitySelected && state.isSelectAllChecked)
+    _filterState.value = state.copy(isActivitySelected = newActivitySelected)
   }
 
   /** Toggles the "Select All" sports filter. */
@@ -99,9 +77,7 @@ object FilterRepository {
     _filterState.value =
         state.copy(
             sportCategories =
-                state.sportCategories.map { it.copy(isChecked = newSelectAllChecked) },
-            isAllSelected =
-                newSelectAllChecked && state.isSocialSelected && state.isActivitySelected)
+                state.sportCategories.map { it.copy(isChecked = newSelectAllChecked) })
   }
 
   /**
@@ -115,29 +91,21 @@ object FilterRepository {
         state.sportCategories.map { sport ->
           if (sport.id == sportId) sport.copy(isChecked = !sport.isChecked) else sport
         }
-    val allSportsChecked = updatedSports.all { it.isChecked }
 
-    _filterState.value =
-        state.copy(
-            sportCategories = updatedSports,
-            isAllSelected = state.isSocialSelected && state.isActivitySelected && allSportsChecked)
+    _filterState.value = state.copy(sportCategories = updatedSports)
   }
 
   /**
    * Applies the current filters to a list of events.
    *
    * @param events The list of events to filter
-   * @return The filtered list of events based on the current filter state
+   * @return The filtered list of events based on the current filter state. If no filters are
+   *   selected, returns all events (default behavior).
    */
   fun applyFilters(events: List<Event>): List<Event> {
     val state = _filterState.value
 
-    // If "All" is selected, return all events
-    if (state.isAllSelected) return events
-
-    var filteredEvents = events
-
-    // Filter by event type (Social, Activity)
+    // Build list of allowed event types based on selected filters
     val allowedTypes = mutableListOf<EventType>()
     if (state.isSocialSelected) allowedTypes.add(EventType.SOCIAL)
     if (state.isActivitySelected) allowedTypes.add(EventType.ACTIVITY)
@@ -147,11 +115,11 @@ object FilterRepository {
       allowedTypes.add(EventType.SPORTS)
     }
 
-    // If no filters are selected, return empty list
-    if (allowedTypes.isEmpty()) return emptyList()
+    // If no filters are selected, return all events (default behavior)
+    if (allowedTypes.isEmpty()) return events
 
     // Filter by event type
-    filteredEvents = filteredEvents.filter { it.type in allowedTypes }
+    val filteredEvents = events.filter { it.type in allowedTypes }
 
     // TODO: Add sport-specific filtering when sport metadata is added to Event model
     // For now, all SPORTS events pass through if any sport is selected

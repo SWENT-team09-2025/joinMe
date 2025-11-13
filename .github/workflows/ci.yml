@@ -30,7 +30,10 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+            ~/.android/build-cache
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
 
       # Load google-services.json and release keystore from the secrets
       - name: Decode secrets
