@@ -37,6 +37,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+/** Note: This test file was co-written with Claude AI */
+
 /**
  * Milestone 2 End-to-End tests for the JoinMe application.
  *

@@ -55,8 +55,7 @@ class LocationFieldTest {
               inputEventVisibility = "noop",
               buttonSaveEvent = "noop",
               errorMessage = "noop",
-              forEachInputEventLocationSuggestion = "noop"
-          )
+              forEachInputEventLocationSuggestion = "noop")
 
       LocationField(
           query = q.value,
@@ -86,10 +85,7 @@ class LocationFieldTest {
     lateinit var onQueryChange: (String) -> Unit
     composeTestRule.setContent {
       val q = remember { mutableStateOf("") }
-      val sugg =
-          remember {
-              mutableStateListOf<Location>()
-          }
+      val sugg = remember { mutableStateListOf<Location>() }
 
       onQueryChange = { newQ ->
         q.value = newQ
@@ -117,8 +113,7 @@ class LocationFieldTest {
               inputEventVisibility = "noop",
               buttonSaveEvent = "noop",
               errorMessage = "noop",
-              forEachInputEventLocationSuggestion = "noop"
-          )
+              forEachInputEventLocationSuggestion = "noop")
       LocationField(
           query = q.value,
           suggestions = sugg,
@@ -166,10 +161,7 @@ class LocationFieldTest {
     lateinit var onQueryChange: (String) -> Unit
     composeTestRule.setContent {
       val q = remember { mutableStateOf("") }
-      val sugg =
-          remember {
-              mutableStateListOf<Location>()
-          }
+      val sugg = remember { mutableStateListOf<Location>() }
 
       onQueryChange = { newQ ->
         q.value = newQ
@@ -197,8 +189,7 @@ class LocationFieldTest {
               inputEventVisibility = "noop",
               buttonSaveEvent = "noop",
               errorMessage = "noop",
-              forEachInputEventLocationSuggestion = "noop"
-          )
+              forEachInputEventLocationSuggestion = "noop")
       LocationField(
           query = q.value,
           suggestions = sugg,

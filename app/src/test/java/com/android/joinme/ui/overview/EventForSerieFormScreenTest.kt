@@ -46,8 +46,7 @@ class EventForSerieFormScreenTest {
           inputEventDuration = "inputEventDuration",
           buttonSaveEvent = "buttonSaveEvent",
           errorMessage = "errorMessage",
-          forEachInputEventLocationSuggestion = "forEachInputEventLocationSuggestion"
-      )
+          forEachInputEventLocationSuggestion = "forEachInputEventLocationSuggestion")
 
   /** Helper function to create a test form state. */
   private fun createTestFormState(
