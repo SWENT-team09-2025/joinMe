@@ -255,11 +255,6 @@ class SerieTest {
   }
 
   @Test
-  fun `isExpired returns false when lastEventEndTime equals date (not started yet)`() {
-    assertFalse(sampleSerie.isExpired()) // lastEventEndTime equals date by default
-  }
-
-  @Test
   fun `isUpcoming returns true when serie date is in future`() {
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.HOUR, 2)

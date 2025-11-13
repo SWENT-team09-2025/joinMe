@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
+import com.android.joinme.model.profile.ProfileRepository
+import com.android.joinme.model.profile.ProfileRepositoryProvider
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
@@ -111,7 +113,8 @@ data class SerieDetailsUIState(
  */
 class SerieDetailsViewModel(
     private val seriesRepository: SeriesRepository = SeriesRepositoryProvider.repository,
-    private val eventsRepository: EventsRepository = EventsRepositoryProvider.getRepository(true)
+    private val eventsRepository: EventsRepository = EventsRepositoryProvider.getRepository(true),
+    private val profileRepository: ProfileRepository = ProfileRepositoryProvider.repository
 ) : ViewModel() {
 
   private val _uiState = MutableStateFlow(SerieDetailsUIState())
@@ -137,6 +140,24 @@ class SerieDetailsViewModel(
         _uiState.value =
             _uiState.value.copy(isLoading = false, errorMsg = "Failed to load serie: ${e.message}")
       }
+    }
+  }
+
+  /**
+   * Fetches the display name of the serie owner given their user ID.
+   *
+   * @param ownerId The user ID of the serie owner
+   * @return The display name of the owner, or "UNKNOWN" if not found or if an error occurs
+   */
+  suspend fun getOwnerDisplayName(ownerId: String): String {
+    if (ownerId.isEmpty()) {
+      return "UNKNOWN"
+    }
+    return try {
+      val profile = profileRepository.getProfile(ownerId)
+      profile?.username ?: "UNKNOWN"
+    } catch (_: Exception) {
+      "UNKNOWN"
     }
   }
 
