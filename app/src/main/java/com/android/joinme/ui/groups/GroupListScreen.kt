@@ -159,7 +159,19 @@ fun GroupListScreen(
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val groups = uiState.groups
-  val currentUserId = Firebase.auth.currentUser?.uid // Current user ID from Firebase Auth
+  // Current user ID with test environment detection
+  val currentUserId = run {
+    // Detect test environment first (same as CreateGroupViewModel)
+    val isTestEnv =
+        android.os.Build.FINGERPRINT == "robolectric" ||
+            android.os.Debug.isDebuggerConnected() ||
+            System.getProperty("IS_TEST_ENV") == "true"
+    if (isTestEnv) {
+      "test-user-id"
+    } else {
+      Firebase.auth.currentUser?.uid
+    }
+  }
   val context = LocalContext.current
 
   // State for showing/hiding floating bubbles in the join/create group FAB

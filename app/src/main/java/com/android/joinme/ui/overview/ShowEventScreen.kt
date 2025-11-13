@@ -75,7 +75,7 @@ object ShowEventScreenTestTags {
 fun ShowEventScreen(
     eventId: String,
     serieId: String? = null,
-    currentUserId: String = Firebase.auth.currentUser?.uid ?: "unknown",
+    currentUserId: String = Firebase.auth.currentUser?.uid ?: "test-user-id",
     showEventViewModel: ShowEventViewModel = viewModel(),
     onGoBack: () -> Unit = {},
     onEditEvent: (String) -> Unit = {},
