@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Person
@@ -195,18 +194,8 @@ private fun ChatTopBar(
       color = topBarColor,
       shadowElevation = 4.dp) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically) {
-              // Back button
-              IconButton(
-                  onClick = onBackClick,
-                  modifier = Modifier.testTag(ChatScreenTestTags.BACK_BUTTON)) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.onSurface)
-                  }
-
               // Avatar
               Box(
                   modifier =
@@ -221,7 +210,7 @@ private fun ChatTopBar(
                         modifier = Modifier.size(20.dp))
                   }
 
-              Spacer(modifier = Modifier.width(12.dp))
+              Spacer(modifier = Modifier.width(16.dp))
 
               // Title
               Text(
@@ -501,4 +490,331 @@ private fun MessageInput(
 private fun formatTimestamp(timestamp: Long): String {
   val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
   return dateFormat.format(Date(timestamp))
+}
+
+/**
+ * Helper composable for preview that bypasses ViewModel initialization.
+ *
+ * This is used for previews to avoid ViewModel/coroutine issues in preview mode.
+ */
+@Composable
+private fun ChatScreenContent(
+    chatTitle: String,
+    messages: List<Message>,
+    currentUserId: String,
+    currentUserName: String,
+    onSendMessage: (String) -> Unit,
+    onBackClick: () -> Unit,
+    topBarColor: androidx.compose.ui.graphics.Color
+) {
+  Scaffold(
+      modifier = Modifier.fillMaxSize(),
+      topBar = {
+        ChatTopBar(
+            chatTitle = chatTitle,
+            onBackClick = onBackClick,
+            onLeaveClick = {},
+            topBarColor = topBarColor)
+      },
+      containerColor = MaterialTheme.colorScheme.background) { paddingValues ->
+        ChatContent(
+            messages = messages,
+            currentUserId = currentUserId,
+            currentUserName = currentUserName,
+            onSendMessage = onSendMessage,
+            paddingValues = paddingValues,
+            categoryColor = topBarColor)
+      }
+}
+
+// Light Mode Previews
+@androidx.compose.ui.tooling.preview.Preview(
+    showBackground = true,
+    name = "Sports Chat - Light",
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_NO)
+@Composable
+private fun ChatScreenPreviewSportsLight() {
+  com.android.joinme.ui.theme.JoinMeTheme {
+    val previewMessages =
+        listOf(
+            Message(
+                id = "1",
+                conversationId = "preview-chat-sports",
+                senderId = "user2",
+                senderName = "Alice",
+                content = "Hey! Ready for the game?",
+                timestamp = System.currentTimeMillis() - 3600000,
+                type = MessageType.TEXT),
+            Message(
+                id = "2",
+                conversationId = "preview-chat-sports",
+                senderId = "user1",
+                senderName = "John Doe",
+                content = "Yes! Can't wait!",
+                timestamp = System.currentTimeMillis() - 1800000,
+                type = MessageType.TEXT))
+
+    ChatScreenContent(
+        chatTitle = "Basketball Game",
+        messages = previewMessages,
+        currentUserId = "user1",
+        currentUserName = "John Doe",
+        onSendMessage = {},
+        onBackClick = {},
+        topBarColor = MaterialTheme.customColors.sportsContainer)
+  }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(
+    showBackground = true,
+    name = "Activity Chat - Light",
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_NO)
+@Composable
+private fun ChatScreenPreviewActivityLight() {
+  com.android.joinme.ui.theme.JoinMeTheme {
+    val previewMessages =
+        listOf(
+            Message(
+                id = "1",
+                conversationId = "preview-chat-activity",
+                senderId = "system",
+                senderName = "System",
+                content = "Bob joined the chat",
+                timestamp = System.currentTimeMillis() - 3600000,
+                type = MessageType.SYSTEM),
+            Message(
+                id = "2",
+                conversationId = "preview-chat-activity",
+                senderId = "user2",
+                senderName = "Bob",
+                content = "What time should we meet?",
+                timestamp = System.currentTimeMillis() - 7200000,
+                type = MessageType.TEXT),
+            Message(
+                id = "3",
+                conversationId = "preview-chat-activity",
+                senderId = "user1",
+                senderName = "John Doe",
+                content = "How about 8 AM at the trailhead?",
+                timestamp = System.currentTimeMillis() - 10800000,
+                type = MessageType.TEXT))
+
+    ChatScreenContent(
+        chatTitle = "Hiking Trip",
+        messages = previewMessages,
+        currentUserId = "user1",
+        currentUserName = "John Doe",
+        onSendMessage = {},
+        onBackClick = {},
+        topBarColor = MaterialTheme.customColors.activityContainer)
+  }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(
+    showBackground = true,
+    name = "Social Chat - Light",
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_NO)
+@Composable
+private fun ChatScreenPreviewSocialLight() {
+  com.android.joinme.ui.theme.JoinMeTheme {
+    val previewMessages =
+        listOf(
+            Message(
+                id = "1",
+                conversationId = "preview-chat-social",
+                senderId = "user2",
+                senderName = "Emma",
+                content = "Looking forward to meeting everyone!",
+                timestamp = System.currentTimeMillis() - 14400000,
+                type = MessageType.TEXT),
+            Message(
+                id = "2",
+                conversationId = "preview-chat-social",
+                senderId = "user3",
+                senderName = "Sarah",
+                content = "Me too! Should we order something in advance?",
+                timestamp = System.currentTimeMillis() - 10800000,
+                type = MessageType.TEXT),
+            Message(
+                id = "3",
+                conversationId = "preview-chat-social",
+                senderId = "user1",
+                senderName = "John Doe",
+                content = "Good idea! I'll have a cappuccino",
+                timestamp = System.currentTimeMillis() - 7200000,
+                type = MessageType.TEXT))
+
+    ChatScreenContent(
+        chatTitle = "Coffee Meetup",
+        messages = previewMessages,
+        currentUserId = "user1",
+        currentUserName = "John Doe",
+        onSendMessage = {},
+        onBackClick = {},
+        topBarColor = MaterialTheme.customColors.socialContainer)
+  }
+}
+
+// Dark Mode Previews
+@androidx.compose.ui.tooling.preview.Preview(
+    showBackground = true,
+    name = "Sports Chat - Dark",
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun ChatScreenPreviewSportsDark() {
+  com.android.joinme.ui.theme.JoinMeTheme {
+    val previewMessages =
+        listOf(
+            Message(
+                id = "1",
+                conversationId = "preview-chat-sports",
+                senderId = "user2",
+                senderName = "Alice",
+                content = "Hey! Ready for the game?",
+                timestamp = System.currentTimeMillis() - 3600000,
+                type = MessageType.TEXT),
+            Message(
+                id = "2",
+                conversationId = "preview-chat-sports",
+                senderId = "user1",
+                senderName = "John Doe",
+                content = "Yes! Can't wait!",
+                timestamp = System.currentTimeMillis() - 1800000,
+                type = MessageType.TEXT))
+
+    ChatScreenContent(
+        chatTitle = "Basketball Game",
+        messages = previewMessages,
+        currentUserId = "user1",
+        currentUserName = "John Doe",
+        onSendMessage = {},
+        onBackClick = {},
+        topBarColor = MaterialTheme.customColors.sportsContainer)
+  }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(
+    showBackground = true,
+    name = "Activity Chat - Dark",
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun ChatScreenPreviewActivityDark() {
+  com.android.joinme.ui.theme.JoinMeTheme {
+    val previewMessages =
+        listOf(
+            Message(
+                id = "1",
+                conversationId = "preview-chat-activity",
+                senderId = "system",
+                senderName = "System",
+                content = "Bob joined the chat",
+                timestamp = System.currentTimeMillis() - 3600000,
+                type = MessageType.SYSTEM),
+            Message(
+                id = "2",
+                conversationId = "preview-chat-activity",
+                senderId = "user2",
+                senderName = "Bob",
+                content = "What time should we meet?",
+                timestamp = System.currentTimeMillis() - 7200000,
+                type = MessageType.TEXT),
+            Message(
+                id = "3",
+                conversationId = "preview-chat-activity",
+                senderId = "user1",
+                senderName = "John Doe",
+                content = "How about 8 AM at the trailhead?",
+                timestamp = System.currentTimeMillis() - 10800000,
+                type = MessageType.TEXT))
+
+    ChatScreenContent(
+        chatTitle = "Hiking Trip",
+        messages = previewMessages,
+        currentUserId = "user1",
+        currentUserName = "John Doe",
+        onSendMessage = {},
+        onBackClick = {},
+        topBarColor = MaterialTheme.customColors.activityContainer)
+  }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(
+    showBackground = true,
+    name = "Social Chat - Dark",
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun ChatScreenPreviewSocialDark() {
+  com.android.joinme.ui.theme.JoinMeTheme {
+    val previewMessages =
+        listOf(
+            Message(
+                id = "1",
+                conversationId = "preview-chat-social",
+                senderId = "user2",
+                senderName = "Emma",
+                content = "Looking forward to meeting everyone!",
+                timestamp = System.currentTimeMillis() - 14400000,
+                type = MessageType.TEXT),
+            Message(
+                id = "2",
+                conversationId = "preview-chat-social",
+                senderId = "user3",
+                senderName = "Sarah",
+                content = "Me too! Should we order something in advance?",
+                timestamp = System.currentTimeMillis() - 10800000,
+                type = MessageType.TEXT),
+            Message(
+                id = "3",
+                conversationId = "preview-chat-social",
+                senderId = "user1",
+                senderName = "John Doe",
+                content = "Good idea! I'll have a cappuccino",
+                timestamp = System.currentTimeMillis() - 7200000,
+                type = MessageType.TEXT))
+
+    ChatScreenContent(
+        chatTitle = "Coffee Meetup",
+        messages = previewMessages,
+        currentUserId = "user1",
+        currentUserName = "John Doe",
+        onSendMessage = {},
+        onBackClick = {},
+        topBarColor = MaterialTheme.customColors.socialContainer)
+  }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(
+    showBackground = true,
+    name = "Empty Chat - Light",
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_NO)
+@Composable
+private fun ChatScreenPreviewEmptyLight() {
+  com.android.joinme.ui.theme.JoinMeTheme {
+    ChatScreenContent(
+        chatTitle = "New Group Chat",
+        messages = emptyList(),
+        currentUserId = "user1",
+        currentUserName = "John Doe",
+        onSendMessage = {},
+        onBackClick = {},
+        topBarColor = MaterialTheme.customColors.sportsContainer)
+  }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(
+    showBackground = true,
+    name = "Empty Chat - Dark",
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun ChatScreenPreviewEmptyDark() {
+  com.android.joinme.ui.theme.JoinMeTheme {
+    ChatScreenContent(
+        chatTitle = "New Group Chat",
+        messages = emptyList(),
+        currentUserId = "user1",
+        currentUserName = "John Doe",
+        onSendMessage = {},
+        onBackClick = {},
+        topBarColor = MaterialTheme.customColors.sportsContainer)
+  }
 }

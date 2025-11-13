@@ -75,7 +75,6 @@ class ChatScreenTest {
     }
 
     composeTestRule.onNodeWithTag(ChatScreenTestTags.TOP_BAR).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.BACK_BUTTON).assertIsDisplayed()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.LEAVE_BUTTON).assertIsDisplayed()
   }
 
@@ -308,29 +307,6 @@ class ChatScreenTest {
   }
 
   // ============================================================================
-  // Navigation Tests
-  // ============================================================================
-
-  @Test
-  fun backButton_triggersCallback() {
-    var backClicked = false
-
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Test Chat",
-          currentUserId = "user1",
-          currentUserName = "Alice",
-          viewModel = viewModel,
-          onBackClick = { backClicked = true })
-    }
-
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.BACK_BUTTON).performClick()
-
-    assert(backClicked)
-  }
-
-  // ============================================================================
   // Color Theme Tests
   // ============================================================================
 
@@ -369,7 +345,6 @@ class ChatScreenTest {
     // Verify all major test tags exist
     composeTestRule.onNodeWithTag(ChatScreenTestTags.SCREEN).assertExists()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.TOP_BAR).assertExists()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.BACK_BUTTON).assertExists()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.LEAVE_BUTTON).assertExists()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.TITLE).assertExists()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_LIST).assertExists()
