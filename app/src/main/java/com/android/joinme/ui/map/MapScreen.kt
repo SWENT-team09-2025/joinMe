@@ -30,7 +30,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
 import com.android.joinme.model.event.getColor
-import com.android.joinme.ui.map.MapScreenTestTags.getTestTagForEventMarker
+import com.android.joinme.ui.map.MapScreenTestTags.getTestTagForMarker
 import com.android.joinme.ui.map.userLocation.LocationServiceImpl
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.NavigationActions
@@ -57,7 +57,7 @@ object MapScreenTestTags {
   const val FILTER_BUTTON = "filterButton"
   const val MAP_CONTAINER = "mapContainer"
 
-  fun getTestTagForEventMarker(eventId: String): String = "eventMarker$eventId"
+  fun getTestTagForMarker(id: String): String = "marker$id"
 }
 
 const val SNIPPET_MESSAGE = "Tap to see more & join me"
@@ -218,7 +218,7 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
                         Marker(
                             state = MarkerState(position = position),
                             icon = markerIcon,
-                            tag = getTestTagForEventMarker(event.eventId),
+                            tag = getTestTagForMarker(event.eventId),
                             title = event.title,
                             snippet = SNIPPET_MESSAGE,
                             onInfoWindowClick = {
@@ -232,7 +232,7 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
                       Marker(
                           state = MarkerState(position = position),
                           icon = markerIcon,
-                          tag = getTestTagForEventMarker(serie.serieId),
+                          tag = getTestTagForMarker(serie.serieId),
                           title = serie.title,
                           snippet = SNIPPET_MESSAGE,
                           onInfoWindowClick = {
