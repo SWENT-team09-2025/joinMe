@@ -108,6 +108,13 @@ val onSerieContainerDark = Color(0xFFFFFFFF)
 
 val seriePinMark = Color(0xFF000000)
 
+// Chat default colors - using primary color scheme for neutral, universal look
+val chatDefaultLight = primaryContainerLight
+val onChatDefaultLight = onPrimaryContainerLight
+
+val chatDefaultDark = primaryContainerDark
+val onChatDefaultDark = onPrimaryContainerDark
+
 val TransparentColor = Color.Transparent
 
 // Surface and container colors
@@ -117,7 +124,3 @@ val OnSurfaceColor = Color.Black
 // Avatar colors
 val AvatarBackgroundColor = Color.White
 val AvatarBorderColor = Color(0xFF7242E4) // Purple accent
-
-// Error and warning colors
-val ErrorColor = Color(0xFFD33E3B)
-val WarningColor = Color(0xFFFFA726)

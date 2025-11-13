@@ -14,8 +14,6 @@ import androidx.compose.ui.test.performTextInput
 import com.android.joinme.model.chat.ChatRepository
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
-import com.android.joinme.ui.theme.socialContainerLight
-import com.android.joinme.ui.theme.sportsContainerLight
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before
@@ -55,8 +53,7 @@ class ChatScreenTest {
           chatTitle = "Basketball Game",
           currentUserId = "user1",
           currentUserName = "Alice",
-          viewModel = viewModel,
-          topBarColor = sportsContainerLight)
+          viewModel = viewModel)
     }
 
     composeTestRule.onNodeWithTag(ChatScreenTestTags.TITLE).assertIsDisplayed()
@@ -311,18 +308,17 @@ class ChatScreenTest {
   // ============================================================================
 
   @Test
-  fun chatScreen_acceptsDifferentTopBarColors() {
+  fun chatScreen_displaysWithDefaultTheme() {
     composeTestRule.setContent {
       ChatScreen(
           chatId = "chat1",
           chatTitle = "Social Event",
           currentUserId = "user1",
           currentUserName = "Alice",
-          viewModel = viewModel,
-          topBarColor = socialContainerLight)
+          viewModel = viewModel)
     }
 
-    // Verify screen displays without errors
+    // Verify screen displays without errors using default theme colors
     composeTestRule.onNodeWithTag(ChatScreenTestTags.TOP_BAR).assertIsDisplayed()
     composeTestRule.onNodeWithText("Social Event").assertIsDisplayed()
   }
