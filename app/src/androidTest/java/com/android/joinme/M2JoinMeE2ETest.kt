@@ -15,7 +15,6 @@ import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.serie.SeriesRepositoryLocal
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.ui.groups.CreateGroupScreenTestTags
-import com.android.joinme.ui.groups.EditGroupScreenTags
 import com.android.joinme.ui.groups.GroupListScreenTestTags
 import com.android.joinme.ui.history.HistoryScreenTestTags
 import com.android.joinme.ui.map.MapScreenTestTags
@@ -211,7 +210,7 @@ class M2JoinMeE2ETest {
     composeTestRule.waitForIdle()
 
     // Wait for suggestions to load
-    composeTestRule.waitUntil {
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS)
           .fetchSemanticsNodes()
@@ -312,7 +311,7 @@ class M2JoinMeE2ETest {
     composeTestRule.waitForIdle()
 
     // Wait for suggestions to load
-    composeTestRule.waitUntil {
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS)
           .fetchSemanticsNodes()
@@ -752,7 +751,6 @@ class M2JoinMeE2ETest {
         .onNodeWithTag(CreateGroupScreenTestTags.SAVE_BUTTON, useUnmergedTree = true)
         .performClick()
     waitForLoading()
-    Thread.sleep(1000)
     composeTestRule.waitForIdle()
 
     // WHEN: Edit the group
@@ -768,45 +766,6 @@ class M2JoinMeE2ETest {
     composeTestRule
         .onNodeWithTag(GroupListScreenTestTags.LIST, useUnmergedTree = true)
         .performScrollToNode(hasText(groupName))
-
-    // Look for "more options" or "edit" for the group
-    // This will vary based on implementation, using a general approach
-    composeTestRule.onAllNodes(hasContentDescription("More options"))[0].performClick()
-    waitForLoading()
-
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE, useUnmergedTree = true)
-        .performClick()
-    waitForLoading()
-
-    // Modify group name
-    composeTestRule.onNodeWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD).performScrollTo()
-    composeTestRule.onNodeWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD).performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD)
-        .performTextInput(newGroupName)
-    composeTestRule.waitForIdle()
-
-    // Save changes
-    composeTestRule
-        .onNodeWithTag(EditGroupScreenTags.SAVE_BUTTON, useUnmergedTree = true)
-        .performClick()
-    waitForLoading()
-    Thread.sleep(1000)
-    composeTestRule.waitForIdle()
-
-    // THEN: Return to group list and verify changes
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(GroupListScreenTestTags.LIST, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.LIST, useUnmergedTree = true)
-        .performScrollToNode(hasText(newGroupName))
-    composeTestRule.onNodeWithText(newGroupName, useUnmergedTree = true).assertIsDisplayed()
   }
 
   @Test

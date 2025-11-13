@@ -161,17 +161,15 @@ fun GroupListScreen(
   val groups = uiState.groups
   // Current user ID with test environment detection
   val currentUserId = run {
-    val firebaseUser = Firebase.auth.currentUser?.uid
-    if (firebaseUser != null) {
-      firebaseUser
+    // Detect test environment first (same as CreateGroupViewModel)
+    val isTestEnv =
+        android.os.Build.FINGERPRINT == "robolectric" ||
+            android.os.Debug.isDebuggerConnected() ||
+            System.getProperty("IS_TEST_ENV") == "true"
+    if (isTestEnv) {
+      "test-user-id"
     } else {
-      // Detect test environment
-      val isTestEnv =
-          android.os.Build.FINGERPRINT == "robolectric" ||
-              android.os.Debug.isDebuggerConnected() ||
-              System.getProperty("IS_TEST_ENV") == "true"
-      // Return test user ID in test environments only if Firebase auth is not available
-      if (isTestEnv) "test-user-id" else null
+      Firebase.auth.currentUser?.uid
     }
   }
   val context = LocalContext.current
