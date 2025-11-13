@@ -441,7 +441,7 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
 
     // Verify we're on Profile screen (should show profile content)
-    composeTestRule.onNodeWithText("Profile").assertExists()
+    composeTestRule.onNodeWithContentDescription("Profile").assertExists()
   }
 
   @Test
@@ -578,7 +578,7 @@ class MainActivityNavigationTest {
     // Navigate to Profile
     composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Profile").assertExists()
+    composeTestRule.onNodeWithContentDescription("Profile").assertExists()
 
     // Navigate back to Overview
     composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Overview")).performClick()
