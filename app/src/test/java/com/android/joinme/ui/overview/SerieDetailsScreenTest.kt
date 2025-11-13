@@ -879,4 +879,27 @@ class SerieDetailsScreenTest {
     // Should show join button for unknown user (non-owner, non-participant)
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE).assertIsDisplayed()
   }
+
+  /** --- OWNER DISPLAY NAME TESTS --- */
+  @Test
+  fun ownerDisplayName_isDisplayed() {
+    setup()
+    val serie = createTestSerie(ownerId = "owner123")
+    fakeSeriesRepo.setSerie(serie)
+
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      SerieDetailsScreen(serieId = serie.serieId, serieDetailsViewModel = viewModel)
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.OWNER_INFO)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.OWNER_INFO).assertIsDisplayed()
+  }
 }
