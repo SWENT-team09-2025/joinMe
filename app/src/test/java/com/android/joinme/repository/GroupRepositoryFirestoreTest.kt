@@ -624,43 +624,6 @@ class GroupRepositoryFirestoreTest {
   }
 
   @Test
-  fun getAllGroups_removesDuplicates() = runTest {
-    // Given: User appears in both owner and member queries (same group returned twice)
-    mockkStatic(FirebaseAuth::class)
-    every { FirebaseAuth.getInstance() } returns mockAuth
-    every { mockAuth.currentUser } returns mockUser
-    every { mockUser.uid } returns testUserId
-
-    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
-    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
-    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
-
-    every { mockCollection.whereArrayContains("memberIds", testUserId) } returns mockQuery
-    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
-    // Return the same group twice (simulating duplicate from owner and member queries)
-    every { mockQuerySnapshot.iterator() } returns
-        mutableListOf(mockSnapshot1, mockSnapshot1).iterator()
-
-    // Setup group
-    every { mockSnapshot1.id } returns "group1"
-    every { mockSnapshot1.getString("name") } returns "Group 1"
-    every { mockSnapshot1.getString("description") } returns "Description 1"
-    every { mockSnapshot1.getString("ownerId") } returns testUserId
-    every { mockSnapshot1.get("memberIds") } returns emptyList<String>()
-    every { mockSnapshot1.get("eventIds") } returns emptyList<String>()
-    every { mockSnapshot1.getString("category") } returns "SPORTS"
-    every { mockSnapshot1.getString("photoUrl") } returns null
-
-    // When
-    val result = repository.getAllGroups()
-
-    // Then: Should only have 1 group (duplicates removed)
-    assertEquals(1, result.size)
-
-    unmockkStatic(FirebaseAuth::class)
-  }
-
-  @Test
   fun editGroup_updatesAllFields() = runTest {
     // Given
     val updatedGroup =

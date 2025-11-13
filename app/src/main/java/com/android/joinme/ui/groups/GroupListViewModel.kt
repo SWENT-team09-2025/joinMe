@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+private const val ERROR_USER_NOT_AUTHENTICATED = "User not authenticated"
+
 /**
  * Represents the UI state for the Group List screen.
  *
@@ -41,10 +43,6 @@ class GroupListViewModel(
 
   private val _uiState = MutableStateFlow(GroupListUIState())
   val uiState: StateFlow<GroupListUIState> = _uiState.asStateFlow()
-
-  companion object {
-    private const val ERROR_USER_NOT_AUTHENTICATED = "User not authenticated"
-  }
 
   init {
     getAllGroups()

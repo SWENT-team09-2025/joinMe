@@ -417,7 +417,6 @@ fun GroupListScreen(
                         onClick = {
                           openMenuGroupId = null
                           groupToShare = group
-                          onShareGroup(group)
                         },
                         testTag = GroupListScreenTestTags.SHARE_GROUP_BUBBLE)
 
@@ -494,10 +493,7 @@ fun GroupListScreen(
 
     // Share Group Dialog
     groupToShare?.let { group ->
-      ShareGroupDialog(
-          group = group,
-          onDismiss = { groupToShare = null },
-          onShareComplete = { onShareGroup(group) })
+      ShareGroupDialog(group = group, onDismiss = { groupToShare = null })
     }
 
     // Join with Link Dialog
@@ -715,10 +711,9 @@ private fun CustomConfirmationDialog(
  *
  * @param group The group to share
  * @param onDismiss Callback when dialog is dismissed
- * @param onShareComplete Callback after link is copied (for additional share actions)
  */
 @Composable
-private fun ShareGroupDialog(group: Group, onDismiss: () -> Unit, onShareComplete: () -> Unit) {
+private fun ShareGroupDialog(group: Group, onDismiss: () -> Unit) {
   val context = LocalContext.current
   val clipboardManager = LocalClipboardManager.current
 
@@ -769,7 +764,7 @@ private fun ShareGroupDialog(group: Group, onDismiss: () -> Unit, onShareComplet
                       clipboardManager.setText(AnnotatedString(group.id))
                       Toast.makeText(context, "Group ID copied to clipboard!", Toast.LENGTH_SHORT)
                           .show()
-                      onShareComplete()
+                      onDismiss()
                     },
                     modifier =
                         Modifier.fillMaxWidth()
