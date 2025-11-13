@@ -1,10 +1,10 @@
-name: M1 - Build Release APK
+name: M2 - Build Release APK
 
 # Run the workflow when commits are pushed to M1 branch
 on:
   push:
     branches:
-      - M1
+      - M2
 
 jobs:
   build-release-apk:
