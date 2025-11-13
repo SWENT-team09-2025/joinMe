@@ -1,5 +1,6 @@
 package com.android.joinme.ui.overview
 
+import android.content.Context
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.core.app.ApplicationProvider
@@ -29,7 +30,7 @@ class EventForSerieFormScreenTest {
   @Before
   fun setUp() {
     // Initialize Firebase for Robolectric tests
-    val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+    val context = ApplicationProvider.getApplicationContext<Context>()
     if (FirebaseApp.getApps(context).isEmpty()) {
       FirebaseApp.initializeApp(context)
     }
@@ -44,7 +45,9 @@ class EventForSerieFormScreenTest {
           inputEventLocationSuggestions = "inputEventLocationSuggestions",
           inputEventDuration = "inputEventDuration",
           buttonSaveEvent = "buttonSaveEvent",
-          errorMessage = "errorMessage")
+          errorMessage = "errorMessage",
+          forEachInputEventLocationSuggestion = "forEachInputEventLocationSuggestion"
+      )
 
   /** Helper function to create a test form state. */
   private fun createTestFormState(

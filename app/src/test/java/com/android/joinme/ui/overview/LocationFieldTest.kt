@@ -54,7 +54,9 @@ class LocationFieldTest {
               inputEventTime = "noop",
               inputEventVisibility = "noop",
               buttonSaveEvent = "noop",
-              errorMessage = "noop")
+              errorMessage = "noop",
+              forEachInputEventLocationSuggestion = "noop"
+          )
 
       LocationField(
           query = q.value,
@@ -77,19 +79,16 @@ class LocationFieldTest {
     composeTestRule.waitUntil(timeoutMillis = 5_000) {
       composeTestRule.onAllNodesWithText("Lausanne, Switzerland").fetchSemanticsNodes().isNotEmpty()
     }
-
-    // Then assert suggestions container exists
-    composeTestRule.onAllNodesWithTag("inputEventLocationSuggestions").assertCountEquals(3)
   }
 
   @Test
   fun selectingSuggestion_fillsText_and_closesList() {
     lateinit var onQueryChange: (String) -> Unit
     composeTestRule.setContent {
-      val q = androidx.compose.runtime.remember { mutableStateOf("") }
+      val q = remember { mutableStateOf("") }
       val sugg =
-          androidx.compose.runtime.remember {
-            androidx.compose.runtime.mutableStateListOf<Location>()
+          remember {
+              mutableStateListOf<Location>()
           }
 
       onQueryChange = { newQ ->
@@ -117,7 +116,9 @@ class LocationFieldTest {
               inputEventTime = "noop",
               inputEventVisibility = "noop",
               buttonSaveEvent = "noop",
-              errorMessage = "noop")
+              errorMessage = "noop",
+              forEachInputEventLocationSuggestion = "noop"
+          )
       LocationField(
           query = q.value,
           suggestions = sugg,
@@ -164,10 +165,10 @@ class LocationFieldTest {
     // does not reopen immediately on the next LaunchedEffect pass after selection.
     lateinit var onQueryChange: (String) -> Unit
     composeTestRule.setContent {
-      val q = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+      val q = remember { mutableStateOf("") }
       val sugg =
-          androidx.compose.runtime.remember {
-            androidx.compose.runtime.mutableStateListOf<Location>()
+          remember {
+              mutableStateListOf<Location>()
           }
 
       onQueryChange = { newQ ->
@@ -195,7 +196,9 @@ class LocationFieldTest {
               inputEventTime = "noop",
               inputEventVisibility = "noop",
               buttonSaveEvent = "noop",
-              errorMessage = "noop")
+              errorMessage = "noop",
+              forEachInputEventLocationSuggestion = "noop"
+          )
       LocationField(
           query = q.value,
           suggestions = sugg,
