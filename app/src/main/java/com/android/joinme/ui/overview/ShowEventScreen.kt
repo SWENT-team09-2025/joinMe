@@ -329,18 +329,18 @@ fun ShowEventScreen(
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Medium)
                           }
+                    } else {
+                      Text(
+                          modifier =
+                              Modifier.fillMaxWidth()
+                                  .padding(bottom = Dimens.Padding.extraLarge)
+                                  .testTag(ShowEventScreenTestTags.FULL_EVENT_MESSAGE),
+                          text = "Sorry this event is full",
+                          style = MaterialTheme.typography.headlineSmall,
+                          textAlign = TextAlign.Center,
+                          color = MaterialTheme.colorScheme.error,
+                          fontWeight = FontWeight.Bold)
                     }
-                  } else {
-                    Text(
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .padding(bottom = Dimens.Padding.extraLarge)
-                                .testTag(ShowEventScreenTestTags.FULL_EVENT_MESSAGE),
-                        text = "Sorry this event is full",
-                        style = MaterialTheme.typography.headlineSmall,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold)
                   }
                 }
               }
