@@ -123,6 +123,43 @@ class M2JoinMeE2ETest {
     composeTestRule.waitForIdle()
   }
 
+  /** Find and click the confirm button in native dialogs (date/time pickers) */
+  private fun clickNativeDialogConfirmButton(timeoutMs: Long = 5000) {
+    // Try multiple strategies to find the confirm button
+    val confirmButton = device.wait(Until.findObject(By.text("OK").clickable(true)), timeoutMs)
+
+    if (confirmButton != null) {
+      confirmButton.click()
+      return
+    }
+
+    // Try other common button texts
+    val alternativeTexts = listOf("Done", "Confirm", "Set", "OK")
+    for (text in alternativeTexts) {
+      val button = device.findObject(By.text(text).clickable(true))
+      if (button != null) {
+        button.click()
+        return
+      }
+    }
+
+    // Try using Android resource IDs (button1 is typically the positive button)
+    val button1 = device.findObject(By.res("android:id/button1"))
+    if (button1 != null) {
+      button1.click()
+      return
+    }
+
+    // Last resort: find any clickable button in the dialog
+    val anyButton = device.findObject(By.clickable(true).clazz("android.widget.Button"))
+    if (anyButton != null) {
+      anyButton.click()
+      return
+    }
+
+    throw AssertionError("Could not find confirm button in native dialog")
+  }
+
   /** Select tomorrow's date in the Android date picker dialog */
   private fun selectTomorrowInDatePicker() {
     // Calculate tomorrow's date
@@ -157,9 +194,7 @@ class M2JoinMeE2ETest {
     }
 
     // Click OK to confirm
-    device.wait(Until.hasObject(By.text("OK")), 1000)
-    val okButton = device.findObject(By.text("OK"))
-    okButton?.click()
+    clickNativeDialogConfirmButton()
     Thread.sleep(300)
   }
 
@@ -255,8 +290,7 @@ class M2JoinMeE2ETest {
         .onAllNodesWithText("Time", substring = true, ignoreCase = true)[0]
         .performClick()
     composeTestRule.waitForIdle()
-    val timeOkButton = device.wait(Until.findObject(By.text("OK")), 5000)
-    timeOkButton?.click() ?: throw AssertionError("Time picker OK button not found")
+    clickNativeDialogConfirmButton()
     Thread.sleep(300)
     composeTestRule.waitForIdle()
 
@@ -389,8 +423,7 @@ class M2JoinMeE2ETest {
     composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_TIME).performScrollTo()
     composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_TIME).performClick()
     composeTestRule.waitForIdle()
-    val serieTimeOkButton = device.wait(Until.findObject(By.text("OK")), 5000)
-    serieTimeOkButton?.click() ?: throw AssertionError("Serie time picker OK button not found")
+    clickNativeDialogConfirmButton()
     Thread.sleep(300)
     composeTestRule.waitForIdle()
 
