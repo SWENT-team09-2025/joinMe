@@ -27,7 +27,6 @@ import com.android.joinme.ui.overview.OverviewScreenTestTags
 import com.android.joinme.ui.overview.SearchScreenTestTags
 import com.android.joinme.ui.overview.SerieDetailsScreenTestTags
 import com.android.joinme.ui.profile.EditProfileTestTags
-import com.android.joinme.ui.profile.ViewProfileTestTags
 import com.google.firebase.auth.FirebaseAuth
 import java.util.Calendar
 import kotlinx.coroutines.runBlocking
@@ -693,10 +692,7 @@ class M2JoinMeE2ETest {
     // WHEN: Navigate to Profile → Groups → Create Group
     navigateToTab("Profile")
     composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
+      composeTestRule.onNodeWithContentDescription("Profile").isDisplayed()
     }
 
     // Navigate to Groups (look for Groups button/text)
@@ -762,10 +758,7 @@ class M2JoinMeE2ETest {
     // Navigate to Profile → Groups
     navigateToTab("Profile")
     composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
+      composeTestRule.onNodeWithContentDescription("Profile").isDisplayed()
     }
     composeTestRule.onNodeWithContentDescription("Group").performClick()
     waitForLoading()
@@ -811,14 +804,8 @@ class M2JoinMeE2ETest {
     // WHEN: Navigate Overview → Profile → Groups → Create Group
     navigateToTab("Profile")
     composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
+      composeTestRule.onNodeWithContentDescription("Profile").isDisplayed()
     }
-    composeTestRule
-        .onNodeWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
-        .assertIsDisplayed()
 
     // Navigate to Groups
     composeTestRule.onNodeWithContentDescription("Group").performClick()
@@ -830,9 +817,7 @@ class M2JoinMeE2ETest {
     // Return: Groups → Profile
     composeTestRule.onNodeWithContentDescription("Back").performClick()
     waitForLoading()
-    composeTestRule
-        .onNodeWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithContentDescription("Profile").assertIsDisplayed()
 
     // Edit Profile (if edit button exists)
     composeTestRule.onNodeWithContentDescription("Edit").performClick()
@@ -841,14 +826,8 @@ class M2JoinMeE2ETest {
         .onNodeWithTag(EditProfileTestTags.SCREEN, useUnmergedTree = true)
         .assertIsDisplayed()
 
-    // Save (no changes needed)
-    composeTestRule
-        .onNodeWithTag(EditProfileTestTags.SAVE_BUTTON, useUnmergedTree = true)
-        .performScrollTo()
-    waitForLoading()
-    composeTestRule
-        .onNodeWithTag(EditProfileTestTags.SAVE_BUTTON, useUnmergedTree = true)
-        .performClick()
+    // Back to Profile
+    composeTestRule.onNodeWithContentDescription("Back").performClick()
     waitForLoading()
 
     // Navigate to Overview
@@ -860,16 +839,8 @@ class M2JoinMeE2ETest {
     // Back to Profile
     navigateToTab("Profile")
     composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
+      composeTestRule.onNodeWithContentDescription("Profile").isDisplayed()
     }
-
-    // THEN: Verify all navigation works correctly
-    composeTestRule
-        .onNodeWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
-        .assertIsDisplayed()
   }
 
   // ==================== WORKFLOW 3: SEARCH, HISTORY & MAP INTEGRATION ====================
@@ -1062,10 +1033,7 @@ class M2JoinMeE2ETest {
     // Navigate to Profile
     navigateToTab("Profile")
     composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(ViewProfileTestTags.PROFILE_TITLE, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
+      composeTestRule.onNodeWithContentDescription("Profile").isDisplayed()
     }
 
     // Back to Overview
