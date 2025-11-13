@@ -193,8 +193,8 @@ class JoinMeE2ETest {
     composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_DATE).performClick()
     composeTestRule.waitForIdle()
     // Wait for native date picker dialog and click OK using UiAutomator
-    device.wait(Until.hasObject(By.text("OK")), 5000)
-    device.findObject(By.text("OK")).click()
+    val dateOkButton = device.wait(Until.findObject(By.text("OK")), 5000)
+    dateOkButton?.click() ?: throw AssertionError("Date picker OK button not found")
     Thread.sleep(300)
     composeTestRule.waitForIdle()
 
@@ -209,8 +209,8 @@ class JoinMeE2ETest {
         .performClick()
     composeTestRule.waitForIdle()
     // Wait for native time picker dialog and click OK using UiAutomator
-    device.wait(Until.hasObject(By.text("OK")), 5000)
-    device.findObject(By.text("OK")).click()
+    val timeOkButton = device.wait(Until.findObject(By.text("OK")), 5000)
+    timeOkButton?.click() ?: throw AssertionError("Time picker OK button not found")
     Thread.sleep(300)
     composeTestRule.waitForIdle()
 

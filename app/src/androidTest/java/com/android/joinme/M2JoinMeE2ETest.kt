@@ -255,8 +255,8 @@ class M2JoinMeE2ETest {
         .onAllNodesWithText("Time", substring = true, ignoreCase = true)[0]
         .performClick()
     composeTestRule.waitForIdle()
-    device.wait(Until.hasObject(By.text("OK")), 2000)
-    device.findObject(By.text("OK")).click()
+    val timeOkButton = device.wait(Until.findObject(By.text("OK")), 5000)
+    timeOkButton?.click() ?: throw AssertionError("Time picker OK button not found")
     Thread.sleep(300)
     composeTestRule.waitForIdle()
 
@@ -389,8 +389,8 @@ class M2JoinMeE2ETest {
     composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_TIME).performScrollTo()
     composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_TIME).performClick()
     composeTestRule.waitForIdle()
-    device.wait(Until.hasObject(By.text("OK")), 2000)
-    device.findObject(By.text("OK")).click()
+    val serieTimeOkButton = device.wait(Until.findObject(By.text("OK")), 5000)
+    serieTimeOkButton?.click() ?: throw AssertionError("Serie time picker OK button not found")
     Thread.sleep(300)
     composeTestRule.waitForIdle()
 
