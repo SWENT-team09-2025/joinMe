@@ -7,7 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -36,6 +36,7 @@ data class EventFormTestTags(
     val inputEventDescription: String,
     val inputEventLocation: String,
     val inputEventLocationSuggestions: String,
+    val forEachInputEventLocationSuggestion: String,
     val inputEventMaxParticipants: String,
     val inputEventDuration: String,
     val inputEventDate: String,
@@ -592,7 +593,7 @@ fun LocationField(
                         color = MaterialTheme.colorScheme.outlineVariant,
                         shape = RoundedCornerShape(Dimens.CornerRadius.large))) {
               LazyColumn(modifier = Modifier.testTag(testTags.inputEventLocationSuggestions)) {
-                items(suggestions) { loc ->
+                itemsIndexed(suggestions) { index, loc ->
                   ListItem(
                       headlineContent = { Text(loc.name) },
                       modifier =
@@ -603,7 +604,7 @@ fun LocationField(
                                 onSuggestionSelected(loc)
                               }
                               .padding(horizontal = Dimens.Padding.extraSmall)
-                              .testTag(testTags.inputEventLocationSuggestions))
+                              .testTag(testTags.forEachInputEventLocationSuggestion))
                   HorizontalDivider(Modifier, thickness = Dimens.BorderWidth.thin)
                 }
               }

@@ -1,4 +1,4 @@
-package com.android.joinme.e2e
+package com.android.joinme
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -8,7 +8,7 @@ import androidx.test.rule.GrantPermissionRule
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
-import com.android.joinme.JoinMe
+import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventsRepositoryLocal
 import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.ui.history.HistoryScreenTestTags
@@ -82,13 +82,16 @@ class JoinMeE2ETest {
     if (repo is EventsRepositoryLocal) {
       runBlocking {
         // Clear existing events
-        val events = repo.getAllEvents().toList()
+        val events =
+            repo.getAllEvents(eventFilter = EventFilter.EVENTS_FOR_OVERVIEW_SCREEN).toList()
         events.forEach { repo.deleteEvent(it.eventId) }
       }
     }
 
     // Start app at Overview screen since we've already authenticated
-    composeTestRule.setContent { JoinMe(startDestination = Screen.Overview.route) }
+    composeTestRule.setContent {
+      JoinMe(startDestination = Screen.Overview.route, enableNotificationPermissionRequest = false)
+    }
 
     // Wait for initial load
     composeTestRule.waitForIdle()
@@ -117,7 +120,7 @@ class JoinMeE2ETest {
   private fun fillEventForm(
       title: String = "E2E Test Event",
       description: String = "This is an end-to-end test event",
-      location: String = "EPFL Campus",
+      location: String = "Lausanne, Switzerland",
       type: String = "SPORTS",
       visibility: String = "PUBLIC"
   ) {
@@ -150,6 +153,18 @@ class JoinMeE2ETest {
         .onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION)
         .performTextInput(location)
     composeTestRule.waitForIdle()
+
+    // Wait for suggestions to load
+    composeTestRule.waitUntil {
+      composeTestRule
+          .onAllNodesWithTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+    // Select first suggestion
+    composeTestRule
+        .onAllNodesWithTag(CreateEventScreenTestTags.FOR_EACH_INPUT_EVENT_LOCATION_SUGGESTION)[0]
+        .performClick()
 
     // Fill max participants (opens Compose dialog)
     composeTestRule
@@ -238,10 +253,16 @@ class JoinMeE2ETest {
         .performClick()
     waitForLoading()
 
-    // 2. Fill out the form
+    // 2. Click add event bubble
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.ADD_EVENT_BUBBLE, useUnmergedTree = true)
+        .performClick()
+    waitForLoading()
+
+    // 3. Fill out the form
     fillEventForm(title = eventTitle)
 
-    // 3. Save the event
+    // 4. Save the event
     waitForLoading()
     composeTestRule
         .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
@@ -306,10 +327,15 @@ class JoinMeE2ETest {
     // GIVEN: User is on Overview
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
 
-    // WHEN: User navigates forward and uses back button
+    // WHEN: User presses create event and create serie option bubbles
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).performClick()
     waitForLoading()
 
+    // THEN: Click on Add Event Bubble
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.ADD_EVENT_BUBBLE).performClick()
+    waitForLoading()
+
+    // WHEN: User presses back
     composeTestRule.onNodeWithContentDescription("Back").performClick()
     waitForLoading()
 
@@ -379,6 +405,10 @@ class JoinMeE2ETest {
           .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
           .performClick()
       waitForLoading()
+      composeTestRule
+          .onNodeWithTag(OverviewScreenTestTags.ADD_EVENT_BUBBLE, useUnmergedTree = true)
+          .performClick()
+      waitForLoading()
       fillEventForm(title = title)
       waitForLoading()
       composeTestRule
@@ -415,6 +445,10 @@ class JoinMeE2ETest {
     // Create event
     composeTestRule
         .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+        .performClick()
+    waitForLoading()
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.ADD_EVENT_BUBBLE, useUnmergedTree = true)
         .performClick()
     waitForLoading()
     fillEventForm(title = eventTitle)

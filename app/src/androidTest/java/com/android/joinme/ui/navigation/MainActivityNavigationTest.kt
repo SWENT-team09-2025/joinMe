@@ -31,7 +31,7 @@ class MainActivityNavigationTest {
 
   @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
-  private fun createTestEvent(id: String, title: String, ownerId: String = "test-owner"): Event {
+  private fun createTestEvent(id: String, title: String, ownerId: String = "test-user-id"): Event {
     // Create event with future date to ensure it appears in upcoming items
     val futureDate = Date(System.currentTimeMillis() + 3600000) // 1 hour from now
     return Event(
@@ -51,7 +51,7 @@ class MainActivityNavigationTest {
   private fun createTestSerie(
       id: String,
       title: String,
-      ownerId: String = FirebaseAuth.getInstance().currentUser?.uid ?: "test-owner"
+      ownerId: String = FirebaseAuth.getInstance().currentUser?.uid ?: "test-user-id"
   ): Serie {
     // Create serie with future date to ensure it appears in upcoming items
     val futureDate = Date(System.currentTimeMillis() + 3600000) // 1 hour from now
@@ -80,19 +80,19 @@ class MainActivityNavigationTest {
         repo.clear()
 
         // Add test event
-        repo.addEvent(createTestEvent("test-1", "Test Event"))
+        repo.addEvent(createTestEvent("test-1", "Test Event", "unknown"))
 
         // Add test serie owned by "unknown" (default currentUserId in SerieDetailsScreen when no
         // auth)
-        repoSerie.addSerie(createTestSerie("test-1", "Test Serie", "unknown"))
+        repoSerie.addSerie(createTestSerie("test-1", "Test Serie", "test-user-id"))
 
         // Add test serie with an event
-        val serie = createTestSerie("test-serie-5", "Test Serie 5", "unknown")
+        val serie = createTestSerie("test-serie-5", "Test Serie 5", "test-user-id")
         repoSerie.addSerie(serie)
 
         val event =
-            createTestEvent("test-event-5", "Test Event 5", "unknown")
-                .copy(participants = listOf("unknown"))
+            createTestEvent("test-event-5", "Test Event 5", "test-user-id")
+                .copy(participants = listOf("test-user-id"))
         repo.addEvent(event)
 
         repoSerie.editSerie(serie.serieId, serie.copy(eventIds = listOf("test-event-5")))
