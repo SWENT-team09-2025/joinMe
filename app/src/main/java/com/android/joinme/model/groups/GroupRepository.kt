@@ -1,3 +1,4 @@
+// Implemented with help of Claude AI
 package com.android.joinme.model.groups
 
 /** Represents a repository that manages Group items. */
@@ -42,7 +43,26 @@ interface GroupRepository {
    * Deletes a Group item from the repository.
    *
    * @param groupId The unique identifier of the Group item to delete.
+   * @param userId The ID of the user attempting to delete the group (must be the owner).
+   * @throws Exception if the Group item is not found or user is not the owner.
+   */
+  suspend fun deleteGroup(groupId: String, userId: String)
+
+  /**
+   * Removes the current user from a Group's member list.
+   *
+   * @param groupId The unique identifier of the Group item to leave.
+   * @param userId The ID of the user who wants to leave the group.
    * @throws Exception if the Group item is not found.
    */
-  suspend fun deleteGroup(groupId: String)
+  suspend fun leaveGroup(groupId: String, userId: String)
+
+  /**
+   * Adds a user to a Group's member list.
+   *
+   * @param groupId The unique identifier of the Group to join.
+   * @param userId The ID of the user who wants to join the group.
+   * @throws Exception if the Group item is not found or user is already a member.
+   */
+  suspend fun joinGroup(groupId: String, userId: String)
 }

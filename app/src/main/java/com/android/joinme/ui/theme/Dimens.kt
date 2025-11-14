@@ -133,6 +133,9 @@ object Dimens {
     /** 8dp - Tight internal padding */
     val small: Dp = 8.dp
 
+    /** 12dp - Small-medium internal padding */
+    val smallMedium: Dp = 12.dp
+
     /** 16dp - Standard internal padding */
     val medium: Dp = 16.dp
 
@@ -282,6 +285,9 @@ object Dimens {
   object IconSize {
     /** 16dp - Small icons (inline with text) */
     val small: Dp = 16.dp
+
+    /** 20dp - Small-medium icons (menu bubbles) */
+    val smallMedium: Dp = 20.dp
 
     /** 24dp - Standard icons (buttons, navigation) - Most common */
     val medium: Dp = 24.dp

@@ -1,3 +1,4 @@
+// Implemented with help of Claude AI
 package com.android.joinme.model.groups
 
 import android.util.Log
@@ -37,6 +38,7 @@ class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupReposit
           else throw Exception("GroupRepositoryFirestore: User not logged in.")
         }
 
+    // Get all groups where user is a member (includes groups where they are owner)
     val snapshot =
         db.collection(GROUPS_COLLECTION_PATH).whereArrayContains("memberIds", userId).get().await()
 
@@ -57,8 +59,38 @@ class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupReposit
     db.collection(GROUPS_COLLECTION_PATH).document(groupId).set(newValue).await()
   }
 
-  override suspend fun deleteGroup(groupId: String) {
+  override suspend fun deleteGroup(groupId: String, userId: String) {
+    val group = getGroup(groupId)
+
+    if (group.ownerId != userId) {
+      throw Exception("GroupRepositoryFirestore: Only the group owner can delete this group")
+    }
+
     db.collection(GROUPS_COLLECTION_PATH).document(groupId).delete().await()
+  }
+
+  override suspend fun leaveGroup(groupId: String, userId: String) {
+    val group = getGroup(groupId)
+    val updatedMemberIds = group.memberIds.filter { it != userId }
+
+    if (updatedMemberIds.size == group.memberIds.size) {
+      throw Exception("GroupRepositoryFirestore: User is not a member of this group")
+    }
+
+    val updatedGroup = group.copy(memberIds = updatedMemberIds)
+    editGroup(groupId, updatedGroup)
+  }
+
+  override suspend fun joinGroup(groupId: String, userId: String) {
+    val group = getGroup(groupId)
+
+    if (group.memberIds.contains(userId)) {
+      throw Exception("GroupRepositoryFirestore: User is already a member of this group")
+    }
+
+    val updatedMemberIds = group.memberIds + userId
+    val updatedGroup = group.copy(memberIds = updatedMemberIds)
+    editGroup(groupId, updatedGroup)
   }
 
   /**

@@ -1,3 +1,4 @@
+// Implemented with help of Claude AI
 package com.android.joinme.model.groups
 
 import com.android.joinme.model.event.EventType
@@ -13,7 +14,6 @@ import com.android.joinme.model.event.EventType
  *   events, and manage members.
  * @property memberIds List of user IDs belonging to this group. Size determines membersCount.
  * @property eventIds List of event IDs that belong to this group.
- * @property membersCount The total number of members in the group (derived from memberIds size).
  * @property photoUrl Optional URL of the group's photo.
  */
 data class Group(
@@ -24,6 +24,15 @@ data class Group(
     val ownerId: String = "",
     val memberIds: List<String> = emptyList(),
     val eventIds: List<String> = emptyList(),
-    val membersCount: Int = memberIds.size,
     val photoUrl: String? = null
-)
+) {
+  /**
+   * The total number of members in the group.
+   *
+   * This is a computed property derived from the size of [memberIds].
+   *
+   * @return The number of members in the group.
+   */
+  val membersCount: Int
+    get() = memberIds.size
+}
