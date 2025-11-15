@@ -30,6 +30,8 @@ data class CustomColors(
     val serieContainer: Color,
     val onSerieContainer: Color,
     val seriePinMark: Color,
+    val chatDefault: Color,
+    val onChatDefault: Color,
     val containerColor: Color,
     val selectedIconColor: Color,
     val selectedTextColor: Color,
@@ -77,6 +79,10 @@ val lightCustomColors =
 
         // SERIE PIN MARKS COLORS
         seriePinMark = seriePinMark,
+
+        // CHAT DEFAULT COLORS
+        chatDefault = chatDefaultLight,
+        onChatDefault = onChatDefaultLight,
 
         // BOTTOM NAVIGATION BAR COLORS
         containerColor = primaryLight,
@@ -156,6 +162,10 @@ val darkCustomColors =
 
         // SERIE PIN MARKS COLORS
         seriePinMark = seriePinMark,
+
+        // CHAT DEFAULT COLORS
+        chatDefault = chatDefaultDark,
+        onChatDefault = onChatDefaultDark,
 
         // BOTTOM NAVIGATION BAR COLORS
         containerColor = surfaceContainerDark,
