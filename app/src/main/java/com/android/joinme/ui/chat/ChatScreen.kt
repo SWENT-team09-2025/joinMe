@@ -155,9 +155,9 @@ fun ChatScreen(
         ChatTopBar(
             chatTitle = chatTitle,
             onBackClick = onBackClick,
-            onLeaveClick = { /* TODO(#187): Implement leave functionality */},
-            topBarColor = effectiveChatColor,
-            onTopBarColor = effectiveOnChatColor)
+            onLeaveClick = onBackClick, // Leave chat navigates back
+            topBarColor = effectiveTopBarColor,
+            onTopBarColor = effectiveOnTopBarColor)
       },
       snackbarHost = { SnackbarHost(snackbarHostState) },
       containerColor = MaterialTheme.colorScheme.background) { paddingValues ->

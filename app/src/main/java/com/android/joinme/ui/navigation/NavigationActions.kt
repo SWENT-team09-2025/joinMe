@@ -165,6 +165,23 @@ sealed class Screen(
       const val route = "groupId/{groupId}"
     }
   }
+
+  // ============================================================================
+  // Chat
+  // ============================================================================
+
+  /**
+   * Screen for viewing and participating in a chat conversation
+   *
+   * @param chatId The ID of the chat/conversation to display
+   * @param chatTitle The title to display in the chat (e.g., group name or event name)
+   */
+  data class Chat(val chatId: String, val chatTitle: String) :
+      Screen(route = "chat/${chatId}/${chatTitle}", name = "Chat") {
+    companion object {
+      const val route = "chat/{chatId}/{chatTitle}"
+    }
+  }
 }
 
 /**
