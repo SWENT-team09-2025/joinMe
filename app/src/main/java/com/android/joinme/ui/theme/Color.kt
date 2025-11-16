@@ -116,11 +116,3 @@ val chatDefaultDark = primaryContainerDark
 val onChatDefaultDark = onPrimaryContainerDark
 
 val TransparentColor = Color.Transparent
-
-// Surface and container colors
-val SurfaceColor = Color.White
-val OnSurfaceColor = Color.Black
-
-// Avatar colors
-val AvatarBackgroundColor = Color.White
-val AvatarBorderColor = Color(0xFF7242E4) // Purple accent
