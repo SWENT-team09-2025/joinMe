@@ -42,50 +42,51 @@ class ChatScreenTest {
   }
 
   // ============================================================================
+  // Helper functions
+  // ============================================================================
+
+  private fun setupChatScreen(
+      chatId: String = "chat1",
+      chatTitle: String = "Test Chat",
+      currentUserId: String = "user1",
+      currentUserName: String = "Alice"
+  ) {
+    composeTestRule.setContent {
+      ChatScreen(chatId, chatTitle, currentUserId, currentUserName, viewModel)
+    }
+  }
+
+  private fun createMessage(
+      id: String,
+      senderId: String = "user1",
+      senderName: String = "Alice",
+      content: String,
+      timestampOffset: Long = 0
+  ) =
+      Message(
+          id = id,
+          conversationId = "chat1",
+          senderId = senderId,
+          senderName = senderName,
+          content = content,
+          timestamp = System.currentTimeMillis() - timestampOffset,
+          type = MessageType.TEXT)
+
+  // ============================================================================
   // Basic Display Tests
   // ============================================================================
 
   @Test
-  fun chatScreen_displaysCorrectTitle() {
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Basketball Game",
-          currentUserId = "user1",
-          currentUserName = "Alice",
-          viewModel = viewModel)
-    }
+  fun chatScreen_displaysAllUIElements() {
+    setupChatScreen(chatTitle = "Basketball Game")
 
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.TITLE).assertIsDisplayed()
-    composeTestRule.onNodeWithText("Basketball Game").assertIsDisplayed()
-  }
-
-  @Test
-  fun chatScreen_displaysTopBar() {
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Test Chat",
-          currentUserId = "user1",
-          currentUserName = "Alice",
-          viewModel = viewModel)
-    }
-
+    // Verify all major UI elements are displayed
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SCREEN).assertExists()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.TOP_BAR).assertIsDisplayed()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.LEAVE_BUTTON).assertIsDisplayed()
-  }
-
-  @Test
-  fun chatScreen_displaysMessageInput() {
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Test Chat",
-          currentUserId = "user1",
-          currentUserName = "Alice",
-          viewModel = viewModel)
-    }
-
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.TITLE).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Basketball Game").assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_LIST).assertExists()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_INPUT).assertIsDisplayed()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsDisplayed()
   }
@@ -96,41 +97,17 @@ class ChatScreenTest {
 
   @Test
   fun chatScreen_displaysEmptyState_whenNoMessages() {
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Test Chat",
-          currentUserId = "user1",
-          currentUserName = "Alice",
-          viewModel = viewModel)
-    }
+    setupChatScreen()
 
     composeTestRule.onNodeWithText("No messages yet. Start the conversation!").assertIsDisplayed()
   }
 
   @Test
   fun chatScreen_displaysMessages_whenMessagesExist() {
-    val messages =
-        listOf(
-            Message(
-                id = "msg1",
-                conversationId = "chat1",
-                senderId = "user1",
-                senderName = "Alice",
-                content = "Hello everyone!",
-                timestamp = System.currentTimeMillis(),
-                type = MessageType.TEXT))
-
+    val messages = listOf(createMessage(id = "msg1", content = "Hello everyone!"))
     fakeChatRepository.setMessages(messages)
 
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Test Chat",
-          currentUserId = "user1",
-          currentUserName = "Alice",
-          viewModel = viewModel)
-    }
+    setupChatScreen()
 
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Hello everyone!").assertIsDisplayed()
@@ -140,41 +117,17 @@ class ChatScreenTest {
   fun chatScreen_displaysMultipleMessages() {
     val messages =
         listOf(
-            Message(
-                id = "msg1",
-                conversationId = "chat1",
-                senderId = "user1",
-                senderName = "Alice",
-                content = "First message",
-                timestamp = System.currentTimeMillis() - 2000,
-                type = MessageType.TEXT),
-            Message(
+            createMessage(id = "msg1", content = "First message", timestampOffset = 2000),
+            createMessage(
                 id = "msg2",
-                conversationId = "chat1",
                 senderId = "user2",
                 senderName = "Bob",
                 content = "Second message",
-                timestamp = System.currentTimeMillis() - 1000,
-                type = MessageType.TEXT),
-            Message(
-                id = "msg3",
-                conversationId = "chat1",
-                senderId = "user1",
-                senderName = "Alice",
-                content = "Third message",
-                timestamp = System.currentTimeMillis(),
-                type = MessageType.TEXT))
-
+                timestampOffset = 1000),
+            createMessage(id = "msg3", content = "Third message"))
     fakeChatRepository.setMessages(messages)
 
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Test Chat",
-          currentUserId = "user1",
-          currentUserName = "Alice",
-          viewModel = viewModel)
-    }
+    setupChatScreen()
 
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("First message").assertIsDisplayed()
@@ -186,25 +139,10 @@ class ChatScreenTest {
   fun chatScreen_displaysSenderName_forOtherUsers() {
     val messages =
         listOf(
-            Message(
-                id = "msg1",
-                conversationId = "chat1",
-                senderId = "user2",
-                senderName = "Bob",
-                content = "Hello!",
-                timestamp = System.currentTimeMillis(),
-                type = MessageType.TEXT))
-
+            createMessage(id = "msg1", senderId = "user2", senderName = "Bob", content = "Hello!"))
     fakeChatRepository.setMessages(messages)
 
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Test Chat",
-          currentUserId = "user1",
-          currentUserName = "Alice",
-          viewModel = viewModel)
-    }
+    setupChatScreen()
 
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Bob").assertIsDisplayed()
@@ -216,45 +154,20 @@ class ChatScreenTest {
   // ============================================================================
 
   @Test
-  fun messageInput_sendButton_isDisabled_whenInputIsEmpty() {
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Test Chat",
-          currentUserId = "user1",
-          currentUserName = "Alice",
-          viewModel = viewModel)
-    }
+  fun messageInput_sendButtonEnabledState() {
+    setupChatScreen()
 
+    // Button is disabled when input is empty
     composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsNotEnabled()
-  }
 
-  @Test
-  fun messageInput_sendButton_isEnabled_whenInputHasText() {
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Test Chat",
-          currentUserId = "user1",
-          currentUserName = "Alice",
-          viewModel = viewModel)
-    }
-
+    // Button is enabled when input has text
     composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_INPUT).performTextInput("Hello!")
-
     composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsEnabled()
   }
 
   @Test
   fun messageInput_acceptsTextInput() {
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Test Chat",
-          currentUserId = "user1",
-          currentUserName = "Alice",
-          viewModel = viewModel)
-    }
+    setupChatScreen()
 
     val testMessage = "This is a test message"
     composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_INPUT).performTextInput(testMessage)
@@ -264,14 +177,7 @@ class ChatScreenTest {
 
   @Test
   fun messageInput_sendButton_sendsMessage() {
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Test Chat",
-          currentUserId = "user1",
-          currentUserName = "Alice",
-          viewModel = viewModel)
-    }
+    setupChatScreen()
 
     val testMessage = "Test message"
     composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_INPUT).performTextInput(testMessage)
@@ -285,14 +191,7 @@ class ChatScreenTest {
 
   @Test
   fun messageInput_doesNotSend_whenInputIsWhitespace() {
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Test Chat",
-          currentUserId = "user1",
-          currentUserName = "Alice",
-          viewModel = viewModel)
-    }
+    setupChatScreen()
 
     composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_INPUT).performTextInput("   ")
     composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).performClick()
@@ -304,73 +203,15 @@ class ChatScreenTest {
   }
 
   // ============================================================================
-  // Color Theme Tests
-  // ============================================================================
-
-  @Test
-  fun chatScreen_displaysWithDefaultTheme() {
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Social Event",
-          currentUserId = "user1",
-          currentUserName = "Alice",
-          viewModel = viewModel)
-    }
-
-    // Verify screen displays without errors using default theme colors
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.TOP_BAR).assertIsDisplayed()
-    composeTestRule.onNodeWithText("Social Event").assertIsDisplayed()
-  }
-
-  // ============================================================================
   // Test Tags Tests
   // ============================================================================
 
   @Test
-  fun chatScreen_hasCorrectTestTags() {
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Test Chat",
-          currentUserId = "user1",
-          currentUserName = "Alice",
-          viewModel = viewModel)
-    }
-
-    // Verify all major test tags exist
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.SCREEN).assertExists()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.TOP_BAR).assertExists()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.LEAVE_BUTTON).assertExists()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.TITLE).assertExists()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_LIST).assertExists()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_INPUT).assertExists()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertExists()
-  }
-
-  @Test
   fun messageItem_hasCorrectTestTag() {
-    val messages =
-        listOf(
-            Message(
-                id = "msg123",
-                conversationId = "chat1",
-                senderId = "user1",
-                senderName = "Alice",
-                content = "Test message",
-                timestamp = System.currentTimeMillis(),
-                type = MessageType.TEXT))
-
+    val messages = listOf(createMessage(id = "msg123", content = "Test message"))
     fakeChatRepository.setMessages(messages)
 
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Test Chat",
-          currentUserId = "user1",
-          currentUserName = "Alice",
-          viewModel = viewModel)
-    }
+    setupChatScreen()
 
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("msg123")).assertExists()
