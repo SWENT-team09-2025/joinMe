@@ -108,4 +108,11 @@ val onSerieContainerDark = Color(0xFFFFFFFF)
 
 val seriePinMark = Color(0xFF000000)
 
+// Chat default colors - using primary color scheme for neutral, universal look
+val chatDefaultLight = primaryContainerLight
+val onChatDefaultLight = onPrimaryContainerLight
+
+val chatDefaultDark = primaryContainerDark
+val onChatDefaultDark = onPrimaryContainerDark
+
 val TransparentColor = Color.Transparent

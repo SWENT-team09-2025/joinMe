@@ -674,4 +674,14 @@ object Dimens {
     /** 150.dp - height for description field */
     val descriptionField: Dp = 150.dp
   }
+
+  /**
+   * Chat screen dimensions.
+   *
+   * Dimensions specific to chat UI including message bubbles and avatars.
+   */
+  object Chat {
+    /** 280dp - Maximum width for message bubbles (70% of typical phone screen) */
+    val messageBubbleMaxWidth: Dp = 280.dp
+  }
 }
