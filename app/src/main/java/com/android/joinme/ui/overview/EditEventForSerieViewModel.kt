@@ -2,7 +2,6 @@ package com.android.joinme.ui.overview
 
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.HttpClientProvider
-import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
@@ -194,9 +193,7 @@ class EditEventForSerieViewModel(
       newDuration: Int
   ) {
     // Get all events in the serie, sorted by date
-    val allEvents = eventRepository.getAllEvents(EventFilter.EVENTS_FOR_OVERVIEW_SCREEN)
-    val serieEvents =
-        allEvents.filter { it.eventId in serie.eventIds }.sortedBy { it.date.toDate().time }
+    val serieEvents = eventRepository.getEventsByIds(serie.eventIds)
 
     // Find the index of the edited event
     val editedEventIndex = serieEvents.indexOfFirst { it.eventId == editedEventId }
