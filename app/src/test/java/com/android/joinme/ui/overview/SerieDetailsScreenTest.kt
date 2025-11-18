@@ -136,21 +136,29 @@ class SerieDetailsScreenTest {
       maxParticipants: Int = 10,
       eventIds: List<String> = listOf("event1", "event2"),
       visibility: Visibility = Visibility.PUBLIC,
-      description: String = "Weekly basketball games every Friday"
+      description: String = "Weekly basketball games every Friday",
+      lastEventEndTime: Timestamp? = null
   ): Serie {
+    // Use current time for start time so serie is not automatically expired
     val calendar = Calendar.getInstance()
-    calendar.set(2025, Calendar.JANUARY, 15, 18, 30, 0)
+    val startTime = Timestamp(calendar.time)
+
+    // Default: Set lastEventEndTime to 2 hours in the future so serie is not expired
+    val defaultEndTime = Calendar.getInstance().apply {
+      add(Calendar.HOUR, 2)
+    }
 
     return Serie(
         serieId = serieId,
         title = title,
         description = description,
-        date = Timestamp(calendar.time),
+        date = startTime,
         participants = participants,
         maxParticipants = maxParticipants,
         visibility = visibility,
         eventIds = eventIds,
-        ownerId = ownerId)
+        ownerId = ownerId,
+        lastEventEndTime = lastEventEndTime ?: Timestamp(defaultEndTime.time))
   }
 
   private fun createTestEvent(
@@ -878,6 +886,204 @@ class SerieDetailsScreenTest {
 
     // Should show join button for unknown user (non-owner, non-participant)
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE).assertIsDisplayed()
+  }
+
+  // ========== Expired Serie Tests ==========
+
+  @Test
+  fun expiredSerie_ownerDoesNotSeeActionButtons() {
+    setup()
+    // Create an expired serie with lastEventEndTime in the past
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -2) // 2 hours ago
+    val pastEndTime = Timestamp(calendar.time)
+
+    val expiredSerie =
+        createTestSerie(ownerId = "owner123", lastEventEndTime = pastEndTime)
+    fakeSeriesRepo.setSerie(expiredSerie)
+
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      SerieDetailsScreen(
+          serieId = expiredSerie.serieId,
+          serieDetailsViewModel = viewModel,
+          currentUserId = "owner123")
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.SERIE_TITLE)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Verify owner buttons are NOT shown for expired serie
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT).assertDoesNotExist()
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON).assertDoesNotExist()
+    composeTestRule
+        .onNodeWithTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON)
+        .assertDoesNotExist()
+
+    // Verify screen still shows serie info
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.SERIE_TITLE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.OWNER_INFO).assertIsDisplayed()
+  }
+
+  @Test
+  fun expiredSerie_participantDoesNotSeeJoinQuitButton() {
+    setup()
+    // Create an expired serie
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -3) // 3 hours ago
+    val pastEndTime = Timestamp(calendar.time)
+
+    val expiredSerie =
+        createTestSerie(
+            ownerId = "owner123",
+            participants = listOf("user1", "user2", "owner123"),
+            lastEventEndTime = pastEndTime)
+    fakeSeriesRepo.setSerie(expiredSerie)
+
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      SerieDetailsScreen(
+          serieId = expiredSerie.serieId,
+          serieDetailsViewModel = viewModel,
+          currentUserId = "user1")
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.SERIE_TITLE)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Verify quit button is NOT shown for expired serie
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE).assertDoesNotExist()
+
+    // Verify screen still shows serie info
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.SERIE_TITLE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.MEMBERS_COUNT).assertIsDisplayed()
+  }
+
+  @Test
+  fun expiredSerie_nonParticipantDoesNotSeeJoinButton() {
+    setup()
+    // Create an expired serie
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -1) // 1 hour ago
+    val pastEndTime = Timestamp(calendar.time)
+
+    val expiredSerie =
+        createTestSerie(
+            ownerId = "owner123",
+            participants = listOf("user1", "owner123"),
+            lastEventEndTime = pastEndTime)
+    fakeSeriesRepo.setSerie(expiredSerie)
+
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      SerieDetailsScreen(
+          serieId = expiredSerie.serieId,
+          serieDetailsViewModel = viewModel,
+          currentUserId = "user2")
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.SERIE_TITLE)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Verify join button is NOT shown for expired serie
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE).assertDoesNotExist()
+
+    // Verify full serie message is also not shown
+    composeTestRule
+        .onNodeWithTag(SerieDetailsScreenTestTags.MESSAGE_FULL_SERIE)
+        .assertDoesNotExist()
+
+    // Verify screen still shows serie info
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.SERIE_TITLE).assertIsDisplayed()
+  }
+
+  @Test
+  fun activeSerie_ownerSeesActionButtons() {
+    setup()
+    // Create an active serie with lastEventEndTime in the future
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 2) // 2 hours from now
+    val futureEndTime = Timestamp(calendar.time)
+
+    val activeSerie =
+        createTestSerie(ownerId = "owner123", lastEventEndTime = futureEndTime)
+    fakeSeriesRepo.setSerie(activeSerie)
+
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      SerieDetailsScreen(
+          serieId = activeSerie.serieId,
+          serieDetailsViewModel = viewModel,
+          currentUserId = "owner123")
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Verify owner buttons ARE shown for active serie
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON)
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun activeSerie_participantSeesQuitButton() {
+    setup()
+    // Create an active serie
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 1) // 1 hour from now
+    val futureEndTime = Timestamp(calendar.time)
+
+    val activeSerie =
+        createTestSerie(
+            ownerId = "owner123",
+            participants = listOf("user1", "user2", "owner123"),
+            lastEventEndTime = futureEndTime)
+    fakeSeriesRepo.setSerie(activeSerie)
+
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      SerieDetailsScreen(
+          serieId = activeSerie.serieId,
+          serieDetailsViewModel = viewModel,
+          currentUserId = "user1")
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Verify quit button IS shown for active serie
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE)
+        .assertTextContains("QUIT SERIE")
   }
 
   /** --- OWNER DISPLAY NAME TESTS --- */

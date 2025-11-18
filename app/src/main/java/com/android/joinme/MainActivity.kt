@@ -243,9 +243,7 @@ fun JoinMe(
       composable(Screen.History.route) {
         HistoryScreen(
             onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
-            onSelectSerie = {
-              Toast.makeText(context, "Not Implemented", Toast.LENGTH_SHORT).show()
-            },
+            onSelectSerie = { navigationActions.navigateTo(Screen.SerieDetails(it.serieId)) },
             onGoBack = { navigationActions.goBack() })
       }
       composable(Screen.ShowEventScreen.route) { navBackStackEntry ->

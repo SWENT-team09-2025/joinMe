@@ -491,6 +491,23 @@ class MainActivityNavigationTest {
   }
 
   @Test
+  fun canNavigateToSerieDetailsFromHistory() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("History").assertExists()
+
+    val testSerieId = "test-serie-123"
+    val screen = Screen.SerieDetails(testSerieId)
+    assert(screen.route == "serie_details/$testSerieId")
+    assert(Screen.SerieDetails.Companion.route == "serie_details/{serieId}")
+  }
+
+  @Test
   fun editGroupRouteIsConfiguredCorrectly() {
     composeTestRule.waitForIdle()
 

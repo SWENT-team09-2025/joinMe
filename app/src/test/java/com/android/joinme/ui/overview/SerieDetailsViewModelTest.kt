@@ -393,6 +393,97 @@ class SerieDetailsViewModelTest {
     assertEquals("PUBLIC", state.visibilityDisplay)
   }
 
+  @Test
+  fun uiState_isPastSerie_returnsTrueWhenSerieIsExpired() {
+    // Create a serie with lastEventEndTime in the past
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -2) // 2 hours ago
+    val pastEndTime = Timestamp(calendar.time)
+
+    calendar.add(Calendar.HOUR, -24) // 26 hours ago (start time)
+    val startTime = Timestamp(calendar.time)
+
+    val expiredSerie =
+        Serie(
+            serieId = "expired-serie",
+            title = "Past Serie",
+            description = "This serie has ended",
+            date = startTime,
+            participants = listOf("user1", "user2"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner123",
+            lastEventEndTime = pastEndTime)
+
+    val state = SerieDetailsUIState(serie = expiredSerie, isLoading = false)
+
+    assertTrue(state.isPastSerie)
+  }
+
+  @Test
+  fun uiState_isPastSerie_returnsFalseWhenSerieIsActive() {
+    // Create a serie with lastEventEndTime in the future
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 2) // 2 hours from now
+    val futureEndTime = Timestamp(calendar.time)
+
+    calendar.add(Calendar.HOUR, -3) // 1 hour ago (start time)
+    val startTime = Timestamp(calendar.time)
+
+    val activeSerie =
+        Serie(
+            serieId = "active-serie",
+            title = "Active Serie",
+            description = "This serie is ongoing",
+            date = startTime,
+            participants = listOf("user1", "user2"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner123",
+            lastEventEndTime = futureEndTime)
+
+    val state = SerieDetailsUIState(serie = activeSerie, isLoading = false)
+
+    assertFalse(state.isPastSerie)
+  }
+
+  @Test
+  fun uiState_isPastSerie_returnsFalseWhenSerieIsUpcoming() {
+    // Create a serie with both start and end time in the future
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 5) // 5 hours from now
+    val futureEndTime = Timestamp(calendar.time)
+
+    calendar.add(Calendar.HOUR, -2) // 3 hours from now (start time)
+    val futureStartTime = Timestamp(calendar.time)
+
+    val upcomingSerie =
+        Serie(
+            serieId = "upcoming-serie",
+            title = "Upcoming Serie",
+            description = "This serie hasn't started",
+            date = futureStartTime,
+            participants = listOf("user1", "user2"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner123",
+            lastEventEndTime = futureEndTime)
+
+    val state = SerieDetailsUIState(serie = upcomingSerie, isLoading = false)
+
+    assertFalse(state.isPastSerie)
+  }
+
+  @Test
+  fun uiState_isPastSerie_returnsFalseWhenSerieIsNull() {
+    val state = SerieDetailsUIState(serie = null, isLoading = false)
+
+    assertFalse(state.isPastSerie)
+  }
+
   /** --- LOAD SERIE DETAILS TESTS --- */
   @Test
   fun loadSerieDetails_validSerieId_updatesUIState() = runTest {
