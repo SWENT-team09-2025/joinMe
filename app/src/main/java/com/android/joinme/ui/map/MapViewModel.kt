@@ -29,8 +29,10 @@ import kotlinx.coroutines.launch
  * @property series The list of series displayed on the map.
  * @property errorMsg An optional error message to be shown to the user.
  * @property isLoading Indicates whether a loading operation is currently in progress.
- * @property isFollowingUser Indicates whether the camera should automatically follow user location updates.
- * @property isReturningFromMarkerClick Indicates if the user is returning from a marker click navigation.
+ * @property isFollowingUser Indicates whether the camera should automatically follow user location
+ *   updates.
+ * @property isReturningFromMarkerClick Indicates if the user is returning from a marker click
+ *   navigation.
  */
 data class MapUIState(
     val userLocation: UserLocation? = null,
@@ -140,32 +142,30 @@ class MapViewModel(
   }
 
   /**
-   * Enables automatic camera following of user location updates.
-   * Called when the user wants to re-center on their location.
+   * Enables automatic camera following of user location updates. Called when the user wants to
+   * re-center on their location.
    */
   fun enableFollowingUser() {
     _uiState.value = _uiState.value.copy(isFollowingUser = true)
   }
 
   /**
-   * Disables automatic camera following of user location updates.
-   * Called when the user manually interacts with the map.
+   * Disables automatic camera following of user location updates. Called when the user manually
+   * interacts with the map.
    */
   fun disableFollowingUser() {
     _uiState.value = _uiState.value.copy(isFollowingUser = false)
   }
 
   /**
-   * Marks that the user is navigating away from the map by clicking on a marker.
-   * This prevents automatic re-centering when returning to the map.
+   * Marks that the user is navigating away from the map by clicking on a marker. This prevents
+   * automatic re-centering when returning to the map.
    */
   fun onMarkerClick() {
     _uiState.value = _uiState.value.copy(isReturningFromMarkerClick = true, isFollowingUser = false)
   }
 
-  /**
-   * Resets the marker click flag after handling the return.
-   */
+  /** Resets the marker click flag after handling the return. */
   fun clearMarkerClickFlag() {
     _uiState.value = _uiState.value.copy(isReturningFromMarkerClick = false)
   }

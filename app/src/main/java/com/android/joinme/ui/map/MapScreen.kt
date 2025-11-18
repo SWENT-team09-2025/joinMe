@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.core.graphics.createBitmap
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
 import com.android.joinme.model.event.getColor
@@ -56,7 +57,6 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
-import androidx.core.graphics.createBitmap
 
 object MapScreenTestTags {
   const val GOOGLE_MAP_SCREEN = "mapScreen"
@@ -187,9 +187,8 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
   // --- Track if we're programmatically animating the camera ---
   var isProgrammaticMove by remember { mutableStateOf(false) }
 
-    // --- Track if the map has been initialized (to avoid detecting initial map movements) ---
+  // --- Track if the map has been initialized (to avoid detecting initial map movements) ---
   var isMapInitialized by remember { mutableStateOf(false) }
-
 
   // --- Center the map when the user location changes (only if following is enabled) ---
   LaunchedEffect(currentLat, currentLng, isFollowingUser) {
