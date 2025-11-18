@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -354,7 +353,9 @@ fun GroupListScreen(
 
         // Calculate dynamic menu height based on ownership
         val isOwner = group.ownerId == currentUserId
-        val numberOfButtons = if (isOwner) 5 else 3 // 5 if owner, 3 if not
+        val numberOfButtons =
+            if (isOwner) 4
+            else 2 // 4 if owner (share, edit, delete, leave removed), 2 if not (share, leave)
         val dynamicMenuHeight =
             Dimens.TouchTarget.minimum.times(numberOfButtons) +
                 Dimens.Spacing.small.times(numberOfButtons - 1)
@@ -404,16 +405,6 @@ fun GroupListScreen(
                           .padding(top = topPaddingDp, end = Dimens.Spacing.huge),
                   verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small),
                   horizontalAlignment = Alignment.End) {
-                    // View Group Details
-                    MenuBubble(
-                        text = "VIEW GROUP DETAILS",
-                        icon = Icons.Default.Visibility,
-                        onClick = {
-                          onViewGroupDetails(group)
-                          openMenuGroupId = null
-                        },
-                        testTag = GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE)
-
                     // Leave Group - Only shown for non-owners
                     if (group.ownerId != currentUserId) {
                       MenuBubble(

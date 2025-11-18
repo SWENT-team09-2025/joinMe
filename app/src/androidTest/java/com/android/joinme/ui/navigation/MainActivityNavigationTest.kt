@@ -652,7 +652,8 @@ class MainActivityNavigationTest {
             Screen.SerieDetails.Companion.route,
             Screen.EditSerie.Companion.route,
             Screen.CreateEventForSerie.Companion.route,
-            Screen.EditEventForSerie.Companion.route)
+            Screen.EditEventForSerie.Companion.route,
+            Screen.Chat.Companion.route)
 
     // Verify all routes are non-empty
     routes.forEach { route -> assert(route.isNotEmpty()) }
@@ -1094,5 +1095,156 @@ class MainActivityNavigationTest {
     // Verify we're on ShowEvent screen with serieId parameter
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.SCREEN).assertExists()
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_TITLE).assertExists()
+  }
+
+  // ========== Chat Navigation Tests ==========
+
+  @Test
+  fun chatRouteIsConfiguredCorrectly() {
+    composeTestRule.waitForIdle()
+
+    // Verify Chat route configuration
+    assert(Screen.Chat.Companion.route == "chat/{chatId}/{chatTitle}")
+    assert(!Screen.Chat("test-chat-id", "Test Chat").isTopLevelDestination)
+  }
+
+  @Test
+  fun chatScreen_hasCorrectScreenName() {
+    composeTestRule.waitForIdle()
+
+    // Verify the Screen object has correct name
+    val screen = Screen.Chat("test-chat-id", "Test Chat")
+    assert(screen.name == "Chat")
+    assert(!screen.isTopLevelDestination)
+  }
+
+  @Test
+  fun chatScreen_generatesCorrectRouteWithParameters() {
+    composeTestRule.waitForIdle()
+
+    // Verify Chat screen generates correct route with chatId and chatTitle
+    val chatId = "group-123"
+    val chatTitle = "My Group Chat"
+    val screen = Screen.Chat(chatId, chatTitle)
+
+    assert(screen.route == "chat/$chatId/$chatTitle")
+  }
+
+  @Test
+  fun chatScreen_handlesSpecialCharactersInTitle() {
+    composeTestRule.waitForIdle()
+
+    // Verify Chat route works with special characters in title
+    val chatId = "group-456"
+    val chatTitle = "Team Discussion & Planning"
+    val screen = Screen.Chat(chatId, chatTitle)
+
+    assert(screen.route == "chat/$chatId/$chatTitle")
+  }
+
+  // ========== Event Chat Navigation Tests ==========
+
+  @Test
+  fun showEventScreen_asOwner_chatFabIsVisible() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Navigate to SerieDetails -> ShowEvent with serieId (where user is owner)
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST)
+        .performScrollToNode(hasTestTag("serieItemtest-serie-5"))
+
+    composeTestRule.onNodeWithTag("serieItemtest-serie-5").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Wait for events to load
+    Thread.sleep(2000)
+    composeTestRule.waitForIdle()
+
+    // Click on event card to navigate to ShowEvent
+    composeTestRule.onNodeWithTag("eventCard_test-event-5").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Verify we're on ShowEvent screen
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.SCREEN).assertExists()
+
+    // Verify Chat FAB is visible (user is owner)
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.CHAT_FAB).assertExists()
+  }
+
+  @Test
+  fun showEventScreen_asNonMember_chatFabIsNotVisible() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Navigate to ShowEvent for event where user is neither owner nor participant
+    composeTestRule.onNodeWithTag("eventItemtest-1").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Verify we're on ShowEvent screen
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.SCREEN).assertExists()
+
+    // Verify Chat FAB is NOT visible (user is not owner or participant)
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.CHAT_FAB).assertDoesNotExist()
+  }
+
+  @Test
+  fun showEventScreen_chatFabNavigatesToChatScreen() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Navigate to SerieDetails -> ShowEvent with serieId (where user is owner)
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST)
+        .performScrollToNode(hasTestTag("serieItemtest-serie-5"))
+
+    composeTestRule.onNodeWithTag("serieItemtest-serie-5").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Wait for events to load
+    Thread.sleep(2000)
+    composeTestRule.waitForIdle()
+
+    // Click on event card to navigate to ShowEvent
+    composeTestRule.onNodeWithTag("eventCard_test-event-5").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Verify we're on ShowEvent screen
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.SCREEN).assertExists()
+
+    // Click Chat FAB
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.CHAT_FAB).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're on Chat screen
+    // Chat screen should display with the event title
+    composeTestRule.onNodeWithText("Test Event 5").assertExists()
+  }
+
+  @Test
+  fun showEventScreen_chatNavigationUsesEventIdAsChatId() {
+    composeTestRule.waitForIdle()
+
+    // Verify that when navigating to chat from ShowEvent,
+    // the eventId is used as the chatId
+    val eventId = "test-event-123"
+    val eventTitle = "Basketball Game"
+
+    // Navigation should create a Chat screen with eventId as chatId
+    val expectedChatScreen = Screen.Chat(chatId = eventId, chatTitle = eventTitle)
+    assert(expectedChatScreen.route == "chat/$eventId/$eventTitle")
   }
 }

@@ -904,6 +904,123 @@ class GroupDetailScreenTest {
     assertEquals(3, clickCount)
   }
 
+  // ========== Chat FAB Tests ==========
+
+  @Test
+  fun chatFab_isDisplayed() {
+    setup()
+    fakeGroupRepo.setGroup(
+        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS))
+
+    val viewModel = createViewModel()
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag("chatFabBottom").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("chatFabBottom").assertHasClickAction()
+  }
+
+  @Test
+  fun chatFab_triggersCallback() {
+    setup()
+    fakeGroupRepo.setGroup(
+        Group(id = "group1", name = "Chat Group", ownerId = "owner1", category = EventType.SPORTS))
+
+    var chatId: String? = null
+    var chatTitle: String? = null
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      GroupDetailScreen(
+          groupId = "group1",
+          viewModel = viewModel,
+          onNavigateToChat = { id, title ->
+            chatId = id
+            chatTitle = title
+          })
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag("chatFabBottom").performClick()
+
+    assertEquals("group1", chatId)
+    assertEquals("Chat Group", chatTitle)
+  }
+
+  @Test
+  fun chatFab_hasMessageIcon() {
+    setup()
+    fakeGroupRepo.setGroup(
+        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS))
+
+    val viewModel = createViewModel()
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithContentDescription("Open Chat").assertIsDisplayed()
+  }
+
+  @Test
+  fun chatFab_canBeClickedMultipleTimes() {
+    setup()
+    fakeGroupRepo.setGroup(
+        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS))
+
+    var clickCount = 0
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      GroupDetailScreen(
+          groupId = "group1", viewModel = viewModel, onNavigateToChat = { _, _ -> clickCount++ })
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag("chatFabBottom").performClick()
+    composeTestRule.onNodeWithTag("chatFabBottom").performClick()
+    composeTestRule.onNodeWithTag("chatFabBottom").performClick()
+
+    assertEquals(3, clickCount)
+  }
+
+  @Test
+  fun chatFab_notDisplayedInLoadingState() {
+    setup()
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    // Chat FAB should not be visible during loading
+    composeTestRule.onNodeWithTag("chatFabBottom").assertDoesNotExist()
+  }
+
+  @Test
+  fun chatFab_notDisplayedInErrorState() {
+    setup()
+    fakeGroupRepo.shouldThrowError = true
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Failed to load group").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    // Chat FAB should not be visible in error state
+    composeTestRule.onNodeWithTag("chatFabBottom").assertDoesNotExist()
+  }
+
   @Test
   fun retryButton_canBeClickedMultipleTimes() {
     setup()

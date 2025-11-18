@@ -26,8 +26,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
+import com.android.joinme.model.chat.ChatRepositoryProvider
 import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.notification.FCMTokenManager
+import com.android.joinme.ui.chat.ChatScreen
+import com.android.joinme.ui.chat.ChatViewModel
 import com.android.joinme.ui.groups.CreateGroupScreen
 import com.android.joinme.ui.groups.EditGroupScreen
 import com.android.joinme.ui.groups.GroupDetailScreen
@@ -272,6 +275,9 @@ fun JoinMe(
               onEditEvent = { id -> navigationActions.navigateTo(Screen.EditEvent(id)) },
               onEditEventForSerie = { sId, eId ->
                 navigationActions.navigateTo(Screen.EditEventForSerie(sId, eId))
+              },
+              onNavigateToChat = { chatId, chatTitle ->
+                navigationActions.navigateTo(Screen.Chat(chatId, chatTitle))
               })
         } ?: run { Toast.makeText(context, "Event UID is null", Toast.LENGTH_SHORT).show() }
       }
@@ -404,9 +410,10 @@ fun JoinMe(
                   onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
             },
             onCreateGroup = { navigationActions.navigateTo(Screen.CreateGroup) },
-            onGroup = {
-              Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
-            }, // TODO navigate to group details screen
+            onGroup = { group ->
+              // Navigate to group details
+              navigationActions.navigateTo(Screen.GroupDetail(group.id))
+            },
             onBackClick = { navigationActions.goBack() },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
@@ -472,7 +479,44 @@ fun JoinMe(
               },
               onMemberClick = {
                 Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+              },
+              onNavigateToChat = { chatId, chatTitle ->
+                navigationActions.navigateTo(Screen.Chat(chatId, chatTitle))
               })
+        }
+      }
+
+      composable(route = Screen.Chat.route) { navBackStackEntry ->
+        val chatId = navBackStackEntry.arguments?.getString("chatId")
+        val chatTitle = navBackStackEntry.arguments?.getString("chatTitle")
+
+        if (chatId != null && chatTitle != null) {
+          // Use viewModel() factory pattern to get a properly scoped ViewModel
+          // that survives recompositions
+          val chatViewModel: ChatViewModel =
+              viewModel(
+                  factory =
+                      object : androidx.lifecycle.ViewModelProvider.Factory {
+                        override fun <T : androidx.lifecycle.ViewModel> create(
+                            modelClass: Class<T>
+                        ): T {
+                          @Suppress("UNCHECKED_CAST")
+                          return ChatViewModel(ChatRepositoryProvider.repository) as T
+                        }
+                      })
+
+          val currentUserId = currentUser?.uid ?: ""
+          val currentUserName = currentUser?.displayName ?: "Unknown User"
+
+          ChatScreen(
+              chatId = chatId,
+              chatTitle = chatTitle,
+              currentUserId = currentUserId,
+              currentUserName = currentUserName,
+              viewModel = chatViewModel,
+              onBackClick = { navigationActions.goBack() })
+        } else {
+          Toast.makeText(context, "Chat ID or title is null", Toast.LENGTH_SHORT).show()
         }
       }
     }

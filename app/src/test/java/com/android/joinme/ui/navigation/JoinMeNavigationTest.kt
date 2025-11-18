@@ -176,7 +176,8 @@ class JoinMeNavigationTest {
             Screen.SerieDetails("test-id"),
             Screen.EditSerie("test-id"),
             Screen.CreateEventForSerie("test-id"),
-            Screen.EditEventForSerie("test-serie-id", "test-event-id"))
+            Screen.EditEventForSerie("test-serie-id", "test-event-id"),
+            Screen.Chat("test-chat-id", "Test Chat"))
 
     nonTopLevelScreens.forEach { screen ->
       assertFalse(
@@ -205,7 +206,8 @@ class JoinMeNavigationTest {
             Screen.SerieDetails.Companion.route,
             Screen.EditSerie.Companion.route,
             Screen.CreateEventForSerie.Companion.route,
-            Screen.EditEventForSerie.Companion.route)
+            Screen.EditEventForSerie.Companion.route,
+            Screen.Chat.Companion.route)
 
     val uniqueRoutes = routes.toSet()
     assertEquals("All screen routes should be unique", routes.size, uniqueRoutes.size)
@@ -231,7 +233,7 @@ class JoinMeNavigationTest {
       assertTrue("${screen.name} route should not be empty", screen.route.isNotEmpty())
     }
 
-    // Check EditEvent companion route
+    // Check companion routes for parameterized screens
     assertTrue(
         "EditEvent route pattern should not be empty",
         Screen.EditEvent.Companion.route.isNotEmpty())
@@ -241,6 +243,7 @@ class JoinMeNavigationTest {
     assertTrue(
         "ShowEventScreen route pattern should not be empty",
         Screen.ShowEventScreen.Companion.route.isNotEmpty())
+    assertTrue("Chat route pattern should not be empty", Screen.Chat.Companion.route.isNotEmpty())
   }
 
   @Test
@@ -260,7 +263,8 @@ class JoinMeNavigationTest {
             Screen.CreateGroup,
             Screen.GroupDetail("test-id"),
             Screen.ShowEventScreen("test-id"),
-            Screen.EditProfile)
+            Screen.EditProfile,
+            Screen.Chat("test-chat-id", "Test Chat"))
 
     screens.forEach { screen ->
       assertTrue("${screen.name} name should not be empty", screen.name.isNotEmpty())
@@ -295,6 +299,67 @@ class JoinMeNavigationTest {
     assertTrue(
         "GroupDetail route should match pattern 'groupId/{groupId}'",
         pattern.matches(Screen.GroupDetail.Companion.route))
+  }
+
+  // ========== Chat Tests ==========
+
+  @Test
+  fun screen_Chat_generatesCorrectRouteWithParams() {
+    val chatId = "test-chat-123"
+    val chatTitle = "Test Chat"
+    val chatScreen = Screen.Chat(chatId, chatTitle)
+    assertEquals("chat/$chatId/$chatTitle", chatScreen.route)
+    assertEquals("Chat", chatScreen.name)
+    assertFalse(chatScreen.isTopLevelDestination)
+  }
+
+  @Test
+  fun screen_Chat_handlesSpecialCharactersInParams() {
+    val chatId = "test-chat-!@#"
+    val chatTitle = "Group Name with Spaces"
+    val chatScreen = Screen.Chat(chatId, chatTitle)
+    assertEquals("chat/$chatId/$chatTitle", chatScreen.route)
+  }
+
+  @Test
+  fun screen_Chat_handlesEmptyTitle() {
+    val chatId = "test-chat-456"
+    val chatTitle = ""
+    val chatScreen = Screen.Chat(chatId, chatTitle)
+    assertEquals("chat/$chatId/$chatTitle", chatScreen.route)
+  }
+
+  @Test
+  fun chatRoute_containsChatIdPlaceholder() {
+    assertTrue(
+        "Chat companion route should contain {chatId} placeholder",
+        Screen.Chat.Companion.route.contains("{chatId}"))
+  }
+
+  @Test
+  fun chatRoute_containsChatTitlePlaceholder() {
+    assertTrue(
+        "Chat companion route should contain {chatTitle} placeholder",
+        Screen.Chat.Companion.route.contains("{chatTitle}"))
+  }
+
+  @Test
+  fun chatRoute_followsExpectedPattern() {
+    val pattern = "chat/\\{chatId\\}/\\{chatTitle\\}".toRegex()
+    assertTrue(
+        "Chat route should match pattern 'chat/{chatId}/{chatTitle}'",
+        pattern.matches(Screen.Chat.Companion.route))
+  }
+
+  @Test
+  fun screen_Chat_canUseEventIdAsChatId() {
+    // Verify that event chat can use eventId as chatId
+    val eventId = "event-789"
+    val eventTitle = "Basketball Game"
+    val chatScreen = Screen.Chat(chatId = eventId, chatTitle = eventTitle)
+    assertEquals("chat/$eventId/$eventTitle", chatScreen.route)
+    assertEquals("Chat", chatScreen.name)
+    assertFalse(chatScreen.isTopLevelDestination)
   }
 
   @Test

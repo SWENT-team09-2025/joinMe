@@ -7,7 +7,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
@@ -46,6 +48,7 @@ object ShowEventScreenTestTags {
   const val EDIT_BUTTON = "editButton"
   const val DELETE_BUTTON = "deleteButton"
   const val FULL_EVENT_MESSAGE = "fullEventMessage"
+  const val CHAT_FAB = "chatFab"
 }
 
 /**
@@ -69,6 +72,8 @@ object ShowEventScreenTestTags {
  * @param onEditEvent Callback invoked when the owner wants to edit the event, receives the event ID
  * @param onEditEventForSerie Callback invoked when the owner wants to edit an event in a serie,
  *   receives serieId and eventId
+ * @param onNavigateToChat Callback invoked when the user wants to navigate to the event chat,
+ *   receives chatId and chatTitle
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,7 +84,8 @@ fun ShowEventScreen(
     showEventViewModel: ShowEventViewModel = viewModel(),
     onGoBack: () -> Unit = {},
     onEditEvent: (String) -> Unit = {},
-    onEditEventForSerie: (String, String) -> Unit = { _, _ -> }
+    onEditEventForSerie: (String, String) -> Unit = { _, _ -> },
+    onNavigateToChat: (String, String) -> Unit = { _, _ -> }
 ) {
   LaunchedEffect(eventId, serieId) { showEventViewModel.loadEvent(eventId, serieId) }
 
@@ -146,6 +152,30 @@ fun ShowEventScreen(
                       containerColor = MaterialTheme.colorScheme.surface))
           HorizontalDivider(
               color = MaterialTheme.colorScheme.primary, thickness = Dimens.BorderWidth.thin)
+        }
+      },
+      floatingActionButton = {
+        // Show FAB only if user is owner or participant
+        if (eventUIState.isOwner(currentUserId) || eventUIState.isParticipant(currentUserId)) {
+          val bottomPadding =
+              if (eventUIState.isOwner(currentUserId)) {
+                Dimens.Button.standardHeight * 2 + Dimens.Spacing.medium * 2
+              } else {
+                Dimens.Button.standardHeight + Dimens.Spacing.medium
+              }
+
+          FloatingActionButton(
+              onClick = { onNavigateToChat(eventId, eventUIState.title.ifBlank { "Event Chat" }) },
+              modifier =
+                  Modifier.testTag(ShowEventScreenTestTags.CHAT_FAB)
+                      .padding(bottom = bottomPadding, end = Dimens.Padding.medium),
+              containerColor = MaterialTheme.colorScheme.primary,
+              contentColor = MaterialTheme.colorScheme.onPrimary) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Message,
+                    contentDescription = "Open Chat",
+                )
+              }
         }
       }) { paddingValues ->
         Column(
