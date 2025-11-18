@@ -82,7 +82,7 @@ class EventsRepositoryFirestore(
 
     val snapshot = db.collection(EVENTS_COLLECTION_PATH).whereIn("eventId", eventIds).get().await()
 
-    return snapshot.mapNotNull { documentToEvent(it) }
+    return snapshot.mapNotNull { documentToEvent(it) }.sortedBy { it.date.toDate().time }
   }
 
   override suspend fun getEvent(eventId: String): Event {

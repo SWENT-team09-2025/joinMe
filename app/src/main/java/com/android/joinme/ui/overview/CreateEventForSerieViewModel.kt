@@ -153,11 +153,7 @@ class CreateEventForSerieViewModel(
     }
 
     // Get all events in the serie and find the last one
-    val allEvents =
-        eventRepository.getAllEvents(
-            com.android.joinme.model.event.EventFilter.EVENTS_FOR_OVERVIEW_SCREEN)
-    val serieEvents =
-        allEvents.filter { it.eventId in serie.eventIds }.sortedBy { it.date.toDate().time }
+    val serieEvents = eventRepository.getEventsByIds(serie.eventIds)
 
     if (serieEvents.isEmpty()) {
       // No events found, use the serie's date
