@@ -144,9 +144,7 @@ class SerieDetailsScreenTest {
     val startTime = Timestamp(calendar.time)
 
     // Default: Set lastEventEndTime to 2 hours in the future so serie is not expired
-    val defaultEndTime = Calendar.getInstance().apply {
-      add(Calendar.HOUR, 2)
-    }
+    val defaultEndTime = Calendar.getInstance().apply { add(Calendar.HOUR, 2) }
 
     return Serie(
         serieId = serieId,
@@ -898,8 +896,7 @@ class SerieDetailsScreenTest {
     calendar.add(Calendar.HOUR, -2) // 2 hours ago
     val pastEndTime = Timestamp(calendar.time)
 
-    val expiredSerie =
-        createTestSerie(ownerId = "owner123", lastEventEndTime = pastEndTime)
+    val expiredSerie = createTestSerie(ownerId = "owner123", lastEventEndTime = pastEndTime)
     fakeSeriesRepo.setSerie(expiredSerie)
 
     val viewModel = createViewModel()
@@ -1020,8 +1017,7 @@ class SerieDetailsScreenTest {
     calendar.add(Calendar.HOUR, 2) // 2 hours from now
     val futureEndTime = Timestamp(calendar.time)
 
-    val activeSerie =
-        createTestSerie(ownerId = "owner123", lastEventEndTime = futureEndTime)
+    val activeSerie = createTestSerie(ownerId = "owner123", lastEventEndTime = futureEndTime)
     fakeSeriesRepo.setSerie(activeSerie)
 
     val viewModel = createViewModel()
@@ -1067,9 +1063,7 @@ class SerieDetailsScreenTest {
 
     composeTestRule.setContent {
       SerieDetailsScreen(
-          serieId = activeSerie.serieId,
-          serieDetailsViewModel = viewModel,
-          currentUserId = "user1")
+          serieId = activeSerie.serieId, serieDetailsViewModel = viewModel, currentUserId = "user1")
     }
 
     composeTestRule.waitUntil(timeoutMillis = 3000) {
