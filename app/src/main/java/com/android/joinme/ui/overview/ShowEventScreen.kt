@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material3.*
@@ -158,11 +159,9 @@ fun ShowEventScreen(
         if (eventUIState.isOwner(currentUserId) || eventUIState.isParticipant(currentUserId)) {
           val bottomPadding =
               if (eventUIState.isOwner(currentUserId)) {
-                // Owner has Edit + Delete buttons, need more space
-                Dimens.Padding.extraLarge * 6
+                Dimens.Button.standardHeight * 2 + Dimens.Spacing.medium * 2
               } else {
-                // Participant has Join/Quit button, less space needed
-                Dimens.Padding.extraLarge * 3
+                Dimens.Button.standardHeight + Dimens.Spacing.medium
               }
 
           FloatingActionButton(
@@ -173,7 +172,7 @@ fun ShowEventScreen(
               containerColor = MaterialTheme.colorScheme.primary,
               contentColor = MaterialTheme.colorScheme.onPrimary) {
                 Icon(
-                    imageVector = Icons.Default.Message,
+                    imageVector = Icons.AutoMirrored.Filled.Message,
                     contentDescription = "Open Chat",
                 )
               }

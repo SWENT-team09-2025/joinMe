@@ -399,8 +399,8 @@ fun JoinMe(
             },
             onCreateGroup = { navigationActions.navigateTo(Screen.CreateGroup) },
             onGroup = { group ->
-              // Navigate to group chat
-              navigationActions.navigateTo(Screen.Chat(chatId = group.id, chatTitle = group.name))
+              // Navigate to group details
+              navigationActions.navigateTo(Screen.GroupDetail(group.id))
             },
             onBackClick = { navigationActions.goBack() },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
@@ -467,6 +467,9 @@ fun JoinMe(
               },
               onMemberClick = {
                 Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+              },
+              onNavigateToChat = { chatId, chatTitle ->
+                navigationActions.navigateTo(Screen.Chat(chatId, chatTitle))
               })
         }
       }

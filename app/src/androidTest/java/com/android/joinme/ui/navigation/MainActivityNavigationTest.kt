@@ -1115,14 +1115,6 @@ class MainActivityNavigationTest {
     // Verify the Screen object has correct name
     val screen = Screen.Chat("test-chat-id", "Test Chat")
     assert(screen.name == "Chat")
-  }
-
-  @Test
-  fun chatScreen_isNotTopLevelDestination() {
-    composeTestRule.waitForIdle()
-
-    // Verify Chat is not a top-level destination
-    val screen = Screen.Chat("test-chat-id", "Test Chat")
     assert(!screen.isTopLevelDestination)
   }
 

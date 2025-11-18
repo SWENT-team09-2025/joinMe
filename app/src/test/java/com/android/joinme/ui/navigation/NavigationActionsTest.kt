@@ -712,18 +712,13 @@ class NavigationActionsTest {
   }
 
   @Test
-  fun `Chat instance route contains chatId and chatTitle`() {
-    val chatId = "my-chat-789"
+  fun chatScreen_hasCorrectRouteAndName() {
+    val chatId = "test-chat-789"
     val chatTitle = "My Group Chat"
     val screen = Screen.Chat(chatId, chatTitle)
-    assertEquals("chat/$chatId/$chatTitle", screen.route)
-  }
 
-  @Test
-  fun `Chat screen has correct name`() {
-    val screen = Screen.Chat("chat-id", "Chat Title")
+    assertEquals("chat/$chatId/$chatTitle", screen.route)
     assertEquals("Chat", screen.name)
-    assertFalse(screen.isTopLevelDestination)
   }
 
   @Test

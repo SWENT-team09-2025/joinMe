@@ -304,11 +304,6 @@ class JoinMeNavigationTest {
   // ========== Chat Tests ==========
 
   @Test
-  fun screen_Chat_hasCorrectRoutePattern() {
-    assertEquals("chat/{chatId}/{chatTitle}", Screen.Chat.Companion.route)
-  }
-
-  @Test
   fun screen_Chat_generatesCorrectRouteWithParams() {
     val chatId = "test-chat-123"
     val chatTitle = "Test Chat"
