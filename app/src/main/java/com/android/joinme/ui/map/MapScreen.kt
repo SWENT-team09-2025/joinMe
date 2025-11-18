@@ -1,6 +1,5 @@
 package com.android.joinme.ui.map
 
-import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
@@ -11,8 +10,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -20,7 +21,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,11 +56,13 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import androidx.core.graphics.createBitmap
 
 object MapScreenTestTags {
   const val GOOGLE_MAP_SCREEN = "mapScreen"
   const val FILTER_BUTTON = "filterButton"
   const val MAP_CONTAINER = "mapContainer"
+  const val MY_LOCATION_BUTTON = "myLocationButton"
 
   fun getTestTagForMarker(id: String): String = "marker$id"
 }
@@ -84,7 +91,7 @@ internal fun createMarkerForColor(color: Color): BitmapDescriptor {
     // Create custom black marker (3x size to match default markers)
     val width = Dimens.PinMark.PIN_MARK_WIDTH
     val height = Dimens.PinMark.PIN_MARK_HEIGHT
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val bitmap = createBitmap(width, height)
     val canvas = Canvas(bitmap)
 
     // Create the pin shape with black paint
@@ -147,6 +154,15 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
         viewModel.uiState.collect { newState -> value = newState }
       }
 
+  // --- Enable following user on screen entry (unless returning from marker double click) ---
+  LaunchedEffect(Unit) {
+    if (uiState.isReturningFromMarkerClick) {
+      viewModel.clearMarkerClickFlag()
+    } else {
+      viewModel.enableFollowingUser()
+    }
+  }
+
   // --- Permissions management---
   val locationPermissionsState =
       rememberMultiplePermissionsState(
@@ -166,16 +182,42 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
 
   val currentLat = uiState.userLocation?.latitude
   val currentLng = uiState.userLocation?.longitude
+  val isFollowingUser = uiState.isFollowingUser
 
-  // --- Center the map when the user location changes ---
-  LaunchedEffect(currentLat, currentLng) {
-    if (currentLat != null && currentLng != null) {
+  // --- Track if we're programmatically animating the camera ---
+  var isProgrammaticMove by remember { mutableStateOf(false) }
+
+    // --- Track if the map has been initialized (to avoid detecting initial map movements) ---
+  var isMapInitialized by remember { mutableStateOf(false) }
+
+
+  // --- Center the map when the user location changes (only if following is enabled) ---
+  LaunchedEffect(currentLat, currentLng, isFollowingUser) {
+    if (currentLat != null && currentLng != null && isFollowingUser) {
       try {
+        isProgrammaticMove = true
         cameraPositionState.animate(
             update = CameraUpdateFactory.newLatLngZoom(LatLng(currentLat, currentLng), 15f),
             durationMs = 1000)
-      } catch (e: Exception) {}
+        isProgrammaticMove = false
+
+        if (!isMapInitialized) {
+          isMapInitialized = true
+        }
+      } catch (e: Exception) {
+        isProgrammaticMove = false
+      }
     }
+  }
+
+  // --- Detect user interaction with the map to disable following ---
+  LaunchedEffect(cameraPositionState) {
+    snapshotFlow { cameraPositionState.isMoving }
+        .collect { isMoving ->
+          if (isMoving && !isProgrammaticMove && isFollowingUser && isMapInitialized) {
+            viewModel.disableFollowingUser()
+          }
+        }
   }
 
   // --- Map properties configuration ---
@@ -209,7 +251,7 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
                   cameraPositionState = cameraPositionState,
                   properties = mapProperties,
                   uiSettings =
-                      MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = true)) {
+                      MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = false)) {
                     uiState.events.forEach { event ->
                       event.location?.let { location ->
                         val position = LatLng(location.latitude, location.longitude)
@@ -222,6 +264,7 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
                             title = event.title,
                             snippet = SNIPPET_MESSAGE,
                             onInfoWindowClick = {
+                              viewModel.onMarkerClick()
                               navigationActions?.navigateTo(Screen.ShowEventScreen(event.eventId))
                             })
                       }
@@ -236,6 +279,7 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
                           title = serie.title,
                           snippet = SNIPPET_MESSAGE,
                           onInfoWindowClick = {
+                            viewModel.onMarkerClick()
                             navigationActions?.navigateTo(Screen.SerieDetails(serie.serieId))
                           })
                     }
@@ -256,6 +300,23 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
                         imageVector = Icons.Filled.Tune,
                         contentDescription = "Filter",
                         tint = MaterialTheme.colorScheme.onSurface)
+                  }
+
+              FloatingActionButton(
+                  onClick = { viewModel.enableFollowingUser() },
+                  modifier =
+                      Modifier.align(Alignment.BottomEnd)
+                          .padding(Dimens.Padding.medium)
+                          .testTag(MapScreenTestTags.MY_LOCATION_BUTTON),
+                  containerColor =
+                      if (isFollowingUser) MaterialTheme.colorScheme.primary
+                      else MaterialTheme.colorScheme.surface) {
+                    Icon(
+                        imageVector = Icons.Filled.MyLocation,
+                        contentDescription = "My Location",
+                        tint =
+                            if (isFollowingUser) MaterialTheme.colorScheme.onPrimary
+                            else MaterialTheme.colorScheme.onSurface)
                   }
             }
       }

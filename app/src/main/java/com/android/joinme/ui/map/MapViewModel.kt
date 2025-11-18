@@ -25,16 +25,21 @@ import kotlinx.coroutines.launch
  * Represents the UI state of the map screen.
  *
  * @property userLocation The current location of the user, or null if not yet available.
- * @property todos The list of events displayed on the map.
+ * @property events The list of events displayed on the map.
+ * @property series The list of series displayed on the map.
  * @property errorMsg An optional error message to be shown to the user.
  * @property isLoading Indicates whether a loading operation is currently in progress.
+ * @property isFollowingUser Indicates whether the camera should automatically follow user location updates.
+ * @property isReturningFromMarkerClick Indicates if the user is returning from a marker click navigation.
  */
 data class MapUIState(
     val userLocation: UserLocation? = null,
     val events: List<Event> = emptyList(),
     val series: Map<Location, Serie> = emptyMap(),
     val errorMsg: String? = null,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val isFollowingUser: Boolean = true,
+    val isReturningFromMarkerClick: Boolean = false
 )
 
 /**
@@ -86,23 +91,17 @@ class MapViewModel(
         val events = repoEvent.getAllEvents(EventFilter.EVENTS_FOR_MAP_SCREEN)
         val series = repoSeries.getAllSeries(SerieFilter.SERIES_FOR_MAP_SCREEN)
 
-        // Create a map of eventId to event for quick lookup
         val eventsById = events.associateBy { it.eventId }
 
-        // filtered events which are in series
         val seriesEventIds = series.flatMap { it.eventIds }.toSet()
         val eventsNotInSeries = events.filterNot { it.eventId in seriesEventIds }
 
-        // create a map between series and the first location of their events
-        // Use mapNotNull to safely handle series with empty eventIds or missing events
         val seriesMap =
             series
                 .mapNotNull { serie ->
-                  // Check if serie has events
                   if (serie.eventIds.isEmpty()) {
                     null
                   } else {
-                    // Get first event from already loaded events
                     val firstEvent = eventsById[serie.eventIds[0]]
                     firstEvent?.location?.let { location -> location to serie }
                   }
@@ -138,6 +137,37 @@ class MapViewModel(
    */
   fun clearErrorMsg() {
     _uiState.value = _uiState.value.copy(errorMsg = null)
+  }
+
+  /**
+   * Enables automatic camera following of user location updates.
+   * Called when the user wants to re-center on their location.
+   */
+  fun enableFollowingUser() {
+    _uiState.value = _uiState.value.copy(isFollowingUser = true)
+  }
+
+  /**
+   * Disables automatic camera following of user location updates.
+   * Called when the user manually interacts with the map.
+   */
+  fun disableFollowingUser() {
+    _uiState.value = _uiState.value.copy(isFollowingUser = false)
+  }
+
+  /**
+   * Marks that the user is navigating away from the map by clicking on a marker.
+   * This prevents automatic re-centering when returning to the map.
+   */
+  fun onMarkerClick() {
+    _uiState.value = _uiState.value.copy(isReturningFromMarkerClick = true, isFollowingUser = false)
+  }
+
+  /**
+   * Resets the marker click flag after handling the return.
+   */
+  fun clearMarkerClickFlag() {
+    _uiState.value = _uiState.value.copy(isReturningFromMarkerClick = false)
   }
 
   /**
