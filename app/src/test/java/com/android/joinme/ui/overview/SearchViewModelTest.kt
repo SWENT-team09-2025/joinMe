@@ -3,6 +3,7 @@ package com.android.joinme.ui.overview
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.filter.FilterRepository
+import com.android.joinme.model.filter.FilteredEventsRepository
 import com.android.joinme.model.serie.SerieFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -19,12 +20,14 @@ import org.junit.Test
 class SearchViewModelTest {
 
   private lateinit var viewModel: SearchViewModel
+  private lateinit var filteredEventsRepository: FilteredEventsRepository
   private val testDispatcher = StandardTestDispatcher()
 
   @Before
   fun setup() {
     Dispatchers.setMain(testDispatcher)
     FilterRepository.reset()
+
     val fakeEventRepository =
         object : com.android.joinme.model.event.EventsRepository {
           override fun getNewEventId(): String = "fake-id"
@@ -71,13 +74,18 @@ class SearchViewModelTest {
           override suspend fun deleteSerie(serieId: String) {}
         }
 
-    viewModel = SearchViewModel(fakeEventRepository, fakeSeriesRepository)
+    // Create FilteredEventsRepository with fake repositories
+    filteredEventsRepository = FilteredEventsRepository(fakeEventRepository, fakeSeriesRepository)
+    FilteredEventsRepository.resetInstance(filteredEventsRepository)
+
+    viewModel = SearchViewModel(filteredEventsRepository)
     testDispatcher.scheduler.advanceUntilIdle()
   }
 
   @After
   fun tearDown() {
     Dispatchers.resetMain()
+    FilteredEventsRepository.resetInstance()
   }
 
   @Test
@@ -287,7 +295,7 @@ class SearchViewModelTest {
             visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
             ownerId = "owner1")
 
-    viewModel.setEvents(listOf(sampleEvent))
+    filteredEventsRepository.setEventsForTesting(listOf(sampleEvent))
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Since no filters are selected by default, all events should be visible
@@ -313,11 +321,11 @@ class SearchViewModelTest {
             visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
             ownerId = "owner1")
 
-    viewModel.setEvents(listOf(sampleEvent))
+    filteredEventsRepository.setEventsForTesting(listOf(sampleEvent))
     testDispatcher.scheduler.advanceUntilIdle()
     assertEquals(1, viewModel.uiState.value.eventItems.size)
 
-    viewModel.setEvents(emptyList())
+    filteredEventsRepository.setEventsForTesting(emptyList())
     testDispatcher.scheduler.advanceUntilIdle()
     assertEquals(0, viewModel.uiState.value.eventItems.size)
   }
@@ -336,7 +344,7 @@ class SearchViewModelTest {
             eventIds = listOf("event1", "event2"),
             ownerId = "owner1")
 
-    viewModel.setSeries(listOf(sampleSerie))
+    filteredEventsRepository.setSeriesForTesting(listOf(sampleSerie))
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Series should be visible
@@ -374,8 +382,8 @@ class SearchViewModelTest {
             eventIds = listOf("event1", "event2"),
             ownerId = "owner1")
 
-    viewModel.setEvents(listOf(sampleEvent))
-    viewModel.setSeries(listOf(sampleSerie))
+    filteredEventsRepository.setEventsForTesting(listOf(sampleEvent))
+    filteredEventsRepository.setSeriesForTesting(listOf(sampleSerie))
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Both event and serie should be visible
@@ -432,8 +440,8 @@ class SearchViewModelTest {
             eventIds = listOf("event1", "event2"),
             ownerId = "owner1")
 
-    viewModel.setEvents(listOf(event1, event2))
-    viewModel.setSeries(listOf(serie))
+    filteredEventsRepository.setEventsForTesting(listOf(event1, event2))
+    filteredEventsRepository.setSeriesForTesting(listOf(serie))
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Initially all items should be visible (3 items)

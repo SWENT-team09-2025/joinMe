@@ -4,6 +4,9 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.EventsRepositoryLocal
 import com.android.joinme.model.filter.FilterRepository
+import com.android.joinme.model.filter.FilteredEventsRepository
+import com.android.joinme.model.serie.SeriesRepositoryLocal
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -14,14 +17,28 @@ import org.robolectric.RobolectricTestRunner
 class SearchScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
+  private lateinit var filteredEventsRepository: FilteredEventsRepository
 
   @Before
   fun setup() {
     // Reset FilterRepository before each test to ensure clean state
     FilterRepository.reset()
+    // Create FilteredEventsRepository with local repositories for testing
+    filteredEventsRepository =
+        FilteredEventsRepository(
+            EventsRepositoryLocal(),
+            SeriesRepositoryLocal(),
+            FilterRepository,
+            kotlinx.coroutines.Dispatchers.Unconfined)
+    FilteredEventsRepository.resetInstance(filteredEventsRepository)
   }
 
-  private fun setupScreen(viewModel: SearchViewModel = SearchViewModel(EventsRepositoryLocal())) {
+  @After
+  fun tearDown() {
+    FilteredEventsRepository.resetInstance()
+  }
+
+  private fun setupScreen(viewModel: SearchViewModel = SearchViewModel(filteredEventsRepository)) {
     composeTestRule.setContent { SearchScreen(searchViewModel = viewModel) }
     composeTestRule.waitForIdle()
   }
@@ -225,7 +242,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_viewModelIntegration_queryUpdates() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     composeTestRule.onNodeWithText("Search an event").performTextInput("test")
@@ -237,7 +254,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_viewModelIntegration_socialFilterUpdates() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     composeTestRule.onNodeWithText("Social").performClick()
@@ -249,7 +266,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_viewModelIntegration_activityFilterUpdates() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     composeTestRule.onNodeWithText("Activity").performClick()
@@ -261,7 +278,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_viewModelIntegration_sportSelectionUpdates() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     // Initially basket is unchecked
@@ -283,11 +300,11 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_displaysEmptyMessage_whenNoEvents() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     // Ensure events are empty
-    viewModel.setEvents(emptyList())
+    filteredEventsRepository.setEventsForTesting(emptyList())
 
     composeTestRule.waitForIdle()
 
@@ -422,7 +439,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_displaysEventCards_whenEventsExist() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     val sampleEvent =
@@ -440,7 +457,7 @@ class SearchScreenTest {
             ownerId = "owner1")
 
     // Set events after screen is setup
-    viewModel.setEvents(listOf(sampleEvent))
+    filteredEventsRepository.setEventsForTesting(listOf(sampleEvent))
 
     composeTestRule.waitForIdle()
 
@@ -451,7 +468,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_eventCardClick_triggersCallback() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
 
     var eventClicked = false
     composeTestRule.setContent {
@@ -474,7 +491,7 @@ class SearchScreenTest {
             ownerId = "owner1")
 
     // Set events after screen is setup
-    viewModel.setEvents(listOf(sampleEvent))
+    filteredEventsRepository.setEventsForTesting(listOf(sampleEvent))
 
     composeTestRule.waitForIdle()
 
@@ -486,7 +503,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_eventList_displaysWithTestTag() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     val sampleEvent =
@@ -504,7 +521,7 @@ class SearchScreenTest {
             ownerId = "owner1")
 
     // Set events
-    viewModel.setEvents(listOf(sampleEvent))
+    filteredEventsRepository.setEventsForTesting(listOf(sampleEvent))
 
     composeTestRule.waitForIdle()
 
@@ -514,7 +531,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_eventCard_hasCorrectTestTag() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     val sampleEvent =
@@ -532,7 +549,7 @@ class SearchScreenTest {
             ownerId = "owner1")
 
     // Set events
-    viewModel.setEvents(listOf(sampleEvent))
+    filteredEventsRepository.setEventsForTesting(listOf(sampleEvent))
 
     composeTestRule.waitForIdle()
 
@@ -544,7 +561,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_multipleEventCards_haveUniqueTestTags() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     val event1 =
@@ -576,7 +593,7 @@ class SearchScreenTest {
             ownerId = "owner2")
 
     // Set events
-    viewModel.setEvents(listOf(event1, event2))
+    filteredEventsRepository.setEventsForTesting(listOf(event1, event2))
 
     composeTestRule.waitForIdle()
 
