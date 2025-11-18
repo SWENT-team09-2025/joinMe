@@ -13,7 +13,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
@@ -133,7 +137,15 @@ fun JoinMe(
   val navController = rememberNavController()
   val navigationActions = NavigationActions(navController)
   val coroutineScope = rememberCoroutineScope()
-  val currentUser = FirebaseAuth.getInstance().currentUser
+
+  var currentUser by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
+
+  // Listen for auth state changes
+  LaunchedEffect(Unit) {
+    val authStateListener =
+        FirebaseAuth.AuthStateListener { auth -> currentUser = auth.currentUser }
+    FirebaseAuth.getInstance().addAuthStateListener(authStateListener)
+  }
   val initialDestination =
       startDestination ?: if (currentUser == null) Screen.Auth.name else Screen.Overview.route
 
@@ -158,7 +170,7 @@ fun JoinMe(
         coroutineScope.launch {
           try {
             val groupRepository = GroupRepositoryProvider.repository
-            groupRepository.joinGroup(initialGroupId, currentUser.uid)
+            groupRepository.joinGroup(initialGroupId, currentUser!!.uid)
             Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT).show()
             navigationActions.navigateTo(Screen.GroupDetail(initialGroupId))
           } catch (e: Exception) {
