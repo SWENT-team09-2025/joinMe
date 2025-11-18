@@ -6,6 +6,17 @@ admin.initializeApp();
 
 const db = admin.firestore();
 
+const S_TO_MS = 1000;
+const MIN_TO_S = 60;
+const HOUR_TO_MIN = 60;
+const DAY_TO_HOUR = 24;
+const NUMBER_OF_DAYS = 30;
+const RECURRENCE = "0 0 * * *";
+const TIME_ZONE = "UTC";
+
+const SERIES = "series";
+const EVENTS = "events";
+
 /**
  * Helper function to send FCM notification to a user
  * @param {string} userId - The ID of the user to send notification to
@@ -226,8 +237,8 @@ export const onEventDeleted = functions.firestore
     const durationMinutes = eventData.duration || 0;
 
     if (eventDate && eventDate.seconds) {
-      const eventStartMs = eventDate.seconds * 1000;
-      const durationMs = durationMinutes * 60 * 1000;
+      const eventStartMs = eventDate.seconds * S_TO_MS;
+      const durationMs = durationMinutes * MIN_TO_S * S_TO_MS;
       const eventEndMs = eventStartMs + durationMs;
       const now = Date.now();
 
@@ -275,11 +286,11 @@ export const onEventDeleted = functions.firestore
  * 6. Delete expired standalone events
  */
 export const cleanupOldEventsAndSeries = functions.pubsub
-  .schedule("0 0 * * *") // Run every day at midnight UTC
-  .timeZone("UTC")
+  .schedule(RECURRENCE)
+  .timeZone(TIME_ZONE)
   .onRun(async (context) => {
     const now = Date.now(); // Current time in milliseconds
-    const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000; // 30 days
+    const thirtyDaysInMs = NUMBER_OF_DAYS * DAY_TO_HOUR * HOUR_TO_MIN * MIN_TO_S * S_TO_MS; // 30 days
     const cutoffTime = now - thirtyDaysInMs;
 
     try {
@@ -287,7 +298,7 @@ export const cleanupOldEventsAndSeries = functions.pubsub
       const seriesToDelete: string[] = [];
 
       // Step 1: Fetch all series
-      const seriesSnapshot = await db.collection("series").get();
+      const seriesSnapshot = await db.collection(SERIES).get();
 
       // Step 2: Check each series
       for (const serieDoc of seriesSnapshot.docs) {
@@ -295,7 +306,7 @@ export const cleanupOldEventsAndSeries = functions.pubsub
         const lastEventEndTime = serieData.lastEventEndTime;
 
         if (lastEventEndTime && lastEventEndTime.seconds) {
-          const lastEventEndMs = lastEventEndTime.seconds * 1000;
+          const lastEventEndMs = lastEventEndTime.seconds * S_TO_MS;
 
           // If series is expired, mark it and its events for deletion
           if (lastEventEndMs < cutoffTime) {
@@ -309,7 +320,7 @@ export const cleanupOldEventsAndSeries = functions.pubsub
       // Step 3: Delete all marked series
       for (const serieId of seriesToDelete) {
         try {
-          await db.collection("series").doc(serieId).delete();
+          await db.collection(SERIES).doc(serieId).delete();
         } catch (err) {
           console.error(`Failed to delete series ${serieId}:`, err);
         }
@@ -318,14 +329,14 @@ export const cleanupOldEventsAndSeries = functions.pubsub
       // Step 4: Delete all events from expired series
       for (const eventId of seriesEventsToDelete) {
         try {
-          await db.collection("events").doc(eventId).delete();
+          await db.collection(EVENTS).doc(eventId).delete();
         } catch (err) {
           console.error(`Failed to delete event ${eventId}:`, err);
         }
       }
 
       // Step 5: Fetch remaining events and check if they are expired
-      const eventsSnapshot = await db.collection("events").get();
+      const eventsSnapshot = await db.collection(EVENTS).get();
       const standaloneEventsToDelete: string[] = [];
 
       for (const eventDoc of eventsSnapshot.docs) {
@@ -337,8 +348,8 @@ export const cleanupOldEventsAndSeries = functions.pubsub
         const durationMinutes = eventData.duration || 0;
 
         if (eventDate && eventDate.seconds) {
-          const eventStartMs = eventDate.seconds * 1000;
-          const durationMs = durationMinutes * 60 * 1000;
+          const eventStartMs = eventDate.seconds * S_TO_MS;
+          const durationMs = durationMinutes * MIN_TO_S * S_TO_MS;
           const eventEndMs = eventStartMs + durationMs;
 
           // If event is expired, mark it for deletion
@@ -351,7 +362,7 @@ export const cleanupOldEventsAndSeries = functions.pubsub
       // Step 6: Delete expired standalone events
       for (const eventId of standaloneEventsToDelete) {
         try {
-          await db.collection("events").doc(eventId).delete();
+          await db.collection(EVENTS).doc(eventId).delete();
         } catch (err) {
           console.error(`Failed to delete event ${eventId}:`, err);
         }
