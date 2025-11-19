@@ -33,7 +33,8 @@ class ProfileRepositoryLocal : ProfileRepository {
             interests = listOf("Sports", "Technology"),
             dateOfBirth = "1990-01-01",
             createdAt = now,
-            updatedAt = now)
+            updatedAt = now,
+            eventsJoinedCount = 5)
     profiles[testProfile.uid] = testProfile
   }
 

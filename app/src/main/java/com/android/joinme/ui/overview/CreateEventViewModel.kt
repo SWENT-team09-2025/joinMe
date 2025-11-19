@@ -10,6 +10,8 @@ import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.map.LocationRepository
 import com.android.joinme.model.map.NominatimLocationRepository
+import com.android.joinme.model.profile.ProfileRepository
+import com.android.joinme.model.profile.ProfileRepositoryProvider
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
@@ -72,6 +74,7 @@ data class CreateEventUIState(
 class CreateEventViewModel(
     private val repository: EventsRepository =
         EventsRepositoryProvider.getRepository(isOnline = true),
+    private val profileRepository: ProfileRepository = ProfileRepositoryProvider.repository,
     locationRepository: LocationRepository = NominatimLocationRepository(HttpClientProvider.client)
 ) : BaseEventFormViewModel(locationRepository) {
 
@@ -84,7 +87,12 @@ class CreateEventViewModel(
     _uiState.value = transform(_uiState.value) as CreateEventUIState
   }
 
-  /** Adds a new event to the repository. Suspends until the save is complete. */
+  /**
+   * Adds a new event to the repository. Suspends until the save is complete.
+   *
+   * This method also increments the owner's eventsJoinedCount since the owner is automatically
+   * added as a participant when creating an event.
+   */
   suspend fun createEvent(): Boolean {
     val state = _uiState.value
     if (!state.isValid) {
@@ -106,6 +114,7 @@ class CreateEventViewModel(
       return false
     }
 
+    val ownerId = Firebase.auth.currentUser?.uid ?: "unknown"
     val event =
         Event(
             eventId = repository.getNewEventId(),
@@ -118,10 +127,26 @@ class CreateEventViewModel(
             participants = emptyList(),
             maxParticipants = state.maxParticipants.toInt(),
             visibility = EventVisibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
-            ownerId = Firebase.auth.currentUser?.uid ?: "unknown")
+            ownerId = ownerId)
 
     return try {
       repository.addEvent(event)
+
+      // Increment owner's eventsJoinedCount since they're automatically added as participant
+      try {
+        val ownerProfile = profileRepository.getProfile(ownerId)
+        if (ownerProfile != null) {
+          val updatedProfile =
+              ownerProfile.copy(eventsJoinedCount = ownerProfile.eventsJoinedCount + 1)
+          profileRepository.createOrUpdateProfile(updatedProfile)
+        }
+      } catch (e: Exception) {
+        // Log the error but don't fail the whole operation
+        Log.w(
+            "CreateEventViewModel",
+            "Warning: Failed to update eventsJoinedCount for owner $ownerId: ${e.message}")
+      }
+
       clearErrorMsg()
       true
     } catch (e: Exception) {

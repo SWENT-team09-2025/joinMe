@@ -24,6 +24,7 @@ private const val F_DOB = "dateOfBirth"
 private const val F_CREATED_AT = "createdAt"
 private const val F_UPDATED_AT = "updatedAt"
 private const val F_FCM_TOKEN = "fcmToken"
+private const val F_EVENTS_JOINED_COUNT = "eventsJoinedCount"
 
 /**
  * Firestore implementation of [ProfileRepository] that manages user profile data in Firebase
@@ -76,7 +77,8 @@ class ProfileRepositoryFirestore(db: FirebaseFirestore, private val storage: Fir
             F_BIO to profile.bio,
             F_INTERESTS to profile.interests,
             F_DOB to profile.dateOfBirth,
-            F_FCM_TOKEN to profile.fcmToken)
+            F_FCM_TOKEN to profile.fcmToken,
+            F_EVENTS_JOINED_COUNT to profile.eventsJoinedCount)
 
     val data =
         if (snapshot.exists()) {
@@ -192,6 +194,9 @@ class ProfileRepositoryFirestore(db: FirebaseFirestore, private val storage: Fir
       val createdAt: Timestamp? = document.getTimestamp(F_CREATED_AT)
       val updatedAt: Timestamp? = document.getTimestamp(F_UPDATED_AT)
 
+      // Counters
+      val eventsJoinedCount = document.getLong(F_EVENTS_JOINED_COUNT)?.toInt() ?: 0
+
       return Profile(
           uid = document.id,
           username = username,
@@ -203,7 +208,8 @@ class ProfileRepositoryFirestore(db: FirebaseFirestore, private val storage: Fir
           dateOfBirth = dateOfBirth,
           createdAt = createdAt,
           updatedAt = updatedAt,
-          fcmToken = fcmToken)
+          fcmToken = fcmToken,
+          eventsJoinedCount = eventsJoinedCount)
     } catch (e: Exception) {
       Log.e(TAG, "Error converting document to Profile", e)
       null
