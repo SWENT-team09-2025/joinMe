@@ -175,6 +175,7 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
     if (!locationPermissionsState.allPermissionsGranted) {
       locationPermissionsState.launchMultiplePermissionRequest()
     }
+    viewModel.fetchLocalizableEvents()
   }
 
   // --- Initialize the map camera position ---
