@@ -88,7 +88,7 @@ class EditEventForSerieViewModelTest {
       events
           .filter { eventIds.contains(it.key) }
           .let {
-            return it.values.toList()
+            return it.values.toList().sortedBy { event -> event.date.toDate().time }
           }
     }
   }

@@ -82,7 +82,7 @@ class EventsRepositoryFirestore(
 
     val snapshot = db.collection(EVENTS_COLLECTION_PATH).whereIn("eventId", eventIds).get().await()
 
-    return snapshot.mapNotNull { documentToEvent(it) }
+    return snapshot.mapNotNull { documentToEvent(it) }.sortedBy { it.date.toDate().time }
   }
 
   override suspend fun getEvent(eventId: String): Event {
@@ -153,6 +153,8 @@ class EventsRepositoryFirestore(
                 name = it["name"] as? String ?: "")
           }
 
+      val partOfASerie = document.getBoolean("partOfASerie") ?: false
+
       Event(
           eventId = eventId,
           type = EventType.valueOf(typeString),
@@ -164,7 +166,8 @@ class EventsRepositoryFirestore(
           participants = participants,
           maxParticipants = maxParticipants,
           visibility = EventVisibility.valueOf(visibilityString),
-          ownerId = ownerId)
+          ownerId = ownerId,
+          partOfASerie = partOfASerie)
     } catch (e: Exception) {
       null
     }

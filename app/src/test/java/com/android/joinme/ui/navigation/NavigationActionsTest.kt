@@ -683,4 +683,123 @@ class NavigationActionsTest {
           })
     }
   }
+
+  // ========== Chat Navigation Tests ==========
+
+  @Test
+  fun `navigateTo Chat with chatId and chatTitle navigates to correct route`() {
+    val chatId = "test-chat-123"
+    val chatTitle = "Test Chat"
+    every { navController.currentDestination?.route } returns Screen.Groups.route
+
+    actions.navigateTo(Screen.Chat(chatId, chatTitle))
+
+    verify {
+      navController.navigate(
+          eq("chat/$chatId/$chatTitle"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            // Chat is not a top-level destination, so shouldn't have launchSingleTop
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `Chat route companion object matches pattern`() {
+    assertEquals("chat/{chatId}/{chatTitle}", Screen.Chat.Companion.route)
+  }
+
+  @Test
+  fun chatScreen_hasCorrectRouteAndName() {
+    val chatId = "test-chat-789"
+    val chatTitle = "My Group Chat"
+    val screen = Screen.Chat(chatId, chatTitle)
+
+    assertEquals("chat/$chatId/$chatTitle", screen.route)
+    assertEquals("Chat", screen.name)
+  }
+
+  @Test
+  fun `navigateTo Chat from GroupListScreen works correctly`() {
+    val chatId = "group-chat-456"
+    val chatTitle = "Team Discussion"
+    every { navController.currentDestination?.route } returns Screen.Groups.route
+
+    actions.navigateTo(Screen.Chat(chatId, chatTitle))
+
+    verify {
+      navController.navigate(
+          eq("chat/$chatId/$chatTitle"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `navigateTo Chat with special characters in chatTitle`() {
+    val chatId = "chat-123"
+    val chatTitle = "Group Name with Spaces & Symbols!"
+    every { navController.currentDestination?.route } returns Screen.GroupDetail(chatId).route
+
+    actions.navigateTo(Screen.Chat(chatId, chatTitle))
+
+    verify {
+      navController.navigate(eq("chat/$chatId/$chatTitle"), any<NavOptionsBuilder.() -> Unit>())
+    }
+  }
+
+  @Test
+  fun `navigateTo Chat multiple times with different chatIds`() {
+    every { navController.currentDestination?.route } returns Screen.Groups.route
+
+    val chatId1 = "chat-1"
+    val chatTitle1 = "Chat One"
+    val chatId2 = "chat-2"
+    val chatTitle2 = "Chat Two"
+
+    actions.navigateTo(Screen.Chat(chatId1, chatTitle1))
+    actions.navigateTo(Screen.Chat(chatId2, chatTitle2))
+
+    verify {
+      navController.navigate(eq("chat/$chatId1/$chatTitle1"), any<NavOptionsBuilder.() -> Unit>())
+    }
+    verify {
+      navController.navigate(eq("chat/$chatId2/$chatTitle2"), any<NavOptionsBuilder.() -> Unit>())
+    }
+  }
+
+  @Test
+  fun `navigateTo Chat from ShowEventScreen with eventId as chatId works correctly`() {
+    val eventId = "event-789"
+    val eventTitle = "Basketball Game"
+    every { navController.currentDestination?.route } returns Screen.ShowEventScreen(eventId).route
+
+    // When navigating from ShowEvent to Chat, eventId is used as chatId
+    actions.navigateTo(Screen.Chat(chatId = eventId, chatTitle = eventTitle))
+
+    verify {
+      navController.navigate(
+          eq("chat/$eventId/$eventTitle"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `Chat navigation from event uses eventId correctly`() {
+    // Verify that event chat uses eventId as chatId
+    val eventId = "event-456"
+    val chatTitle = "Event Chat"
+    val screen = Screen.Chat(chatId = eventId, chatTitle = chatTitle)
+
+    assertEquals("chat/$eventId/$chatTitle", screen.route)
+  }
 }
