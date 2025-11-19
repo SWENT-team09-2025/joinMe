@@ -31,8 +31,8 @@ import kotlinx.coroutines.tasks.await
  *         isPinned: false
  * ```
  *
- * This provides real-time synchronization where all clients receive updates instantly when
- * messages are added, edited, or deleted.
+ * This provides real-time synchronization where all clients receive updates instantly when messages
+ * are added, edited, or deleted.
  */
 class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : ChatRepository {
 
@@ -122,7 +122,11 @@ class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : C
 
     // Get current readBy list
     val snapshot = messageRef.get().await()
-    val currentReadBy = snapshot.child("readBy").getValue(object : com.google.firebase.database.GenericTypeIndicator<List<String>>() {}) ?: emptyList()
+    val currentReadBy =
+        snapshot
+            .child("readBy")
+            .getValue(object : com.google.firebase.database.GenericTypeIndicator<List<String>>() {})
+            ?: emptyList()
 
     // Add userId if not already present
     if (!currentReadBy.contains(userId)) {
@@ -154,7 +158,12 @@ class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : C
             MessageType.TEXT
           }
 
-      val readBy = snapshot.child("readBy").getValue(object : com.google.firebase.database.GenericTypeIndicator<List<String>>() {}) ?: emptyList()
+      val readBy =
+          snapshot
+              .child("readBy")
+              .getValue(
+                  object : com.google.firebase.database.GenericTypeIndicator<List<String>>() {})
+              ?: emptyList()
       val isPinned = snapshot.child("isPinned").getValue(Boolean::class.java) ?: false
 
       Message(

@@ -121,7 +121,11 @@ class ChatRepositoryRealtimeDatabaseTest {
     every { mockMessageSnapshot1.child("content").getValue(String::class.java) } returns "Hello"
     every { mockMessageSnapshot1.child("timestamp").getValue(Long::class.java) } returns 1000L
     every { mockMessageSnapshot1.child("type").getValue(String::class.java) } returns "TEXT"
-    every { mockMessageSnapshot1.child("readBy").getValue(any<com.google.firebase.database.GenericTypeIndicator<List<String>>>()) } returns emptyList()
+    every {
+      mockMessageSnapshot1
+          .child("readBy")
+          .getValue(any<com.google.firebase.database.GenericTypeIndicator<List<String>>>())
+    } returns emptyList()
     every { mockMessageSnapshot1.child("isPinned").getValue(Boolean::class.java) } returns false
 
     // Setup message 2
@@ -131,17 +135,22 @@ class ChatRepositoryRealtimeDatabaseTest {
     every { mockMessageSnapshot2.child("content").getValue(String::class.java) } returns "Hi there"
     every { mockMessageSnapshot2.child("timestamp").getValue(Long::class.java) } returns 2000L
     every { mockMessageSnapshot2.child("type").getValue(String::class.java) } returns "TEXT"
-    every { mockMessageSnapshot2.child("readBy").getValue(any<com.google.firebase.database.GenericTypeIndicator<List<String>>>()) } returns emptyList()
+    every {
+      mockMessageSnapshot2
+          .child("readBy")
+          .getValue(any<com.google.firebase.database.GenericTypeIndicator<List<String>>>())
+    } returns emptyList()
     every { mockMessageSnapshot2.child("isPinned").getValue(Boolean::class.java) } returns false
 
     every { mockSnapshot.children } returns listOf(mockMessageSnapshot1, mockMessageSnapshot2)
 
     every { mockMessagesRef.orderByChild("timestamp") } returns mockQuery
-    every { mockQuery.addValueEventListener(any()) } answers {
-      val listener = firstArg<ValueEventListener>()
-      listener.onDataChange(mockSnapshot)
-      mockk(relaxed = true)
-    }
+    every { mockQuery.addValueEventListener(any()) } answers
+        {
+          val listener = firstArg<ValueEventListener>()
+          listener.onDataChange(mockSnapshot)
+          mockk(relaxed = true)
+        }
 
     // When
     val flow = repository.observeMessagesForConversation(testConversationId)
@@ -164,11 +173,12 @@ class ChatRepositoryRealtimeDatabaseTest {
 
     every { mockSnapshot.children } returns emptyList()
     every { mockMessagesRef.orderByChild("timestamp") } returns mockQuery
-    every { mockQuery.addValueEventListener(any()) } answers {
-      val listener = firstArg<ValueEventListener>()
-      listener.onDataChange(mockSnapshot)
-      mockk(relaxed = true)
-    }
+    every { mockQuery.addValueEventListener(any()) } answers
+        {
+          val listener = firstArg<ValueEventListener>()
+          listener.onDataChange(mockSnapshot)
+          mockk(relaxed = true)
+        }
 
     // When
     val flow = repository.observeMessagesForConversation(testConversationId)
@@ -186,11 +196,12 @@ class ChatRepositoryRealtimeDatabaseTest {
     val mockError = mockk<DatabaseError>(relaxed = true)
 
     every { mockMessagesRef.orderByChild("timestamp") } returns mockQuery
-    every { mockQuery.addValueEventListener(any()) } answers {
-      val listener = firstArg<ValueEventListener>()
-      listener.onCancelled(mockError)
-      mockk(relaxed = true)
-    }
+    every { mockQuery.addValueEventListener(any()) } answers
+        {
+          val listener = firstArg<ValueEventListener>()
+          listener.onCancelled(mockError)
+          mockk(relaxed = true)
+        }
 
     // When
     val flow = repository.observeMessagesForConversation(testConversationId)
@@ -216,7 +227,11 @@ class ChatRepositoryRealtimeDatabaseTest {
     every { mockValidMessage.child("content").getValue(String::class.java) } returns "Hello"
     every { mockValidMessage.child("timestamp").getValue(Long::class.java) } returns 1000L
     every { mockValidMessage.child("type").getValue(String::class.java) } returns "TEXT"
-    every { mockValidMessage.child("readBy").getValue(any<com.google.firebase.database.GenericTypeIndicator<List<String>>>()) } returns emptyList()
+    every {
+      mockValidMessage
+          .child("readBy")
+          .getValue(any<com.google.firebase.database.GenericTypeIndicator<List<String>>>())
+    } returns emptyList()
     every { mockValidMessage.child("isPinned").getValue(Boolean::class.java) } returns false
 
     // Invalid message (missing senderId)
@@ -225,11 +240,12 @@ class ChatRepositoryRealtimeDatabaseTest {
 
     every { mockSnapshot.children } returns listOf(mockValidMessage, mockInvalidMessage)
     every { mockMessagesRef.orderByChild("timestamp") } returns mockQuery
-    every { mockQuery.addValueEventListener(any()) } answers {
-      val listener = firstArg<ValueEventListener>()
-      listener.onDataChange(mockSnapshot)
-      mockk(relaxed = true)
-    }
+    every { mockQuery.addValueEventListener(any()) } answers
+        {
+          val listener = firstArg<ValueEventListener>()
+          listener.onDataChange(mockSnapshot)
+          mockk(relaxed = true)
+        }
 
     // When
     val flow = repository.observeMessagesForConversation(testConversationId)
@@ -248,15 +264,15 @@ class ChatRepositoryRealtimeDatabaseTest {
   @Test
   fun addMessage_successfullySavesMessage() = runTest {
     // Given
-    val message = Message(
-        id = testMessageId,
-        conversationId = testConversationId,
-        senderId = "user1",
-        senderName = "Alice",
-        content = "Test message",
-        timestamp = System.currentTimeMillis(),
-        type = MessageType.TEXT
-    )
+    val message =
+        Message(
+            id = testMessageId,
+            conversationId = testConversationId,
+            senderId = "user1",
+            senderName = "Alice",
+            content = "Test message",
+            timestamp = System.currentTimeMillis(),
+            type = MessageType.TEXT)
 
     val mockTask = Tasks.forResult<Void>(null)
     every { mockMessageRef.setValue(any()) } returns mockTask
@@ -275,15 +291,15 @@ class ChatRepositoryRealtimeDatabaseTest {
   @Test
   fun editMessage_successfullyUpdatesMessage() = runTest {
     // Given
-    val updatedMessage = Message(
-        id = testMessageId,
-        conversationId = testConversationId,
-        senderId = "user1",
-        senderName = "Alice",
-        content = "Updated content",
-        timestamp = System.currentTimeMillis(),
-        type = MessageType.TEXT
-    )
+    val updatedMessage =
+        Message(
+            id = testMessageId,
+            conversationId = testConversationId,
+            senderId = "user1",
+            senderName = "Alice",
+            content = "Updated content",
+            timestamp = System.currentTimeMillis(),
+            type = MessageType.TEXT)
 
     val mockTask = Tasks.forResult<Void>(null)
     every { mockMessageRef.updateChildren(any()) } returns mockTask
@@ -326,7 +342,11 @@ class ChatRepositoryRealtimeDatabaseTest {
     val mockSetTask = Tasks.forResult<Void>(null)
 
     every { mockMessageRef.get() } returns mockTask
-    every { mockSnapshot.child("readBy").getValue(any<com.google.firebase.database.GenericTypeIndicator<List<String>>>()) } returns listOf("user1")
+    every {
+      mockSnapshot
+          .child("readBy")
+          .getValue(any<com.google.firebase.database.GenericTypeIndicator<List<String>>>())
+    } returns listOf("user1")
     every { mockMessageRef.child("readBy") } returns mockReadByRef
     every { mockReadByRef.setValue(any()) } returns mockSetTask
 
@@ -346,7 +366,11 @@ class ChatRepositoryRealtimeDatabaseTest {
     val mockTask = Tasks.forResult(mockSnapshot)
 
     every { mockMessageRef.get() } returns mockTask
-    every { mockSnapshot.child("readBy").getValue(any<com.google.firebase.database.GenericTypeIndicator<List<String>>>()) } returns listOf("user1", userId)
+    every {
+      mockSnapshot
+          .child("readBy")
+          .getValue(any<com.google.firebase.database.GenericTypeIndicator<List<String>>>())
+    } returns listOf("user1", userId)
     every { mockMessageRef.child("readBy") } returns mockReadByRef
 
     // When
