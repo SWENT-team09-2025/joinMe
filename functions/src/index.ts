@@ -1,6 +1,8 @@
 import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 
+// Implemented with the help of Claud AI
+
 // Initialize Firebase Admin
 admin.initializeApp();
 
