@@ -314,6 +314,57 @@ class CreateEventViewModelTest {
     Assert.assertNull(vm.uiState.value.selectedGroupId)
   }
 
+  @Test
+  fun setMaxParticipants_whenGroupSelected_validatesAgainstGroupSize() = runTest {
+    // Set up a group with 5 members
+    val testGroup =
+        Group(id = "group-1", name = "Test Group", memberIds = listOf("u1", "u2", "u3", "u4", "u5"))
+    groupRepo.addTestGroup(testGroup)
+
+    val newVm = CreateEventViewModel(repo, groupRepo)
+    advanceUntilIdle()
+
+    // Select the group
+    newVm.setSelectedGroup("group-1")
+
+    // Try to set maxParticipants less than group size
+    newVm.setMaxParticipants("3")
+    Assert.assertNotNull(newVm.uiState.value.invalidMaxParticipantsMsg)
+    Assert.assertTrue(
+        newVm.uiState.value.invalidMaxParticipantsMsg!!.contains("at least 5"))
+
+    // Set maxParticipants equal to group size
+    newVm.setMaxParticipants("5")
+    Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
+
+    // Set maxParticipants greater than group size
+    newVm.setMaxParticipants("10")
+    Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
+  }
+
+  @Test
+  fun setSelectedGroup_revalidatesMaxParticipants() = runTest {
+    // Set up a group with 5 members
+    val testGroup =
+        Group(id = "group-1", name = "Test Group", memberIds = listOf("u1", "u2", "u3", "u4", "u5"))
+    groupRepo.addTestGroup(testGroup)
+
+    val newVm = CreateEventViewModel(repo, groupRepo)
+    advanceUntilIdle()
+
+    // Set maxParticipants to 3 (valid for standalone)
+    newVm.setMaxParticipants("3")
+    Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
+
+    // Select group - should now be invalid
+    newVm.setSelectedGroup("group-1")
+    Assert.assertNotNull(newVm.uiState.value.invalidMaxParticipantsMsg)
+
+    // Clear group selection - should be valid again
+    newVm.setSelectedGroup(null)
+    Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
+  }
+
   // ---------- createEvent with group ----------
 
   @Test
@@ -338,9 +389,14 @@ class CreateEventViewModelTest {
   }
 
   @Test
-  fun createEvent_withValidFormAndGroup_addsEventToGroup() = runTest {
-    // Set up a test group
-    val testGroup = Group(id = "group-1", name = "Test Group", eventIds = emptyList())
+  fun createEvent_withValidFormAndGroup_addsEventToGroupAndMembersAsParticipants() = runTest {
+    // Set up a test group with members
+    val testGroup =
+        Group(
+            id = "group-1",
+            name = "Test Group",
+            memberIds = listOf("user1", "user2", "user3"),
+            eventIds = emptyList())
     groupRepo.addTestGroup(testGroup)
 
     // Fill form and select group
@@ -360,6 +416,11 @@ class CreateEventViewModelTest {
 
     Assert.assertTrue(ok)
     Assert.assertEquals(1, repo.added.size)
+
+    // Verify event has group members as participants
+    val createdEvent = repo.added[0]
+    Assert.assertEquals(3, createdEvent.participants.size)
+    Assert.assertTrue(createdEvent.participants.containsAll(listOf("user1", "user2", "user3")))
 
     // Verify group was updated with event ID
     val updatedGroup = groupRepo.getGroup("group-1")
@@ -385,7 +446,7 @@ class CreateEventViewModelTest {
 
     Assert.assertFalse(ok)
     Assert.assertNotNull(vm.uiState.value.errorMsg)
-    Assert.assertEquals(1, repo.added.size) // Event was created
+    Assert.assertEquals(0, repo.added.size) // Event was NOT created
   }
 
   @Test

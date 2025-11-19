@@ -105,7 +105,6 @@ class CreateEventViewModel(
         _uiState.value = _uiState.value.copy(availableGroups = groups)
       } catch (e: Exception) {
         Log.e("CreateEventViewModel", "Error loading user groups", e)
-        // Don't show error to user, just leave groups empty
       }
     }
   }
@@ -132,6 +131,18 @@ class CreateEventViewModel(
       return false
     }
 
+    // Get group if selected, for both members and event list update
+    val selectedGroup =
+        state.selectedGroupId?.let { groupId ->
+          try {
+            groupRepository.getGroup(groupId)
+          } catch (e: Exception) {
+            Log.e("CreateEventViewModel", "Error getting group", e)
+            setErrorMsg("Failed to get group: ${e.message}")
+            return false
+          }
+        }
+
     val eventId = repository.getNewEventId()
     val event =
         Event(
@@ -142,7 +153,7 @@ class CreateEventViewModel(
             location = state.selectedLocation!!,
             date = parsedDate,
             duration = state.duration.toInt(),
-            participants = emptyList(),
+            participants = selectedGroup?.memberIds ?: emptyList(),
             maxParticipants = state.maxParticipants.toInt(),
             visibility = EventVisibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
             ownerId = Firebase.auth.currentUser?.uid ?: "unknown")
@@ -151,11 +162,10 @@ class CreateEventViewModel(
       repository.addEvent(event)
 
       // If a group is selected, add the event ID to the group's event list
-      state.selectedGroupId?.let { groupId ->
+      selectedGroup?.let { group ->
         try {
-          val group = groupRepository.getGroup(groupId)
           val updatedGroup = group.copy(eventIds = group.eventIds + eventId)
-          groupRepository.editGroup(groupId, updatedGroup)
+          groupRepository.editGroup(group.id, updatedGroup)
         } catch (e: Exception) {
           Log.e("CreateEventViewModel", "Error adding event to group", e)
           setErrorMsg("Event created but failed to add to group: ${e.message}")
@@ -181,15 +191,28 @@ class CreateEventViewModel(
 
   fun setMaxParticipants(value: String) {
     val num = value.toIntOrNull()
+    val selectedGroup =
+        _uiState.value.selectedGroupId?.let { groupId ->
+          _uiState.value.availableGroups.find { it.id == groupId }
+        }
+    val groupMembersCount = selectedGroup?.memberIds?.size ?: 0
+
     _uiState.value =
         _uiState.value.copy(
             maxParticipants = value,
             invalidMaxParticipantsMsg =
-                if (num == null || num <= 0) "Must be a positive number" else null)
+                when {
+                  num == null || num <= 0 -> "Must be a positive number"
+                  groupMembersCount > 0 && num < groupMembersCount ->
+                      "Must be at least $groupMembersCount (group size)"
+                  else -> null
+                })
   }
 
   /** Updates the selected group for the event. Pass null for standalone events. */
   fun setSelectedGroup(groupId: String?) {
     _uiState.value = _uiState.value.copy(selectedGroupId = groupId)
+    // Re-validate maxParticipants when group selection changes
+    setMaxParticipants(_uiState.value.maxParticipants)
   }
 }
