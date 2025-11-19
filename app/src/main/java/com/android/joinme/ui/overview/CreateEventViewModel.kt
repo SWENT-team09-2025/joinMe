@@ -1,12 +1,14 @@
 package com.android.joinme.ui.overview
 
 import android.util.Log
+import androidx.lifecycle.viewModelScope
 import com.android.joinme.HttpClientProvider
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
+import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.map.Location
@@ -20,6 +22,7 @@ import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /** UI state for the CreateEvent screen. */
 data class CreateEventUIState(
@@ -37,6 +40,7 @@ data class CreateEventUIState(
     override val locationSuggestions: List<Location> = emptyList(),
     override val selectedLocation: Location? = null,
     val selectedGroupId: String? = null, // null means standalone event
+    val availableGroups: List<Group> = emptyList(),
 
     // validation messages
     override val invalidTypeMsg: String? = null,
@@ -83,10 +87,27 @@ class CreateEventViewModel(
   override val _uiState = MutableStateFlow(CreateEventUIState())
   val uiState: StateFlow<CreateEventUIState> = _uiState.asStateFlow()
 
+  init {
+    loadUserGroups()
+  }
+
   override fun getState(): EventFormUIState = _uiState.value
 
   override fun updateState(transform: (EventFormUIState) -> EventFormUIState) {
     _uiState.value = transform(_uiState.value) as CreateEventUIState
+  }
+
+  /** Loads the list of groups the current user belongs to. */
+  private fun loadUserGroups() {
+    viewModelScope.launch {
+      try {
+        val groups = groupRepository.getAllGroups()
+        _uiState.value = _uiState.value.copy(availableGroups = groups)
+      } catch (e: Exception) {
+        Log.e("CreateEventViewModel", "Error loading user groups", e)
+        // Don't show error to user, just leave groups empty
+      }
+    }
   }
 
   /** Adds a new event to the repository. If a group is selected, adds the event to the group. */

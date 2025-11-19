@@ -70,6 +70,7 @@ class CreateEventViewModelTest {
     private val groups = mutableMapOf<String, Group>()
     var shouldThrowOnGet = false
     var shouldThrowOnEdit = false
+    var shouldThrowOnGetAll = false
 
     fun addTestGroup(group: Group) {
       groups[group.id] = group
@@ -77,7 +78,10 @@ class CreateEventViewModelTest {
 
     override fun getNewGroupId(): String = "fake-group-id"
 
-    override suspend fun getAllGroups(): List<Group> = groups.values.toList()
+    override suspend fun getAllGroups(): List<Group> {
+      if (shouldThrowOnGetAll) throw Exception("Failed to get all groups")
+      return groups.values.toList()
+    }
 
     override suspend fun getGroup(groupId: String): Group {
       if (shouldThrowOnGet) throw Exception("Failed to get group")
@@ -254,6 +258,44 @@ class CreateEventViewModelTest {
 
     vm.clearErrorMsg()
     Assert.assertNull(vm.uiState.value.errorMsg)
+  }
+
+  // ---------- group loading ----------
+
+  @Test
+  fun initialState_loadsAvailableGroups() = runTest {
+    // Add test groups before creating VM
+    val group1 = Group(id = "group-1", name = "Group 1")
+    val group2 = Group(id = "group-2", name = "Group 2")
+    groupRepo.addTestGroup(group1)
+    groupRepo.addTestGroup(group2)
+
+    // Create a new VM to trigger init block
+    val newVm = CreateEventViewModel(repo, groupRepo)
+    advanceUntilIdle()
+
+    Assert.assertEquals(2, newVm.uiState.value.availableGroups.size)
+    Assert.assertTrue(newVm.uiState.value.availableGroups.contains(group1))
+    Assert.assertTrue(newVm.uiState.value.availableGroups.contains(group2))
+  }
+
+  @Test
+  fun initialState_whenNoGroups_hasEmptyList() = runTest {
+    val newVm = CreateEventViewModel(repo, groupRepo)
+    advanceUntilIdle()
+
+    Assert.assertTrue(newVm.uiState.value.availableGroups.isEmpty())
+  }
+
+  @Test
+  fun initialState_whenGroupLoadingFails_hasEmptyList() = runTest {
+    groupRepo.shouldThrowOnGetAll = true
+
+    val newVm = CreateEventViewModel(repo, groupRepo)
+    advanceUntilIdle()
+
+    // Should not crash, just have empty groups
+    Assert.assertTrue(newVm.uiState.value.availableGroups.isEmpty())
   }
 
   // ---------- group selection ----------
