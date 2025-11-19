@@ -826,6 +826,10 @@ class HistoryScreenTest {
       return series
     }
 
+    override suspend fun getSeriesByIds(serieIds: List<String>): List<Serie> {
+      return series.filter { serieIds.contains(it.serieId) }
+    }
+
     override suspend fun getSerie(serieId: String): Serie = series.first { it.serieId == serieId }
 
     override suspend fun addSerie(serie: Serie) {

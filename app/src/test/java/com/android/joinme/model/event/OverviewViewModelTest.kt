@@ -561,6 +561,11 @@ class OverviewViewModelTest {
       return series.toList()
     }
 
+    override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> {
+      if (shouldThrow) throw RuntimeException("Serie repository error")
+      return series.filter { seriesIds.contains(it.serieId) }
+    }
+
     override suspend fun getSerie(serieId: String): Serie {
       if (shouldThrow) throw RuntimeException("Serie repository error")
       return series.first { it.serieId == serieId }
