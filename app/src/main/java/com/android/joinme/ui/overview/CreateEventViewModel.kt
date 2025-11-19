@@ -92,8 +92,10 @@ class CreateEventViewModel(
    *
    * This method also increments the owner's eventsJoinedCount since the owner is automatically
    * added as a participant when creating an event.
+   *
+   * @param userId The user ID of the event owner. Defaults to the current Firebase Auth user.
    */
-  suspend fun createEvent(): Boolean {
+  suspend fun createEvent(userId: String? = null): Boolean {
     val state = _uiState.value
     if (!state.isValid) {
       setErrorMsg("At least one field is not valid")
@@ -114,7 +116,7 @@ class CreateEventViewModel(
       return false
     }
 
-    val ownerId = Firebase.auth.currentUser?.uid ?: "unknown"
+    val ownerId = userId ?: Firebase.auth.currentUser?.uid ?: "unknown"
     val event =
         Event(
             eventId = repository.getNewEventId(),

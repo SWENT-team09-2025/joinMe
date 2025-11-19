@@ -371,6 +371,29 @@ class ShowEventViewModelTest {
   }
 
   @Test
+  fun toggleParticipation_profileUpdateFails_doesNotJoinEvent() = runTest {
+    val event = createTestEvent(participants = listOf("user1"))
+    repository.addEvent(event)
+
+    // Make profileRepository throw exception when trying to update
+    whenever(profileRepository.getProfile("user2"))
+        .thenThrow(RuntimeException("Database connection failed"))
+
+    viewModel.toggleParticipation(event.eventId, "user2")
+    advanceUntilIdle()
+
+    // Verify event in repository was NOT modified
+    val eventInRepo = repository.getEvent(event.eventId)
+    assertFalse(eventInRepo.participants.contains("user2"))
+    assertEquals(2, eventInRepo.participants.size) // Still only owner and user1
+
+    // Error message should be set
+    val state = viewModel.uiState.first()
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Failed to update your profile"))
+  }
+
+  @Test
   fun toggleParticipation_eventFull_setsErrorMessage() = runTest {
     val event = createTestEvent(participants = listOf("user1", "user2"), maxParticipants = 2)
     repository.addEvent(event)
@@ -488,6 +511,35 @@ class ShowEventViewModelTest {
               assertEquals("user1", profile.uid)
               assertEquals(0, profile.eventsJoinedCount)
             })
+  }
+
+  @Test
+  fun deleteEvent_profileUpdateFails_doesNotDeleteEvent() = runTest {
+    val event = createTestEvent(participants = listOf("user1", "user2"))
+    repository.addEvent(event)
+
+    val profile1 =
+        Profile(
+            uid = "user1", username = "User1", email = "user1@example.com", eventsJoinedCount = 5)
+
+    whenever(profileRepository.getProfile("user1")).thenReturn(profile1)
+    // Make user2's profile update fail
+    whenever(profileRepository.getProfile("user2"))
+        .thenThrow(RuntimeException("Profile service unavailable"))
+
+    viewModel.deleteEvent(event.eventId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+
+    // Event should NOT be deleted (profile update happens first now)
+    val eventStillExists = repository.getEvent(event.eventId)
+    assertNotNull(eventStillExists)
+    assertEquals(event.eventId, eventStillExists.eventId)
+
+    // Error message should be set
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Failed to update profile"))
   }
 
   @Test

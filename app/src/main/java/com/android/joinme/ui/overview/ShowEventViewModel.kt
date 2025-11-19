@@ -163,11 +163,7 @@ class ShowEventViewModel(
             event.participants + userId
           }
 
-      // Update the event with new participants list
-      val updatedEvent = event.copy(participants = updatedParticipants)
-      repository.editEvent(eventId, updatedEvent)
-
-      // Update user's eventsJoinedCount in their profile
+      // Update user's eventsJoinedCount in their profile FIRST
       try {
         val userProfile = profileRepository.getProfile(userId)
         if (userProfile != null) {
@@ -182,10 +178,14 @@ class ShowEventViewModel(
           profileRepository.createOrUpdateProfile(updatedProfile)
         }
       } catch (e: Exception) {
-        // Log the error but don't fail the whole operation
-        // The event participation was successful, profile update is secondary
-        setErrorMsg("Warning: Failed to update eventsJoinedCount for user $userId: ${e.message}")
+        // Profile update failed - don't proceed with event update to maintain consistency
+        setErrorMsg("Failed to update your profile. Cannot complete operation: ${e.message}")
+        return
       }
+
+      // Only update the event if profile update succeeded
+      val updatedEvent = event.copy(participants = updatedParticipants)
+      repository.editEvent(eventId, updatedEvent)
 
       // Reload the event to update UI
       loadEvent(eventId)
@@ -207,10 +207,7 @@ class ShowEventViewModel(
       // Get the event before deleting to access participants list
       val event = repository.getEvent(eventId)
 
-      // Delete the event
-      repository.deleteEvent(eventId)
-
-      // Decrement eventsJoinedCount for all participants
+      // Decrement eventsJoinedCount for all participants FIRST
       event.participants.forEach { participantId ->
         try {
           val participantProfile = profileRepository.getProfile(participantId)
@@ -220,11 +217,15 @@ class ShowEventViewModel(
             profileRepository.createOrUpdateProfile(updatedProfile)
           }
         } catch (e: Exception) {
-          // Log but don't fail the deletion
+          // Profile update failed - don't proceed with deletion to maintain consistency
           setErrorMsg(
-              "Warning: Failed to update eventsJoinedCount for participant $participantId: ${e.message}")
+              "Failed to update profile for participant $participantId. Cannot delete event: ${e.message}")
+          return
         }
       }
+
+      // Only delete the event if all profile updates succeeded
+      repository.deleteEvent(eventId)
 
       clearErrorMsg()
     } catch (e: Exception) {

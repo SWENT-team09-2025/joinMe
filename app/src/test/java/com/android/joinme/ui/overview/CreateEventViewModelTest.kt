@@ -4,7 +4,9 @@ import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.map.Location
+import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -17,6 +19,9 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.verify
+import org.mockito.kotlin.check
+import org.mockito.kotlin.whenever
 
 /**
  * Unit tests for CreateEventViewModel.
@@ -198,5 +203,72 @@ class CreateEventViewModelTest {
 
     vm.clearErrorMsg()
     Assert.assertNull(vm.uiState.value.errorMsg)
+  }
+
+  // ---------- eventsJoinedCount tests ----------
+
+  @Test
+  fun createEvent_incrementsOwnerEventsJoinedCount() = runTest {
+    val ownerProfile =
+        Profile(
+            uid = "owner-123",
+            username = "Owner",
+            email = "owner@test.com",
+            eventsJoinedCount = 5,
+            createdAt = Timestamp.now(),
+            updatedAt = Timestamp.now())
+
+    whenever(profileRepository.getProfile("owner-123")).thenReturn(ownerProfile)
+
+    // Fill valid form
+    vm.setType("SPORTS")
+    vm.setTitle("Football")
+    vm.setDescription("Friendly 5v5")
+    vm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
+    vm.setDate("25/12/2023")
+    vm.setTime("10:00")
+    vm.setMaxParticipants("10")
+    vm.setDuration("90")
+    vm.setVisibility("PUBLIC")
+
+    val result = vm.createEvent(userId = "owner-123")
+    advanceUntilIdle()
+
+    Assert.assertTrue(result)
+    Assert.assertEquals(1, repo.added.size)
+
+    // Verify profile was updated with incremented count
+    verify(profileRepository)
+        .createOrUpdateProfile(
+            check { profile ->
+              Assert.assertEquals("owner-123", profile.uid)
+              Assert.assertEquals(6, profile.eventsJoinedCount)
+            })
+  }
+
+  @Test
+  fun createEvent_profileUpdateFails_stillCreatesEvent() = runTest {
+    // Mock profile update to fail
+    whenever(profileRepository.getProfile("owner-456"))
+        .thenThrow(RuntimeException("Database error"))
+
+    // Fill valid form
+    vm.setType("SPORTS")
+    vm.setTitle("Football")
+    vm.setDescription("Friendly 5v5")
+    vm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
+    vm.setDate("25/12/2023")
+    vm.setTime("10:00")
+    vm.setMaxParticipants("10")
+    vm.setDuration("90")
+    vm.setVisibility("PUBLIC")
+
+    val result = vm.createEvent(userId = "owner-456")
+    advanceUntilIdle()
+
+    // Event creation should still succeed even if profile update fails
+    Assert.assertTrue(result)
+    Assert.assertEquals(1, repo.added.size)
+    Assert.assertEquals("owner-456", repo.added[0].ownerId)
   }
 }
