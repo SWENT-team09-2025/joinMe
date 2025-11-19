@@ -100,6 +100,16 @@ class SeriesRepositoryLocal(
     }
   }
 
+  /**
+   * Retrieves a list of Serie items by their unique identifiers.
+   *
+   * @param seriesIds The list of unique identifiers of the Serie items to retrieve
+   * @return A list of Serie items with the specified identifiers
+   */
+  override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> {
+    return series.filter { seriesIds.contains(it.serieId) }
+  }
+
   /** Clears all series from the repository. Useful for testing. */
   fun clear() {
     series.clear()

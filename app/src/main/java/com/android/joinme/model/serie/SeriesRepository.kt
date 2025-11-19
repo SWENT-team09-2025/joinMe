@@ -56,4 +56,12 @@ interface SeriesRepository {
    * @throws Exception if the Serie item is not found
    */
   suspend fun deleteSerie(serieId: String)
+
+  /**
+   * Retrieves a list of Serie items by their unique identifiers.
+   *
+   * @param seriesIds The list of unique identifiers of the Serie items to retrieve
+   * @return A list of Serie items with the specified identifiers
+   */
+  suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie>
 }
