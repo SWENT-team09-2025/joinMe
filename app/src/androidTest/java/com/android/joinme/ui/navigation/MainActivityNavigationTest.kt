@@ -96,6 +96,23 @@ class MainActivityNavigationTest {
         repo.addEvent(event)
 
         repoSerie.editSerie(serie.serieId, serie.copy(eventIds = listOf("test-event-5")))
+
+        // Add past serie for History screen testing
+        val pastDate = Date(System.currentTimeMillis() - 7200000) // 2 hours ago
+        val pastEndDate = Date(System.currentTimeMillis() - 3600000) // 1 hour ago
+        val pastSerie =
+            Serie(
+                serieId = "past-serie-1",
+                title = "Past Serie",
+                description = "Past serie for history",
+                date = Timestamp(pastDate),
+                participants = listOf("test-user-id"),
+                maxParticipants = 10,
+                visibility = Visibility.PUBLIC,
+                eventIds = emptyList(),
+                ownerId = "test-user-id",
+                lastEventEndTime = Timestamp(pastEndDate))
+        repoSerie.addSerie(pastSerie)
       }
     }
 
@@ -496,15 +513,26 @@ class MainActivityNavigationTest {
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
+    // Navigate to History
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON).performClick()
     composeTestRule.waitForIdle()
 
+    // Verify History screen is displayed
     composeTestRule.onNodeWithText("History").assertExists()
 
-    val testSerieId = "test-serie-123"
-    val screen = Screen.SerieDetails(testSerieId)
-    assert(screen.route == "serie_details/$testSerieId")
-    assert(Screen.SerieDetails.Companion.route == "serie_details/{serieId}")
+    // Wait for data to load
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Click on past serie to navigate to SerieDetails
+    composeTestRule.onNodeWithTag("historySerieItempast-serie-1").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Verify we're on SerieDetails screen
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.SCREEN).assertExists()
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.SERIE_TITLE).assertExists()
   }
 
   @Test
