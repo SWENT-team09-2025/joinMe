@@ -332,7 +332,7 @@ fun ShowEventScreen(
                       }
                 } else {
                   // if event is part of a serie, don't display join/quit button
-                  if (!eventUIState.isPartOfASerie) {
+                  if (!eventUIState.partOfASerie) {
                     // if event is full, don't display join button
                     val participantCount = eventUIState.participantsCount.toIntOrNull() ?: 0
                     val maxParticipants =
