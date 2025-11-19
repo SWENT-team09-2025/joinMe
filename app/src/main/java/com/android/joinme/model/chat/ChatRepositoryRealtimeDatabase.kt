@@ -37,6 +37,7 @@ import kotlinx.coroutines.tasks.await
 class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : ChatRepository {
 
   companion object {
+    private const val TAG = "ChatRepositoryRTDB"
     private const val CONVERSATIONS_PATH = "conversations"
     private const val MESSAGES_PATH = "messages"
 
@@ -48,6 +49,9 @@ class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : C
     private const val FIELD_TYPE = "type"
     private const val FIELD_READ_BY = "readBy"
     private const val FIELD_IS_PINNED = "isPinned"
+
+    // Default values
+    private const val DEFAULT_MESSAGE_TYPE = "TEXT"
 
     // Type indicator for deserializing List<String> from Realtime Database
     private val STRING_LIST_TYPE_INDICATOR =
@@ -87,7 +91,7 @@ class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : C
               }
 
               override fun onCancelled(error: DatabaseError) {
-                Log.e("ChatRepositoryRTDB", "Error observing messages", error.toException())
+                Log.e(TAG, "Error observing messages", error.toException())
                 trySend(emptyList())
               }
             }
@@ -164,7 +168,8 @@ class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : C
       val content = snapshot.child(FIELD_CONTENT).getValue(String::class.java) ?: return null
       val timestamp = snapshot.child(FIELD_TIMESTAMP).getValue(Long::class.java) ?: return null
 
-      val typeString = snapshot.child(FIELD_TYPE).getValue(String::class.java) ?: "TEXT"
+      val typeString =
+          snapshot.child(FIELD_TYPE).getValue(String::class.java) ?: DEFAULT_MESSAGE_TYPE
       val type =
           try {
             MessageType.valueOf(typeString)
@@ -186,7 +191,7 @@ class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : C
           readBy = readBy,
           isPinned = isPinned)
     } catch (e: Exception) {
-      Log.e("ChatRepositoryRTDB", "Error converting snapshot to Message", e)
+      Log.e(TAG, "Error converting snapshot to Message", e)
       null
     }
   }
