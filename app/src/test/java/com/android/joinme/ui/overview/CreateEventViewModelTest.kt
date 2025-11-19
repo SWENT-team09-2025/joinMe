@@ -4,6 +4,7 @@ import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.map.Location
+import com.android.joinme.model.profile.ProfileRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -15,6 +16,7 @@ import org.junit.After
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
+import org.mockito.Mockito.mock
 
 /**
  * Unit tests for CreateEventViewModel.
@@ -55,6 +57,7 @@ class CreateEventViewModelTest {
   }
 
   private lateinit var repo: FakeEventsRepository
+  private lateinit var profileRepository: ProfileRepository
   private lateinit var vm: CreateEventViewModel
   private val testDispatcher = StandardTestDispatcher()
 
@@ -62,7 +65,8 @@ class CreateEventViewModelTest {
   fun setUp() {
     Dispatchers.setMain(testDispatcher)
     repo = FakeEventsRepository()
-    vm = CreateEventViewModel(repo)
+    profileRepository = mock(ProfileRepository::class.java)
+    vm = CreateEventViewModel(repo, profileRepository)
   }
 
   @After

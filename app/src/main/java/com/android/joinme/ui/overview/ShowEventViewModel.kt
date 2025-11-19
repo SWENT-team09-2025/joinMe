@@ -138,12 +138,18 @@ class ShowEventViewModel(
   /**
    * Toggles the current user's participation in the event (join or quit).
    *
+   * This method also updates the user's eventsJoinedCount in their profile:
+   * - When joining: increment eventsJoinedCount by 1
+   * - When quitting: decrement eventsJoinedCount by 1
+   *
    * @param eventId The ID of the event.
    * @param userId The ID of the current user.
    */
   suspend fun toggleParticipation(eventId: String, userId: String) {
     try {
       val event = repository.getEvent(eventId)
+      val isJoining = !event.participants.contains(userId)
+
       val updatedParticipants =
           if (event.participants.contains(userId)) {
             // User is already a participant, remove them (quit)
@@ -161,6 +167,26 @@ class ShowEventViewModel(
       val updatedEvent = event.copy(participants = updatedParticipants)
       repository.editEvent(eventId, updatedEvent)
 
+      // Update user's eventsJoinedCount in their profile
+      try {
+        val userProfile = profileRepository.getProfile(userId)
+        if (userProfile != null) {
+          val newCount =
+              if (isJoining) {
+                userProfile.eventsJoinedCount + 1
+              } else {
+                // When quitting, decrement but don't go below 0
+                maxOf(0, userProfile.eventsJoinedCount - 1)
+              }
+          val updatedProfile = userProfile.copy(eventsJoinedCount = newCount)
+          profileRepository.createOrUpdateProfile(updatedProfile)
+        }
+      } catch (e: Exception) {
+        // Log the error but don't fail the whole operation
+        // The event participation was successful, profile update is secondary
+        setErrorMsg("Warning: Failed to update eventsJoinedCount for user $userId: ${e.message}")
+      }
+
       // Reload the event to update UI
       loadEvent(eventId)
       clearErrorMsg()
@@ -172,11 +198,34 @@ class ShowEventViewModel(
   /**
    * Deletes an Event document by its ID.
    *
+   * This method also decrements eventsJoinedCount for all participants of the deleted event.
+   *
    * @param eventId The ID of the Event document to be deleted.
    */
   suspend fun deleteEvent(eventId: String) {
     try {
+      // Get the event before deleting to access participants list
+      val event = repository.getEvent(eventId)
+
+      // Delete the event
       repository.deleteEvent(eventId)
+
+      // Decrement eventsJoinedCount for all participants
+      event.participants.forEach { participantId ->
+        try {
+          val participantProfile = profileRepository.getProfile(participantId)
+          if (participantProfile != null) {
+            val newCount = maxOf(0, participantProfile.eventsJoinedCount - 1)
+            val updatedProfile = participantProfile.copy(eventsJoinedCount = newCount)
+            profileRepository.createOrUpdateProfile(updatedProfile)
+          }
+        } catch (e: Exception) {
+          // Log but don't fail the deletion
+          setErrorMsg(
+              "Warning: Failed to update eventsJoinedCount for participant $participantId: ${e.message}")
+        }
+      }
+
       clearErrorMsg()
     } catch (e: Exception) {
       setErrorMsg("Failed to delete Event: ${e.message}")

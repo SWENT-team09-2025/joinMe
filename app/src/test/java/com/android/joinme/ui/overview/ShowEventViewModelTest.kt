@@ -19,6 +19,7 @@ import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.*
 import org.mockito.kotlin.any
+import org.mockito.kotlin.check
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -275,6 +276,31 @@ class ShowEventViewModelTest {
   }
 
   @Test
+  fun toggleParticipation_userJoins_incrementsEventsJoinedCount() = runTest {
+    val event = createTestEvent(participants = listOf("user1"))
+    repository.addEvent(event)
+
+    val userProfile =
+        Profile(
+            uid = "user2",
+            username = "NewUser",
+            email = "newuser@example.com",
+            eventsJoinedCount = 5)
+    whenever(profileRepository.getProfile("user2")).thenReturn(userProfile)
+
+    viewModel.toggleParticipation(event.eventId, "user2")
+    advanceUntilIdle()
+
+    // Verify that createOrUpdateProfile was called with incremented count
+    verify(profileRepository)
+        .createOrUpdateProfile(
+            check { profile ->
+              assertEquals("user2", profile.uid)
+              assertEquals(6, profile.eventsJoinedCount)
+            })
+  }
+
+  @Test
   fun toggleParticipation_userIsParticipant_quitsEvent() = runTest {
     val event = createTestEvent(participants = listOf("user1", "user2"))
     repository.addEvent(event)
@@ -292,6 +318,56 @@ class ShowEventViewModelTest {
     val state = viewModel.uiState.first()
     assertFalse(state.participants.contains("user2"))
     assertEquals("2", state.participantsCount)
+  }
+
+  @Test
+  fun toggleParticipation_userQuits_decrementsEventsJoinedCount() = runTest {
+    val event = createTestEvent(participants = listOf("user1", "user2"))
+    repository.addEvent(event)
+
+    val userProfile =
+        Profile(
+            uid = "user2",
+            username = "ExistingUser",
+            email = "existing@example.com",
+            eventsJoinedCount = 10)
+    whenever(profileRepository.getProfile("user2")).thenReturn(userProfile)
+
+    viewModel.toggleParticipation(event.eventId, "user2")
+    advanceUntilIdle()
+
+    // Verify that createOrUpdateProfile was called with decremented count
+    verify(profileRepository)
+        .createOrUpdateProfile(
+            check { profile ->
+              assertEquals("user2", profile.uid)
+              assertEquals(9, profile.eventsJoinedCount)
+            })
+  }
+
+  @Test
+  fun toggleParticipation_userQuitsWithZeroCount_doesNotGoNegative() = runTest {
+    val event = createTestEvent(participants = listOf("user1", "user2"))
+    repository.addEvent(event)
+
+    val userProfile =
+        Profile(
+            uid = "user2",
+            username = "UserWithZero",
+            email = "zero@example.com",
+            eventsJoinedCount = 0)
+    whenever(profileRepository.getProfile("user2")).thenReturn(userProfile)
+
+    viewModel.toggleParticipation(event.eventId, "user2")
+    advanceUntilIdle()
+
+    // Verify count stays at 0 and doesn't go negative
+    verify(profileRepository)
+        .createOrUpdateProfile(
+            check { profile ->
+              assertEquals("user2", profile.uid)
+              assertEquals(0, profile.eventsJoinedCount)
+            })
   }
 
   @Test
@@ -331,6 +407,9 @@ class ShowEventViewModelTest {
     val event = createTestEvent()
     repository.addEvent(event)
 
+    val mockProfile = Profile(uid = "user1", username = "User1", email = "user1@example.com")
+    whenever(profileRepository.getProfile(any())).thenReturn(mockProfile)
+
     viewModel.deleteEvent(event.eventId)
     advanceUntilIdle()
 
@@ -343,6 +422,72 @@ class ShowEventViewModelTest {
     } catch (_: Exception) {
       // Expected
     }
+  }
+
+  @Test
+  fun deleteEvent_decrementsEventsJoinedCountForAllParticipants() = runTest {
+    val event = createTestEvent(participants = listOf("user1", "user2", "user3"))
+    repository.addEvent(event)
+
+    val profile1 =
+        Profile(
+            uid = "user1", username = "User1", email = "user1@example.com", eventsJoinedCount = 5)
+    val profile2 =
+        Profile(
+            uid = "user2", username = "User2", email = "user2@example.com", eventsJoinedCount = 3)
+    val profile3 =
+        Profile(
+            uid = "user3", username = "User3", email = "user3@example.com", eventsJoinedCount = 10)
+
+    whenever(profileRepository.getProfile("user1")).thenReturn(profile1)
+    whenever(profileRepository.getProfile("user2")).thenReturn(profile2)
+    whenever(profileRepository.getProfile("user3")).thenReturn(profile3)
+
+    viewModel.deleteEvent(event.eventId)
+    advanceUntilIdle()
+
+    // Verify all participants had their count decremented
+    verify(profileRepository)
+        .createOrUpdateProfile(
+            check { profile ->
+              assertEquals("user1", profile.uid)
+              assertEquals(4, profile.eventsJoinedCount)
+            })
+    verify(profileRepository)
+        .createOrUpdateProfile(
+            check { profile ->
+              assertEquals("user2", profile.uid)
+              assertEquals(2, profile.eventsJoinedCount)
+            })
+    verify(profileRepository)
+        .createOrUpdateProfile(
+            check { profile ->
+              assertEquals("user3", profile.uid)
+              assertEquals(9, profile.eventsJoinedCount)
+            })
+  }
+
+  @Test
+  fun deleteEvent_participantWithZeroCount_doesNotGoNegative() = runTest {
+    val event = createTestEvent(participants = listOf("user1"))
+    repository.addEvent(event)
+
+    val profile1 =
+        Profile(
+            uid = "user1", username = "User1", email = "user1@example.com", eventsJoinedCount = 0)
+
+    whenever(profileRepository.getProfile("user1")).thenReturn(profile1)
+
+    viewModel.deleteEvent(event.eventId)
+    advanceUntilIdle()
+
+    // Verify count stays at 0 and doesn't go negative
+    verify(profileRepository)
+        .createOrUpdateProfile(
+            check { profile ->
+              assertEquals("user1", profile.uid)
+              assertEquals(0, profile.eventsJoinedCount)
+            })
   }
 
   @Test
