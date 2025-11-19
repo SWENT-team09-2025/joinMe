@@ -7,6 +7,8 @@ import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
+import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.map.LocationRepository
 import com.android.joinme.model.map.NominatimLocationRepository
@@ -34,6 +36,7 @@ data class CreateEventUIState(
     override val locationQuery: String = "",
     override val locationSuggestions: List<Location> = emptyList(),
     override val selectedLocation: Location? = null,
+    val selectedGroupId: String? = null, // null means standalone event
 
     // validation messages
     override val invalidTypeMsg: String? = null,
@@ -72,6 +75,8 @@ data class CreateEventUIState(
 class CreateEventViewModel(
     private val repository: EventsRepository =
         EventsRepositoryProvider.getRepository(isOnline = true),
+    private val groupRepository: GroupRepository =
+        GroupRepositoryProvider.repository,
     locationRepository: LocationRepository = NominatimLocationRepository(HttpClientProvider.client)
 ) : BaseEventFormViewModel(locationRepository) {
 
@@ -84,7 +89,7 @@ class CreateEventViewModel(
     _uiState.value = transform(_uiState.value) as CreateEventUIState
   }
 
-  /** Adds a new event to the repository. Suspends until the save is complete. */
+  /** Adds a new event to the repository. If a group is selected, adds the event to the group. */
   suspend fun createEvent(): Boolean {
     val state = _uiState.value
     if (!state.isValid) {
@@ -106,9 +111,10 @@ class CreateEventViewModel(
       return false
     }
 
+    val eventId = repository.getNewEventId()
     val event =
         Event(
-            eventId = repository.getNewEventId(),
+            eventId = eventId,
             type = EventType.valueOf(state.type.uppercase(Locale.ROOT)),
             title = state.title,
             description = state.description,
@@ -122,6 +128,20 @@ class CreateEventViewModel(
 
     return try {
       repository.addEvent(event)
+
+      // If a group is selected, add the event ID to the group's event list
+      state.selectedGroupId?.let { groupId ->
+        try {
+          val group = groupRepository.getGroup(groupId)
+          val updatedGroup = group.copy(eventIds = group.eventIds + eventId)
+          groupRepository.editGroup(groupId, updatedGroup)
+        } catch (e: Exception) {
+          Log.e("CreateEventViewModel", "Error adding event to group", e)
+          setErrorMsg("Event created but failed to add to group: ${e.message}")
+          return false
+        }
+      }
+
       clearErrorMsg()
       true
     } catch (e: Exception) {
@@ -145,5 +165,10 @@ class CreateEventViewModel(
             maxParticipants = value,
             invalidMaxParticipantsMsg =
                 if (num == null || num <= 0) "Must be a positive number" else null)
+  }
+
+  /** Updates the selected group for the event. Pass null for standalone events. */
+  fun setSelectedGroup(groupId: String?) {
+    _uiState.value = _uiState.value.copy(selectedGroupId = groupId)
   }
 }

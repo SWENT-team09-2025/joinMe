@@ -1,9 +1,13 @@
 package com.android.joinme.ui.overview
 
+import androidx.test.core.app.ApplicationProvider
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventsRepository
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.map.Location
+import com.google.firebase.FirebaseApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -15,6 +19,11 @@ import org.junit.After
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+/** Note: This file was co-written with AI (Claude) */
 
 /**
  * Unit tests for CreateEventViewModel.
@@ -22,6 +31,8 @@ import org.junit.Test
  * These tests avoid asserting on exact error strings (which can change), and instead assert on
  * invalid* flags, isValid, and repository interactions.
  */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28])
 @OptIn(ExperimentalCoroutinesApi::class)
 class CreateEventViewModelTest {
 
@@ -54,15 +65,64 @@ class CreateEventViewModelTest {
     override fun getNewEventId(): String = "fake-id-1"
   }
 
+  // ---- Simple fake group repo that records groups and edits ----
+  private class FakeGroupRepository : GroupRepository {
+    private val groups = mutableMapOf<String, Group>()
+    var shouldThrowOnGet = false
+    var shouldThrowOnEdit = false
+
+    fun addTestGroup(group: Group) {
+      groups[group.id] = group
+    }
+
+    override fun getNewGroupId(): String = "fake-group-id"
+
+    override suspend fun getAllGroups(): List<Group> = groups.values.toList()
+
+    override suspend fun getGroup(groupId: String): Group {
+      if (shouldThrowOnGet) throw Exception("Failed to get group")
+      return groups[groupId] ?: throw Exception("Group not found")
+    }
+
+    override suspend fun addGroup(group: Group) {
+      groups[group.id] = group
+    }
+
+    override suspend fun editGroup(groupId: String, newValue: Group) {
+      if (shouldThrowOnEdit) throw Exception("Failed to edit group")
+      groups[groupId] = newValue
+    }
+
+    override suspend fun deleteGroup(groupId: String, userId: String) {
+      groups.remove(groupId)
+    }
+
+    override suspend fun leaveGroup(groupId: String, userId: String) {
+      /* no-op */
+    }
+
+    override suspend fun joinGroup(groupId: String, userId: String) {
+      /* no-op */
+    }
+  }
+
   private lateinit var repo: FakeEventsRepository
+  private lateinit var groupRepo: FakeGroupRepository
   private lateinit var vm: CreateEventViewModel
   private val testDispatcher = StandardTestDispatcher()
 
   @Before
   fun setUp() {
+    // Initialize Firebase for tests that call createEvent()
+    val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+    if (FirebaseApp.getApps(context).isEmpty()) {
+      FirebaseApp.initializeApp(context)
+    }
+
     Dispatchers.setMain(testDispatcher)
     repo = FakeEventsRepository()
-    vm = CreateEventViewModel(repo)
+    groupRepo = FakeGroupRepository()
+    vm = CreateEventViewModel(repo, groupRepo)
   }
 
   @After
@@ -194,5 +254,120 @@ class CreateEventViewModelTest {
 
     vm.clearErrorMsg()
     Assert.assertNull(vm.uiState.value.errorMsg)
+  }
+
+  // ---------- group selection ----------
+
+  @Test
+  fun initialState_hasNoSelectedGroup() {
+    Assert.assertNull(vm.uiState.value.selectedGroupId)
+  }
+
+  @Test
+  fun setSelectedGroup_updatesStateAndCanBeCleared() {
+    vm.setSelectedGroup("group-123")
+    Assert.assertEquals("group-123", vm.uiState.value.selectedGroupId)
+
+    vm.setSelectedGroup(null)
+    Assert.assertNull(vm.uiState.value.selectedGroupId)
+  }
+
+  // ---------- createEvent with group ----------
+
+  @Test
+  fun createEvent_withValidFormAndNoGroup_createsStandaloneEvent() = runTest {
+    vm.setType("SPORTS")
+    vm.setTitle("Football")
+    vm.setDescription("Friendly 5v5")
+    vm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
+    vm.setDate("25/12/2023")
+    vm.setTime("10:00")
+    vm.setMaxParticipants("10")
+    vm.setDuration("90")
+    vm.setVisibility("PUBLIC")
+
+    val ok = vm.createEvent()
+    advanceUntilIdle()
+
+    Assert.assertTrue(ok)
+    Assert.assertEquals(1, repo.added.size)
+    // Ensure no group was modified
+    Assert.assertTrue(groupRepo.getAllGroups().isEmpty())
+  }
+
+  @Test
+  fun createEvent_withValidFormAndGroup_addsEventToGroup() = runTest {
+    // Set up a test group
+    val testGroup = Group(id = "group-1", name = "Test Group", eventIds = emptyList())
+    groupRepo.addTestGroup(testGroup)
+
+    // Fill form and select group
+    vm.setType("SPORTS")
+    vm.setTitle("Football")
+    vm.setDescription("Friendly 5v5")
+    vm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
+    vm.setDate("25/12/2023")
+    vm.setTime("10:00")
+    vm.setMaxParticipants("10")
+    vm.setDuration("90")
+    vm.setVisibility("PUBLIC")
+    vm.setSelectedGroup("group-1")
+
+    val ok = vm.createEvent()
+    advanceUntilIdle()
+
+    Assert.assertTrue(ok)
+    Assert.assertEquals(1, repo.added.size)
+
+    // Verify group was updated with event ID
+    val updatedGroup = groupRepo.getGroup("group-1")
+    Assert.assertEquals(1, updatedGroup.eventIds.size)
+    Assert.assertEquals("fake-id-1", updatedGroup.eventIds[0])
+  }
+
+  @Test
+  fun createEvent_withGroupNotFound_returnsFalseAndSetsError() = runTest {
+    vm.setType("SPORTS")
+    vm.setTitle("Football")
+    vm.setDescription("Friendly 5v5")
+    vm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
+    vm.setDate("25/12/2023")
+    vm.setTime("10:00")
+    vm.setMaxParticipants("10")
+    vm.setDuration("90")
+    vm.setVisibility("PUBLIC")
+    vm.setSelectedGroup("non-existent-group")
+
+    val ok = vm.createEvent()
+    advanceUntilIdle()
+
+    Assert.assertFalse(ok)
+    Assert.assertNotNull(vm.uiState.value.errorMsg)
+    Assert.assertEquals(1, repo.added.size) // Event was created
+  }
+
+  @Test
+  fun createEvent_withGroupEditFailure_returnsFalseAndSetsError() = runTest {
+    val testGroup = Group(id = "group-1", name = "Test Group", eventIds = emptyList())
+    groupRepo.addTestGroup(testGroup)
+    groupRepo.shouldThrowOnEdit = true
+
+    vm.setType("SPORTS")
+    vm.setTitle("Football")
+    vm.setDescription("Friendly 5v5")
+    vm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
+    vm.setDate("25/12/2023")
+    vm.setTime("10:00")
+    vm.setMaxParticipants("10")
+    vm.setDuration("90")
+    vm.setVisibility("PUBLIC")
+    vm.setSelectedGroup("group-1")
+
+    val ok = vm.createEvent()
+    advanceUntilIdle()
+
+    Assert.assertFalse(ok)
+    Assert.assertNotNull(vm.uiState.value.errorMsg)
+    Assert.assertEquals(1, repo.added.size) // Event was created
   }
 }
