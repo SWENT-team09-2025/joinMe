@@ -317,93 +317,96 @@ fun SerieDetailsScreen(
                         .padding(vertical = Dimens.Spacing.small),
                 textAlign = TextAlign.Center)
 
-            // Add event button (only shown to owner)
-            if (uiState.isOwner(currentUserId)) {
-              Button(
-                  onClick = onAddEventClick,
-                  enabled = uiState.events.size < 30,
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .height(Dimens.Spacing.huge)
-                          .testTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT),
-                  shape = RoundedCornerShape(Dimens.CornerRadius.medium),
-                  colors = MaterialTheme.customColors.buttonColors()) {
-                    Text(text = "ADD EVENT", style = MaterialTheme.typography.headlineSmall)
-                  }
-
-              // Edit and Delete buttons
-              Button(
-                  onClick = { onEditSerieClick(serieId) },
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .height(Dimens.Spacing.huge)
-                          .testTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON),
-                  shape = RoundedCornerShape(Dimens.CornerRadius.medium),
-                  enabled = uiState.isOwner(currentUserId),
-                  colors = MaterialTheme.customColors.buttonColors()) {
-                    Text(text = "EDIT SERIE", style = MaterialTheme.typography.headlineSmall)
-                  }
-
-              Button(
-                  onClick = { showDeleteDialog = true },
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .height(Dimens.Spacing.huge)
-                          .testTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON),
-                  shape = RoundedCornerShape(Dimens.CornerRadius.medium),
-                  colors = MaterialTheme.customColors.buttonColors()) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.customColors.deleteButton)
-                    Spacer(modifier = Modifier.width(Dimens.Spacing.small))
-                    Text(text = "DELETE SERIE", style = MaterialTheme.typography.headlineSmall)
-                  }
-            }
-
-            // Join/Quit serie button (shown to non-owners)
-            if (!uiState.isOwner(currentUserId)) {
-              if (uiState.canJoin(currentUserId) || uiState.isParticipant(currentUserId)) {
+            // Only show buttons if the serie is not expired
+            if (!uiState.isPastSerie) {
+              // Add event button (only shown to owner)
+              if (uiState.isOwner(currentUserId)) {
                 Button(
-                    onClick = {
-                      coroutineScope.launch {
-                        val success =
-                            if (uiState.isParticipant(currentUserId)) {
-                              serieDetailsViewModel.quitSerie((currentUserId))
-                            } else {
-                              serieDetailsViewModel.joinSerie(currentUserId)
-                            }
-                        if (success && !uiState.isParticipant(currentUserId)) {
-                          // If user quit successfully, navigate back
-                          onQuitSerieSuccess()
-                        }
-                      }
-                    },
+                    onClick = onAddEventClick,
+                    enabled = uiState.events.size < 30,
                     modifier =
                         Modifier.fillMaxWidth()
                             .height(Dimens.Spacing.huge)
-                            .testTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE),
+                            .testTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT),
                     shape = RoundedCornerShape(Dimens.CornerRadius.medium),
-                    enabled =
-                        uiState.isParticipant(currentUserId) || uiState.canJoin(currentUserId),
                     colors = MaterialTheme.customColors.buttonColors()) {
-                      Text(
-                          text =
-                              if (uiState.isParticipant(currentUserId)) "QUIT SERIE"
-                              else "JOIN SERIE",
-                          style = MaterialTheme.typography.headlineSmall)
+                      Text(text = "ADD EVENT", style = MaterialTheme.typography.headlineSmall)
                     }
-              } else {
-                Text(
-                    text = "Sorry this serie is full",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.error,
+
+                // Edit and Delete buttons
+                Button(
+                    onClick = { onEditSerieClick(serieId) },
                     modifier =
                         Modifier.fillMaxWidth()
-                            .padding(bottom = Dimens.Padding.extraLarge)
-                            .testTag(SerieDetailsScreenTestTags.MESSAGE_FULL_SERIE),
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Bold)
+                            .height(Dimens.Spacing.huge)
+                            .testTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON),
+                    shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+                    enabled = uiState.isOwner(currentUserId),
+                    colors = MaterialTheme.customColors.buttonColors()) {
+                      Text(text = "EDIT SERIE", style = MaterialTheme.typography.headlineSmall)
+                    }
+
+                Button(
+                    onClick = { showDeleteDialog = true },
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .height(Dimens.Spacing.huge)
+                            .testTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON),
+                    shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+                    colors = MaterialTheme.customColors.buttonColors()) {
+                      Icon(
+                          imageVector = Icons.Default.Delete,
+                          contentDescription = "Delete",
+                          tint = MaterialTheme.customColors.deleteButton)
+                      Spacer(modifier = Modifier.width(Dimens.Spacing.small))
+                      Text(text = "DELETE SERIE", style = MaterialTheme.typography.headlineSmall)
+                    }
+              }
+
+              // Join/Quit serie button (shown to non-owners)
+              if (!uiState.isOwner(currentUserId)) {
+                if (uiState.canJoin(currentUserId) || uiState.isParticipant(currentUserId)) {
+                  Button(
+                      onClick = {
+                        coroutineScope.launch {
+                          val success =
+                              if (uiState.isParticipant(currentUserId)) {
+                                serieDetailsViewModel.quitSerie((currentUserId))
+                              } else {
+                                serieDetailsViewModel.joinSerie(currentUserId)
+                              }
+                          if (success && !uiState.isParticipant(currentUserId)) {
+                            // If user quit successfully, navigate back
+                            onQuitSerieSuccess()
+                          }
+                        }
+                      },
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .height(Dimens.Spacing.huge)
+                              .testTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE),
+                      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+                      enabled =
+                          uiState.isParticipant(currentUserId) || uiState.canJoin(currentUserId),
+                      colors = MaterialTheme.customColors.buttonColors()) {
+                        Text(
+                            text =
+                                if (uiState.isParticipant(currentUserId)) "QUIT SERIE"
+                                else "JOIN SERIE",
+                            style = MaterialTheme.typography.headlineSmall)
+                      }
+                } else {
+                  Text(
+                      text = "Sorry this serie is full",
+                      style = MaterialTheme.typography.headlineSmall,
+                      color = MaterialTheme.colorScheme.error,
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .padding(bottom = Dimens.Padding.extraLarge)
+                              .testTag(SerieDetailsScreenTestTags.MESSAGE_FULL_SERIE),
+                      textAlign = TextAlign.Center,
+                      fontWeight = FontWeight.Bold)
+                }
               }
             }
           }

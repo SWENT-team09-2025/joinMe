@@ -11,6 +11,7 @@ import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.model.serie.getFormattedDuration
+import com.android.joinme.model.serie.isExpired
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -99,6 +100,10 @@ data class SerieDetailsUIState(
   /** Gets the visibility display string (PUBLIC or PRIVATE) */
   val visibilityDisplay: String
     get() = serie?.visibility?.name ?: "PUBLIC"
+
+  /** Checks if the serie is expired (last event has ended) */
+  val isPastSerie: Boolean
+    get() = serie?.isExpired() ?: false
 }
 
 /**
