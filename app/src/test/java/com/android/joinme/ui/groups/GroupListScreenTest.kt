@@ -342,26 +342,22 @@ class GroupListScreenTest {
     composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertIsDisplayed()
+    composeTestRule.onNodeWithText("SHARE GROUP").assertIsDisplayed()
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertDoesNotExist()
+    composeTestRule.onNodeWithText("SHARE GROUP").assertDoesNotExist()
   }
 
   @Test
-  fun groupMenu_viewDetails_triggersCallback() {
+  fun groupMenu_shareGroup_triggersDialog() {
     val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
-    var viewedGroup: Group? = null
 
-    composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = createViewModel(listOf(group)), onViewGroupDetails = { viewedGroup = it })
-    }
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").performClick()
+    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
 
-    assertEquals(group, viewedGroup)
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_DIALOG).assertExists()
   }
 
   @Test
@@ -372,7 +368,6 @@ class GroupListScreenTest {
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
 
-    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertExists()
     composeTestRule.onNodeWithText("LEAVE GROUP").assertExists()
     composeTestRule.onNodeWithText("SHARE GROUP").assertExists()
     composeTestRule.onNodeWithText("EDIT GROUP").assertDoesNotExist()
@@ -685,9 +680,10 @@ class GroupListScreenTest {
     composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").performClick()
+    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
 
-    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertDoesNotExist()
+    // After clicking share, the menu should close and dialog should open
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_DIALOG).assertExists()
   }
 
   @Test
@@ -697,11 +693,11 @@ class GroupListScreenTest {
     composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertIsDisplayed()
+    composeTestRule.onNodeWithText("SHARE GROUP").assertIsDisplayed()
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("test1")).performClick()
 
-    composeTestRule.onNodeWithText("VIEW GROUP DETAILS").assertDoesNotExist()
+    composeTestRule.onNodeWithText("SHARE GROUP").assertDoesNotExist()
   }
 
   // =======================================

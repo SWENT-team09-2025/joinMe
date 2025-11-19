@@ -79,6 +79,12 @@ class ProfileViewModel(
       _isLoading.value = true
       clearError()
       clearProfile()
+      // Validate uid is not empty
+      if (uid.isBlank()) {
+        _isLoading.value = false
+        _error.value = "User not authenticated. Please sign in again."
+        return@launch
+      }
 
       try {
         // Try to fetch the profile (with timeout to prevent infinite waiting)

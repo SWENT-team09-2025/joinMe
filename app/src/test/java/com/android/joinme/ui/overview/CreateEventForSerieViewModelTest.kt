@@ -55,8 +55,7 @@ class CreateEventForSerieViewModelTest {
     }
 
     override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
-      /* no-op */
-      return emptyList()
+      return added.filter { it.eventId in eventIds }.sortedBy { it.date.toDate().time }
     }
 
     override suspend fun getEvent(eventId: String): Event =

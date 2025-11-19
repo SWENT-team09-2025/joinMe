@@ -12,6 +12,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,6 +44,8 @@ import com.android.joinme.ui.theme.customColors
  * @param onBackClick Callback when the back button is clicked.
  * @param onGroupEventsClick Callback when the "Group Events" button is clicked.
  * @param onMemberClick Callback when a member profile is clicked, receives the member's UID.
+ * @param onNavigateToChat Callback invoked when the user wants to navigate to the group chat,
+ *   receives chatId and chatTitle.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,7 +54,8 @@ fun GroupDetailScreen(
     viewModel: GroupDetailViewModel = viewModel(factory = GroupDetailViewModelFactory()),
     onBackClick: () -> Unit = {},
     onGroupEventsClick: () -> Unit = {},
-    onMemberClick: (String) -> Unit = {}
+    onMemberClick: (String) -> Unit = {},
+    onNavigateToChat: (String, String) -> Unit = { _, _ -> }
 ) {
   LaunchedEffect(groupId) { viewModel.loadGroupDetails(groupId) }
 
@@ -94,13 +99,15 @@ fun GroupDetailScreen(
             }
             uiState.group != null -> {
               GroupContent(
+                  groupId = groupId,
                   groupCategory = uiState.group!!.category,
                   groupName = uiState.group!!.name,
                   groupDescription = uiState.group!!.description,
                   members = uiState.members,
                   membersCount = uiState.group!!.membersCount,
                   onGroupEventsClick = onGroupEventsClick,
-                  onMemberClick = onMemberClick)
+                  onMemberClick = onMemberClick,
+                  onNavigateToChat = onNavigateToChat)
             }
           }
         }
@@ -110,13 +117,15 @@ fun GroupDetailScreen(
 /** Main content displaying group information and members. */
 @Composable
 private fun GroupContent(
+    groupId: String,
     groupCategory: EventType,
     groupName: String,
     groupDescription: String,
     members: List<Profile>,
     membersCount: Int,
     onGroupEventsClick: () -> Unit,
-    onMemberClick: (String) -> Unit
+    onMemberClick: (String) -> Unit,
+    onNavigateToChat: (String, String) -> Unit
 ) {
   Column(modifier = Modifier.fillMaxSize().background(groupCategory.getColor())) {
     Column(modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.large)) {
@@ -177,18 +186,39 @@ private fun GroupContent(
     Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.Padding.large)) {
-      Button(
-          onClick = onGroupEventsClick,
-          modifier = Modifier.fillMaxWidth().height(Dimens.Button.standardHeight),
-          colors = MaterialTheme.customColors.buttonColorsForEventType(groupCategory),
-          border =
-              BorderStroke(width = Dimens.BorderWidth.medium, color = groupCategory.getOnColor()),
-          shape = RoundedCornerShape(Dimens.GroupDetail.eventsButtonCornerRadius)) {
-            Text(
-                text = "Group Events",
-                style = MaterialTheme.typography.headlineSmall,
-                color = groupCategory.getOnColor(),
-                fontWeight = FontWeight.Medium)
+      // Row to hold chat FAB and Group Events button
+      Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small),
+          verticalAlignment = Alignment.CenterVertically) {
+            // Chat FAB positioned to the left
+            FloatingActionButton(
+                onClick = { onNavigateToChat(groupId, groupName) },
+                containerColor = groupCategory.getColor(),
+                contentColor = groupCategory.getOnColor(),
+                shape = RoundedCornerShape(Dimens.GroupDetail.eventsButtonCornerRadius),
+                modifier = Modifier.testTag("chatFabBottom")) {
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Filled.Message,
+                      contentDescription = "Open Chat",
+                  )
+                }
+
+            // Group Events button - now using weight to fill remaining space
+            Button(
+                onClick = onGroupEventsClick,
+                modifier = Modifier.weight(1f).height(Dimens.Button.standardHeight),
+                colors = MaterialTheme.customColors.buttonColorsForEventType(groupCategory),
+                border =
+                    BorderStroke(
+                        width = Dimens.BorderWidth.medium, color = groupCategory.getOnColor()),
+                shape = RoundedCornerShape(Dimens.GroupDetail.eventsButtonCornerRadius)) {
+                  Text(
+                      text = "Group Events",
+                      style = MaterialTheme.typography.headlineSmall,
+                      color = groupCategory.getOnColor(),
+                      fontWeight = FontWeight.Medium)
+                }
           }
 
       Spacer(modifier = Modifier.height(Dimens.Spacing.medium))

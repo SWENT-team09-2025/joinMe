@@ -155,7 +155,7 @@ fun ChatScreen(
         ChatTopBar(
             chatTitle = chatTitle,
             onBackClick = onBackClick,
-            onLeaveClick = { /* TODO(#187): Implement leave functionality */},
+            onLeaveClick = onBackClick, // Leave chat navigates back
             topBarColor = effectiveChatColor,
             onTopBarColor = effectiveOnChatColor)
       },

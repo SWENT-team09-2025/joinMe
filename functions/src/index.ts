@@ -6,6 +6,17 @@ admin.initializeApp();
 
 const db = admin.firestore();
 
+const S_TO_MS = 1000;
+const MIN_TO_S = 60;
+const HOUR_TO_MIN = 60;
+const DAY_TO_HOUR = 24;
+const NUMBER_OF_DAYS = 30;
+const RECURRENCE = "0 0 * * *";
+const TIME_ZONE = "UTC";
+
+const SERIES = "series";
+const EVENTS = "events";
+
 /**
  * Helper function to send FCM notification to a user
  * @param {string} userId - The ID of the user to send notification to
@@ -213,6 +224,7 @@ export const onEventUpdated = functions.firestore
 /**
  * Triggered when an event document is deleted.
  * Notifies all participants that the event was cancelled.
+ * Skips notifications if the event is already expired (automatic cleanup).
  */
 export const onEventDeleted = functions.firestore
   .document("events/{eventId}")
@@ -220,6 +232,23 @@ export const onEventDeleted = functions.firestore
     const eventId = context.params.eventId;
     const eventData = snap.data();
 
+    // Check if event is already expired (indicates automatic cleanup)
+    const eventDate = eventData.date;
+    const durationMinutes = eventData.duration || 0;
+
+    if (eventDate && eventDate.seconds) {
+      const eventStartMs = eventDate.seconds * S_TO_MS;
+      const durationMs = durationMinutes * MIN_TO_S * S_TO_MS;
+      const eventEndMs = eventStartMs + durationMs;
+      const now = Date.now();
+
+      // If event already ended, don't send notifications (automatic cleanup)
+      if (eventEndMs < now) {
+        return;
+      }
+    }
+
+    // Event is still upcoming or active, send cancellation notifications
     const ownerId = eventData.ownerId;
     const participants: string[] = eventData.participants || [];
     const eventTitle = eventData.title || "An event";
@@ -242,4 +271,105 @@ export const onEventDeleted = functions.firestore
     );
 
     await Promise.all(notificationPromises);
+  });
+
+/**
+ * Scheduled function that runs daily at midnight (UTC).
+ * Cleans up old events and series that are expired for more than 30 days.
+ *
+ * Logic:
+ * 1. Fetch all series
+ * 2. If lastEventEndTime < now - 30 days, mark series and its events for deletion
+ * 3. Delete all marked series
+ * 4. Delete all events from those series
+ * 5. Fetch remaining events and check if they are expired (date + duration < now - 30 days)
+ * 6. Delete expired standalone events
+ */
+export const cleanupOldEventsAndSeries = functions.pubsub
+  .schedule(RECURRENCE)
+  .timeZone(TIME_ZONE)
+  .onRun(async (context) => {
+    const now = Date.now(); // Current time in milliseconds
+    const thirtyDaysInMs = NUMBER_OF_DAYS * DAY_TO_HOUR * HOUR_TO_MIN * MIN_TO_S * S_TO_MS; // 30 days
+    const cutoffTime = now - thirtyDaysInMs;
+
+    try {
+      const seriesEventsToDelete: string[] = [];
+      const seriesToDelete: string[] = [];
+
+      // Step 1: Fetch all series
+      const seriesSnapshot = await db.collection(SERIES).get();
+
+      // Step 2: Check each series
+      for (const serieDoc of seriesSnapshot.docs) {
+        const serieData = serieDoc.data();
+        const lastEventEndTime = serieData.lastEventEndTime;
+
+        if (lastEventEndTime && lastEventEndTime.seconds) {
+          const lastEventEndMs = lastEventEndTime.seconds * S_TO_MS;
+
+          // If series is expired, mark it and its events for deletion
+          if (lastEventEndMs < cutoffTime) {
+            seriesToDelete.push(serieDoc.id);
+            const eventIds: string[] = serieData.eventIds || [];
+            seriesEventsToDelete.push(...eventIds);
+          }
+        }
+      }
+
+      // Step 3: Delete all marked series
+      for (const serieId of seriesToDelete) {
+        try {
+          await db.collection(SERIES).doc(serieId).delete();
+        } catch (err) {
+          console.error(`Failed to delete series ${serieId}:`, err);
+        }
+      }
+
+      // Step 4: Delete all events from expired series
+      for (const eventId of seriesEventsToDelete) {
+        try {
+          await db.collection(EVENTS).doc(eventId).delete();
+        } catch (err) {
+          console.error(`Failed to delete event ${eventId}:`, err);
+        }
+      }
+
+      // Step 5: Fetch remaining events and check if they are expired
+      const eventsSnapshot = await db.collection(EVENTS).get();
+      const standaloneEventsToDelete: string[] = [];
+
+      for (const eventDoc of eventsSnapshot.docs) {
+        const eventData = eventDoc.data();
+        const eventId = eventDoc.id;
+
+        // Calculate event end time (start date + duration)
+        const eventDate = eventData.date;
+        const durationMinutes = eventData.duration || 0;
+
+        if (eventDate && eventDate.seconds) {
+          const eventStartMs = eventDate.seconds * S_TO_MS;
+          const durationMs = durationMinutes * MIN_TO_S * S_TO_MS;
+          const eventEndMs = eventStartMs + durationMs;
+
+          // If event is expired, mark it for deletion
+          if (eventEndMs < cutoffTime) {
+            standaloneEventsToDelete.push(eventId);
+          }
+        }
+      }
+
+      // Step 6: Delete expired standalone events
+      for (const eventId of standaloneEventsToDelete) {
+        try {
+          await db.collection(EVENTS).doc(eventId).delete();
+        } catch (err) {
+          console.error(`Failed to delete event ${eventId}:`, err);
+        }
+      }
+
+      return null;
+    } catch (error) {
+      throw error;
+    }
   });
