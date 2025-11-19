@@ -304,7 +304,7 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
               FloatingActionButton(
                   onClick = { viewModel.enableFollowingUser() },
                   modifier =
-                      Modifier.align(Alignment.BottomEnd)
+                      Modifier.align(Alignment.TopEnd)
                           .padding(Dimens.Padding.medium)
                           .testTag(MapScreenTestTags.MY_LOCATION_BUTTON),
                   containerColor =
