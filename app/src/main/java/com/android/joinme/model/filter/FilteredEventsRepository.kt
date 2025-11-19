@@ -9,6 +9,8 @@ import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -118,7 +120,9 @@ class FilteredEventsRepository(
    * This is called automatically when filters change or when new data is fetched.
    */
   private fun applyFilters() {
-    val filtered = filterRepository.applyFilters(allEvents)
+    // Get current user ID for participation filtering
+    val currentUserId = Firebase.auth.currentUser?.uid ?: ""
+    val filtered = filterRepository.applyFilters(allEvents, currentUserId)
     _filteredEvents.value = filtered
   }
 
