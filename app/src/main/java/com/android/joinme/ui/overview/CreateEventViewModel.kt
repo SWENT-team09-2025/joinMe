@@ -116,7 +116,7 @@ class CreateEventViewModel(
       return false
     }
 
-    val ownerId = userId ?: Firebase.auth.currentUser?.uid ?: "unknown"
+    val ownerId = userId ?: (Firebase.auth.currentUser?.uid ?: "unknown")
     val event =
         Event(
             eventId = repository.getNewEventId(),
