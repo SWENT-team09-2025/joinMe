@@ -110,7 +110,7 @@ class CreateEventForSerieViewModel(
                     com.android.joinme.model.utils.Visibility.PRIVATE -> EventVisibility.PRIVATE
                   },
               ownerId = serie.ownerId, // Inherit from serie
-              isPartOfASerie = true // Mark as part of a serie
+              partOfASerie = true // Mark as part of a serie
               )
 
       // Add the event to the repository
