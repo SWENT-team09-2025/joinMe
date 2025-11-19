@@ -373,3 +373,127 @@ export const cleanupOldEventsAndSeries = functions.pubsub
       throw error;
     }
   });
+
+/**
+ * Triggered when a new message is created in a group chat.
+ * Sends push notifications to all group members except the sender.
+ */
+export const onChatMessageCreated = functions.firestore
+  .document("conversations/{conversationId}/messages/{messageId}")
+  .onCreate(async (snapshot, context) => {
+    try {
+      const conversationId = context.params.conversationId;
+      const messageId = context.params.messageId;
+      const messageData = snapshot.data();
+
+      console.log(`New message in conversation ${conversationId}`);
+
+      // Get message details
+      const senderId = messageData.senderId;
+      const senderName = messageData.senderName || "Someone";
+      const messageContent = messageData.content || "New message";
+      const messageType = messageData.type || "TEXT";
+
+      // Skip system messages (like "User joined")
+      if (messageType === "SYSTEM") {
+        console.log("Skipping notification for system message");
+        return null;
+      }
+
+      // STEP 1: Fetch group document (conversationId = groupId)
+      const groupDoc = await db.collection("groups").doc(conversationId).get();
+
+      if (!groupDoc.exists) {
+        console.log(`Group not found: ${conversationId}`);
+        return null;
+      }
+
+      const groupData = groupDoc.data();
+      if (!groupData) {
+        return null;
+      }
+
+      const memberIds: string[] = groupData.memberIds || [];
+      const groupName = groupData.name || "Group Chat";
+
+      console.log(`Group "${groupName}" has ${memberIds.length} members`);
+
+      // STEP 2: Filter out the sender (don't notify yourself)
+      const recipientIds = memberIds.filter((userId) => userId !== senderId);
+
+      if (recipientIds.length === 0) {
+        console.log("No recipients to notify");
+        return null;
+      }
+
+      // STEP 3: Truncate long messages for notification
+      const truncatedContent =
+        messageContent.length > 100
+          ? messageContent.substring(0, 100) + "..."
+          : messageContent;
+
+      // STEP 4: Send notification to each recipient
+      const notificationPromises = recipientIds.map(async (userId) => {
+        try {
+          // Get user's FCM token
+          const userDoc = await db.collection("profiles").doc(userId).get();
+
+          if (!userDoc.exists) {
+            console.log(`User ${userId} not found`);
+            return;
+          }
+
+          const userData = userDoc.data();
+          const fcmToken = userData?.fcmToken;
+
+          if (!fcmToken) {
+            console.log(`User ${userId} does not have an FCM token`);
+            return;
+          }
+
+          // Build notification payload
+          const message: admin.messaging.Message = {
+            token: fcmToken,
+            notification: {
+              title: `${groupName}: ${senderName}`,
+              body: truncatedContent,
+            },
+            data: {
+              type: "group_chat_message",
+              conversationId: conversationId,
+              groupId: conversationId,
+              messageId: messageId,
+              senderId: senderId,
+              senderName: senderName,
+              groupName: groupName,
+            },
+            android: {
+              priority: "high",
+              notification: {
+                channelId: "joinme_notifications",
+                priority: "high",
+                sound: "default",
+              },
+            },
+          };
+
+          // Send the notification
+          await admin.messaging().send(message);
+          console.log(`Notification sent to user ${userId}`);
+        } catch (error) {
+          console.error(`Error sending notification to user ${userId}:`, error);
+        }
+      });
+
+      // Wait for all notifications to be sent
+      await Promise.all(notificationPromises);
+
+      console.log(
+        `Successfully sent notifications to ${recipientIds.length} recipients`
+      );
+      return null;
+    } catch (error) {
+      console.error("Error in onChatMessageCreated:", error);
+      return null;
+    }
+  });
