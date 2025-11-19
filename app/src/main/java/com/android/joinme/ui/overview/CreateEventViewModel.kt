@@ -79,8 +79,7 @@ data class CreateEventUIState(
 class CreateEventViewModel(
     private val repository: EventsRepository =
         EventsRepositoryProvider.getRepository(isOnline = true),
-    private val groupRepository: GroupRepository =
-        GroupRepositoryProvider.repository,
+    private val groupRepository: GroupRepository = GroupRepositoryProvider.repository,
     locationRepository: LocationRepository = NominatimLocationRepository(HttpClientProvider.client)
 ) : BaseEventFormViewModel(locationRepository) {
 

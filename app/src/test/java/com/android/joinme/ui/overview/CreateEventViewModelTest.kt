@@ -330,8 +330,7 @@ class CreateEventViewModelTest {
     // Try to set maxParticipants less than group size
     newVm.setMaxParticipants("3")
     Assert.assertNotNull(newVm.uiState.value.invalidMaxParticipantsMsg)
-    Assert.assertTrue(
-        newVm.uiState.value.invalidMaxParticipantsMsg!!.contains("at least 5"))
+    Assert.assertTrue(newVm.uiState.value.invalidMaxParticipantsMsg!!.contains("at least 5"))
 
     // Set maxParticipants equal to group size
     newVm.setMaxParticipants("5")
