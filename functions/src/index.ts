@@ -380,13 +380,13 @@ export const cleanupOldEventsAndSeries = functions.pubsub
  * Triggered when a new message is created in a group chat.
  * Sends push notifications to all group members except the sender.
  */
-export const onChatMessageCreated = functions.firestore
-  .document("conversations/{conversationId}/messages/{messageId}")
+export const onChatMessageCreated = functions.database
+  .ref("conversations/{conversationId}/messages/{messageId}")
   .onCreate(async (snapshot, context) => {
     try {
       const conversationId = context.params.conversationId;
       const messageId = context.params.messageId;
-      const messageData = snapshot.data();
+      const messageData = snapshot.val();
 
       console.log(`New message in conversation ${conversationId}`);
 
