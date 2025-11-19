@@ -249,12 +249,71 @@ class MapScreenTest {
   }
 
   @Test
-  fun createMarkerForColor_createsDefaultMarkerForYellow() {
-    // Test that yellow color creates a default marker with hue
-    val yellowColor = Color.Yellow
-    val marker = createMarkerForColor(yellowColor)
+  fun myLocationButton_hasClickAction() {
+    composeTestRule.setContent { MapScreen(viewModel = MapViewModel(), navigationActions = null) }
 
-    // Verify that a marker is created
-    assertNotNull(marker)
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.MY_LOCATION_BUTTON)
+        .assertExists()
+        .assertIsDisplayed()
+        .assertHasClickAction()
+  }
+
+  @Test
+  fun myLocationButton_clickEnablesFollowingUser() {
+    val testViewModel = MapViewModel()
+
+    // Set initial state to not following
+    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
+    stateField.isAccessible = true
+    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
+    mutableState.value = MapUIState(isFollowingUser = false)
+
+    composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
+
+    // Click the button
+    composeTestRule.onNodeWithTag(MapScreenTestTags.MY_LOCATION_BUTTON).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify that following is now enabled
+    assert(testViewModel.uiState.value.isFollowingUser)
+  }
+
+  @Test
+  fun mapScreen_enablesFollowingUserOnEntryWhenNotReturningFromMarkerClick() {
+    val testViewModel = MapViewModel()
+
+    // Set initial state to not returning from marker click
+    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
+    stateField.isAccessible = true
+    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
+    mutableState.value = MapUIState(isFollowingUser = false, isReturningFromMarkerClick = false)
+
+    composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
+
+    composeTestRule.waitForIdle()
+
+    // Verify that following user is enabled
+    assert(testViewModel.uiState.value.isFollowingUser)
+  }
+
+  @Test
+  fun mapScreen_clearsMarkerClickFlagWhenReturningFromMarkerClick() {
+    val testViewModel = MapViewModel()
+
+    // Set initial state to returning from marker click
+    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
+    stateField.isAccessible = true
+    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
+    mutableState.value = MapUIState(isFollowingUser = false, isReturningFromMarkerClick = true)
+
+    composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
+
+    composeTestRule.waitForIdle()
+
+    // Verify that marker click flag is cleared and following is not enabled
+    assert(!testViewModel.uiState.value.isReturningFromMarkerClick)
+    assert(!testViewModel.uiState.value.isFollowingUser)
   }
 }
