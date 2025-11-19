@@ -2,6 +2,7 @@ package com.android.joinme.model.filter
 
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventType
+import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.sport.Sports
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -205,6 +206,48 @@ object FilterRepository {
       (state.showMyEvents && isMyEvent) ||
           (state.showJoinedEvents && isJoinedEvent) ||
           (state.showOtherEvents && isOtherEvent)
+    }
+  }
+
+  /**
+   * Applies the current filters to a list of series.
+   *
+   * A series is included if at least one of its events matches the current filter criteria. This
+   * allows users to discover series that contain events of interest.
+   *
+   * @param series The list of series to filter
+   * @param allEvents The list of all events (needed to check event types for each serie)
+   * @param currentUserId The ID of the current user (required for participation filters)
+   * @return The filtered list of series based on the current filter state. If no filters are
+   *   selected, returns all series (default behavior).
+   */
+  fun applyFiltersToSeries(
+      series: List<Serie>,
+      allEvents: List<Event>,
+      currentUserId: String = ""
+  ): List<Serie> {
+    val state = _filterState.value
+
+    // Build list of allowed event types based on selected filters
+    val allowedTypes = mutableListOf<EventType>()
+    if (state.isSocialSelected) allowedTypes.add(EventType.SOCIAL)
+    if (state.isActivitySelected) allowedTypes.add(EventType.ACTIVITY)
+    if (state.sportCategories.any { it.isChecked }) {
+      allowedTypes.add(EventType.SPORTS)
+    }
+
+    // If no type filters are selected, return all series (default behavior)
+    if (allowedTypes.isEmpty()) return series
+
+    // Create a map of eventId to Event for efficient lookup
+    val eventMap = allEvents.associateBy { it.eventId }
+
+    // Filter series: include if at least one event matches the allowed types
+    return series.filter { serie ->
+      serie.eventIds.any { eventId ->
+        val event = eventMap[eventId]
+        event != null && event.type in allowedTypes
+      }
     }
   }
 }

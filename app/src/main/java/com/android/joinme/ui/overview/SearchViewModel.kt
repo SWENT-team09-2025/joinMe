@@ -56,7 +56,7 @@ class SearchViewModel(
       filteredEventsRepository.filteredEvents.collect { applySearchQueryToUIState() }
     }
     viewModelScope.launch {
-      filteredEventsRepository.allSeriesFlow.collect { applySearchQueryToUIState() }
+      filteredEventsRepository.filteredSeries.collect { applySearchQueryToUIState() }
     }
     // Observe errors from repository
     viewModelScope.launch {
@@ -139,20 +139,20 @@ class SearchViewModel(
    * FilteredEventsRepository.
    */
   private fun applySearchQueryToUIState() {
-    // Get already filtered events from repository
+    // Get already filtered events and series from repository
     val filteredEvents = filteredEventsRepository.filteredEvents.value
-    val allSeries = filteredEventsRepository.allSeriesFlow.value
+    val filteredSeries = filteredEventsRepository.filteredSeries.value
 
     // Identify events that belong to series
-    val serieEventIds = allSeries.flatMap { it.eventIds }.toSet()
+    val serieEventIds = filteredSeries.flatMap { it.eventIds }.toSet()
 
     // Filter out standalone events (events not in any serie)
     val standaloneEvents = filteredEvents.filterNot { it.eventId in serieEventIds }
 
-    // Convert standalone events and all series to EventItems
+    // Convert standalone events and filtered series to EventItems
     val eventItems = mutableListOf<EventItem>()
     eventItems.addAll(standaloneEvents.map { EventItem.SingleEvent(it) })
-    eventItems.addAll(allSeries.map { EventItem.EventSerie(it) })
+    eventItems.addAll(filteredSeries.map { EventItem.EventSerie(it) })
 
     // Apply search query filter if query is not empty
     val query = _uiState.value.query

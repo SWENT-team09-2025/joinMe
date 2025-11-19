@@ -61,9 +61,9 @@ class FilteredEventsRepository(
   private val _filteredEvents = MutableStateFlow<List<Event>>(emptyList())
   val filteredEvents: StateFlow<List<Event>> = _filteredEvents.asStateFlow()
 
-  // All series (no filtering applied to series themselves, only to events)
-  private val _allSeries = MutableStateFlow<List<Serie>>(emptyList())
-  val allSeriesFlow: StateFlow<List<Serie>> = _allSeries.asStateFlow()
+  // Filtered series state
+  private val _filteredSeries = MutableStateFlow<List<Serie>>(emptyList())
+  val filteredSeries: StateFlow<List<Serie>> = _filteredSeries.asStateFlow()
 
   // Error state
   private val _errorMsg = MutableStateFlow<String?>(null)
@@ -104,7 +104,6 @@ class FilteredEventsRepository(
         allEvents = eventsDeferred.await()
         allSeries = seriesDeferred.await()
 
-        _allSeries.value = allSeries
         applyFilters()
       } catch (e: Exception) {
         _errorMsg.value = "Failed to load events and series: ${e.message}"
@@ -115,15 +114,25 @@ class FilteredEventsRepository(
   }
 
   /**
-   * Applies current filters to all events and updates the filtered events state.
+   * Applies current filters to all events and series, and updates their filtered states.
    *
    * This is called automatically when filters change or when new data is fetched.
    */
   private fun applyFilters() {
     // Get current user ID for participation filtering
-    val currentUserId = Firebase.auth.currentUser?.uid ?: ""
-    val filtered = filterRepository.applyFilters(allEvents, currentUserId)
-    _filteredEvents.value = filtered
+    // Wrap in try-catch to handle Firebase not being initialized in tests
+    val currentUserId =
+        try {
+          Firebase.auth.currentUser?.uid ?: ""
+        } catch (e: IllegalStateException) {
+          ""
+        }
+
+    val filteredEvents = filterRepository.applyFilters(allEvents, currentUserId)
+    val filteredSeries = filterRepository.applyFiltersToSeries(allSeries, allEvents, currentUserId)
+
+    _filteredEvents.value = filteredEvents
+    _filteredSeries.value = filteredSeries
   }
 
   /**
@@ -143,7 +152,7 @@ class FilteredEventsRepository(
    */
   fun setSeriesForTesting(series: List<Serie>) {
     allSeries = series
-    _allSeries.value = series
+    applyFilters()
   }
 
   companion object {

@@ -112,7 +112,7 @@ class FilteredEventsRepositoryTest {
     testDispatcher.scheduler.advanceUntilIdle()
 
     assertEquals(emptyList<Event>(), repository.filteredEvents.value)
-    assertEquals(emptyList<Serie>(), repository.allSeriesFlow.value)
+    assertEquals(emptyList<Serie>(), repository.filteredSeries.value)
     assertNull(repository.errorMsg.value)
     assertFalse(repository.isLoading.value)
   }
@@ -128,7 +128,7 @@ class FilteredEventsRepositoryTest {
 
     // All events should be returned since no filters are selected
     assertEquals(2, repository.filteredEvents.value.size)
-    assertEquals(1, repository.allSeriesFlow.value.size)
+    assertEquals(1, repository.filteredSeries.value.size)
     assertNull(repository.errorMsg.value)
   }
 
@@ -166,8 +166,8 @@ class FilteredEventsRepositoryTest {
     repository.setSeriesForTesting(listOf(sampleSerie))
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertEquals(1, repository.allSeriesFlow.value.size)
-    assertEquals("serie1", repository.allSeriesFlow.value[0].serieId)
+    assertEquals(1, repository.filteredSeries.value.size)
+    assertEquals("serie1", repository.filteredSeries.value[0].serieId)
   }
 
   @Test
