@@ -87,19 +87,15 @@ class ChatRepositoryRealtimeDatabaseTest {
     assertEquals("generated-id-123", messageId)
   }
 
-  @Test
-  fun getNewMessageId_fallsBackToTimestampWhenPushReturnsNull() {
+  @Test(expected = IllegalStateException::class)
+  fun getNewMessageId_throwsExceptionWhenPushReturnsNull() {
     // Given
     val mockPushRef = mockk<DatabaseReference>(relaxed = true)
     every { mockConversationsRef.push() } returns mockPushRef
     every { mockPushRef.key } returns null
 
-    // When
-    val messageId = repository.getNewMessageId()
-
-    // Then
-    assertNotNull(messageId)
-    assertTrue(messageId.toLongOrNull() != null) // Should be a timestamp
+    // When - should throw IllegalStateException
+    repository.getNewMessageId()
   }
 
   // ============================================================================

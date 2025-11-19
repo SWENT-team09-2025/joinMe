@@ -36,17 +36,39 @@ import kotlinx.coroutines.tasks.await
  */
 class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : ChatRepository {
 
-  private val conversationsRef: DatabaseReference = database.getReference("conversations")
+  companion object {
+    private const val CONVERSATIONS_PATH = "conversations"
+    private const val MESSAGES_PATH = "messages"
+
+    // Message field names
+    private const val FIELD_SENDER_ID = "senderId"
+    private const val FIELD_SENDER_NAME = "senderName"
+    private const val FIELD_CONTENT = "content"
+    private const val FIELD_TIMESTAMP = "timestamp"
+    private const val FIELD_TYPE = "type"
+    private const val FIELD_READ_BY = "readBy"
+    private const val FIELD_IS_PINNED = "isPinned"
+
+    // Type indicator for deserializing List<String> from Realtime Database
+    private val STRING_LIST_TYPE_INDICATOR =
+        object : com.google.firebase.database.GenericTypeIndicator<List<String>>() {}
+  }
+
+  private val conversationsRef: DatabaseReference = database.getReference(CONVERSATIONS_PATH)
 
   override fun getNewMessageId(): String {
     // Generate a unique ID using Firebase's push() method
-    return conversationsRef.push().key ?: System.currentTimeMillis().toString()
+    return conversationsRef.push().key
+        ?: throw IllegalStateException("Failed to generate message ID from Firebase")
   }
 
   override fun observeMessagesForConversation(conversationId: String): Flow<List<Message>> =
       callbackFlow {
         val messagesRef =
-            conversationsRef.child(conversationId).child("messages").orderByChild("timestamp")
+            conversationsRef
+                .child(conversationId)
+                .child(MESSAGES_PATH)
+                .orderByChild(FIELD_TIMESTAMP)
 
         val listener =
             object : ValueEventListener {
@@ -60,7 +82,7 @@ class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : C
                   }
                 }
 
-                // Messages are already ordered by timestamp due to orderByChild("timestamp")
+                // Messages are already ordered by timestamp due to orderByChild(FIELD_TIMESTAMP)
                 trySend(messages)
               }
 
@@ -77,39 +99,17 @@ class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : C
 
   override suspend fun addMessage(message: Message) {
     val messageRef =
-        conversationsRef.child(message.conversationId).child("messages").child(message.id)
-
-    val messageMap =
-        mapOf(
-            "senderId" to message.senderId,
-            "senderName" to message.senderName,
-            "content" to message.content,
-            "timestamp" to message.timestamp,
-            "type" to message.type.name,
-            "readBy" to message.readBy,
-            "isPinned" to message.isPinned)
-
-    messageRef.setValue(messageMap).await()
+        conversationsRef.child(message.conversationId).child(MESSAGES_PATH).child(message.id)
+    messageRef.setValue(messageToMap(message)).await()
   }
 
   override suspend fun editMessage(conversationId: String, messageId: String, newValue: Message) {
-    val messageRef = conversationsRef.child(conversationId).child("messages").child(messageId)
-
-    val updates =
-        mapOf(
-            "senderId" to newValue.senderId,
-            "senderName" to newValue.senderName,
-            "content" to newValue.content,
-            "timestamp" to newValue.timestamp,
-            "type" to newValue.type.name,
-            "readBy" to newValue.readBy,
-            "isPinned" to newValue.isPinned)
-
-    messageRef.updateChildren(updates).await()
+    val messageRef = conversationsRef.child(conversationId).child(MESSAGES_PATH).child(messageId)
+    messageRef.updateChildren(messageToMap(newValue)).await()
   }
 
   override suspend fun deleteMessage(conversationId: String, messageId: String) {
-    val messageRef = conversationsRef.child(conversationId).child("messages").child(messageId)
+    val messageRef = conversationsRef.child(conversationId).child(MESSAGES_PATH).child(messageId)
     messageRef.removeValue().await()
   }
 
@@ -118,21 +118,35 @@ class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : C
       messageId: String,
       userId: String
   ) {
-    val messageRef = conversationsRef.child(conversationId).child("messages").child(messageId)
+    val messageRef = conversationsRef.child(conversationId).child(MESSAGES_PATH).child(messageId)
 
     // Get current readBy list
     val snapshot = messageRef.get().await()
     val currentReadBy =
-        snapshot
-            .child("readBy")
-            .getValue(object : com.google.firebase.database.GenericTypeIndicator<List<String>>() {})
-            ?: emptyList()
+        snapshot.child(FIELD_READ_BY).getValue(STRING_LIST_TYPE_INDICATOR) ?: emptyList()
 
     // Add userId if not already present
     if (!currentReadBy.contains(userId)) {
       val updatedReadBy = currentReadBy + userId
-      messageRef.child("readBy").setValue(updatedReadBy).await()
+      messageRef.child(FIELD_READ_BY).setValue(updatedReadBy).await()
     }
+  }
+
+  /**
+   * Converts a [Message] object to a map for storing in Realtime Database.
+   *
+   * @param message The message to convert
+   * @return Map of field names to values
+   */
+  private fun messageToMap(message: Message): Map<String, Any?> {
+    return mapOf(
+        FIELD_SENDER_ID to message.senderId,
+        FIELD_SENDER_NAME to message.senderName,
+        FIELD_CONTENT to message.content,
+        FIELD_TIMESTAMP to message.timestamp,
+        FIELD_TYPE to message.type.name,
+        FIELD_READ_BY to message.readBy,
+        FIELD_IS_PINNED to message.isPinned)
   }
 
   /**
@@ -145,12 +159,12 @@ class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : C
   private fun dataSnapshotToMessage(snapshot: DataSnapshot, conversationId: String): Message? {
     return try {
       val id = snapshot.key ?: return null
-      val senderId = snapshot.child("senderId").getValue(String::class.java) ?: return null
-      val senderName = snapshot.child("senderName").getValue(String::class.java) ?: return null
-      val content = snapshot.child("content").getValue(String::class.java) ?: return null
-      val timestamp = snapshot.child("timestamp").getValue(Long::class.java) ?: return null
+      val senderId = snapshot.child(FIELD_SENDER_ID).getValue(String::class.java) ?: return null
+      val senderName = snapshot.child(FIELD_SENDER_NAME).getValue(String::class.java) ?: return null
+      val content = snapshot.child(FIELD_CONTENT).getValue(String::class.java) ?: return null
+      val timestamp = snapshot.child(FIELD_TIMESTAMP).getValue(Long::class.java) ?: return null
 
-      val typeString = snapshot.child("type").getValue(String::class.java) ?: "TEXT"
+      val typeString = snapshot.child(FIELD_TYPE).getValue(String::class.java) ?: "TEXT"
       val type =
           try {
             MessageType.valueOf(typeString)
@@ -158,13 +172,8 @@ class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : C
             MessageType.TEXT
           }
 
-      val readBy =
-          snapshot
-              .child("readBy")
-              .getValue(
-                  object : com.google.firebase.database.GenericTypeIndicator<List<String>>() {})
-              ?: emptyList()
-      val isPinned = snapshot.child("isPinned").getValue(Boolean::class.java) ?: false
+      val readBy = snapshot.child(FIELD_READ_BY).getValue(STRING_LIST_TYPE_INDICATOR) ?: emptyList()
+      val isPinned = snapshot.child(FIELD_IS_PINNED).getValue(Boolean::class.java) ?: false
 
       Message(
           id = id,
