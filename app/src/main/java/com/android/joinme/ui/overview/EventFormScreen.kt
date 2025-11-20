@@ -109,7 +109,8 @@ fun EventFormScreen(
     onVisibilityChange: (String) -> Unit,
     onSave: () -> Boolean,
     onGoBack: () -> Unit,
-    saveButtonText: String = "SAVE"
+    saveButtonText: String = "SAVE",
+    extraContent: (@Composable () -> Unit)? = null
 ) {
   val eventTypes = EventType.values().map { it.name.uppercase(Locale.ROOT) }
   val visibilities = listOf(EventVisibility.PUBLIC.name, EventVisibility.PRIVATE.name)
@@ -143,6 +144,9 @@ fun EventFormScreen(
                     .padding(Dimens.Padding.medium)
                     .padding(paddingValues),
             verticalArrangement = Arrangement.spacedBy(Dimens.Padding.small)) {
+              // Extra content slot (e.g., group selection for CreateEvent)
+              extraContent?.invoke()
+
               // Type dropdown
               ExposedDropdownMenuBox(
                   expanded = showTypeDropdown,

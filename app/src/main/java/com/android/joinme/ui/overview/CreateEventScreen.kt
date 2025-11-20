@@ -1,9 +1,16 @@
 package com.android.joinme.ui.overview
 
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.ui.theme.Dimens
+import com.android.joinme.ui.theme.customColors
 import kotlinx.coroutines.launch
 
 object CreateEventScreenTestTags {
@@ -18,10 +25,87 @@ object CreateEventScreenTestTags {
   const val INPUT_EVENT_DATE = "inputEventDate"
   const val INPUT_EVENT_TIME = "inputEventTime"
   const val INPUT_EVENT_VISIBILITY = "inputEventVisibility"
+  const val INPUT_EVENT_GROUP = "inputEventGroup"
   const val BUTTON_SAVE_EVENT = "buttonSaveEvent"
   const val ERROR_MESSAGE = "errorMessage"
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GroupSelectionDropdown(
+    selectedGroupId: String?,
+    availableGroups: List<com.android.joinme.model.groups.Group>,
+    onGroupSelected: (String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+  var showGroupDropdown by remember { mutableStateOf(false) }
+
+  ExposedDropdownMenuBox(
+      expanded = showGroupDropdown, onExpandedChange = { showGroupDropdown = !showGroupDropdown }) {
+        OutlinedTextField(
+            value =
+                when {
+                  selectedGroupId == null -> "Standalone Event"
+                  else ->
+                      availableGroups.find { it.id == selectedGroupId }?.name ?: "Standalone Event"
+                },
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Group") },
+            placeholder = { Text("Select group or standalone") },
+            trailingIcon = {
+              ExposedDropdownMenuDefaults.TrailingIcon(expanded = showGroupDropdown)
+            },
+            modifier =
+                modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
+                    .testTag(CreateEventScreenTestTags.INPUT_EVENT_GROUP))
+        ExposedDropdownMenu(
+            expanded = showGroupDropdown,
+            onDismissRequest = { showGroupDropdown = false },
+            modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
+              // Standalone option
+              DropdownMenuItem(
+                  text = {
+                    Text(
+                        text = "Standalone Event",
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        style = MaterialTheme.typography.headlineSmall)
+                  },
+                  onClick = {
+                    onGroupSelected(null)
+                    showGroupDropdown = false
+                  },
+                  colors = MaterialTheme.customColors.dropdownMenu)
+
+              if (availableGroups.isNotEmpty()) {
+                HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+              }
+
+              // Group options
+              availableGroups.forEachIndexed { index, group ->
+                DropdownMenuItem(
+                    text = {
+                      Text(
+                          text = group.name,
+                          color = MaterialTheme.colorScheme.onPrimaryContainer,
+                          style = MaterialTheme.typography.headlineSmall)
+                    },
+                    onClick = {
+                      onGroupSelected(group.id)
+                      showGroupDropdown = false
+                    },
+                    colors = MaterialTheme.customColors.dropdownMenu)
+                if (index < availableGroups.lastIndex) {
+                  HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                }
+              }
+            }
+      }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateEventScreen(
     createEventViewModel: CreateEventViewModel = viewModel(),
@@ -104,5 +188,11 @@ fun CreateEventScreen(
         }
         true
       },
-      onGoBack = onGoBack)
+      onGoBack = onGoBack,
+      extraContent = {
+        GroupSelectionDropdown(
+            selectedGroupId = uiState.selectedGroupId,
+            availableGroups = uiState.availableGroups,
+            onGroupSelected = { createEventViewModel.setSelectedGroup(it) })
+      })
 }
