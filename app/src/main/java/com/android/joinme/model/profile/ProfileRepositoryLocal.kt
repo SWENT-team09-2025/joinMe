@@ -33,12 +33,21 @@ class ProfileRepositoryLocal : ProfileRepository {
             interests = listOf("Sports", "Technology"),
             dateOfBirth = "1990-01-01",
             createdAt = now,
-            updatedAt = now)
+            updatedAt = now,
+            eventsJoinedCount = 5)
     profiles[testProfile.uid] = testProfile
   }
 
   override suspend fun getProfile(uid: String): Profile? {
     return profiles[uid]
+  }
+
+  override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? {
+    if (uids.isEmpty()) return emptyList()
+
+    val result = uids.mapNotNull { getProfile(it) }
+    // Return null if not all profiles were found
+    return if (result.size == uids.size) result else null
   }
 
   override suspend fun createOrUpdateProfile(profile: Profile) {
