@@ -204,13 +204,13 @@ class ActivityGroupScreenTest {
     val viewModel =
         ActivityGroupViewModel(
             groupRepository = groupRepo, eventsRepository = eventRepo, seriesRepository = serieRepo)
-    var selectedEvent: Event? = null
+    var selectedEventId: String? = null
 
     composeTestRule.setContent {
       ActivityGroupScreen(
           groupId = "1",
           activityGroupViewModel = viewModel,
-          onSelectedEvent = { selectedEvent = it })
+          onSelectedEvent = { selectedEventId = it })
     }
 
     composeTestRule.waitForIdle()
@@ -219,8 +219,8 @@ class ActivityGroupScreenTest {
 
     composeTestRule.onNodeWithText("Clickable Event").performClick()
 
-    assert(selectedEvent != null)
-    assert(selectedEvent?.eventId == "event1")
+    assert(selectedEventId != null)
+    assert(selectedEventId == "event1")
   }
 
   @Test
@@ -239,13 +239,13 @@ class ActivityGroupScreenTest {
     val viewModel =
         ActivityGroupViewModel(
             groupRepository = groupRepo, eventsRepository = eventRepo, seriesRepository = serieRepo)
-    var selectedSerie: Serie? = null
+    var selectedSerieId: String? = null
 
     composeTestRule.setContent {
       ActivityGroupScreen(
           groupId = "1",
           activityGroupViewModel = viewModel,
-          onSelectedSerie = { selectedSerie = it })
+          onSelectedSerie = { selectedSerieId = it })
     }
 
     composeTestRule.waitForIdle()
@@ -254,8 +254,8 @@ class ActivityGroupScreenTest {
 
     composeTestRule.onNodeWithText("Clickable Serie").performClick()
 
-    assert(selectedSerie != null)
-    assert(selectedSerie?.serieId == "serie1")
+    assert(selectedSerieId != null)
+    assert(selectedSerieId == "serie1")
   }
 
   @Test
