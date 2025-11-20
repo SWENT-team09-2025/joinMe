@@ -20,6 +20,9 @@ class SearchScreenTest {
   private lateinit var fakeEventRepository: FakeEventRepository
   private lateinit var fakeSeriesRepository: FakeSeriesRepository
 
+  // Future timestamp for test events (1 day in the future)
+  private val futureTimestamp = com.google.firebase.Timestamp(System.currentTimeMillis() / 1000 + 86400, 0)
+
   @Before
   fun setup() {
     // Reset FilterRepository before each test to ensure clean state
@@ -455,7 +458,7 @@ class SearchScreenTest {
             title = "Basketball Game",
             description = "Fun basketball game",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 60,
             participants = listOf("user1"),
             maxParticipants = 10,
@@ -490,7 +493,7 @@ class SearchScreenTest {
             title = "Basketball Game",
             description = "Fun basketball game",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 60,
             participants = listOf("user1"),
             maxParticipants = 10,
@@ -521,7 +524,7 @@ class SearchScreenTest {
             title = "Basketball Game",
             description = "Fun basketball game",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 60,
             participants = listOf("user1"),
             maxParticipants = 10,
@@ -550,7 +553,7 @@ class SearchScreenTest {
             title = "Test Event",
             description = "Test description",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 60,
             participants = listOf("user1"),
             maxParticipants = 10,
@@ -581,7 +584,7 @@ class SearchScreenTest {
             title = "Event 1",
             description = "Description 1",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 60,
             participants = listOf("user1"),
             maxParticipants = 10,
@@ -595,7 +598,7 @@ class SearchScreenTest {
             title = "Event 2",
             description = "Description 2",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 90,
             participants = listOf("user2"),
             maxParticipants = 15,
