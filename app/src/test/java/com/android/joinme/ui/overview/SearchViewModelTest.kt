@@ -2,6 +2,7 @@ package com.android.joinme.ui.overview
 
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventFilter
+import com.android.joinme.model.event.isUpcoming
 import com.android.joinme.model.filter.FilterRepository
 import com.android.joinme.model.filter.FilteredEventsRepository
 import com.android.joinme.model.serie.SerieFilter
@@ -21,6 +22,8 @@ class SearchViewModelTest {
 
   private lateinit var viewModel: SearchViewModel
   private lateinit var filteredEventsRepository: FilteredEventsRepository
+  private lateinit var fakeEventRepository: FakeEventRepository
+  private lateinit var fakeSeriesRepository: FakeSeriesRepository
   private val testDispatcher = StandardTestDispatcher()
 
   @Before
@@ -28,51 +31,8 @@ class SearchViewModelTest {
     Dispatchers.setMain(testDispatcher)
     FilterRepository.reset()
 
-    val fakeEventRepository =
-        object : com.android.joinme.model.event.EventsRepository {
-          override fun getNewEventId(): String = "fake-id"
-
-          override suspend fun getAllEvents(
-              eventFilter: EventFilter
-          ): List<com.android.joinme.model.event.Event> = emptyList()
-
-          override suspend fun getEvent(eventId: String): com.android.joinme.model.event.Event {
-            throw Exception("Not implemented in fake repo")
-          }
-
-          override suspend fun addEvent(event: com.android.joinme.model.event.Event) {}
-
-          override suspend fun editEvent(
-              eventId: String,
-              newValue: com.android.joinme.model.event.Event
-          ) {}
-
-          override suspend fun deleteEvent(eventId: String) {}
-
-          override suspend fun getEventsByIds(eventIds: List<String>): List<Event> = emptyList()
-        }
-
-    val fakeSeriesRepository =
-        object : com.android.joinme.model.serie.SeriesRepository {
-          override fun getNewSerieId(): String = "fake-serie-id"
-
-          override suspend fun getAllSeries(
-              serieFilter: SerieFilter
-          ): List<com.android.joinme.model.serie.Serie> = emptyList()
-
-          override suspend fun getSerie(serieId: String): com.android.joinme.model.serie.Serie {
-            throw Exception("Not implemented in fake repo")
-          }
-
-          override suspend fun addSerie(serie: com.android.joinme.model.serie.Serie) {}
-
-          override suspend fun editSerie(
-              serieId: String,
-              newValue: com.android.joinme.model.serie.Serie
-          ) {}
-
-          override suspend fun deleteSerie(serieId: String) {}
-        }
+    fakeEventRepository = FakeEventRepository()
+    fakeSeriesRepository = FakeSeriesRepository()
 
     // Create FilteredEventsRepository with fake repositories
     filteredEventsRepository = FilteredEventsRepository(fakeEventRepository, fakeSeriesRepository)
@@ -295,7 +255,8 @@ class SearchViewModelTest {
             visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
             ownerId = "owner1")
 
-    filteredEventsRepository.setEventsForTesting(listOf(sampleEvent))
+    fakeEventRepository.eventsToReturn = listOf(sampleEvent)
+    filteredEventsRepository.refresh()
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Since no filters are selected by default, all events should be visible
@@ -321,11 +282,13 @@ class SearchViewModelTest {
             visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
             ownerId = "owner1")
 
-    filteredEventsRepository.setEventsForTesting(listOf(sampleEvent))
+    fakeEventRepository.eventsToReturn = listOf(sampleEvent)
+    filteredEventsRepository.refresh()
     testDispatcher.scheduler.advanceUntilIdle()
     assertEquals(1, viewModel.uiState.value.eventItems.size)
 
-    filteredEventsRepository.setEventsForTesting(emptyList())
+    fakeEventRepository.eventsToReturn = emptyList()
+    filteredEventsRepository.refresh()
     testDispatcher.scheduler.advanceUntilIdle()
     assertEquals(0, viewModel.uiState.value.eventItems.size)
   }
@@ -344,7 +307,8 @@ class SearchViewModelTest {
             eventIds = listOf("event1", "event2"),
             ownerId = "owner1")
 
-    filteredEventsRepository.setSeriesForTesting(listOf(sampleSerie))
+    fakeSeriesRepository.seriesToReturn = listOf(sampleSerie)
+    filteredEventsRepository.refresh()
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Series should be visible
@@ -382,8 +346,9 @@ class SearchViewModelTest {
             eventIds = listOf("event1", "event2"),
             ownerId = "owner1")
 
-    filteredEventsRepository.setEventsForTesting(listOf(sampleEvent))
-    filteredEventsRepository.setSeriesForTesting(listOf(sampleSerie))
+    fakeEventRepository.eventsToReturn = listOf(sampleEvent)
+    fakeSeriesRepository.seriesToReturn = listOf(sampleSerie)
+    filteredEventsRepository.refresh()
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Both event and serie should be visible
@@ -440,8 +405,9 @@ class SearchViewModelTest {
             eventIds = listOf("event1", "event2"),
             ownerId = "owner1")
 
-    filteredEventsRepository.setEventsForTesting(listOf(event1, event2))
-    filteredEventsRepository.setSeriesForTesting(listOf(serie))
+    fakeEventRepository.eventsToReturn = listOf(event1, event2)
+    fakeSeriesRepository.seriesToReturn = listOf(serie)
+    filteredEventsRepository.refresh()
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Initially all items should be visible (3 items)
@@ -457,5 +423,54 @@ class SearchViewModelTest {
         viewModel.uiState.value.eventItems.all {
           it.title.contains("Basketball", ignoreCase = true)
         })
+  }
+
+  // Fake implementations for testing
+  private class FakeEventRepository : com.android.joinme.model.event.EventsRepository {
+    var eventsToReturn: List<com.android.joinme.model.event.Event> = emptyList()
+
+    override fun getNewEventId(): String = "fake-id"
+
+    override suspend fun getAllEvents(
+        eventFilter: EventFilter
+    ): List<com.android.joinme.model.event.Event> = eventsToReturn.filter { it.isUpcoming() }
+
+    override suspend fun getEvent(eventId: String): com.android.joinme.model.event.Event {
+      throw Exception("Not implemented in fake repo")
+    }
+
+    override suspend fun addEvent(event: com.android.joinme.model.event.Event) {}
+
+    override suspend fun editEvent(
+        eventId: String,
+        newValue: com.android.joinme.model.event.Event
+    ) {}
+
+    override suspend fun deleteEvent(eventId: String) {}
+
+    override suspend fun getEventsByIds(eventIds: List<String>): List<Event> = emptyList()
+  }
+
+  private class FakeSeriesRepository : com.android.joinme.model.serie.SeriesRepository {
+    var seriesToReturn: List<com.android.joinme.model.serie.Serie> = emptyList()
+
+    override fun getNewSerieId(): String = "fake-serie-id"
+
+    override suspend fun getAllSeries(
+        serieFilter: SerieFilter
+    ): List<com.android.joinme.model.serie.Serie> = seriesToReturn
+
+    override suspend fun getSerie(serieId: String): com.android.joinme.model.serie.Serie {
+      throw Exception("Not implemented in fake repo")
+    }
+
+    override suspend fun addSerie(serie: com.android.joinme.model.serie.Serie) {}
+
+    override suspend fun editSerie(
+        serieId: String,
+        newValue: com.android.joinme.model.serie.Serie
+    ) {}
+
+    override suspend fun deleteSerie(serieId: String) {}
   }
 }

@@ -9,6 +9,7 @@ import com.android.joinme.model.filter.FilteredEventsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 /**
@@ -53,10 +54,12 @@ class SearchViewModel(
   init {
     // Observe filtered events and series from repository and apply search query
     viewModelScope.launch {
-      filteredEventsRepository.filteredEvents.collect { applySearchQueryToUIState() }
-    }
-    viewModelScope.launch {
-      filteredEventsRepository.filteredSeries.collect { applySearchQueryToUIState() }
+      combine(filteredEventsRepository.filteredEvents, filteredEventsRepository.filteredSeries) {
+              _,
+              _ ->
+            Unit
+          }
+          .collect { applySearchQueryToUIState() }
     }
     // Observe errors from repository
     viewModelScope.launch {

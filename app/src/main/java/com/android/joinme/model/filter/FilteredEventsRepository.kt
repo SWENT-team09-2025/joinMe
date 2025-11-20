@@ -15,7 +15,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -86,7 +86,7 @@ class FilteredEventsRepository(
   /**
    * Refreshes data by fetching all events and series from repositories.
    *
-   * Fetches events and series in parallel, applies current filters, and updates the state. If
+   * Fetches events and series sequentially, applies current filters, and updates the state. If
    * fetching fails, sets an error message.
    */
   fun refresh() {
@@ -95,14 +95,9 @@ class FilteredEventsRepository(
         _isLoading.value = true
         _errorMsg.value = null
 
-        // Fetch events and series in parallel
-        val eventsDeferred = async {
-          eventRepo.getAllEvents(EventFilter.EVENTS_FOR_SEARCH_SCREEN).filter { it.isUpcoming() }
-        }
-        val seriesDeferred = async { seriesRepo.getAllSeries(SerieFilter.SERIES_FOR_SEARCH_SCREEN) }
-
-        allEvents = eventsDeferred.await()
-        allSeries = seriesDeferred.await()
+        allEvents =
+            eventRepo.getAllEvents(EventFilter.EVENTS_FOR_SEARCH_SCREEN).filter { it.isUpcoming() }
+        allSeries = seriesRepo.getAllSeries(SerieFilter.SERIES_FOR_SEARCH_SCREEN)
 
         applyFilters()
       } catch (e: Exception) {
@@ -136,23 +131,12 @@ class FilteredEventsRepository(
   }
 
   /**
-   * Sets events directly (for testing purposes).
+   * Closes the repository and cancels all ongoing coroutines.
    *
-   * @param events The list of events to set
+   * This should be called when the repository is no longer needed to prevent memory leaks.
    */
-  fun setEventsForTesting(events: List<Event>) {
-    allEvents = events
-    applyFilters()
-  }
-
-  /**
-   * Sets series directly (for testing purposes).
-   *
-   * @param series The list of series to set
-   */
-  fun setSeriesForTesting(series: List<Serie>) {
-    allSeries = series
-    applyFilters()
+  fun close() {
+    repositoryScope.cancel()
   }
 
   companion object {

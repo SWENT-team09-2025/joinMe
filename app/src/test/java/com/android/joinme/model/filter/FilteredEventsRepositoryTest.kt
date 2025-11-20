@@ -154,26 +154,10 @@ class FilteredEventsRepositoryTest {
   }
 
   @Test
-  fun `setEventsForTesting updates filtered events`() = runTest {
-    repository.setEventsForTesting(listOf(sampleSocialEvent, sampleActivityEvent))
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    assertEquals(2, repository.filteredEvents.value.size)
-  }
-
-  @Test
-  fun `setSeriesForTesting updates series flow`() = runTest {
-    repository.setSeriesForTesting(listOf(sampleSerie))
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    assertEquals(1, repository.filteredSeries.value.size)
-    assertEquals("serie1", repository.filteredSeries.value[0].serieId)
-  }
-
-  @Test
   fun `filter changes automatically trigger re-filtering`() = runTest {
-    repository.setEventsForTesting(
-        listOf(sampleSocialEvent, sampleActivityEvent, sampleSportsEvent))
+    fakeEventRepository.eventsToReturn =
+        listOf(sampleSocialEvent, sampleActivityEvent, sampleSportsEvent)
+    repository.refresh()
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Initially all events should be visible (no filters)
@@ -190,8 +174,9 @@ class FilteredEventsRepositoryTest {
 
   @Test
   fun `multiple filter changes apply correctly`() = runTest {
-    repository.setEventsForTesting(
-        listOf(sampleSocialEvent, sampleActivityEvent, sampleSportsEvent))
+    fakeEventRepository.eventsToReturn =
+        listOf(sampleSocialEvent, sampleActivityEvent, sampleSportsEvent)
+    repository.refresh()
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Select Social and Activity
@@ -209,8 +194,9 @@ class FilteredEventsRepositoryTest {
 
   @Test
   fun `no filters selected shows all events`() = runTest {
-    repository.setEventsForTesting(
-        listOf(sampleSocialEvent, sampleActivityEvent, sampleSportsEvent))
+    fakeEventRepository.eventsToReturn =
+        listOf(sampleSocialEvent, sampleActivityEvent, sampleSportsEvent)
+    repository.refresh()
     testDispatcher.scheduler.advanceUntilIdle()
 
     // No filters selected - all events should be visible
@@ -264,7 +250,8 @@ class FilteredEventsRepositoryTest {
 
   @Test
   fun `filter repository properly filters events by sports`() = runTest {
-    repository.setEventsForTesting(listOf(sampleSportsEvent))
+    fakeEventRepository.eventsToReturn = listOf(sampleSportsEvent)
+    repository.refresh()
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Initially all events visible
@@ -280,7 +267,8 @@ class FilteredEventsRepositoryTest {
 
   @Test
   fun `empty events list after filtering`() = runTest {
-    repository.setEventsForTesting(listOf(sampleSocialEvent))
+    fakeEventRepository.eventsToReturn = listOf(sampleSocialEvent)
+    repository.refresh()
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Filter for Activity only
