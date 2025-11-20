@@ -228,4 +228,45 @@ class SeriesRepositoryLocalTest {
       Assert.assertEquals("0", repo.getNewSerieId())
     }
   }
+
+  @Test
+  fun getSeriesByIds_returnsMatchingSeries() {
+    runBlocking {
+      val s1 = sampleSerie.copy(serieId = "1", title = "Serie 1")
+      val s2 = sampleSerie.copy(serieId = "2", title = "Serie 2")
+      val s3 = sampleSerie.copy(serieId = "3", title = "Serie 3")
+      repo.addSerie(s1)
+      repo.addSerie(s2)
+      repo.addSerie(s3)
+
+      val result = repo.getSeriesByIds(listOf("1", "3"))
+
+      Assert.assertEquals(2, result.size)
+      Assert.assertTrue(result.any { it.serieId == "1" })
+      Assert.assertTrue(result.any { it.serieId == "3" })
+      Assert.assertFalse(result.any { it.serieId == "2" })
+    }
+  }
+
+  @Test
+  fun getSeriesByIds_returnsEmptyListWhenNoMatches() {
+    runBlocking {
+      repo.addSerie(sampleSerie.copy(serieId = "1"))
+
+      val result = repo.getSeriesByIds(listOf("999", "888"))
+
+      Assert.assertTrue(result.isEmpty())
+    }
+  }
+
+  @Test
+  fun getSeriesByIds_returnsEmptyListWhenEmptyInput() {
+    runBlocking {
+      repo.addSerie(sampleSerie)
+
+      val result = repo.getSeriesByIds(emptyList())
+
+      Assert.assertTrue(result.isEmpty())
+    }
+  }
 }

@@ -464,6 +464,11 @@ class HistoryViewModelTest {
       return fakeSeries.toList()
     }
 
+    override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> {
+      if (shouldThrow) throw RuntimeException("Serie repository error")
+      return fakeSeries.filter { seriesIds.contains(it.serieId) }
+    }
+
     override suspend fun getSerie(serieId: String): Serie {
       if (shouldThrow) throw RuntimeException("Serie repository error")
       return fakeSeries.first { it.serieId == serieId }

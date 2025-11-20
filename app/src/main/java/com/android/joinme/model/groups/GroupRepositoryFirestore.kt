@@ -114,6 +114,7 @@ class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupReposit
       val ownerId = document.getString("ownerId") ?: return null
       val memberIds = document.get("memberIds") as? List<String> ?: emptyList()
       val eventIds = document.get("eventIds") as? List<String> ?: emptyList()
+      val serieIds = document.get("serieIds") as? List<String> ?: emptyList()
       val photoUrl = document.getString("photoUrl")
 
       Group(
@@ -124,6 +125,7 @@ class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupReposit
           ownerId = ownerId,
           memberIds = memberIds,
           eventIds = eventIds,
+          serieIds = serieIds,
           photoUrl = photoUrl)
     } catch (e: Exception) {
       Log.e("GroupRepositoryFirestore", "Error converting document to Group", e)

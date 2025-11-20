@@ -58,6 +58,14 @@ class FakeSerieDetailsSeriesRepository : SeriesRepository {
 
   override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> = series.values.toList()
 
+  override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> {
+    return series
+        .filter { seriesIds.contains(it.key) }
+        .let {
+          return it.values.toList()
+        }
+  }
+
   override fun getNewSerieId(): String = "new-serie-id"
 }
 

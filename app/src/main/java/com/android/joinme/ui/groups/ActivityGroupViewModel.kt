@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
  *
  * @property isLoading Whether the data is currently being loaded
  * @property events List of events associated with the group
- * @property series List of series associated with the group (reserved for future implementation)
+ * @property series List of series associated with the group
  * @property error Error message if loading failed, null otherwise
  */
 data class ActivityGroupUiState(
@@ -35,13 +35,12 @@ data class ActivityGroupUiState(
 /**
  * ViewModel for the ActivityGroup screen.
  *
- * Manages the state and loading of group activities including events and series. Currently loads
- * events based on the group's event IDs. Series support is reserved for future implementation when
- * the Group model includes series IDs.
+ * Manages the state and loading of group activities including events and series. Loads events and
+ * series based on the group's event IDs and serie IDs respectively.
  *
  * @property groupRepository Repository for managing group data
  * @property eventsRepository Repository for managing event data
- * @property seriesRepository Repository for managing series data (reserved for future use)
+ * @property seriesRepository Repository for managing series data
  */
 class ActivityGroupViewModel(
     private val groupRepository: GroupRepository = GroupRepositoryProvider.repository,
@@ -56,8 +55,7 @@ class ActivityGroupViewModel(
   /**
    * Loads the activities (events and series) for the specified group.
    *
-   * Currently loads only events based on the group's event IDs. Series loading will be implemented
-   * when the Group model includes series IDs.
+   * Loads events based on the group's event IDs and series based on the group's serie IDs.
    *
    * @param groupId The unique identifier of the group whose activities are to be loaded
    */
@@ -76,8 +74,13 @@ class ActivityGroupViewModel(
               emptyList()
             }
 
-        // TODO(#342): Series loading will be added here when Group includes series IDs
-        val loadedSeries = emptyList<Serie>()
+        // Load series using the group's serie IDs
+        val loadedSeries =
+            if (group.serieIds.isNotEmpty()) {
+              seriesRepository.getSeriesByIds(group.serieIds)
+            } else {
+              emptyList()
+            }
 
         _uiState.value =
             ActivityGroupUiState(

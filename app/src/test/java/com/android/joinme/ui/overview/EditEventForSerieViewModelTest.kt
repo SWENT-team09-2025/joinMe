@@ -125,6 +125,14 @@ class EditEventForSerieViewModelTest {
       return series.values.toList()
     }
 
+    override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> {
+      series
+          .filter { seriesIds.contains(it.key) }
+          .let {
+            return it.values.toList()
+          }
+    }
+
     override fun getNewSerieId(): String = "newSerieId"
   }
 
