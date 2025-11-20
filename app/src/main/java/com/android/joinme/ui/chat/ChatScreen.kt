@@ -110,7 +110,7 @@ object ChatScreenTestTags {
  * @param currentUserId The ID of the current user viewing the chat
  * @param currentUserName The display name of the current user
  * @param viewModel The ViewModel managing the chat state and operations
- * @param onBackClick Callback invoked when the back button is clicked
+ * @param onLeaveClick Callback invoked when the back button is clicked
  * @param chatColor Optional color for the chat theme (top bar, message bubbles, send button).
  *   Defaults to chatDefault if not provided
  * @param onChatColor Optional color for text/icons on chat-colored elements. Defaults to
@@ -124,7 +124,7 @@ fun ChatScreen(
     currentUserId: String,
     currentUserName: String,
     viewModel: ChatViewModel,
-    onBackClick: () -> Unit = {},
+    onLeaveClick: () -> Unit = {},
     chatColor: Color? = null,
     onChatColor: Color? = null
 ) {
@@ -154,8 +154,7 @@ fun ChatScreen(
       topBar = {
         ChatTopBar(
             chatTitle = chatTitle,
-            onBackClick = onBackClick,
-            onLeaveClick = onBackClick, // Leave chat navigates back
+            onLeaveClick = onLeaveClick, // Leave chat navigates back
             topBarColor = effectiveChatColor,
             onTopBarColor = effectiveOnChatColor)
       },
@@ -186,7 +185,6 @@ fun ChatScreen(
  * Custom top bar for the chat screen matching Figma design.
  *
  * @param chatTitle The title to display
- * @param onBackClick Callback for back button
  * @param onLeaveClick Callback for leave button (not yet implemented)
  * @param topBarColor Color for the top bar background
  * @param onTopBarColor Color for text/icons on the top bar (must provide proper contrast with
@@ -196,7 +194,6 @@ fun ChatScreen(
 @Composable
 private fun ChatTopBar(
     chatTitle: String,
-    onBackClick: () -> Unit,
     onLeaveClick: () -> Unit,
     topBarColor: Color,
     onTopBarColor: Color

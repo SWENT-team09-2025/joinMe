@@ -512,7 +512,7 @@ fun JoinMe(
               currentUserId = currentUserId,
               currentUserName = currentUserName,
               viewModel = chatViewModel,
-              onBackClick = { navigationActions.goBack() })
+              onLeaveClick = { navigationActions.goBack() })
         } else {
           Toast.makeText(context, "Chat ID or title is null", Toast.LENGTH_SHORT).show()
         }
