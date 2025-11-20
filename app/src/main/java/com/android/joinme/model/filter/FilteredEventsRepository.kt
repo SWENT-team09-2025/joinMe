@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+// implemented with the help of Claude AI
+
 /**
  * Repository for managing filtered events and series data across the application.
  *

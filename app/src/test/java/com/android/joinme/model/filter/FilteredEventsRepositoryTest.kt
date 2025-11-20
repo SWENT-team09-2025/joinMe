@@ -22,6 +22,8 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
+// Implemented with the help of Claude AI
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class FilteredEventsRepositoryTest {
 
