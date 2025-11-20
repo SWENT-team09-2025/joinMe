@@ -110,7 +110,8 @@ fun EventFormScreen(
     onSave: () -> Boolean,
     onGoBack: () -> Unit,
     saveButtonText: String = "SAVE",
-    extraContent: (@Composable () -> Unit)? = null
+    extraContent: (@Composable () -> Unit)? = null,
+    isGroupEvent: Boolean = false
 ) {
   val eventTypes = EventType.values().map { it.name.uppercase(Locale.ROOT) }
   val visibilities = listOf(EventVisibility.PUBLIC.name, EventVisibility.PRIVATE.name)
@@ -147,52 +148,55 @@ fun EventFormScreen(
               // Extra content slot (e.g., group selection for CreateEvent)
               extraContent?.invoke()
 
-              // Type dropdown
-              ExposedDropdownMenuBox(
-                  expanded = showTypeDropdown,
-                  onExpandedChange = { showTypeDropdown = !showTypeDropdown }) {
-                    OutlinedTextField(
-                        value = formState.type,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Event Type") },
-                        placeholder = { Text("Select event type") },
-                        isError = formState.invalidTypeMsg != null,
-                        supportingText = {
-                          if (formState.invalidTypeMsg != null) {
-                            Text(
-                                text = formState.invalidTypeMsg,
-                                color = MaterialTheme.colorScheme.error)
-                          }
-                        },
-                        trailingIcon = {
-                          ExposedDropdownMenuDefaults.TrailingIcon(expanded = showTypeDropdown)
-                        },
-                        modifier =
-                            Modifier.menuAnchor().fillMaxWidth().testTag(testTags.inputEventType))
-                    ExposedDropdownMenu(
-                        expanded = showTypeDropdown,
-                        onDismissRequest = { showTypeDropdown = false },
-                        modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
-                          eventTypes.forEachIndexed { index, type ->
-                            DropdownMenuItem(
-                                text = {
-                                  Text(
-                                      text = type,
-                                      color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                      style = MaterialTheme.typography.headlineSmall)
-                                },
-                                onClick = {
-                                  onTypeChange(type)
-                                  showTypeDropdown = false
-                                },
-                                colors = MaterialTheme.customColors.dropdownMenu)
-                            if (index < eventTypes.lastIndex) {
-                              HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+              // Type dropdown (hidden for group events)
+              if (!isGroupEvent) {
+                ExposedDropdownMenuBox(
+                    expanded = showTypeDropdown,
+                    onExpandedChange = { showTypeDropdown = !showTypeDropdown }) {
+                      OutlinedTextField(
+                          value = formState.type,
+                          onValueChange = {},
+                          readOnly = true,
+                          label = { Text("Event Type") },
+                          placeholder = { Text("Select event type") },
+                          isError = formState.invalidTypeMsg != null,
+                          supportingText = {
+                            if (formState.invalidTypeMsg != null) {
+                              Text(
+                                  text = formState.invalidTypeMsg,
+                                  color = MaterialTheme.colorScheme.error)
+                            }
+                          },
+                          trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = showTypeDropdown)
+                          },
+                          modifier =
+                              Modifier.menuAnchor().fillMaxWidth().testTag(testTags.inputEventType))
+                      ExposedDropdownMenu(
+                          expanded = showTypeDropdown,
+                          onDismissRequest = { showTypeDropdown = false },
+                          modifier =
+                              Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
+                            eventTypes.forEachIndexed { index, type ->
+                              DropdownMenuItem(
+                                  text = {
+                                    Text(
+                                        text = type,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        style = MaterialTheme.typography.headlineSmall)
+                                  },
+                                  onClick = {
+                                    onTypeChange(type)
+                                    showTypeDropdown = false
+                                  },
+                                  colors = MaterialTheme.customColors.dropdownMenu)
+                              if (index < eventTypes.lastIndex) {
+                                HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                              }
                             }
                           }
-                        }
-                  }
+                    }
+              }
 
               // Title
               OutlinedTextField(
@@ -245,82 +249,85 @@ fun EventFormScreen(
               Row(
                   modifier = Modifier.fillMaxWidth(),
                   horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium)) {
-                    var showParticipantsDialog by remember { mutableStateOf(false) }
-                    var tempParticipants by remember {
-                      mutableIntStateOf(formState.maxParticipants.toIntOrNull() ?: 1)
-                    }
+                    // Max Participants (hidden for group events)
+                    if (!isGroupEvent) {
+                      var showParticipantsDialog by remember { mutableStateOf(false) }
+                      var tempParticipants by remember {
+                        mutableIntStateOf(formState.maxParticipants.toIntOrNull() ?: 1)
+                      }
 
-                    Box(
-                        modifier =
-                            Modifier.weight(1f).clickable { showParticipantsDialog = true }) {
-                          OutlinedTextField(
-                              value = formState.maxParticipants,
-                              onValueChange = {},
-                              readOnly = true,
-                              label = { Text("Max Participants") },
-                              placeholder = { Text("Select number") },
-                              isError = formState.invalidMaxParticipantsMsg != null,
-                              supportingText = {
-                                if (formState.invalidMaxParticipantsMsg != null) {
-                                  Text(
-                                      text = formState.invalidMaxParticipantsMsg,
-                                      color = MaterialTheme.colorScheme.error)
-                                }
-                              },
-                              colors =
-                                  OutlinedTextFieldDefaults.colors(
-                                      disabledTextColor =
-                                          LocalContentColor.current.copy(
-                                              LocalContentColor.current.alpha),
-                                      disabledBorderColor = MaterialTheme.colorScheme.outline,
-                                      disabledLabelColor =
-                                          MaterialTheme.colorScheme.onSurfaceVariant,
-                                      disabledPlaceholderColor =
-                                          MaterialTheme.colorScheme.onSurfaceVariant,
-                                      disabledLeadingIconColor =
-                                          MaterialTheme.colorScheme.onSurfaceVariant,
-                                      disabledTrailingIconColor =
-                                          MaterialTheme.colorScheme.onSurfaceVariant),
-                              enabled = false,
-                              modifier =
-                                  Modifier.fillMaxWidth()
-                                      .testTag(testTags.inputEventMaxParticipants))
-                        }
-
-                    if (showParticipantsDialog) {
-                      AlertDialog(
-                          onDismissRequest = { showParticipantsDialog = false },
-                          title = { Text("Select Max Participants") },
-                          text = {
-                            AndroidView(
-                                factory = { context ->
-                                  NumberPicker(context).apply {
-                                    minValue = 1
-                                    maxValue = 100
-                                    value = tempParticipants
-                                    wrapSelectorWheel = true
-                                    setOnValueChangedListener { _, _, newVal ->
-                                      tempParticipants = newVal
-                                    }
+                      Box(
+                          modifier =
+                              Modifier.weight(1f).clickable { showParticipantsDialog = true }) {
+                            OutlinedTextField(
+                                value = formState.maxParticipants,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Max Participants") },
+                                placeholder = { Text("Select number") },
+                                isError = formState.invalidMaxParticipantsMsg != null,
+                                supportingText = {
+                                  if (formState.invalidMaxParticipantsMsg != null) {
+                                    Text(
+                                        text = formState.invalidMaxParticipantsMsg,
+                                        color = MaterialTheme.colorScheme.error)
                                   }
                                 },
-                                update = { picker -> picker.value = tempParticipants },
-                                modifier = Modifier.fillMaxWidth())
-                          },
-                          confirmButton = {
-                            TextButton(
-                                onClick = {
-                                  onMaxParticipantsChange(tempParticipants.toString())
-                                  showParticipantsDialog = false
-                                }) {
-                                  Text("OK")
-                                }
-                          },
-                          dismissButton = {
-                            TextButton(onClick = { showParticipantsDialog = false }) {
-                              Text("Cancel")
-                            }
-                          })
+                                colors =
+                                    OutlinedTextFieldDefaults.colors(
+                                        disabledTextColor =
+                                            LocalContentColor.current.copy(
+                                                LocalContentColor.current.alpha),
+                                        disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                        disabledLabelColor =
+                                            MaterialTheme.colorScheme.onSurfaceVariant,
+                                        disabledPlaceholderColor =
+                                            MaterialTheme.colorScheme.onSurfaceVariant,
+                                        disabledLeadingIconColor =
+                                            MaterialTheme.colorScheme.onSurfaceVariant,
+                                        disabledTrailingIconColor =
+                                            MaterialTheme.colorScheme.onSurfaceVariant),
+                                enabled = false,
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .testTag(testTags.inputEventMaxParticipants))
+                          }
+
+                      if (showParticipantsDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showParticipantsDialog = false },
+                            title = { Text("Select Max Participants") },
+                            text = {
+                              AndroidView(
+                                  factory = { context ->
+                                    NumberPicker(context).apply {
+                                      minValue = 1
+                                      maxValue = 100
+                                      value = tempParticipants
+                                      wrapSelectorWheel = true
+                                      setOnValueChangedListener { _, _, newVal ->
+                                        tempParticipants = newVal
+                                      }
+                                    }
+                                  },
+                                  update = { picker -> picker.value = tempParticipants },
+                                  modifier = Modifier.fillMaxWidth())
+                            },
+                            confirmButton = {
+                              TextButton(
+                                  onClick = {
+                                    onMaxParticipantsChange(tempParticipants.toString())
+                                    showParticipantsDialog = false
+                                  }) {
+                                    Text("OK")
+                                  }
+                            },
+                            dismissButton = {
+                              TextButton(onClick = { showParticipantsDialog = false }) {
+                                Text("Cancel")
+                              }
+                            })
+                      }
                     }
 
                     var showDurationDialog by remember { mutableStateOf(false) }
@@ -328,25 +335,30 @@ fun EventFormScreen(
                       mutableIntStateOf(formState.duration.toIntOrNull() ?: 10)
                     }
 
-                    Box(modifier = Modifier.weight(1f).clickable { showDurationDialog = true }) {
-                      OutlinedTextField(
-                          value = formState.duration,
-                          onValueChange = {},
-                          readOnly = true,
-                          label = { Text("Duration (min)") },
-                          placeholder = { Text("Select duration") },
-                          isError = formState.invalidDurationMsg != null,
-                          supportingText = {
-                            if (formState.invalidDurationMsg != null) {
-                              Text(
-                                  text = formState.invalidDurationMsg,
-                                  color = MaterialTheme.colorScheme.error)
-                            }
-                          },
-                          colors = MaterialTheme.customColors.outlinedTextField(),
-                          enabled = false,
-                          modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventDuration))
-                    }
+                    Box(
+                        modifier =
+                            Modifier.weight(if (isGroupEvent) 1f else 1f).clickable {
+                              showDurationDialog = true
+                            }) {
+                          OutlinedTextField(
+                              value = formState.duration,
+                              onValueChange = {},
+                              readOnly = true,
+                              label = { Text("Duration (min)") },
+                              placeholder = { Text("Select duration") },
+                              isError = formState.invalidDurationMsg != null,
+                              supportingText = {
+                                if (formState.invalidDurationMsg != null) {
+                                  Text(
+                                      text = formState.invalidDurationMsg,
+                                      color = MaterialTheme.colorScheme.error)
+                                }
+                              },
+                              colors = MaterialTheme.customColors.outlinedTextField(),
+                              enabled = false,
+                              modifier =
+                                  Modifier.fillMaxWidth().testTag(testTags.inputEventDuration))
+                        }
 
                     if (showDurationDialog) {
                       AlertDialog(
@@ -458,55 +470,58 @@ fun EventFormScreen(
                     }
                   }
 
-              // Visibility dropdown
-              ExposedDropdownMenuBox(
-                  expanded = showVisibilityDropdown,
-                  onExpandedChange = { showVisibilityDropdown = !showVisibilityDropdown }) {
-                    OutlinedTextField(
-                        value = formState.visibility,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Event Visibility") },
-                        placeholder = { Text("Select visibility") },
-                        isError = formState.invalidVisibilityMsg != null,
-                        supportingText = {
-                          if (formState.invalidVisibilityMsg != null) {
-                            Text(
-                                text = formState.invalidVisibilityMsg,
-                                color = MaterialTheme.colorScheme.error)
-                          }
-                        },
-                        trailingIcon = {
-                          ExposedDropdownMenuDefaults.TrailingIcon(
-                              expanded = showVisibilityDropdown)
-                        },
-                        modifier =
-                            Modifier.menuAnchor()
-                                .fillMaxWidth()
-                                .testTag(testTags.inputEventVisibility))
-                    ExposedDropdownMenu(
-                        expanded = showVisibilityDropdown,
-                        onDismissRequest = { showVisibilityDropdown = false },
-                        modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
-                          visibilities.forEachIndexed { index, vis ->
-                            DropdownMenuItem(
-                                text = {
-                                  Text(
-                                      text = vis,
-                                      color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                      style = MaterialTheme.typography.headlineSmall)
-                                },
-                                onClick = {
-                                  onVisibilityChange(vis)
-                                  showVisibilityDropdown = false
-                                },
-                                colors = MaterialTheme.customColors.dropdownMenu)
-                            if (index < visibilities.lastIndex) {
-                              HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+              // Visibility dropdown (hidden for group events)
+              if (!isGroupEvent) {
+                ExposedDropdownMenuBox(
+                    expanded = showVisibilityDropdown,
+                    onExpandedChange = { showVisibilityDropdown = !showVisibilityDropdown }) {
+                      OutlinedTextField(
+                          value = formState.visibility,
+                          onValueChange = {},
+                          readOnly = true,
+                          label = { Text("Event Visibility") },
+                          placeholder = { Text("Select visibility") },
+                          isError = formState.invalidVisibilityMsg != null,
+                          supportingText = {
+                            if (formState.invalidVisibilityMsg != null) {
+                              Text(
+                                  text = formState.invalidVisibilityMsg,
+                                  color = MaterialTheme.colorScheme.error)
+                            }
+                          },
+                          trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(
+                                expanded = showVisibilityDropdown)
+                          },
+                          modifier =
+                              Modifier.menuAnchor()
+                                  .fillMaxWidth()
+                                  .testTag(testTags.inputEventVisibility))
+                      ExposedDropdownMenu(
+                          expanded = showVisibilityDropdown,
+                          onDismissRequest = { showVisibilityDropdown = false },
+                          modifier =
+                              Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
+                            visibilities.forEachIndexed { index, vis ->
+                              DropdownMenuItem(
+                                  text = {
+                                    Text(
+                                        text = vis,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        style = MaterialTheme.typography.headlineSmall)
+                                  },
+                                  onClick = {
+                                    onVisibilityChange(vis)
+                                    showVisibilityDropdown = false
+                                  },
+                                  colors = MaterialTheme.customColors.dropdownMenu)
+                              if (index < visibilities.lastIndex) {
+                                HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                              }
                             }
                           }
-                        }
-                  }
+                    }
+              }
 
               Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 

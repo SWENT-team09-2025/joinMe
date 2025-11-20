@@ -213,21 +213,28 @@ class CreateEventViewModel(
     val selectedGroup = groupId?.let { id -> _uiState.value.availableGroups.find { it.id == id } }
 
     if (selectedGroup != null) {
-      // For group events, auto-set type, maxParticipants, and visibility
+      // For group events, auto-set type, maxParticipants (set to 300 to accommodate group growth),
+      // and visibility
       _uiState.value =
           _uiState.value.copy(
               selectedGroupId = groupId,
               type = selectedGroup.category.name.uppercase(Locale.ROOT),
-              maxParticipants = selectedGroup.memberIds.size.toString(),
+              maxParticipants = "300",
               visibility = EventVisibility.PRIVATE.name,
               invalidTypeMsg = null,
               invalidMaxParticipantsMsg = null,
               invalidVisibilityMsg = null)
     } else {
-      // For standalone events, reset to defaults
-      _uiState.value = _uiState.value.copy(selectedGroupId = null)
-      // Re-validate maxParticipants when switching back to standalone
-      setMaxParticipants(_uiState.value.maxParticipants)
+      // For standalone events, clear the fields
+      _uiState.value =
+          _uiState.value.copy(
+              selectedGroupId = null,
+              type = "",
+              maxParticipants = "",
+              visibility = "",
+              invalidTypeMsg = null,
+              invalidMaxParticipantsMsg = null,
+              invalidVisibilityMsg = null)
     }
   }
 }

@@ -306,12 +306,19 @@ class CreateEventViewModelTest {
   }
 
   @Test
-  fun setSelectedGroup_updatesStateAndCanBeCleared() {
-    vm.setSelectedGroup("group-123")
-    Assert.assertEquals("group-123", vm.uiState.value.selectedGroupId)
+  fun setSelectedGroup_updatesStateAndCanBeCleared() = runTest {
+    // Add a test group first
+    val testGroup = Group(id = "group-123", name = "Test Group")
+    groupRepo.addTestGroup(testGroup)
 
-    vm.setSelectedGroup(null)
-    Assert.assertNull(vm.uiState.value.selectedGroupId)
+    val newVm = CreateEventViewModel(repo, groupRepo)
+    advanceUntilIdle()
+
+    newVm.setSelectedGroup("group-123")
+    Assert.assertEquals("group-123", newVm.uiState.value.selectedGroupId)
+
+    newVm.setSelectedGroup(null)
+    Assert.assertNull(newVm.uiState.value.selectedGroupId)
   }
 
   @Test
@@ -355,13 +362,157 @@ class CreateEventViewModelTest {
     newVm.setMaxParticipants("3")
     Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
 
-    // Select group - should now be invalid
+    // Select group - auto-sets to 300, so validation passes
     newVm.setSelectedGroup("group-1")
-    Assert.assertNotNull(newVm.uiState.value.invalidMaxParticipantsMsg)
-
-    // Clear group selection - should be valid again
-    newVm.setSelectedGroup(null)
+    Assert.assertEquals("300", newVm.uiState.value.maxParticipants)
     Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
+
+    // Clear group selection - resets to empty
+    newVm.setSelectedGroup(null)
+    Assert.assertEquals("", newVm.uiState.value.maxParticipants)
+    Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
+  }
+
+  @Test
+  fun setSelectedGroup_autoSetsTypeMaxParticipantsAndVisibility() = runTest {
+    // Set up a SPORTS group with 3 members
+    val testGroup =
+        Group(
+            id = "group-1",
+            name = "Sports Group",
+            category = com.android.joinme.model.event.EventType.SPORTS,
+            memberIds = listOf("u1", "u2", "u3"))
+    groupRepo.addTestGroup(testGroup)
+
+    val newVm = CreateEventViewModel(repo, groupRepo)
+    advanceUntilIdle()
+
+    // Initially fields should be empty
+    Assert.assertEquals("", newVm.uiState.value.type)
+    Assert.assertEquals("", newVm.uiState.value.maxParticipants)
+    Assert.assertEquals("", newVm.uiState.value.visibility)
+
+    // Select group
+    newVm.setSelectedGroup("group-1")
+
+    // Verify auto-set fields
+    Assert.assertEquals("SPORTS", newVm.uiState.value.type)
+    Assert.assertEquals("300", newVm.uiState.value.maxParticipants)
+    Assert.assertEquals("PRIVATE", newVm.uiState.value.visibility)
+
+    // Verify validation messages are cleared
+    Assert.assertNull(newVm.uiState.value.invalidTypeMsg)
+    Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
+    Assert.assertNull(newVm.uiState.value.invalidVisibilityMsg)
+  }
+
+  @Test
+  fun setSelectedGroup_withDifferentGroupTypes_setsCorrectType() = runTest {
+    // Set up groups with different types
+    val sportsGroup =
+        Group(
+            id = "sports-group",
+            name = "Sports",
+            category = com.android.joinme.model.event.EventType.SPORTS)
+    val socialGroup =
+        Group(
+            id = "social-group",
+            name = "Social",
+            category = com.android.joinme.model.event.EventType.SOCIAL)
+    val activityGroup =
+        Group(
+            id = "activity-group",
+            name = "Activity",
+            category = com.android.joinme.model.event.EventType.ACTIVITY)
+
+    groupRepo.addTestGroup(sportsGroup)
+    groupRepo.addTestGroup(socialGroup)
+    groupRepo.addTestGroup(activityGroup)
+
+    val newVm = CreateEventViewModel(repo, groupRepo)
+    advanceUntilIdle()
+
+    // Test SPORTS group
+    newVm.setSelectedGroup("sports-group")
+    Assert.assertEquals("SPORTS", newVm.uiState.value.type)
+
+    // Test SOCIAL group
+    newVm.setSelectedGroup("social-group")
+    Assert.assertEquals("SOCIAL", newVm.uiState.value.type)
+
+    // Test ACTIVITY group
+    newVm.setSelectedGroup("activity-group")
+    Assert.assertEquals("ACTIVITY", newVm.uiState.value.type)
+  }
+
+  @Test
+  fun setSelectedGroup_clearingGroup_resetsFieldsToEmpty() = runTest {
+    // Set up a group
+    val testGroup =
+        Group(
+            id = "group-1",
+            name = "Test Group",
+            category = com.android.joinme.model.event.EventType.SPORTS,
+            memberIds = listOf("u1", "u2", "u3"))
+    groupRepo.addTestGroup(testGroup)
+
+    val newVm = CreateEventViewModel(repo, groupRepo)
+    advanceUntilIdle()
+
+    // Select group to set fields
+    newVm.setSelectedGroup("group-1")
+    Assert.assertEquals("SPORTS", newVm.uiState.value.type)
+    Assert.assertEquals("300", newVm.uiState.value.maxParticipants)
+    Assert.assertEquals("PRIVATE", newVm.uiState.value.visibility)
+
+    // Clear group selection
+    newVm.setSelectedGroup(null)
+
+    // Verify fields are reset to empty
+    Assert.assertEquals("", newVm.uiState.value.type)
+    Assert.assertEquals("", newVm.uiState.value.maxParticipants)
+    Assert.assertEquals("", newVm.uiState.value.visibility)
+
+    // Verify validation messages are cleared
+    Assert.assertNull(newVm.uiState.value.invalidTypeMsg)
+    Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
+    Assert.assertNull(newVm.uiState.value.invalidVisibilityMsg)
+  }
+
+  @Test
+  fun setSelectedGroup_withManuallySetFields_thenClearingGroup_resetsFields() = runTest {
+    // Manually set some fields first
+    vm.setType("SPORTS")
+    vm.setMaxParticipants("10")
+    vm.setVisibility("PUBLIC")
+
+    Assert.assertEquals("SPORTS", vm.uiState.value.type)
+    Assert.assertEquals("10", vm.uiState.value.maxParticipants)
+    Assert.assertEquals("PUBLIC", vm.uiState.value.visibility)
+
+    // Set up and select a group
+    val testGroup = Group(id = "group-1", name = "Test Group")
+    groupRepo.addTestGroup(testGroup)
+
+    val newVm = CreateEventViewModel(repo, groupRepo)
+    advanceUntilIdle()
+
+    // Set fields manually
+    newVm.setType("ACTIVITY")
+    newVm.setMaxParticipants("15")
+    newVm.setVisibility("PRIVATE")
+
+    // Select group - should override with group values
+    newVm.setSelectedGroup("group-1")
+    Assert.assertEquals("ACTIVITY", newVm.uiState.value.type) // Group's category
+    Assert.assertEquals("300", newVm.uiState.value.maxParticipants)
+    Assert.assertEquals("PRIVATE", newVm.uiState.value.visibility)
+
+    // Clear group - should reset to empty
+    newVm.setSelectedGroup(null)
+    Assert.assertEquals("", newVm.uiState.value.type)
+    Assert.assertEquals("", newVm.uiState.value.maxParticipants)
+    Assert.assertEquals("", newVm.uiState.value.visibility)
   }
 
   // ---------- createEvent with group ----------
@@ -398,19 +549,22 @@ class CreateEventViewModelTest {
             eventIds = emptyList())
     groupRepo.addTestGroup(testGroup)
 
-    // Fill form and select group
-    vm.setType("SPORTS")
-    vm.setTitle("Football")
-    vm.setDescription("Friendly 5v5")
-    vm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
-    vm.setDate("25/12/2023")
-    vm.setTime("10:00")
-    vm.setMaxParticipants("10")
-    vm.setDuration("90")
-    vm.setVisibility("PUBLIC")
-    vm.setSelectedGroup("group-1")
+    // Create new VM with the group already loaded
+    val newVm = CreateEventViewModel(repo, groupRepo)
+    advanceUntilIdle()
 
-    val ok = vm.createEvent()
+    // Select group first (this will auto-set type, maxParticipants, visibility)
+    newVm.setSelectedGroup("group-1")
+
+    // Fill remaining form fields
+    newVm.setTitle("Football")
+    newVm.setDescription("Friendly 5v5")
+    newVm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
+    newVm.setDate("25/12/2023")
+    newVm.setTime("10:00")
+    newVm.setDuration("90")
+
+    val ok = newVm.createEvent()
     advanceUntilIdle()
 
     Assert.assertTrue(ok)
@@ -454,22 +608,26 @@ class CreateEventViewModelTest {
     groupRepo.addTestGroup(testGroup)
     groupRepo.shouldThrowOnEdit = true
 
-    vm.setType("SPORTS")
-    vm.setTitle("Football")
-    vm.setDescription("Friendly 5v5")
-    vm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
-    vm.setDate("25/12/2023")
-    vm.setTime("10:00")
-    vm.setMaxParticipants("10")
-    vm.setDuration("90")
-    vm.setVisibility("PUBLIC")
-    vm.setSelectedGroup("group-1")
+    // Create new VM with the group already loaded
+    val newVm = CreateEventViewModel(repo, groupRepo)
+    advanceUntilIdle()
 
-    val ok = vm.createEvent()
+    // Select group first (this will auto-set type, maxParticipants, visibility)
+    newVm.setSelectedGroup("group-1")
+
+    // Fill remaining form fields
+    newVm.setTitle("Football")
+    newVm.setDescription("Friendly 5v5")
+    newVm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
+    newVm.setDate("25/12/2023")
+    newVm.setTime("10:00")
+    newVm.setDuration("90")
+
+    val ok = newVm.createEvent()
     advanceUntilIdle()
 
     Assert.assertFalse(ok)
-    Assert.assertNotNull(vm.uiState.value.errorMsg)
+    Assert.assertNotNull(newVm.uiState.value.errorMsg)
     Assert.assertEquals(1, repo.added.size) // Event was created
   }
 }

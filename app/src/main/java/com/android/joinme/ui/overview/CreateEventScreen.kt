@@ -194,5 +194,6 @@ fun CreateEventScreen(
             selectedGroupId = uiState.selectedGroupId,
             availableGroups = uiState.availableGroups,
             onGroupSelected = { createEventViewModel.setSelectedGroup(it) })
-      })
+      },
+      isGroupEvent = uiState.selectedGroupId != null)
 }
