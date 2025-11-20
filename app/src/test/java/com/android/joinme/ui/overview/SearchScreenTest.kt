@@ -2,8 +2,10 @@ package com.android.joinme.ui.overview
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.android.joinme.model.event.EventsRepositoryLocal
+import com.android.joinme.model.event.isUpcoming
 import com.android.joinme.model.filter.FilterRepository
+import com.android.joinme.model.filter.FilteredEventsRepository
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -14,14 +16,38 @@ import org.robolectric.RobolectricTestRunner
 class SearchScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
+  private lateinit var filteredEventsRepository: FilteredEventsRepository
+  private lateinit var fakeEventRepository: FakeEventRepository
+  private lateinit var fakeSeriesRepository: FakeSeriesRepository
+
+  // Future timestamp for test events (1 day in the future)
+  private val futureTimestamp =
+      com.google.firebase.Timestamp(System.currentTimeMillis() / 1000 + 86400, 0)
 
   @Before
   fun setup() {
     // Reset FilterRepository before each test to ensure clean state
     FilterRepository.reset()
+
+    fakeEventRepository = FakeEventRepository()
+    fakeSeriesRepository = FakeSeriesRepository()
+
+    // Create FilteredEventsRepository with fake repositories for testing
+    filteredEventsRepository =
+        FilteredEventsRepository(
+            fakeEventRepository,
+            fakeSeriesRepository,
+            FilterRepository,
+            kotlinx.coroutines.Dispatchers.Unconfined)
+    FilteredEventsRepository.resetInstance(filteredEventsRepository)
   }
 
-  private fun setupScreen(viewModel: SearchViewModel = SearchViewModel(EventsRepositoryLocal())) {
+  @After
+  fun tearDown() {
+    FilteredEventsRepository.resetInstance()
+  }
+
+  private fun setupScreen(viewModel: SearchViewModel = SearchViewModel(filteredEventsRepository)) {
     composeTestRule.setContent { SearchScreen(searchViewModel = viewModel) }
     composeTestRule.waitForIdle()
   }
@@ -225,7 +251,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_viewModelIntegration_queryUpdates() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     composeTestRule.onNodeWithText("Search an event").performTextInput("test")
@@ -237,7 +263,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_viewModelIntegration_socialFilterUpdates() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     composeTestRule.onNodeWithText("Social").performClick()
@@ -249,7 +275,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_viewModelIntegration_activityFilterUpdates() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     composeTestRule.onNodeWithText("Activity").performClick()
@@ -261,7 +287,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_viewModelIntegration_sportSelectionUpdates() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     // Initially basket is unchecked
@@ -283,11 +309,12 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_displaysEmptyMessage_whenNoEvents() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     // Ensure events are empty
-    viewModel.setEvents(emptyList())
+    fakeEventRepository.eventsToReturn = emptyList()
+    filteredEventsRepository.refresh()
 
     composeTestRule.waitForIdle()
 
@@ -422,7 +449,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_displaysEventCards_whenEventsExist() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     val sampleEvent =
@@ -432,7 +459,7 @@ class SearchScreenTest {
             title = "Basketball Game",
             description = "Fun basketball game",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 60,
             participants = listOf("user1"),
             maxParticipants = 10,
@@ -440,7 +467,8 @@ class SearchScreenTest {
             ownerId = "owner1")
 
     // Set events after screen is setup
-    viewModel.setEvents(listOf(sampleEvent))
+    fakeEventRepository.eventsToReturn = listOf(sampleEvent)
+    filteredEventsRepository.refresh()
 
     composeTestRule.waitForIdle()
 
@@ -451,7 +479,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_eventCardClick_triggersCallback() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
 
     var eventClicked = false
     composeTestRule.setContent {
@@ -466,7 +494,7 @@ class SearchScreenTest {
             title = "Basketball Game",
             description = "Fun basketball game",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 60,
             participants = listOf("user1"),
             maxParticipants = 10,
@@ -474,7 +502,8 @@ class SearchScreenTest {
             ownerId = "owner1")
 
     // Set events after screen is setup
-    viewModel.setEvents(listOf(sampleEvent))
+    fakeEventRepository.eventsToReturn = listOf(sampleEvent)
+    filteredEventsRepository.refresh()
 
     composeTestRule.waitForIdle()
 
@@ -486,7 +515,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_eventList_displaysWithTestTag() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     val sampleEvent =
@@ -496,7 +525,7 @@ class SearchScreenTest {
             title = "Basketball Game",
             description = "Fun basketball game",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 60,
             participants = listOf("user1"),
             maxParticipants = 10,
@@ -504,7 +533,8 @@ class SearchScreenTest {
             ownerId = "owner1")
 
     // Set events
-    viewModel.setEvents(listOf(sampleEvent))
+    fakeEventRepository.eventsToReturn = listOf(sampleEvent)
+    filteredEventsRepository.refresh()
 
     composeTestRule.waitForIdle()
 
@@ -514,7 +544,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_eventCard_hasCorrectTestTag() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     val sampleEvent =
@@ -524,7 +554,7 @@ class SearchScreenTest {
             title = "Test Event",
             description = "Test description",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 60,
             participants = listOf("user1"),
             maxParticipants = 10,
@@ -532,7 +562,8 @@ class SearchScreenTest {
             ownerId = "owner1")
 
     // Set events
-    viewModel.setEvents(listOf(sampleEvent))
+    fakeEventRepository.eventsToReturn = listOf(sampleEvent)
+    filteredEventsRepository.refresh()
 
     composeTestRule.waitForIdle()
 
@@ -544,7 +575,7 @@ class SearchScreenTest {
 
   @Test
   fun searchScreen_multipleEventCards_haveUniqueTestTags() {
-    val viewModel = SearchViewModel(EventsRepositoryLocal())
+    val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
     val event1 =
@@ -554,7 +585,7 @@ class SearchScreenTest {
             title = "Event 1",
             description = "Description 1",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 60,
             participants = listOf("user1"),
             maxParticipants = 10,
@@ -568,7 +599,7 @@ class SearchScreenTest {
             title = "Event 2",
             description = "Description 2",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 90,
             participants = listOf("user2"),
             maxParticipants = 15,
@@ -576,7 +607,8 @@ class SearchScreenTest {
             ownerId = "owner2")
 
     // Set events
-    viewModel.setEvents(listOf(event1, event2))
+    fakeEventRepository.eventsToReturn = listOf(event1, event2)
+    filteredEventsRepository.refresh()
 
     composeTestRule.waitForIdle()
 
@@ -611,5 +643,60 @@ class SearchScreenTest {
 
     // Dropdown should still be visible
     composeTestRule.onNodeWithText("Select all").assertIsDisplayed()
+  }
+
+  // Fake implementations for testing
+  private class FakeEventRepository : com.android.joinme.model.event.EventsRepository {
+    var eventsToReturn: List<com.android.joinme.model.event.Event> = emptyList()
+
+    override fun getNewEventId(): String = "fake-id"
+
+    override suspend fun getAllEvents(
+        eventFilter: com.android.joinme.model.event.EventFilter
+    ): List<com.android.joinme.model.event.Event> = eventsToReturn.filter { it.isUpcoming() }
+
+    override suspend fun getEvent(eventId: String): com.android.joinme.model.event.Event {
+      throw Exception("Not implemented in fake repo")
+    }
+
+    override suspend fun addEvent(event: com.android.joinme.model.event.Event) {}
+
+    override suspend fun editEvent(
+        eventId: String,
+        newValue: com.android.joinme.model.event.Event
+    ) {}
+
+    override suspend fun deleteEvent(eventId: String) {}
+
+    override suspend fun getEventsByIds(
+        eventIds: List<String>
+    ): List<com.android.joinme.model.event.Event> = emptyList()
+  }
+
+  private class FakeSeriesRepository : com.android.joinme.model.serie.SeriesRepository {
+    var seriesToReturn: List<com.android.joinme.model.serie.Serie> = emptyList()
+
+    override fun getNewSerieId(): String = "fake-serie-id"
+
+    override suspend fun getAllSeries(
+        serieFilter: com.android.joinme.model.serie.SerieFilter
+    ): List<com.android.joinme.model.serie.Serie> = seriesToReturn
+
+    override suspend fun getSeriesByIds(
+        seriesIds: List<String>
+    ): List<com.android.joinme.model.serie.Serie> = emptyList()
+
+    override suspend fun getSerie(serieId: String): com.android.joinme.model.serie.Serie {
+      throw Exception("Not implemented in fake repo")
+    }
+
+    override suspend fun addSerie(serie: com.android.joinme.model.serie.Serie) {}
+
+    override suspend fun editSerie(
+        serieId: String,
+        newValue: com.android.joinme.model.serie.Serie
+    ) {}
+
+    override suspend fun deleteSerie(serieId: String) {}
   }
 }
