@@ -1,6 +1,8 @@
 // Implemented with help of Claude AI
 package com.android.joinme.model.groups
 
+/** Exception message for when a group is not found in the local repository. */
+const val GROUP_NOT_FOUND = "GroupRepositoryLocal: Group not found"
 /** Represents a repository that manages a local list of groups (for offline mode or testing). */
 class GroupRepositoryLocal : GroupRepository {
   private val groups: MutableList<Group> = mutableListOf()
@@ -15,8 +17,7 @@ class GroupRepositoryLocal : GroupRepository {
   }
 
   override suspend fun getGroup(groupId: String): Group {
-    return groups.find { it.id == groupId }
-        ?: throw Exception("GroupRepositoryLocal: Group not found")
+    return groups.find { it.id == groupId } ?: throw Exception(GROUP_NOT_FOUND)
   }
 
   override suspend fun addGroup(group: Group) {
@@ -28,7 +29,7 @@ class GroupRepositoryLocal : GroupRepository {
     if (index != -1) {
       groups[index] = newValue
     } else {
-      throw Exception("GroupRepositoryLocal: Group not found")
+      throw Exception(GROUP_NOT_FOUND)
     }
   }
 
@@ -43,7 +44,7 @@ class GroupRepositoryLocal : GroupRepository {
     if (index != -1) {
       groups.removeAt(index)
     } else {
-      throw Exception("GroupRepositoryLocal: Group not found")
+      throw Exception(GROUP_NOT_FOUND)
     }
   }
 

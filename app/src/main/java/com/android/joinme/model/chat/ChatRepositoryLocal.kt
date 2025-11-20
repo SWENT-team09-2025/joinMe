@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
+/** Exception message for when a message is not found in the local repository. */
+const val MESSAGE_NOT_FOUND = "ChatRepositoryLocal: Message not found"
+
 /**
  * In-memory implementation of [ChatRepository] for offline mode or testing.
  *
@@ -48,7 +51,7 @@ class ChatRepositoryLocal : ChatRepository {
         messages[index] = newValue
         messagesFlow.value = messages.toList()
       } else {
-        throw Exception("ChatRepositoryLocal: Message not found")
+        throw Exception(MESSAGE_NOT_FOUND)
       }
     }
   }
@@ -61,7 +64,7 @@ class ChatRepositoryLocal : ChatRepository {
         messages.removeAt(index)
         messagesFlow.value = messages.toList()
       } else {
-        throw Exception("ChatRepositoryLocal: Message not found")
+        throw Exception(MESSAGE_NOT_FOUND)
       }
     }
   }
@@ -81,7 +84,7 @@ class ChatRepositoryLocal : ChatRepository {
           messagesFlow.value = messages.toList()
         }
       } else {
-        throw Exception("ChatRepositoryLocal: Message not found")
+        throw Exception(MESSAGE_NOT_FOUND)
       }
     }
   }
