@@ -80,6 +80,13 @@ class SeriesRepositoryMock(private val shouldThrowError: Boolean = false) : Seri
     return series
   }
 
+  override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> {
+    if (shouldThrowError) {
+      throw Exception("Network error: Failed to fetch series by IDs")
+    }
+    return series.filter { seriesIds.contains(it.serieId) }
+  }
+
   override suspend fun getSerie(serieId: String): Serie {
     if (shouldThrowError) {
       throw Exception("Network error")

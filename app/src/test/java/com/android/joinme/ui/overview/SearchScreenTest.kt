@@ -678,6 +678,10 @@ class SearchScreenTest {
         serieFilter: com.android.joinme.model.serie.SerieFilter
     ): List<com.android.joinme.model.serie.Serie> = seriesToReturn
 
+    override suspend fun getSeriesByIds(
+        seriesIds: List<String>
+    ): List<com.android.joinme.model.serie.Serie> = emptyList()
+
     override suspend fun getSerie(serieId: String): com.android.joinme.model.serie.Serie {
       throw Exception("Not implemented in fake repo")
     }

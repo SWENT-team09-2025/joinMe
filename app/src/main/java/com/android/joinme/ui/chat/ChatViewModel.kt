@@ -82,7 +82,9 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
             _uiState.value = _uiState.value.copy(isLoading = false)
           }
           .collect { messageList ->
-            _uiState.value = _uiState.value.copy(messages = messageList, isLoading = false)
+            // Sort messages by timestamp (oldest first, newest last)
+            val sortedMessages = messageList.sortedBy { it.timestamp }
+            _uiState.value = _uiState.value.copy(messages = sortedMessages, isLoading = false)
           }
     }
   }

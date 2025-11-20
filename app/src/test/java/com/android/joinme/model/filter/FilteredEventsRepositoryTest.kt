@@ -315,6 +315,8 @@ class FilteredEventsRepositoryTest {
       return seriesToReturn
     }
 
+    override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> = emptyList()
+
     override suspend fun getSerie(serieId: String): Serie {
       throw Exception("Not implemented")
     }

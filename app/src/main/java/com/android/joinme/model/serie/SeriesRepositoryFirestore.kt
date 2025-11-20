@@ -91,6 +91,21 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
   }
 
   /**
+   * Retrieves a list of Serie items by their unique identifiers.
+   *
+   * @param seriesIds The list of unique identifiers of the Serie items to retrieve
+   * @return A list of Serie items with the specified identifiers
+   */
+  override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> {
+    if (seriesIds.isEmpty()) return emptyList()
+    if (seriesIds.size > 30) throw Exception("SeriesRepositoryFirestore: Too many serie IDs")
+
+    val snapshot = db.collection(SERIES_COLLECTION_PATH).whereIn("serieId", seriesIds).get().await()
+
+    return snapshot.mapNotNull { documentToSerie(it) }.sortedBy { it.date.toDate().time }
+  }
+
+  /**
    * Retrieves a specific Serie item by its unique identifier from Firestore.
    *
    * @param serieId The unique identifier of the Serie item to retrieve
