@@ -335,30 +335,25 @@ fun EventFormScreen(
                       mutableIntStateOf(formState.duration.toIntOrNull() ?: 10)
                     }
 
-                    Box(
-                        modifier =
-                            Modifier.weight(if (isGroupEvent) 1f else 1f).clickable {
-                              showDurationDialog = true
-                            }) {
-                          OutlinedTextField(
-                              value = formState.duration,
-                              onValueChange = {},
-                              readOnly = true,
-                              label = { Text("Duration (min)") },
-                              placeholder = { Text("Select duration") },
-                              isError = formState.invalidDurationMsg != null,
-                              supportingText = {
-                                if (formState.invalidDurationMsg != null) {
-                                  Text(
-                                      text = formState.invalidDurationMsg,
-                                      color = MaterialTheme.colorScheme.error)
-                                }
-                              },
-                              colors = MaterialTheme.customColors.outlinedTextField(),
-                              enabled = false,
-                              modifier =
-                                  Modifier.fillMaxWidth().testTag(testTags.inputEventDuration))
-                        }
+                    Box(modifier = Modifier.weight(1f).clickable { showDurationDialog = true }) {
+                      OutlinedTextField(
+                          value = formState.duration,
+                          onValueChange = {},
+                          readOnly = true,
+                          label = { Text("Duration (min)") },
+                          placeholder = { Text("Select duration") },
+                          isError = formState.invalidDurationMsg != null,
+                          supportingText = {
+                            if (formState.invalidDurationMsg != null) {
+                              Text(
+                                  text = formState.invalidDurationMsg,
+                                  color = MaterialTheme.colorScheme.error)
+                            }
+                          },
+                          colors = MaterialTheme.customColors.outlinedTextField(),
+                          enabled = false,
+                          modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventDuration))
+                    }
 
                     if (showDurationDialog) {
                       AlertDialog(

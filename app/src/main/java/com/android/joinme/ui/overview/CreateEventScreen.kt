@@ -30,6 +30,8 @@ object CreateEventScreenTestTags {
   const val ERROR_MESSAGE = "errorMessage"
 }
 
+private const val STANDALONE_EVENT_LABEL = "Standalone Event"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GroupSelectionDropdown(
@@ -45,9 +47,10 @@ private fun GroupSelectionDropdown(
         OutlinedTextField(
             value =
                 when {
-                  selectedGroupId == null -> "Standalone Event"
+                  selectedGroupId == null -> STANDALONE_EVENT_LABEL
                   else ->
-                      availableGroups.find { it.id == selectedGroupId }?.name ?: "Standalone Event"
+                      availableGroups.find { it.id == selectedGroupId }?.name
+                          ?: STANDALONE_EVENT_LABEL
                 },
             onValueChange = {},
             readOnly = true,
@@ -69,7 +72,7 @@ private fun GroupSelectionDropdown(
               DropdownMenuItem(
                   text = {
                     Text(
-                        text = "Standalone Event",
+                        text = STANDALONE_EVENT_LABEL,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         style = MaterialTheme.typography.headlineSmall)
                   },
