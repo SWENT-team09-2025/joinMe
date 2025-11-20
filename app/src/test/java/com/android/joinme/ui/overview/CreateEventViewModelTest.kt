@@ -47,8 +47,11 @@ class CreateEventViewModelTest {
   private class FakeEventsRepository : EventsRepository {
     val added = mutableListOf<Event>()
     val deleted = mutableListOf<String>()
+    var shouldThrowOnAdd = false
+    var shouldThrowOnDelete = false
 
     override suspend fun addEvent(event: Event) {
+      if (shouldThrowOnAdd) throw Exception("Failed to add event")
       added += event
     }
 
@@ -57,6 +60,7 @@ class CreateEventViewModelTest {
     }
 
     override suspend fun deleteEvent(eventId: String) {
+      if (shouldThrowOnDelete) throw Exception("Failed to delete event")
       deleted += eventId
       added.removeIf { it.eventId == eventId }
     }
@@ -649,5 +653,80 @@ class CreateEventViewModelTest {
     Assert.assertTrue(repo.added.isEmpty())
     Assert.assertEquals(1, repo.deleted.size)
     Assert.assertNotNull(vm.uiState.value.errorMsg)
+  }
+
+  @Test
+  fun createEvent_addEventFails_returnsFalseAndSetsError() = runTest {
+    val ownerProfile =
+        Profile(
+            uid = "owner-111",
+            username = "Owner",
+            email = "owner@test.com",
+            eventsJoinedCount = 5,
+            createdAt = Timestamp.now(),
+            updatedAt = Timestamp.now())
+    whenever(profileRepository.getProfile("owner-111")).thenReturn(ownerProfile)
+
+    // Make addEvent throw
+    repo.shouldThrowOnAdd = true
+
+    // Fill valid form
+    vm.setType("SPORTS")
+    vm.setTitle("Football")
+    vm.setDescription("Friendly 5v5")
+    vm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
+    vm.setDate("25/12/2023")
+    vm.setTime("10:00")
+    vm.setMaxParticipants("10")
+    vm.setDuration("90")
+    vm.setVisibility("PUBLIC")
+
+    val result = vm.createEvent(userId = "owner-111")
+    advanceUntilIdle()
+
+    // Event creation should fail
+    Assert.assertFalse(result)
+    Assert.assertTrue(repo.added.isEmpty())
+    Assert.assertNotNull(vm.uiState.value.errorMsg)
+    Assert.assertTrue(vm.uiState.value.errorMsg!!.contains("Failed to create event"))
+  }
+
+  @Test
+  fun createEvent_rollbackFails_stillReturnsErrorButLogsRollbackFailure() = runTest {
+    val ownerProfile =
+        Profile(
+            uid = "owner-222",
+            username = "Owner",
+            email = "owner@test.com",
+            eventsJoinedCount = 5,
+            createdAt = Timestamp.now(),
+            updatedAt = Timestamp.now())
+    whenever(profileRepository.getProfile("owner-222")).thenReturn(ownerProfile)
+    whenever(profileRepository.createOrUpdateProfile(org.mockito.kotlin.any()))
+        .thenThrow(RuntimeException("Profile update failed"))
+
+    // Make deleteEvent throw during rollback
+    repo.shouldThrowOnDelete = true
+
+    // Fill valid form
+    vm.setType("SPORTS")
+    vm.setTitle("Football")
+    vm.setDescription("Friendly 5v5")
+    vm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
+    vm.setDate("25/12/2023")
+    vm.setTime("10:00")
+    vm.setMaxParticipants("10")
+    vm.setDuration("90")
+    vm.setVisibility("PUBLIC")
+
+    val result = vm.createEvent(userId = "owner-222")
+    advanceUntilIdle()
+
+    // Event creation should fail (even though rollback also failed)
+    Assert.assertFalse(result)
+    Assert.assertNotNull(vm.uiState.value.errorMsg)
+    Assert.assertTrue(vm.uiState.value.errorMsg!!.contains("Failed to update your profile"))
+    // Event was added but rollback failed, so it's still in the list
+    Assert.assertEquals(1, repo.added.size)
   }
 }
