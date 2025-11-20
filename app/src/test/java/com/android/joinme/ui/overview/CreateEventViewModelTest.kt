@@ -136,9 +136,8 @@ class CreateEventViewModelTest {
     Dispatchers.setMain(testDispatcher)
     repo = FakeEventsRepository()
     profileRepository = mock(ProfileRepository::class.java)
-    vm = CreateEventViewModel(repo, profileRepository)
     groupRepo = FakeGroupRepository()
-    vm = CreateEventViewModel(repo, groupRepo)
+    vm = CreateEventViewModel(repo, profileRepository, groupRepo)
   }
 
   @After
@@ -288,6 +287,31 @@ class CreateEventViewModelTest {
     whenever(profileRepository.getProfile("owner-123")).thenReturn(ownerProfile)
 
     // Fill valid form
+    vm.setType("SPORTS")
+    vm.setTitle("Football")
+    vm.setDescription("Friendly 5v5")
+    vm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
+    vm.setDate("25/12/2023")
+    vm.setTime("10:00")
+    vm.setMaxParticipants("10")
+    vm.setDuration("90")
+    vm.setVisibility("PUBLIC")
+
+    val result = vm.createEvent(userId = "owner-123")
+    advanceUntilIdle()
+
+    Assert.assertTrue(result)
+    Assert.assertEquals(1, repo.added.size)
+
+    // Verify profile was updated with incremented count
+    verify(profileRepository)
+        .createOrUpdateProfile(
+            check { profile ->
+              Assert.assertEquals("owner-123", profile.uid)
+              Assert.assertEquals(6, profile.eventsJoinedCount)
+            })
+  }
+
   // ---------- group loading ----------
 
   @Test
@@ -299,7 +323,7 @@ class CreateEventViewModelTest {
     groupRepo.addTestGroup(group2)
 
     // Create a new VM to trigger init block
-    val newVm = CreateEventViewModel(repo, groupRepo)
+    val newVm = CreateEventViewModel(repo, profileRepository, groupRepo)
     advanceUntilIdle()
 
     Assert.assertEquals(2, newVm.uiState.value.availableGroups.size)
@@ -309,7 +333,7 @@ class CreateEventViewModelTest {
 
   @Test
   fun initialState_whenNoGroups_hasEmptyList() = runTest {
-    val newVm = CreateEventViewModel(repo, groupRepo)
+    val newVm = CreateEventViewModel(repo, profileRepository, groupRepo)
     advanceUntilIdle()
 
     Assert.assertTrue(newVm.uiState.value.availableGroups.isEmpty())
@@ -319,7 +343,7 @@ class CreateEventViewModelTest {
   fun initialState_whenGroupLoadingFails_hasEmptyList() = runTest {
     groupRepo.shouldThrowOnGetAll = true
 
-    val newVm = CreateEventViewModel(repo, groupRepo)
+    val newVm = CreateEventViewModel(repo, profileRepository, groupRepo)
     advanceUntilIdle()
 
     // Should not crash, just have empty groups
@@ -349,7 +373,7 @@ class CreateEventViewModelTest {
         Group(id = "group-1", name = "Test Group", memberIds = listOf("u1", "u2", "u3", "u4", "u5"))
     groupRepo.addTestGroup(testGroup)
 
-    val newVm = CreateEventViewModel(repo, groupRepo)
+    val newVm = CreateEventViewModel(repo, profileRepository, groupRepo)
     advanceUntilIdle()
 
     // Select the group
@@ -376,7 +400,7 @@ class CreateEventViewModelTest {
         Group(id = "group-1", name = "Test Group", memberIds = listOf("u1", "u2", "u3", "u4", "u5"))
     groupRepo.addTestGroup(testGroup)
 
-    val newVm = CreateEventViewModel(repo, groupRepo)
+    val newVm = CreateEventViewModel(repo, profileRepository, groupRepo)
     advanceUntilIdle()
 
     // Set maxParticipants to 3 (valid for standalone)
@@ -396,6 +420,16 @@ class CreateEventViewModelTest {
 
   @Test
   fun createEvent_withValidFormAndNoGroup_createsStandaloneEvent() = runTest {
+    val ownerProfile =
+        Profile(
+            uid = "owner-123",
+            username = "Owner",
+            email = "owner@test.com",
+            eventsJoinedCount = 5,
+            createdAt = Timestamp.now(),
+            updatedAt = Timestamp.now())
+    whenever(profileRepository.getProfile("owner-123")).thenReturn(ownerProfile)
+
     vm.setType("SPORTS")
     vm.setTitle("Football")
     vm.setDescription("Friendly 5v5")
@@ -428,13 +462,22 @@ class CreateEventViewModelTest {
         .thenThrow(RuntimeException("Database error"))
 
     // Fill valid form
-    val ok = vm.createEvent()
+    vm.setType("SPORTS")
+    vm.setTitle("Football")
+    vm.setDescription("Friendly 5v5")
+    vm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
+    vm.setDate("25/12/2023")
+    vm.setTime("10:00")
+    vm.setMaxParticipants("10")
+    vm.setDuration("90")
+    vm.setVisibility("PUBLIC")
+
+    val ok = vm.createEvent(userId = "owner-456")
     advanceUntilIdle()
 
-    Assert.assertTrue(ok)
-    Assert.assertEquals(1, repo.added.size)
-    // Ensure no group was modified
-    Assert.assertTrue(groupRepo.getAllGroups().isEmpty())
+    Assert.assertFalse(ok)
+    Assert.assertTrue(repo.added.isEmpty())
+    Assert.assertNotNull(vm.uiState.value.errorMsg)
   }
 
   @Test
@@ -448,6 +491,17 @@ class CreateEventViewModelTest {
             eventIds = emptyList())
     groupRepo.addTestGroup(testGroup)
 
+    // Mock profile for the owner
+    val ownerProfile =
+        Profile(
+            uid = "owner-123",
+            username = "Owner",
+            email = "owner@test.com",
+            eventsJoinedCount = 5,
+            createdAt = Timestamp.now(),
+            updatedAt = Timestamp.now())
+    whenever(profileRepository.getProfile("owner-123")).thenReturn(ownerProfile)
+
     // Fill form and select group
     vm.setType("SPORTS")
     vm.setTitle("Football")
@@ -460,7 +514,7 @@ class CreateEventViewModelTest {
     vm.setVisibility("PUBLIC")
     vm.setSelectedGroup("group-1")
 
-    val ok = vm.createEvent()
+    val ok = vm.createEvent(userId = "owner-123")
     advanceUntilIdle()
 
     Assert.assertTrue(ok)
@@ -479,6 +533,9 @@ class CreateEventViewModelTest {
 
   @Test
   fun createEvent_withGroupNotFound_returnsFalseAndSetsError() = runTest {
+    // Select a non-existent group
+    vm.setSelectedGroup("non-existent-group")
+
     vm.setType("SPORTS")
     vm.setTitle("Football")
     vm.setDescription("Friendly 5v5")
@@ -492,7 +549,7 @@ class CreateEventViewModelTest {
     val result = vm.createEvent(userId = "owner-456")
     advanceUntilIdle()
 
-    // Event creation should fail if profile fetch fails
+    // Event creation should fail because group was not found
     Assert.assertFalse(result)
     Assert.assertTrue(repo.added.isEmpty())
     Assert.assertNotNull(vm.uiState.value.errorMsg)
@@ -504,9 +561,17 @@ class CreateEventViewModelTest {
     whenever(profileRepository.getProfile("owner-789")).thenReturn(null)
 
     // Fill valid form
-    vm.setSelectedGroup("non-existent-group")
+    vm.setType("SPORTS")
+    vm.setTitle("Football")
+    vm.setDescription("Friendly 5v5")
+    vm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
+    vm.setDate("25/12/2023")
+    vm.setTime("10:00")
+    vm.setMaxParticipants("10")
+    vm.setDuration("90")
+    vm.setVisibility("PUBLIC")
 
-    val ok = vm.createEvent()
+    val ok = vm.createEvent(userId = "owner-789")
     advanceUntilIdle()
 
     Assert.assertFalse(ok)
@@ -520,6 +585,17 @@ class CreateEventViewModelTest {
     groupRepo.addTestGroup(testGroup)
     groupRepo.shouldThrowOnEdit = true
 
+    // Mock profile for the owner
+    val ownerProfile =
+        Profile(
+            uid = "owner-789",
+            username = "Owner",
+            email = "owner@test.com",
+            eventsJoinedCount = 5,
+            createdAt = Timestamp.now(),
+            updatedAt = Timestamp.now())
+    whenever(profileRepository.getProfile("owner-789")).thenReturn(ownerProfile)
+
     vm.setType("SPORTS")
     vm.setTitle("Football")
     vm.setDescription("Friendly 5v5")
@@ -529,13 +605,13 @@ class CreateEventViewModelTest {
     vm.setMaxParticipants("10")
     vm.setDuration("90")
     vm.setVisibility("PUBLIC")
+    vm.setSelectedGroup("group-1")
 
     val result = vm.createEvent(userId = "owner-789")
     advanceUntilIdle()
 
-    // Event creation should fail if profile is null
+    // Event creation should fail because group edit failed
     Assert.assertFalse(result)
-    Assert.assertTrue(repo.added.isEmpty())
     Assert.assertNotNull(vm.uiState.value.errorMsg)
   }
 
@@ -573,13 +649,5 @@ class CreateEventViewModelTest {
     Assert.assertTrue(repo.added.isEmpty())
     Assert.assertEquals(1, repo.deleted.size)
     Assert.assertNotNull(vm.uiState.value.errorMsg)
-    vm.setSelectedGroup("group-1")
-
-    val ok = vm.createEvent()
-    advanceUntilIdle()
-
-    Assert.assertFalse(ok)
-    Assert.assertNotNull(vm.uiState.value.errorMsg)
-    Assert.assertEquals(1, repo.added.size) // Event was created
   }
 }

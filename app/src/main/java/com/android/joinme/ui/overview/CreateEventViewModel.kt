@@ -121,7 +121,7 @@ class CreateEventViewModel(
    *
    * @param userId The user ID of the event owner. Defaults to the current Firebase Auth user.
    */
-  suspend fun createEvent(): Boolean {
+  suspend fun createEvent(userId: String? = null): Boolean {
     val state = _uiState.value
     if (!state.isValid) {
       setErrorMsg("At least one field is not valid")
@@ -187,25 +187,22 @@ class CreateEventViewModel(
     // Create the event
     try {
       repository.addEvent(event)
-
-      // If a group is selected, add the event ID to the group's event list
-      selectedGroup?.let { group ->
-        try {
-          val updatedGroup = group.copy(eventIds = group.eventIds + eventId)
-          groupRepository.editGroup(group.id, updatedGroup)
-        } catch (e: Exception) {
-          Log.e("CreateEventViewModel", "Error adding event to group", e)
-          setErrorMsg("Event created but failed to add to group: ${e.message}")
-          return false
-        }
-      }
-
-      clearErrorMsg()
-      true
     } catch (e: Exception) {
       Log.e("CreateEventViewModel", "Error creating event", e)
       setErrorMsg("Failed to create event: ${e.message}")
       return false
+    }
+
+    // If a group is selected, add the event ID to the group's event list
+    selectedGroup?.let { group ->
+      try {
+        val updatedGroup = group.copy(eventIds = group.eventIds + eventId)
+        groupRepository.editGroup(group.id, updatedGroup)
+      } catch (e: Exception) {
+        Log.e("CreateEventViewModel", "Error adding event to group", e)
+        setErrorMsg("Event created but failed to add to group: ${e.message}")
+        return false
+      }
     }
 
     // Increment owner's eventsJoinedCount since they're automatically added as participant
