@@ -1,8 +1,10 @@
 package com.android.joinme.ui.overview
 
 import com.android.joinme.model.event.Event
+import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
+import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryLocal
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.profile.Profile
@@ -30,6 +32,38 @@ class ShowEventViewModelTest {
   private lateinit var profileRepository: ProfileRepository
   private lateinit var viewModel: ShowEventViewModel
   private val testDispatcher = StandardTestDispatcher()
+
+  // Fake repository that can throw exceptions
+  private class FakeEventsRepository : EventsRepository {
+    val events = mutableListOf<Event>()
+    var shouldThrowOnEdit = false
+    var shouldThrowOnDelete = false
+
+    override suspend fun addEvent(event: Event) {
+      events += event
+    }
+
+    override suspend fun editEvent(eventId: String, newValue: Event) {
+      if (shouldThrowOnEdit) throw Exception("Failed to edit event")
+      val index = events.indexOfFirst { it.eventId == eventId }
+      if (index >= 0) events[index] = newValue
+    }
+
+    override suspend fun deleteEvent(eventId: String) {
+      if (shouldThrowOnDelete) throw Exception("Failed to delete event")
+      events.removeIf { it.eventId == eventId }
+    }
+
+    override suspend fun getEventsByIds(eventIds: List<String>): List<Event> =
+        events.filter { it.eventId in eventIds }
+
+    override suspend fun getEvent(eventId: String): Event =
+        events.find { it.eventId == eventId } ?: throw NoSuchElementException("Event not found")
+
+    override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> = events.toList()
+
+    override fun getNewEventId(): String = "fake-id-${events.size + 1}"
+  }
 
   private fun createTestEvent(
       eventId: String = "test-event-1",
@@ -892,5 +926,108 @@ class ShowEventViewModelTest {
 
     state = viewModel.uiState.first()
     assertNull(state.serieId)
+  }
+
+  /** --- ADDITIONAL COVERAGE TESTS FOR ERROR HANDLING--- */
+  @Test
+  fun toggleParticipation_editEventFails_rollsBackProfileAndSetsError() = runTest {
+    val fakeRepo = FakeEventsRepository()
+    val event = createTestEvent(participants = listOf("user1"))
+    fakeRepo.addEvent(event)
+    fakeRepo.shouldThrowOnEdit = true
+
+    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+
+    val userProfile =
+        Profile(
+            uid = "user2",
+            username = "NewUser",
+            email = "newuser@example.com",
+            eventsJoinedCount = 5)
+    whenever(profileRepository.getProfile("user2")).thenReturn(userProfile)
+
+    vm.toggleParticipation(event.eventId, "user2")
+    advanceUntilIdle()
+
+    val state = vm.uiState.first()
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Failed to update participation"))
+
+    // Verify profile was rolled back (createOrUpdateProfile called twice: once to update, once to
+    // rollback)
+    verify(profileRepository, times(2)).createOrUpdateProfile(any())
+  }
+
+  @Test
+  fun deleteEvent_deleteEventFails_rollsBackProfilesAndSetsError() = runTest {
+    val fakeRepo = FakeEventsRepository()
+    val event = createTestEvent(participants = listOf("user1", "user2"))
+    fakeRepo.addEvent(event)
+    fakeRepo.shouldThrowOnDelete = true
+
+    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+
+    val profile1 =
+        Profile(
+            uid = "user1", username = "User1", email = "user1@example.com", eventsJoinedCount = 5)
+    val profile2 =
+        Profile(
+            uid = "user2", username = "User2", email = "user2@example.com", eventsJoinedCount = 3)
+    val ownerProfile =
+        Profile(
+            uid = "owner123",
+            username = "Owner",
+            email = "owner@example.com",
+            eventsJoinedCount = 7)
+
+    whenever(profileRepository.getProfilesByIds(listOf("user1", "user2", "owner123")))
+        .thenReturn(listOf(profile1, profile2, ownerProfile))
+
+    vm.deleteEvent(event.eventId)
+    advanceUntilIdle()
+
+    val state = vm.uiState.first()
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Failed to delete Event"))
+
+    // Profiles were updated (3) then rolled back (3) = 6 calls
+    verify(profileRepository, times(6)).createOrUpdateProfile(any())
+
+    // Event should still exist since delete failed
+    assertNotNull(fakeRepo.events.find { it.eventId == event.eventId })
+  }
+
+  @Test
+  fun deleteEvent_noParticipants_deletesEventDirectly() = runTest {
+    val fakeRepo = FakeEventsRepository()
+    // Create event with no participants (owner will be auto-added, so use empty list)
+    val event =
+        Event(
+            eventId = "empty-event",
+            type = EventType.SPORTS,
+            title = "Empty Event",
+            description = "No participants",
+            location = Location(46.5197, 6.6323, "EPFL"),
+            date = Timestamp(Date()),
+            duration = 90,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner123")
+    fakeRepo.addEvent(event)
+
+    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+
+    vm.deleteEvent(event.eventId)
+    advanceUntilIdle()
+
+    val state = vm.uiState.first()
+    assertNull(state.errorMsg)
+
+    // Event should be deleted
+    assertNull(fakeRepo.events.find { it.eventId == event.eventId })
+
+    // No profile updates should have happened
+    verify(profileRepository, never()).createOrUpdateProfile(any())
   }
 }
