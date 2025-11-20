@@ -668,4 +668,124 @@ class SeriesRepositoryFirestoreTest {
     assert(resultTitles.contains("Active Serie 1"))
     assert(resultTitles.contains("Upcoming Public Serie"))
   }
+
+  @Test
+  fun getSeriesByIds_returnsMatchingSeries() = runTest {
+    // Given
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+
+    val seriesIds = listOf("serie1", "serie2")
+
+    // Mock whereIn query
+    every { mockCollection.whereIn("serieId", seriesIds) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
+
+    // Setup first serie
+    val testDate1 = Timestamp(Date())
+    every { mockSnapshot1.id } returns "serie1"
+    every { mockSnapshot1.getString("title") } returns "Serie 1"
+    every { mockSnapshot1.getString("description") } returns "Description 1"
+    every { mockSnapshot1.getTimestamp("date") } returns testDate1
+    every { mockSnapshot1.get("participants") } returns listOf(testUserId)
+    every { mockSnapshot1.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot1.getString("visibility") } returns Visibility.PUBLIC.name
+    every { mockSnapshot1.get("eventIds") } returns listOf("event1", "event2")
+    every { mockSnapshot1.getString("ownerId") } returns testUserId
+    every { mockSnapshot1.getTimestamp("lastEventEndTime") } returns testDate1
+
+    // Setup second serie
+    val testDate2 = Timestamp(Date())
+    every { mockSnapshot2.id } returns "serie2"
+    every { mockSnapshot2.getString("title") } returns "Serie 2"
+    every { mockSnapshot2.getString("description") } returns "Description 2"
+    every { mockSnapshot2.getTimestamp("date") } returns testDate2
+    every { mockSnapshot2.get("participants") } returns listOf(testUserId)
+    every { mockSnapshot2.getLong("maxParticipants") } returns 8L
+    every { mockSnapshot2.getString("visibility") } returns Visibility.PRIVATE.name
+    every { mockSnapshot2.get("eventIds") } returns listOf("event3")
+    every { mockSnapshot2.getString("ownerId") } returns testUserId
+    every { mockSnapshot2.getTimestamp("lastEventEndTime") } returns testDate2
+
+    // When
+    val result = repository.getSeriesByIds(seriesIds)
+
+    // Then
+    assertEquals(2, result.size)
+    assertEquals("Serie 1", result[0].title)
+    assertEquals("Serie 2", result[1].title)
+  }
+
+  @Test
+  fun getSeriesByIds_returnsEmptyListWhenEmptyInput() = runTest {
+    // When
+    val result = repository.getSeriesByIds(emptyList())
+
+    // Then
+    assertEquals(0, result.size)
+  }
+
+  @Test(expected = Exception::class)
+  fun getSeriesByIds_throwsExceptionWhenTooManyIds() = runTest {
+    // Given
+    val tooManyIds = (1..31).map { "serie$it" }
+
+    // When
+    repository.getSeriesByIds(tooManyIds)
+
+    // Then - exception is thrown
+  }
+
+  @Test
+  fun getSeriesByIds_filtersOutInvalidSeries() = runTest {
+    // Given
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+
+    val seriesIds = listOf("serie1", "serie2")
+
+    // Mock whereIn query
+    every { mockCollection.whereIn("serieId", seriesIds) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
+
+    // Setup first serie - valid
+    val testDate = Timestamp(Date())
+    every { mockSnapshot1.id } returns "serie1"
+    every { mockSnapshot1.getString("title") } returns "Serie 1"
+    every { mockSnapshot1.getString("description") } returns "Description 1"
+    every { mockSnapshot1.getTimestamp("date") } returns testDate
+    every { mockSnapshot1.get("participants") } returns listOf(testUserId)
+    every { mockSnapshot1.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot1.getString("visibility") } returns Visibility.PUBLIC.name
+    every { mockSnapshot1.get("eventIds") } returns listOf("event1")
+    every { mockSnapshot1.getString("ownerId") } returns testUserId
+    every { mockSnapshot1.getTimestamp("lastEventEndTime") } returns testDate
+
+    // Setup second serie - invalid (missing title)
+    every { mockSnapshot2.id } returns "serie2"
+    every { mockSnapshot2.getString("title") } returns null // Missing required field
+    every { mockSnapshot2.getString("description") } returns "Description 2"
+    every { mockSnapshot2.getTimestamp("date") } returns testDate
+    every { mockSnapshot2.get("participants") } returns listOf(testUserId)
+    every { mockSnapshot2.getLong("maxParticipants") } returns 8L
+    every { mockSnapshot2.getString("visibility") } returns Visibility.PRIVATE.name
+    every { mockSnapshot2.get("eventIds") } returns listOf("event2")
+    every { mockSnapshot2.getString("ownerId") } returns testUserId
+    every { mockSnapshot2.getTimestamp("lastEventEndTime") } returns testDate
+
+    // When
+    val result = repository.getSeriesByIds(seriesIds)
+
+    // Then - only valid serie is returned
+    assertEquals(1, result.size)
+    assertEquals("Serie 1", result[0].title)
+  }
 }

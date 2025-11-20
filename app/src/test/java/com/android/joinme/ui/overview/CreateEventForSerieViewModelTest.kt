@@ -87,6 +87,10 @@ class CreateEventForSerieViewModelTest {
     override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> =
         series.values.toList()
 
+    override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> {
+      return seriesIds.mapNotNull { series[it] }
+    }
+
     override fun getNewSerieId(): String = "fake-serie-id"
   }
 

@@ -4,7 +4,7 @@ package com.android.joinme.model.groups
 import com.android.joinme.model.event.EventType
 
 /**
- * Represents a group that can organize multiple events and manage members.
+ * Represents a group that can organize multiple events and series and manage members.
  *
  * @property id The unique identifier for the group.
  * @property name The name of the group.
@@ -14,6 +14,7 @@ import com.android.joinme.model.event.EventType
  *   events, and manage members.
  * @property memberIds List of user IDs belonging to this group. Size determines membersCount.
  * @property eventIds List of event IDs that belong to this group.
+ * @property serieIds List of serie IDs that belong to this group.
  * @property photoUrl Optional URL of the group's photo.
  */
 data class Group(
@@ -24,6 +25,7 @@ data class Group(
     val ownerId: String = "",
     val memberIds: List<String> = emptyList(),
     val eventIds: List<String> = emptyList(),
+    val serieIds: List<String> = emptyList(),
     val photoUrl: String? = null
 ) {
   /**

@@ -3,6 +3,7 @@ package com.android.joinme.ui.overview
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.filter.FilterRepository
+import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SerieFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -56,6 +57,10 @@ class SearchViewModelTest {
           override suspend fun getAllSeries(
               serieFilter: SerieFilter
           ): List<com.android.joinme.model.serie.Serie> = emptyList()
+
+          override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> {
+            return emptyList()
+          }
 
           override suspend fun getSerie(serieId: String): com.android.joinme.model.serie.Serie {
             throw Exception("Not implemented in fake repo")
