@@ -504,7 +504,9 @@ class GroupDetailScreenTest {
 
     composeTestRule.setContent {
       GroupDetailScreen(
-          groupId = "group1", viewModel = viewModel, onActivityGroupClick = { buttonClicked = true })
+          groupId = "group1",
+          viewModel = viewModel,
+          onActivityGroupClick = { buttonClicked = true })
     }
 
     composeTestRule.waitUntil(timeoutMillis = 3000) {

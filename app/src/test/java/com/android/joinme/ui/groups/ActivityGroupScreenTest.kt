@@ -208,7 +208,9 @@ class ActivityGroupScreenTest {
 
     composeTestRule.setContent {
       ActivityGroupScreen(
-          groupId = "1", activityGroupViewModel = viewModel, onSelectedEvent = { selectedEvent = it })
+          groupId = "1",
+          activityGroupViewModel = viewModel,
+          onSelectedEvent = { selectedEvent = it })
     }
 
     composeTestRule.waitForIdle()

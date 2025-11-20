@@ -171,11 +171,11 @@ sealed class Screen(
     }
   }
 
-    /**
-     * Screen for viewing activities (events + series) within a group
-     *
-     * @param groupId The ID of the group whose activities to display
-     */
+  /**
+   * Screen for viewing activities (events + series) within a group
+   *
+   * @param groupId The ID of the group whose activities to display
+   */
   data class ActivityGroup(val groupId: String) :
       Screen(route = "activity_group/${groupId}", name = "Activity Group") {
     companion object {
