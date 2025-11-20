@@ -45,26 +45,26 @@ import com.android.joinme.ui.theme.Dimens
  * loading indicators.
  */
 object ActivityGroupScreenTestTags {
-    const val BACK_BUTTON = "activityGroupBackButton"
-    const val EMPTY_ACTIVITY_LIST_MSG = "emptyActivityList"
-    const val ACTIVITY_LIST = "activityList"
-    const val LOADING_INDICATOR = "activityGroupLoadingIndicator"
+  const val BACK_BUTTON = "activityGroupBackButton"
+  const val EMPTY_ACTIVITY_LIST_MSG = "emptyActivityList"
+  const val ACTIVITY_LIST = "activityList"
+  const val LOADING_INDICATOR = "activityGroupLoadingIndicator"
 
-    /**
-     * Generates a unique test tag for a specific event item.
-     *
-     * @param event The event to generate a tag for
-     * @return A string combining "eventItem" with the event's unique ID
-     */
-    fun getTestTagForEvent(event: Event): String = "eventItem${event.eventId}"
+  /**
+   * Generates a unique test tag for a specific event item.
+   *
+   * @param event The event to generate a tag for
+   * @return A string combining "eventItem" with the event's unique ID
+   */
+  fun getTestTagForEvent(event: Event): String = "eventItem${event.eventId}"
 
-    /**
-     * Generates a unique test tag for a specific serie item.
-     *
-     * @param serie The serie to generate a tag for
-     * @return A string combining "serieItem" with the serie's unique ID
-     */
-    fun getTestTagForSerie(serie: Serie): String = "serieItem${serie.serieId}"
+  /**
+   * Generates a unique test tag for a specific serie item.
+   *
+   * @param serie The serie to generate a tag for
+   * @return A string combining "serieItem" with the serie's unique ID
+   */
+  fun getTestTagForSerie(serie: Serie): String = "serieItem${serie.serieId}"
 }
 
 /**
@@ -100,99 +100,97 @@ fun ActivityGroupScreen(
     onSelectedSerie: (Serie) -> Unit = {},
     onNavigateBack: () -> Unit = {},
 ) {
-    val context = LocalContext.current
-    val uiState by activityGroupViewModel.uiState.collectAsState()
-    val events = uiState.events
-    val series = uiState.series
-    val isLoading = uiState.isLoading
+  val context = LocalContext.current
+  val uiState by activityGroupViewModel.uiState.collectAsState()
+  val events = uiState.events
+  val series = uiState.series
+  val isLoading = uiState.isLoading
 
-    // Trigger data load when screen is first displayed
-    LaunchedEffect(groupId) { activityGroupViewModel.load(groupId) }
+  // Trigger data load when screen is first displayed
+  LaunchedEffect(groupId) { activityGroupViewModel.load(groupId) }
 
-    // Display error messages as toasts
-    LaunchedEffect(uiState.error) {
-        uiState.error?.let { message -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show() }
-    }
+  // Display error messages as toasts
+  LaunchedEffect(uiState.error) {
+    uiState.error?.let { message -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show() }
+  }
 
-    Scaffold(
-        topBar = {
-            Column {
-                CenterAlignedTopAppBar(
-                    modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
-                    // TODO(#354): Replace with actual group name once fetched
-                    title = {
-                        Text(text = "Group Activities", style = MaterialTheme.typography.titleLarge)
-                    },
-                    navigationIcon = {
-                        IconButton(
-                            onClick = onNavigateBack,
-                            modifier = Modifier.testTag(ActivityGroupScreenTestTags.BACK_BUTTON)) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = MaterialTheme.colorScheme.onSurface)
-                        }
-                    },
-                    colors =
-                        TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface))
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.primary, thickness = Dimens.BorderWidth.thin)
-            }
-        }) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            when {
-                isLoading -> {
-                    // Loading state
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.testTag(ActivityGroupScreenTestTags.LOADING_INDICATOR))
+  Scaffold(
+      topBar = {
+        Column {
+          CenterAlignedTopAppBar(
+              modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
+              // TODO(#354): Replace with actual group name once fetched
+              title = {
+                Text(text = "Group Activities", style = MaterialTheme.typography.titleLarge)
+              },
+              navigationIcon = {
+                IconButton(
+                    onClick = onNavigateBack,
+                    modifier = Modifier.testTag(ActivityGroupScreenTestTags.BACK_BUTTON)) {
+                      Icon(
+                          imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                          contentDescription = "Back",
+                          tint = MaterialTheme.colorScheme.onSurface)
                     }
-                }
-                events.isEmpty() && series.isEmpty() -> {
-                    // Empty state
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "This group has no activities yet",
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier =
-                                Modifier.testTag(ActivityGroupScreenTestTags.EMPTY_ACTIVITY_LIST_MSG))
-                    }
-                }
-                else -> {
-                    // Content state: Display all events and series
-                    LazyColumn(
-                        contentPadding =
-                            PaddingValues(
-                                vertical = Dimens.Padding.small, horizontal = Dimens.Padding.medium),
-                        modifier =
-                            Modifier.fillMaxWidth().testTag(ActivityGroupScreenTestTags.ACTIVITY_LIST)) {
-                        // Render all events
-                        items(events.size) { index ->
-                            EventCard(
-                                modifier = Modifier.padding(vertical = Dimens.Padding.small),
-                                event = events[index],
-                                onClick = { onSelectEvent(events[index]) },
-                                testTag =
-                                    ActivityGroupScreenTestTags.getTestTagForEvent(events[index]))
-                        }
-
-                        // Render all series
-                        items(series.size) { index ->
-                            SerieCard(
-                                modifier = Modifier.padding(vertical = Dimens.Padding.small),
-                                serie = series[index],
-                                onClick = { onSelectedSerie(series[index]) },
-                                testTag =
-                                    ActivityGroupScreenTestTags.getTestTagForSerie(series[index]))
-                        }
-                    }
-                }
-            }
+              },
+              colors =
+                  TopAppBarDefaults.topAppBarColors(
+                      containerColor = MaterialTheme.colorScheme.surface))
+          HorizontalDivider(
+              color = MaterialTheme.colorScheme.primary, thickness = Dimens.BorderWidth.thin)
         }
-    }
+      }) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+          when {
+            isLoading -> {
+              // Loading state
+              Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    modifier = Modifier.testTag(ActivityGroupScreenTestTags.LOADING_INDICATOR))
+              }
+            }
+            events.isEmpty() && series.isEmpty() -> {
+              // Empty state
+              Column(
+                  modifier = Modifier.fillMaxSize(),
+                  verticalArrangement = Arrangement.Center,
+                  horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "This group has no activities yet",
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier =
+                            Modifier.testTag(ActivityGroupScreenTestTags.EMPTY_ACTIVITY_LIST_MSG))
+                  }
+            }
+            else -> {
+              // Content state: Display all events and series
+              LazyColumn(
+                  contentPadding =
+                      PaddingValues(
+                          vertical = Dimens.Padding.small, horizontal = Dimens.Padding.medium),
+                  modifier =
+                      Modifier.fillMaxWidth().testTag(ActivityGroupScreenTestTags.ACTIVITY_LIST)) {
+                    // Render all events
+                    items(events.size) { index ->
+                      EventCard(
+                          modifier = Modifier.padding(vertical = Dimens.Padding.small),
+                          event = events[index],
+                          onClick = { onSelectEvent(events[index]) },
+                          testTag = ActivityGroupScreenTestTags.getTestTagForEvent(events[index]))
+                    }
+
+                    // Render all series
+                    items(series.size) { index ->
+                      SerieCard(
+                          modifier = Modifier.padding(vertical = Dimens.Padding.small),
+                          serie = series[index],
+                          onClick = { onSelectedSerie(series[index]) },
+                          testTag = ActivityGroupScreenTestTags.getTestTagForSerie(series[index]))
+                    }
+                  }
+            }
+          }
+        }
+      }
 }
