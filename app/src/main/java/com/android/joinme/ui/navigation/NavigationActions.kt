@@ -159,10 +159,27 @@ sealed class Screen(
     }
   }
 
+  /**
+   * Screen for viewing group details
+   *
+   * @param groupId The ID of the group to display
+   */
   data class GroupDetail(val groupId: String) :
       Screen(route = "groupId/${groupId}", name = "Group Detail") {
     companion object {
       const val route = "groupId/{groupId}"
+    }
+  }
+
+    /**
+     * Screen for viewing activities (events + series) within a group
+     *
+     * @param groupId The ID of the group whose activities to display
+     */
+  data class ActivityGroup(val groupId: String) :
+      Screen(route = "activity_group/${groupId}", name = "Activity Group") {
+    companion object {
+      const val route = "activity_group/{groupId}"
     }
   }
 
