@@ -21,7 +21,8 @@ class SearchScreenTest {
   private lateinit var fakeSeriesRepository: FakeSeriesRepository
 
   // Future timestamp for test events (1 day in the future)
-  private val futureTimestamp = com.google.firebase.Timestamp(System.currentTimeMillis() / 1000 + 86400, 0)
+  private val futureTimestamp =
+      com.google.firebase.Timestamp(System.currentTimeMillis() / 1000 + 86400, 0)
 
   @Before
   fun setup() {
