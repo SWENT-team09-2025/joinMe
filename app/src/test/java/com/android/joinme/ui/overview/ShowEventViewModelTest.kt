@@ -20,7 +20,6 @@ import org.junit.Test
 import org.mockito.Mockito.*
 import org.mockito.kotlin.any
 import org.mockito.kotlin.check
-import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.whenever
 
@@ -471,9 +470,18 @@ class ShowEventViewModelTest {
     val event = createTestEvent(participants = listOf("user1", "user2"))
     repository.addEvent(event)
 
-    val profile1 = Profile(uid = "user1", username = "User1", email = "user1@example.com", eventsJoinedCount = 5)
-    val profile2 = Profile(uid = "user2", username = "User2", email = "user2@example.com", eventsJoinedCount = 3)
-    val ownerProfile = Profile(uid = "owner123", username = "Owner", email = "owner@example.com", eventsJoinedCount = 10)
+    val profile1 =
+        Profile(
+            uid = "user1", username = "User1", email = "user1@example.com", eventsJoinedCount = 5)
+    val profile2 =
+        Profile(
+            uid = "user2", username = "User2", email = "user2@example.com", eventsJoinedCount = 3)
+    val ownerProfile =
+        Profile(
+            uid = "owner123",
+            username = "Owner",
+            email = "owner@example.com",
+            eventsJoinedCount = 10)
     // Event includes owner in participants
     whenever(profileRepository.getProfilesByIds(listOf("user1", "user2", "owner123")))
         .thenReturn(listOf(profile1, profile2, ownerProfile))
@@ -500,7 +508,10 @@ class ShowEventViewModelTest {
 
     val ownerProfile =
         Profile(
-            uid = "owner123", username = "Owner", email = "owner@example.com", eventsJoinedCount = 5)
+            uid = "owner123",
+            username = "Owner",
+            email = "owner@example.com",
+            eventsJoinedCount = 5)
     whenever(profileRepository.getProfilesByIds(listOf("owner123")))
         .thenReturn(listOf(ownerProfile))
 
@@ -534,7 +545,10 @@ class ShowEventViewModelTest {
             uid = "user3", username = "User3", email = "user3@example.com", eventsJoinedCount = 10)
     val ownerProfile =
         Profile(
-            uid = "owner123", username = "Owner", email = "owner@example.com", eventsJoinedCount = 7)
+            uid = "owner123",
+            username = "Owner",
+            email = "owner@example.com",
+            eventsJoinedCount = 7)
 
     // Event includes owner in participants
     whenever(profileRepository.getProfilesByIds(listOf("user1", "user2", "user3", "owner123")))
@@ -557,7 +571,10 @@ class ShowEventViewModelTest {
             uid = "user1", username = "User1", email = "user1@example.com", eventsJoinedCount = 0)
     val ownerProfile =
         Profile(
-            uid = "owner123", username = "Owner", email = "owner@example.com", eventsJoinedCount = 5)
+            uid = "owner123",
+            username = "Owner",
+            email = "owner@example.com",
+            eventsJoinedCount = 5)
 
     // Event includes owner in participants, so mock both
     whenever(profileRepository.getProfilesByIds(listOf("user1", "owner123")))
@@ -566,7 +583,8 @@ class ShowEventViewModelTest {
     viewModel.deleteEvent(event.eventId)
     advanceUntilIdle()
 
-    // Verify count stays at 0 and doesn't go negative (called twice: once for user1, once for owner)
+    // Verify count stays at 0 and doesn't go negative (called twice: once for user1, once for
+    // owner)
     verify(profileRepository, times(2)).createOrUpdateProfile(any())
 
     // Use argument captor approach or just verify the behavior indirectly
@@ -580,7 +598,8 @@ class ShowEventViewModelTest {
 
     // Make getProfilesByIds return null (some profiles not found)
     // Event includes owner in participants
-    whenever(profileRepository.getProfilesByIds(listOf("user1", "user2", "owner123"))).thenReturn(null)
+    whenever(profileRepository.getProfilesByIds(listOf("user1", "user2", "owner123")))
+        .thenReturn(null)
 
     viewModel.deleteEvent(event.eventId)
     advanceUntilIdle()
@@ -610,7 +629,10 @@ class ShowEventViewModelTest {
             uid = "user2", username = "User2", email = "user2@example.com", eventsJoinedCount = 3)
     val ownerProfile =
         Profile(
-            uid = "owner123", username = "Owner", email = "owner@example.com", eventsJoinedCount = 7)
+            uid = "owner123",
+            username = "Owner",
+            email = "owner@example.com",
+            eventsJoinedCount = 7)
 
     // Event includes owner in participants
     whenever(profileRepository.getProfilesByIds(listOf("user1", "user2", "owner123")))

@@ -9,8 +9,8 @@ import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
-import com.google.firebase.Timestamp
 import com.google.firebase.FirebaseApp
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -22,11 +22,11 @@ import org.junit.After
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.kotlin.check
 import org.mockito.kotlin.whenever
-import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 

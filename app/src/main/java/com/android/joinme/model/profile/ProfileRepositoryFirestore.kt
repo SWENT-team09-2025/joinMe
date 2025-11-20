@@ -3,8 +3,6 @@ package com.android.joinme.model.profile
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import com.android.joinme.model.event.EVENTS_COLLECTION_PATH
-import com.android.joinme.model.event.Event
 import com.android.joinme.model.utils.ImageProcessor
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentSnapshot

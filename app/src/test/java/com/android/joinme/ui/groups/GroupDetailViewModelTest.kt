@@ -130,9 +130,7 @@ class GroupDetailViewModelTest {
     override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? {
       if (uids.isEmpty()) return emptyList()
       return try {
-        uids.map { uid ->
-          getProfile(uid) ?: return null
-        }
+        uids.map { uid -> getProfile(uid) ?: return null }
       } catch (e: Exception) {
         null
       }

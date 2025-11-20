@@ -99,8 +99,6 @@ class CreateEventViewModel(
     _uiState.value = transform(_uiState.value) as CreateEventUIState
   }
 
-  
-  
   /** Loads the list of groups the current user belongs to. */
   private fun loadUserGroups() {
     viewModelScope.launch {
@@ -171,13 +169,14 @@ class CreateEventViewModel(
             ownerId = ownerId)
 
     // Fetch owner profile first to validate it exists
-    val ownerProfile = try {
-      profileRepository.getProfile(ownerId)
-    } catch (e: Exception) {
-      Log.e("CreateEventViewModel", "Error fetching owner profile", e)
-      setErrorMsg("Failed to load your profile. Cannot create event: ${e.message}")
-      return false
-    }
+    val ownerProfile =
+        try {
+          profileRepository.getProfile(ownerId)
+        } catch (e: Exception) {
+          Log.e("CreateEventViewModel", "Error fetching owner profile", e)
+          setErrorMsg("Failed to load your profile. Cannot create event: ${e.message}")
+          return false
+        }
 
     if (ownerProfile == null) {
       setErrorMsg("Failed to load your profile. Cannot create event.")
@@ -207,8 +206,7 @@ class CreateEventViewModel(
 
     // Increment owner's eventsJoinedCount since they're automatically added as participant
     try {
-      val updatedProfile =
-          ownerProfile.copy(eventsJoinedCount = ownerProfile.eventsJoinedCount + 1)
+      val updatedProfile = ownerProfile.copy(eventsJoinedCount = ownerProfile.eventsJoinedCount + 1)
       profileRepository.createOrUpdateProfile(updatedProfile)
     } catch (e: Exception) {
       // Rollback: delete the event since profile update failed

@@ -140,18 +140,20 @@ class ProfileRepositoryLocalTest {
   fun testGetProfilesByIds_multipleExistingProfiles_returnsAllProfiles() = runTest {
     // Create additional test profiles
     val now = Timestamp.now()
-    val profile2 = Profile(
-        uid = "user-2",
-        username = "User 2",
-        email = "user2@test.com",
-        createdAt = now,
-        updatedAt = now)
-    val profile3 = Profile(
-        uid = "user-3",
-        username = "User 3",
-        email = "user3@test.com",
-        createdAt = now,
-        updatedAt = now)
+    val profile2 =
+        Profile(
+            uid = "user-2",
+            username = "User 2",
+            email = "user2@test.com",
+            createdAt = now,
+            updatedAt = now)
+    val profile3 =
+        Profile(
+            uid = "user-3",
+            username = "User 3",
+            email = "user3@test.com",
+            createdAt = now,
+            updatedAt = now)
 
     repository.createOrUpdateProfile(profile2)
     repository.createOrUpdateProfile(profile3)

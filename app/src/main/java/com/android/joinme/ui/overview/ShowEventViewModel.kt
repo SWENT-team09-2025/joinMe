@@ -180,15 +180,15 @@ class ShowEventViewModel(
         val updatedProfile = userProfile.copy(eventsJoinedCount = newCount)
         profileRepository.createOrUpdateProfile(updatedProfile)
 
-          // Only update the event if profile update succeeded
-          val updatedEvent = event.copy(participants = updatedParticipants)
-          try {
-              repository.editEvent(eventId, updatedEvent)
-          } catch (e: Exception){
-            profileRepository.createOrUpdateProfile(userProfile)
-            setErrorMsg("Failed to update participation: ${e.message}")
-            return
-          }
+        // Only update the event if profile update succeeded
+        val updatedEvent = event.copy(participants = updatedParticipants)
+        try {
+          repository.editEvent(eventId, updatedEvent)
+        } catch (e: Exception) {
+          profileRepository.createOrUpdateProfile(userProfile)
+          setErrorMsg("Failed to update participation: ${e.message}")
+          return
+        }
       } catch (e: Exception) {
         // Profile update failed - don't proceed with event update to maintain consistency
         setErrorMsg("Failed to update your profile. Cannot complete operation: ${e.message}")
@@ -230,10 +230,8 @@ class ShowEventViewModel(
             val updatedProfile = profile.copy(eventsJoinedCount = newCount)
             profileRepository.createOrUpdateProfile(updatedProfile)
           } catch (e: Exception) {
-              //Restore all eventsJoinedCount if profile update fails
-              participantProfiles.forEach { p ->
-                  profileRepository.createOrUpdateProfile(p)
-              }
+            // Restore all eventsJoinedCount if profile update fails
+            participantProfiles.forEach { p -> profileRepository.createOrUpdateProfile(p) }
             setErrorMsg(
                 "Failed to update profile for participant ${profile.uid}. Cannot delete event: ${e.message}")
             return
@@ -244,16 +242,16 @@ class ShowEventViewModel(
           // Only delete the event if all profile updates succeeded
           repository.deleteEvent(eventId)
         } catch (e: Exception) {
-            //Restore all eventsJoinedCount if profile update fails
-            participantProfiles.forEach { profile ->
-                profileRepository.createOrUpdateProfile(profile)
-            }
+          // Restore all eventsJoinedCount if profile update fails
+          participantProfiles.forEach { profile ->
+            profileRepository.createOrUpdateProfile(profile)
+          }
           setErrorMsg("Failed to delete Event: ${e.message}")
           return
         }
-      }else {
-          // No participants, just delete the event
-          repository.deleteEvent(eventId)
+      } else {
+        // No participants, just delete the event
+        repository.deleteEvent(eventId)
       }
 
       clearErrorMsg()
