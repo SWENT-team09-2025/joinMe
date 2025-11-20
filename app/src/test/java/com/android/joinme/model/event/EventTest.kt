@@ -113,18 +113,18 @@ class EventTest {
   }
 
   @Test
-  fun `isPartOfASerie defaults to false`() {
-    assertFalse(sampleEvent.isPartOfASerie)
+  fun `partOfASerie defaults to false`() {
+    assertFalse(sampleEvent.partOfASerie)
   }
 
   @Test
   fun `event can be part of a serie`() {
-    val serieEvent = sampleEvent.copy(isPartOfASerie = true)
-    assertTrue(serieEvent.isPartOfASerie)
+    val serieEvent = sampleEvent.copy(partOfASerie = true)
+    assertTrue(serieEvent.partOfASerie)
   }
 
   @Test
-  fun `isPartOfASerie property is correctly set`() {
+  fun `partOfASerie property is correctly set`() {
     val standaloneEvent =
         Event(
             eventId = "456",
@@ -138,7 +138,7 @@ class EventTest {
             maxParticipants = 15,
             visibility = EventVisibility.PRIVATE,
             ownerId = "owner456",
-            isPartOfASerie = false)
+            partOfASerie = false)
 
     val serieEvent =
         Event(
@@ -153,9 +153,9 @@ class EventTest {
             maxParticipants = 8,
             visibility = EventVisibility.PUBLIC,
             ownerId = "owner789",
-            isPartOfASerie = true)
+            partOfASerie = true)
 
-    assertFalse(standaloneEvent.isPartOfASerie)
-    assertTrue(serieEvent.isPartOfASerie)
+    assertFalse(standaloneEvent.partOfASerie)
+    assertTrue(serieEvent.partOfASerie)
   }
 }
