@@ -15,6 +15,14 @@ interface ProfileRepository {
   suspend fun getProfile(uid: String): Profile?
 
   /**
+   * Fetches multiple user profiles by their unique identifiers (UIDs).
+   *
+   * @param uids The list of unique identifiers of the user profiles.
+   * @return The list of user profiles if all are found, otherwise null.
+   */
+  suspend fun getProfilesByIds(uids: List<String>): List<Profile>?
+
+  /**
    * Creates or updates a user profile.
    *
    * @param profile The user profile to create or update.

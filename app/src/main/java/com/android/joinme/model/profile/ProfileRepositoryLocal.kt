@@ -42,6 +42,14 @@ class ProfileRepositoryLocal : ProfileRepository {
     return profiles[uid]
   }
 
+  override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? {
+    if (uids.isEmpty()) return emptyList()
+
+    val result = uids.mapNotNull { getProfile(it) }
+    // Return null if not all profiles were found
+    return if (result.size == uids.size) result else null
+  }
+
   override suspend fun createOrUpdateProfile(profile: Profile) {
     profiles[profile.uid] = profile
   }

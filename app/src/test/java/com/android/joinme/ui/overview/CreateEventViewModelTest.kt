@@ -35,6 +35,7 @@ class CreateEventViewModelTest {
   // ---- Simple fake repo that records added events ----
   private class FakeEventsRepository : EventsRepository {
     val added = mutableListOf<Event>()
+    val deleted = mutableListOf<String>()
 
     override suspend fun addEvent(event: Event) {
       added += event
@@ -45,7 +46,8 @@ class CreateEventViewModelTest {
     }
 
     override suspend fun deleteEvent(eventId: String) {
-      /* no-op */
+      deleted += eventId
+      added.removeIf { it.eventId == eventId }
     }
 
     override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
@@ -247,8 +249,8 @@ class CreateEventViewModelTest {
   }
 
   @Test
-  fun createEvent_profileUpdateFails_stillCreatesEvent() = runTest {
-    // Mock profile update to fail
+  fun createEvent_profileFetchFails_doesNotCreateEvent() = runTest {
+    // Mock profile fetch to fail
     whenever(profileRepository.getProfile("owner-456"))
         .thenThrow(RuntimeException("Database error"))
 
@@ -266,9 +268,70 @@ class CreateEventViewModelTest {
     val result = vm.createEvent(userId = "owner-456")
     advanceUntilIdle()
 
-    // Event creation should still succeed even if profile update fails
-    Assert.assertTrue(result)
-    Assert.assertEquals(1, repo.added.size)
-    Assert.assertEquals("owner-456", repo.added[0].ownerId)
+    // Event creation should fail if profile fetch fails
+    Assert.assertFalse(result)
+    Assert.assertTrue(repo.added.isEmpty())
+    Assert.assertNotNull(vm.uiState.value.errorMsg)
+  }
+
+  @Test
+  fun createEvent_profileIsNull_doesNotCreateEvent() = runTest {
+    // Mock profile to return null
+    whenever(profileRepository.getProfile("owner-789")).thenReturn(null)
+
+    // Fill valid form
+    vm.setType("SPORTS")
+    vm.setTitle("Football")
+    vm.setDescription("Friendly 5v5")
+    vm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
+    vm.setDate("25/12/2023")
+    vm.setTime("10:00")
+    vm.setMaxParticipants("10")
+    vm.setDuration("90")
+    vm.setVisibility("PUBLIC")
+
+    val result = vm.createEvent(userId = "owner-789")
+    advanceUntilIdle()
+
+    // Event creation should fail if profile is null
+    Assert.assertFalse(result)
+    Assert.assertTrue(repo.added.isEmpty())
+    Assert.assertNotNull(vm.uiState.value.errorMsg)
+  }
+
+  @Test
+  fun createEvent_profileUpdateFails_rollsBackEvent() = runTest {
+    val ownerProfile =
+        Profile(
+            uid = "owner-999",
+            username = "Owner",
+            email = "owner@test.com",
+            eventsJoinedCount = 5,
+            createdAt = Timestamp.now(),
+            updatedAt = Timestamp.now())
+
+    whenever(profileRepository.getProfile("owner-999")).thenReturn(ownerProfile)
+    whenever(profileRepository.createOrUpdateProfile(org.mockito.kotlin.any()))
+        .thenThrow(RuntimeException("Profile update failed"))
+
+    // Fill valid form
+    vm.setType("SPORTS")
+    vm.setTitle("Football")
+    vm.setDescription("Friendly 5v5")
+    vm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
+    vm.setDate("25/12/2023")
+    vm.setTime("10:00")
+    vm.setMaxParticipants("10")
+    vm.setDuration("90")
+    vm.setVisibility("PUBLIC")
+
+    val result = vm.createEvent(userId = "owner-999")
+    advanceUntilIdle()
+
+    // Event creation should fail and event should be rolled back
+    Assert.assertFalse(result)
+    Assert.assertTrue(repo.added.isEmpty())
+    Assert.assertEquals(1, repo.deleted.size)
+    Assert.assertNotNull(vm.uiState.value.errorMsg)
   }
 }

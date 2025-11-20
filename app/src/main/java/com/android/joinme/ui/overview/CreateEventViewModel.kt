@@ -131,31 +131,47 @@ class CreateEventViewModel(
             visibility = EventVisibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
             ownerId = ownerId)
 
-    return try {
+    // Fetch owner profile first to validate it exists
+    val ownerProfile = try {
+      profileRepository.getProfile(ownerId)
+    } catch (e: Exception) {
+      Log.e("CreateEventViewModel", "Error fetching owner profile", e)
+      setErrorMsg("Failed to load your profile. Cannot create event: ${e.message}")
+      return false
+    }
+
+    if (ownerProfile == null) {
+      setErrorMsg("Failed to load your profile. Cannot create event.")
+      return false
+    }
+
+    // Create the event
+    try {
       repository.addEvent(event)
-
-      // Increment owner's eventsJoinedCount since they're automatically added as participant
-      try {
-        val ownerProfile = profileRepository.getProfile(ownerId)
-        if (ownerProfile != null) {
-          val updatedProfile =
-              ownerProfile.copy(eventsJoinedCount = ownerProfile.eventsJoinedCount + 1)
-          profileRepository.createOrUpdateProfile(updatedProfile)
-        }
-      } catch (e: Exception) {
-        // Log the error but don't fail the whole operation
-        Log.w(
-            "CreateEventViewModel",
-            "Warning: Failed to update eventsJoinedCount for owner $ownerId: ${e.message}")
-      }
-
-      clearErrorMsg()
-      true
     } catch (e: Exception) {
       Log.e("CreateEventViewModel", "Error creating event", e)
       setErrorMsg("Failed to create event: ${e.message}")
-      false
+      return false
     }
+
+    // Increment owner's eventsJoinedCount since they're automatically added as participant
+    try {
+      val updatedProfile =
+          ownerProfile.copy(eventsJoinedCount = ownerProfile.eventsJoinedCount + 1)
+      profileRepository.createOrUpdateProfile(updatedProfile)
+    } catch (e: Exception) {
+      // Rollback: delete the event since profile update failed
+      try {
+        repository.deleteEvent(event.eventId)
+      } catch (deleteError: Exception) {
+        Log.e("CreateEventViewModel", "Failed to rollback event creation", deleteError)
+      }
+      setErrorMsg("Failed to update your profile. Cannot create event: ${e.message}")
+      return false
+    }
+
+    clearErrorMsg()
+    return true
   }
 
   fun setLocation(location: String) {

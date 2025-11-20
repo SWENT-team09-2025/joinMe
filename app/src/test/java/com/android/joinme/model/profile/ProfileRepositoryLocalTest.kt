@@ -119,6 +119,68 @@ class ProfileRepositoryLocalTest {
     assertNull("Non-existent profile should be null", profile)
   }
 
+  // ==================== GET PROFILES BY IDS TESTS ====================
+
+  @Test
+  fun testGetProfilesByIds_emptyList_returnsEmptyList() = runTest {
+    val profiles = repository.getProfilesByIds(emptyList())
+    assertNotNull("Should return empty list, not null", profiles)
+    assertTrue("List should be empty", profiles!!.isEmpty())
+  }
+
+  @Test
+  fun testGetProfilesByIds_singleExistingProfile_returnsProfile() = runTest {
+    val profiles = repository.getProfilesByIds(listOf("test-user-123"))
+    assertNotNull("Should return list with profile", profiles)
+    assertEquals(1, profiles!!.size)
+    assertEquals("test-user-123", profiles[0].uid)
+  }
+
+  @Test
+  fun testGetProfilesByIds_multipleExistingProfiles_returnsAllProfiles() = runTest {
+    // Create additional test profiles
+    val now = Timestamp.now()
+    val profile2 = Profile(
+        uid = "user-2",
+        username = "User 2",
+        email = "user2@test.com",
+        createdAt = now,
+        updatedAt = now)
+    val profile3 = Profile(
+        uid = "user-3",
+        username = "User 3",
+        email = "user3@test.com",
+        createdAt = now,
+        updatedAt = now)
+
+    repository.createOrUpdateProfile(profile2)
+    repository.createOrUpdateProfile(profile3)
+
+    val profiles = repository.getProfilesByIds(listOf("test-user-123", "user-2", "user-3"))
+    assertNotNull("Should return list with all profiles", profiles)
+    assertEquals(3, profiles!!.size)
+  }
+
+  @Test
+  fun testGetProfilesByIds_someProfilesNotFound_returnsNull() = runTest {
+    val profiles = repository.getProfilesByIds(listOf("test-user-123", "non-existent-uid"))
+    assertNull("Should return null when some profiles not found", profiles)
+  }
+
+  @Test
+  fun testGetProfilesByIds_allProfilesNotFound_returnsNull() = runTest {
+    val profiles = repository.getProfilesByIds(listOf("non-existent-1", "non-existent-2"))
+    assertNull("Should return null when all profiles not found", profiles)
+  }
+
+  @Test
+  fun testGetProfilesByIds_duplicateIds_returnsCorrectCount() = runTest {
+    // Even with duplicates in the request, we should get correct results
+    val profiles = repository.getProfilesByIds(listOf("test-user-123", "test-user-123"))
+    assertNotNull("Should return profiles", profiles)
+    assertEquals(2, profiles!!.size)
+  }
+
   // ==================== PHOTO UPLOAD TESTS ====================
 
   @Test

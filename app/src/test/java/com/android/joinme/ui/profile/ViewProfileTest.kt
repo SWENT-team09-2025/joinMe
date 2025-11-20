@@ -63,6 +63,12 @@ class ViewProfileScreenTest {
       return stored?.takeIf { it.uid == uid }
     }
 
+    override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? {
+      if (uids.isEmpty()) return emptyList()
+      val result = uids.mapNotNull { stored?.takeIf { p -> p.uid == it } }
+      return if (result.size == uids.size) result else null
+    }
+
     override suspend fun createOrUpdateProfile(profile: Profile) {
       stored = profile
     }

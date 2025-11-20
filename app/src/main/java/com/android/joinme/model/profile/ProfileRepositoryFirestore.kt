@@ -3,6 +3,8 @@ package com.android.joinme.model.profile
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.android.joinme.model.event.EVENTS_COLLECTION_PATH
+import com.android.joinme.model.event.Event
 import com.android.joinme.model.utils.ImageProcessor
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentSnapshot
@@ -61,6 +63,27 @@ class ProfileRepositoryFirestore(db: FirebaseFirestore, private val storage: Fir
             "ProfileRepositoryFirestore: Profile with UID $uid not found")
   }
 
+  /**
+   * Retrieves multiple user profiles by their UIDs from Firestore. Returns null if any profile is
+   * not found or if an error occurs.
+   */
+  override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? {
+    if (uids.isEmpty()) return emptyList()
+
+    return try {
+      uids.map { uid ->
+        try {
+          getProfile(uid)
+        } catch (_: NoSuchElementException) {
+          Log.w(TAG, "Profile not found: $uid")
+          return null
+        }
+      }
+    } catch (e: Exception) {
+      Log.e(TAG, "Error fetching profiles", e)
+      null
+    }
+  }
   /**
    * Creates or updates a user profile in Firestore. If the profile document already exists, it
    * updates the existing fields; otherwise, it creates a new document with the provided data.

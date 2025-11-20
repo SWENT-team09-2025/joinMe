@@ -293,7 +293,15 @@ class ShowEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent(ownerId = "owner123", participants = listOf("user1", "owner123"))
     runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
+
+    // Mock profileRepository for user1
+    val profileRepository = mock(ProfileRepository::class.java)
+    val user1Profile = Profile(uid = "user1", username = "User1", email = "user1@test.com", eventsJoinedCount = 5)
+    runBlocking {
+      whenever(profileRepository.getProfile("user1")).thenReturn(user1Profile)
+    }
+
+    val viewModel = ShowEventViewModel(repo, profileRepository)
 
     composeTestRule.setContent {
       ShowEventScreen(
@@ -363,7 +371,15 @@ class ShowEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent(ownerId = "owner123", participants = listOf("owner123"))
     runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
+
+    // Mock profileRepository for user3
+    val profileRepository = mock(ProfileRepository::class.java)
+    val user3Profile = Profile(uid = "user3", username = "User3", email = "user3@test.com", eventsJoinedCount = 0)
+    runBlocking {
+      whenever(profileRepository.getProfile("user3")).thenReturn(user3Profile)
+    }
+
+    val viewModel = ShowEventViewModel(repo, profileRepository)
 
     composeTestRule.setContent {
       ShowEventScreen(
