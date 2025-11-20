@@ -128,17 +128,14 @@ class CreateEventScreenTest {
 
   /** --- EDGE CASES --- */
   @Test
-  fun emptyTitle_disablesSaveButton() {
+  fun emptyAndWhitespaceInputs_disableSaveButton() {
     composeTestRule.setContent { CreateEventScreen(onDone = {}) }
 
+    // Test empty title
     composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("")
     composeTestRule.onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT).assertIsNotEnabled()
-  }
 
-  @Test
-  fun whitespaceInputsShouldBeTreatedAsEmpty() {
-    composeTestRule.setContent { CreateEventScreen(onDone = {}) }
-
+    // Test whitespace inputs
     composeTestRule
         .onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_TITLE)
         .performTextInput("   ")
@@ -216,28 +213,18 @@ class CreateEventScreenTest {
   }
 
   @Test
-  fun maxParticipantsFieldDisplaysValue() {
+  fun individualFieldsAreDisplayed() {
     composeTestRule.setContent { CreateEventScreen(onDone = {}) }
 
     // Max participants field should be displayed (even if empty initially)
     composeTestRule
         .onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
         .assertIsDisplayed()
-  }
-
-  @Test
-  fun durationFieldDisplaysValue() {
-    composeTestRule.setContent { CreateEventScreen(onDone = {}) }
 
     // Duration field should be displayed (even if empty initially)
     composeTestRule
         .onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_DURATION)
         .assertIsDisplayed()
-  }
-
-  @Test
-  fun dateFieldDisplaysValue() {
-    composeTestRule.setContent { CreateEventScreen(onDone = {}) }
 
     // Date field should exist (may need scrolling to be displayed)
     composeTestRule.onNodeWithTag(CreateEventScreenTestTags.INPUT_EVENT_DATE).assertExists()

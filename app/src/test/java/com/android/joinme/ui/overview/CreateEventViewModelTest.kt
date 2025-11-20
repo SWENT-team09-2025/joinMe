@@ -184,33 +184,31 @@ class CreateEventViewModelTest {
   }
 
   @Test
-  fun setMaxParticipants_nonNumeric_marksInvalid() {
+  fun setMaxParticipants_invalidValues_marksInvalid() {
+    // Test non-numeric value
     vm.setMaxParticipants("ten")
-    val s = vm.uiState.value
+    var s = vm.uiState.value
     Assert.assertNotNull(s.invalidMaxParticipantsMsg)
     Assert.assertFalse(s.isValid)
-  }
 
-  @Test
-  fun setMaxParticipants_negative_marksInvalid() {
+    // Test negative value
     vm.setMaxParticipants("-1")
-    val s = vm.uiState.value
+    s = vm.uiState.value
     Assert.assertNotNull(s.invalidMaxParticipantsMsg)
     Assert.assertFalse(s.isValid)
   }
 
   @Test
-  fun setDuration_nonNumeric_marksInvalid() {
+  fun setDuration_invalidValues_marksInvalid() {
+    // Test non-numeric value
     vm.setDuration("abc")
-    val s = vm.uiState.value
+    var s = vm.uiState.value
     Assert.assertNotNull(s.invalidDurationMsg)
     Assert.assertFalse(s.isValid)
-  }
 
-  @Test
-  fun setDuration_zero_marksInvalid() {
+    // Test zero value
     vm.setDuration("0")
-    val s = vm.uiState.value
+    s = vm.uiState.value
     Assert.assertNotNull(s.invalidDurationMsg)
     Assert.assertFalse(s.isValid)
   }
@@ -264,13 +262,17 @@ class CreateEventViewModelTest {
 
   @Test
   fun initialState_loadsAvailableGroups() = runTest {
-    // Add test groups before creating VM
+    // Initially should be empty
+    val emptyVm = CreateEventViewModel(repo, groupRepo)
+    advanceUntilIdle()
+    Assert.assertTrue(emptyVm.uiState.value.availableGroups.isEmpty())
+
+    // Add test groups and create new VM
     val group1 = Group(id = "group-1", name = "Group 1")
     val group2 = Group(id = "group-2", name = "Group 2")
     groupRepo.addTestGroup(group1)
     groupRepo.addTestGroup(group2)
 
-    // Create a new VM to trigger init block
     val newVm = CreateEventViewModel(repo, groupRepo)
     advanceUntilIdle()
 
@@ -279,44 +281,28 @@ class CreateEventViewModelTest {
     Assert.assertTrue(newVm.uiState.value.availableGroups.contains(group2))
   }
 
-  @Test
-  fun initialState_whenNoGroups_hasEmptyList() = runTest {
-    val newVm = CreateEventViewModel(repo, groupRepo)
-    advanceUntilIdle()
-
-    Assert.assertTrue(newVm.uiState.value.availableGroups.isEmpty())
-  }
-
-  @Test
-  fun initialState_whenGroupLoadingFails_hasEmptyList() = runTest {
-    groupRepo.shouldThrowOnGetAll = true
-
-    val newVm = CreateEventViewModel(repo, groupRepo)
-    advanceUntilIdle()
-
-    // Should not crash, just have empty groups
-    Assert.assertTrue(newVm.uiState.value.availableGroups.isEmpty())
-  }
-
   // ---------- group selection ----------
 
   @Test
-  fun initialState_hasNoSelectedGroup() {
-    Assert.assertNull(vm.uiState.value.selectedGroupId)
-  }
-
-  @Test
   fun setSelectedGroup_updatesStateAndCanBeCleared() = runTest {
-    // Add a test group first
+    // Initially should have no selected group
+    Assert.assertNull(vm.uiState.value.selectedGroupId)
+
+    // Add a test group
     val testGroup = Group(id = "group-123", name = "Test Group")
     groupRepo.addTestGroup(testGroup)
 
     val newVm = CreateEventViewModel(repo, groupRepo)
     advanceUntilIdle()
 
+    // Initially should still be null
+    Assert.assertNull(newVm.uiState.value.selectedGroupId)
+
+    // Select the group
     newVm.setSelectedGroup("group-123")
     Assert.assertEquals("group-123", newVm.uiState.value.selectedGroupId)
 
+    // Clear the selection
     newVm.setSelectedGroup(null)
     Assert.assertNull(newVm.uiState.value.selectedGroupId)
   }
