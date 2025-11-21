@@ -9,12 +9,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -160,6 +161,7 @@ fun ChatScreen(
             onTopBarColor = effectiveOnChatColor)
       },
       snackbarHost = { SnackbarHost(snackbarHostState) },
+      contentWindowInsets = WindowInsets.systemBars, // Only consume system bars, not IME
       containerColor = MaterialTheme.colorScheme.background) { paddingValues ->
         if (uiState.isLoading) {
           Box(
@@ -266,55 +268,48 @@ private fun ChatContent(
     }
   }
 
-  Column(
-      modifier =
-          Modifier.fillMaxSize()
-              .padding(paddingValues)
-              .imePadding() // Push content up when keyboard appears
-      ) {
-        // Messages list
-        LazyColumn(
-            modifier = Modifier.weight(1f).fillMaxWidth().testTag(ChatScreenTestTags.MESSAGE_LIST),
-            state = listState,
-            contentPadding = PaddingValues(Dimens.Padding.medium),
-            verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
-              if (messages.isEmpty()) {
-                item {
-                  Box(
-                      modifier = Modifier.fillParentMaxSize(),
-                      contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "No messages yet. Start the conversation!",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.testTag(ChatScreenTestTags.EMPTY_MESSAGE))
-                      }
-                }
-              } else {
-                items(messages, key = { it.id }) { message ->
-                  MessageItem(
-                      message = message,
-                      isCurrentUser = message.senderId == currentUserId,
-                      bubbleColor = chatColor,
-                      onBubbleColor = onChatColor)
-                }
+  Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+    // Messages list
+    LazyColumn(
+        modifier = Modifier.weight(1f).fillMaxWidth().testTag(ChatScreenTestTags.MESSAGE_LIST),
+        state = listState,
+        contentPadding = PaddingValues(Dimens.Padding.medium),
+        verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
+          if (messages.isEmpty()) {
+            item {
+              Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = "No messages yet. Start the conversation!",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.testTag(ChatScreenTestTags.EMPTY_MESSAGE))
               }
             }
+          } else {
+            items(messages, key = { it.id }) { message ->
+              MessageItem(
+                  message = message,
+                  isCurrentUser = message.senderId == currentUserId,
+                  bubbleColor = chatColor,
+                  onBubbleColor = onChatColor)
+            }
+          }
+        }
 
-        // Message input
-        MessageInput(
-            text = messageText,
-            onTextChange = { messageText = it },
-            onSendClick = {
-              if (messageText.isNotBlank()) {
-                onSendMessage(messageText)
-                messageText = ""
-              }
-            },
-            sendButtonColor = chatColor,
-            onSendButtonColor = onChatColor)
-      }
+    // Message input
+    MessageInput(
+        text = messageText,
+        onTextChange = { messageText = it },
+        onSendClick = {
+          if (messageText.isNotBlank()) {
+            onSendMessage(messageText)
+            messageText = ""
+          }
+        },
+        sendButtonColor = chatColor,
+        onSendButtonColor = onChatColor)
+  }
 }
 
 /**
