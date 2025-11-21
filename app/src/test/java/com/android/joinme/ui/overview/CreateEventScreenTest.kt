@@ -9,6 +9,7 @@ import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.profile.ProfileRepository
 import com.google.firebase.FirebaseApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -20,6 +21,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.Mockito.mock
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -462,7 +464,8 @@ class CreateEventScreenTest {
     fakeGroupRepo.addTestGroup(group3)
 
     // Create ViewModel with fake repos
-    val viewModel = CreateEventViewModel(fakeEventsRepo, fakeGroupRepo)
+    val profileRepository = mock(ProfileRepository::class.java)
+    val viewModel = CreateEventViewModel(fakeEventsRepo, profileRepository, fakeGroupRepo)
 
     // Wait for groups to load
     testDispatcher.scheduler.advanceUntilIdle()

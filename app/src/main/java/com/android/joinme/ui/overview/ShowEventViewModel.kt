@@ -138,12 +138,18 @@ class ShowEventViewModel(
   /**
    * Toggles the current user's participation in the event (join or quit).
    *
+   * This method also updates the user's eventsJoinedCount in their profile:
+   * - When joining: increment eventsJoinedCount by 1
+   * - When quitting: decrement eventsJoinedCount by 1
+   *
    * @param eventId The ID of the event.
    * @param userId The ID of the current user.
    */
   suspend fun toggleParticipation(eventId: String, userId: String) {
     try {
       val event = repository.getEvent(eventId)
+      val isJoining = !event.participants.contains(userId)
+
       val updatedParticipants =
           if (event.participants.contains(userId)) {
             // User is already a participant, remove them (quit)
@@ -157,9 +163,37 @@ class ShowEventViewModel(
             event.participants + userId
           }
 
-      // Update the event with new participants list
-      val updatedEvent = event.copy(participants = updatedParticipants)
-      repository.editEvent(eventId, updatedEvent)
+      // Update user's eventsJoinedCount in their profile FIRST
+      try {
+        val userProfile = profileRepository.getProfile(userId)
+        if (userProfile == null) {
+          setErrorMsg("Failed to load your profile. Cannot complete operation.")
+          return
+        }
+        val newCount =
+            if (isJoining) {
+              userProfile.eventsJoinedCount + 1
+            } else {
+              // When quitting, decrement but don't go below 0
+              maxOf(0, userProfile.eventsJoinedCount - 1)
+            }
+        val updatedProfile = userProfile.copy(eventsJoinedCount = newCount)
+        profileRepository.createOrUpdateProfile(updatedProfile)
+
+        // Only update the event if profile update succeeded
+        val updatedEvent = event.copy(participants = updatedParticipants)
+        try {
+          repository.editEvent(eventId, updatedEvent)
+        } catch (e: Exception) {
+          profileRepository.createOrUpdateProfile(userProfile)
+          setErrorMsg("Failed to update participation: ${e.message}")
+          return
+        }
+      } catch (e: Exception) {
+        // Profile update failed - don't proceed with event update to maintain consistency
+        setErrorMsg("Failed to update your profile. Cannot complete operation: ${e.message}")
+        return
+      }
 
       // Reload the event to update UI
       loadEvent(eventId)
@@ -172,11 +206,54 @@ class ShowEventViewModel(
   /**
    * Deletes an Event document by its ID.
    *
+   * This method also decrements eventsJoinedCount for all participants of the deleted event.
+   *
    * @param eventId The ID of the Event document to be deleted.
    */
   suspend fun deleteEvent(eventId: String) {
     try {
-      repository.deleteEvent(eventId)
+      // Get the event before deleting to access participants list
+      val event = repository.getEvent(eventId)
+
+      // Fetch all participant profiles first to validate they all exist
+      if (event.participants.isNotEmpty()) {
+        val participantProfiles = profileRepository.getProfilesByIds(event.participants)
+        if (participantProfiles == null) {
+          setErrorMsg("Failed to load all participant profiles. Cannot delete event.")
+          return
+        }
+
+        // Decrement eventsJoinedCount for all participants
+        participantProfiles.forEach { profile ->
+          try {
+            val newCount = maxOf(0, profile.eventsJoinedCount - 1)
+            val updatedProfile = profile.copy(eventsJoinedCount = newCount)
+            profileRepository.createOrUpdateProfile(updatedProfile)
+          } catch (e: Exception) {
+            // Restore all eventsJoinedCount if profile update fails
+            participantProfiles.forEach { p -> profileRepository.createOrUpdateProfile(p) }
+            setErrorMsg(
+                "Failed to update profile for participant ${profile.uid}. Cannot delete event: ${e.message}")
+            return
+          }
+        }
+
+        try {
+          // Only delete the event if all profile updates succeeded
+          repository.deleteEvent(eventId)
+        } catch (e: Exception) {
+          // Restore all eventsJoinedCount if profile update fails
+          participantProfiles.forEach { profile ->
+            profileRepository.createOrUpdateProfile(profile)
+          }
+          setErrorMsg("Failed to delete Event: ${e.message}")
+          return
+        }
+      } else {
+        // No participants, just delete the event
+        repository.deleteEvent(eventId)
+      }
+
       clearErrorMsg()
     } catch (e: Exception) {
       setErrorMsg("Failed to delete Event: ${e.message}")

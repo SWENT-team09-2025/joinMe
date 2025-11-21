@@ -53,6 +53,10 @@ class CreateSerieViewModelTest {
 
     override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> = added.toList()
 
+    override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> {
+      return added.filter { seriesIds.contains(it.serieId) }
+    }
+
     override fun getNewSerieId(): String = "fake-serie-id-1"
   }
 
@@ -496,6 +500,10 @@ class CreateSerieViewModelTest {
           override suspend fun editSerie(serieId: String, newValue: Serie) {}
 
           override suspend fun deleteSerie(serieId: String) {}
+
+          override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> {
+            return emptyList()
+          }
 
           override suspend fun getSerie(serieId: String): Serie {
             throw NoSuchElementException()

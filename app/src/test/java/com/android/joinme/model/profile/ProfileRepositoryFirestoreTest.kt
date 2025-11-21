@@ -238,6 +238,74 @@ class ProfileRepositoryFirestoreTest {
     assertTrue(result.interests.isEmpty())
   }
 
+  // ==================== GET PROFILES BY IDS TESTS ====================
+
+  @Test
+  fun `getProfilesByIds returns empty list for empty input`() = runTest {
+    // When
+    val result = repository.getProfilesByIds(emptyList())
+
+    // Then
+    assertNotNull(result)
+    assertTrue(result!!.isEmpty())
+  }
+
+  @Test
+  fun `getProfilesByIds returns profiles when all exist`() = runTest {
+    // Given
+    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    every { mockSnapshot.exists() } returns true
+    every { mockSnapshot.id } returns testUid
+    every { mockSnapshot.getString("username") } returns testProfile.username
+    every { mockSnapshot.getString("email") } returns testProfile.email
+    every { mockSnapshot.getString("dateOfBirth") } returns testProfile.dateOfBirth
+    every { mockSnapshot.getString("country") } returns testProfile.country
+    every { mockSnapshot.getString("bio") } returns testProfile.bio
+    every { mockSnapshot.getString("photoUrl") } returns testProfile.photoUrl
+    every { mockSnapshot.get("interests") } returns testProfile.interests
+    every { mockSnapshot.getTimestamp("createdAt") } returns Timestamp.now()
+    every { mockSnapshot.getTimestamp("updatedAt") } returns Timestamp.now()
+
+    val mockTask = Tasks.forResult(mockSnapshot)
+    every { mockDocument.get() } returns mockTask
+
+    // When
+    val result = repository.getProfilesByIds(listOf(testUid))
+
+    // Then
+    assertNotNull(result)
+    assertEquals(1, result!!.size)
+    assertEquals(testUid, result[0].uid)
+  }
+
+  @Test
+  fun `getProfilesByIds returns null when profile not found`() = runTest {
+    // Given
+    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    every { mockSnapshot.exists() } returns false
+
+    val mockTask = Tasks.forResult(mockSnapshot)
+    every { mockDocument.get() } returns mockTask
+
+    // When
+    val result = repository.getProfilesByIds(listOf(testUid))
+
+    // Then
+    assertNull(result)
+  }
+
+  @Test
+  fun `getProfilesByIds returns null when getProfile throws exception`() = runTest {
+    // Given
+    every { mockDocument.get() } returns Tasks.forException(Exception("Network error"))
+
+    // When
+    val result = repository.getProfilesByIds(listOf(testUid))
+
+    // Then
+    assertNull(result)
+  }
+
   // ==================== PHOTO UPLOAD TESTS ====================
 
   private fun setupStorageMocks(

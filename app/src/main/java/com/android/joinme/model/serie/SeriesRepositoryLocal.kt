@@ -3,6 +3,9 @@ package com.android.joinme.model.serie
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryLocal
 
+/** Exception message for when a serie is not found in the local repository. */
+const val SERIES_NOT_FOUND = "SeriesRepositoryLocal: Serie not found"
+
 /**
  * Local in-memory implementation of SeriesRepository.
  *
@@ -48,8 +51,7 @@ class SeriesRepositoryLocal(
    * @throws Exception if the Serie item is not found in local storage
    */
   override suspend fun getSerie(serieId: String): Serie {
-    return series.find { it.serieId == serieId }
-        ?: throw Exception("SeriesRepositoryLocal: Serie not found")
+    return series.find { it.serieId == serieId } ?: throw Exception(SERIES_NOT_FOUND)
   }
 
   /**
@@ -75,7 +77,7 @@ class SeriesRepositoryLocal(
     if (index != -1) {
       series[index] = newValue
     } else {
-      throw Exception("SeriesRepositoryLocal: Serie not found")
+      throw Exception(SERIES_NOT_FOUND)
     }
   }
 
@@ -96,8 +98,18 @@ class SeriesRepositoryLocal(
     if (index != -1) {
       series.removeAt(index)
     } else {
-      throw Exception("SeriesRepositoryLocal: Serie not found")
+      throw Exception(SERIES_NOT_FOUND)
     }
+  }
+
+  /**
+   * Retrieves a list of Serie items by their unique identifiers.
+   *
+   * @param seriesIds The list of unique identifiers of the Serie items to retrieve
+   * @return A list of Serie items with the specified identifiers
+   */
+  override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> {
+    return series.filter { seriesIds.contains(it.serieId) }
   }
 
   /** Clears all series from the repository. Useful for testing. */
