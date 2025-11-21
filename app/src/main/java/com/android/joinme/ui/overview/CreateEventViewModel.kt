@@ -26,6 +26,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+/** Note: This file was co-written with the help of AI (Claude) */
+
 /** UI state for the CreateEvent screen. */
 data class CreateEventUIState(
     override val type: String = "",
@@ -88,6 +90,10 @@ class CreateEventViewModel(
 
   override val _uiState = MutableStateFlow(CreateEventUIState())
   val uiState: StateFlow<CreateEventUIState> = _uiState.asStateFlow()
+
+  companion object {
+    private const val DEFAULT_GROUP_EVENT_MAX_PARTICIPANTS = 300
+  }
 
   init {
     loadUserGroups()
@@ -255,13 +261,13 @@ class CreateEventViewModel(
     val selectedGroup = groupId?.let { id -> _uiState.value.availableGroups.find { it.id == id } }
 
     if (selectedGroup != null) {
-      // For group events, auto-set type, maxParticipants (set to 300 to accommodate group growth),
+      // For group events, auto-set type, maxParticipants (set to accommodate group growth),
       // and visibility
       _uiState.value =
           _uiState.value.copy(
               selectedGroupId = groupId,
               type = selectedGroup.category.name.uppercase(Locale.ROOT),
-              maxParticipants = "300",
+              maxParticipants = DEFAULT_GROUP_EVENT_MAX_PARTICIPANTS.toString(),
               visibility = EventVisibility.PRIVATE.name,
               invalidTypeMsg = null,
               invalidMaxParticipantsMsg = null,
