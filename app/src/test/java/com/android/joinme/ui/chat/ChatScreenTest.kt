@@ -14,6 +14,8 @@ import androidx.compose.ui.test.performTextInput
 import com.android.joinme.model.chat.ChatRepository
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
+import com.android.joinme.model.profile.Profile
+import com.android.joinme.model.profile.ProfileRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before
@@ -33,12 +35,14 @@ class ChatScreenTest {
   @get:Rule val composeTestRule = createComposeRule()
 
   private lateinit var fakeChatRepository: FakeChatRepository
+  private lateinit var fakeProfileRepository: FakeProfileRepository
   private lateinit var viewModel: ChatViewModel
 
   @Before
   fun setup() {
     fakeChatRepository = FakeChatRepository()
-    viewModel = ChatViewModel(fakeChatRepository)
+    fakeProfileRepository = FakeProfileRepository()
+    viewModel = ChatViewModel(fakeChatRepository, fakeProfileRepository)
   }
 
   // ============================================================================
@@ -223,6 +227,24 @@ class ChatScreenTest {
   // ============================================================================
   // Fake Repository for Testing
   // ============================================================================
+
+  private class FakeProfileRepository : ProfileRepository {
+    override suspend fun getProfile(uid: String): Profile? = null
+
+    override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? = emptyList()
+
+    override suspend fun createOrUpdateProfile(profile: Profile) {}
+
+    override suspend fun deleteProfile(uid: String) {}
+
+    override suspend fun uploadProfilePhoto(
+        context: android.content.Context,
+        uid: String,
+        imageUri: android.net.Uri
+    ): String = ""
+
+    override suspend fun deleteProfilePhoto(uid: String) {}
+  }
 
   private class FakeChatRepository : ChatRepository {
     private val messagesFlow = MutableStateFlow<List<Message>>(emptyList())

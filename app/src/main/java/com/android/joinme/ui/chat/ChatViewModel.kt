@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.chat.ChatRepository
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
+import com.android.joinme.model.profile.Profile
+import com.android.joinme.model.profile.ProfileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,23 +23,30 @@ import kotlinx.coroutines.launch
  * @property isLoading Indicates whether the screen is currently loading data.
  * @property errorMsg An error message to be shown when operations fail.
  * @property currentUserId The ID of the current user viewing the chat.
+ * @property senderProfiles A map of sender IDs to their complete Profile objects.
  */
 data class ChatUIState(
     val messages: List<Message> = emptyList(),
     val isLoading: Boolean = true,
     val errorMsg: String? = null,
-    val currentUserId: String = ""
+    val currentUserId: String = "",
+    val senderProfiles: Map<String, Profile> = emptyMap()
 )
 
 /**
  * ViewModel for the Chat screen.
  *
  * Responsible for managing the UI state by fetching and providing Message items via the
- * [ChatRepository]. Handles sending messages, editing, deleting, and marking messages as read.
+ * [ChatRepository]. Handles sending messages, editing, deleting, and marking messages as read. Also
+ * fetches profile photos for message senders.
  *
  * @property chatRepository The repository used to fetch and manage Message items.
+ * @property profileRepository The repository used to fetch user profile information.
  */
-class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
+class ChatViewModel(
+    private val chatRepository: ChatRepository,
+    private val profileRepository: ProfileRepository
+) : ViewModel() {
 
   private val _uiState = MutableStateFlow(ChatUIState())
   val uiState: StateFlow<ChatUIState> = _uiState.asStateFlow()
@@ -85,7 +94,43 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
             // Sort messages by timestamp (oldest first, newest last)
             val sortedMessages = messageList.sortedBy { it.timestamp }
             _uiState.value = _uiState.value.copy(messages = sortedMessages, isLoading = false)
+
+            // Fetch profile information for all unique senders
+            fetchSenderProfiles(sortedMessages)
           }
+    }
+  }
+
+  /**
+   * Fetches profile information for all unique message senders.
+   *
+   * @param messages The list of messages to extract sender IDs from.
+   */
+  private fun fetchSenderProfiles(messages: List<Message>) {
+    viewModelScope.launch {
+      try {
+        // Get unique sender IDs
+        val senderIds = messages.map { it.senderId }.distinct()
+
+        // Fetch profiles for all senders (similar to GroupDetailViewModel)
+        val profiles =
+            senderIds.mapNotNull { senderId ->
+              try {
+                profileRepository.getProfile(senderId)
+              } catch (e: Exception) {
+                Log.e(TAG, "Failed to fetch profile for sender: $senderId", e)
+                null
+              }
+            }
+
+        // Create a map of sender ID to Profile
+        val profilesMap = profiles.associateBy { it.uid }
+
+        _uiState.value = _uiState.value.copy(senderProfiles = profilesMap)
+      } catch (e: Exception) {
+        Log.e(TAG, "Failed to fetch sender profiles", e)
+        // Don't show error to user, profile photos are optional
+      }
     }
   }
 

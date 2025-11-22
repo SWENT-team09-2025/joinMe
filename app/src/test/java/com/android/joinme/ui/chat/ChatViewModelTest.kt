@@ -5,6 +5,8 @@ package com.android.joinme.ui.chat
 import com.android.joinme.model.chat.ChatRepository
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
+import com.android.joinme.model.profile.Profile
+import com.android.joinme.model.profile.ProfileRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -26,6 +28,45 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChatViewModelTest {
+
+  private class FakeProfileRepository : ProfileRepository {
+    private val profiles = mutableMapOf<String, Profile>()
+    var shouldThrowError = false
+
+    fun addProfile(profile: Profile) {
+      profiles[profile.uid] = profile
+    }
+
+    override suspend fun getProfile(uid: String): Profile? {
+      if (shouldThrowError) throw Exception("Profile fetch error")
+      return profiles[uid]
+    }
+
+    override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? {
+      if (shouldThrowError) throw Exception("Profiles fetch error")
+      return uids.mapNotNull { profiles[it] }
+    }
+
+    override suspend fun createOrUpdateProfile(profile: Profile) {
+      profiles[profile.uid] = profile
+    }
+
+    override suspend fun deleteProfile(uid: String) {
+      profiles.remove(uid)
+    }
+
+    override suspend fun uploadProfilePhoto(
+        context: android.content.Context,
+        uid: String,
+        imageUri: android.net.Uri
+    ): String {
+      return "https://example.com/photo.jpg"
+    }
+
+    override suspend fun deleteProfilePhoto(uid: String) {
+      profiles[uid]?.let { profiles[uid] = it.copy(photoUrl = null) }
+    }
+  }
 
   private class FakeChatRepository : ChatRepository {
     var shouldThrowError = false
@@ -119,6 +160,7 @@ class ChatViewModelTest {
   }
 
   private lateinit var fakeRepo: FakeChatRepository
+  private lateinit var fakeProfileRepo: FakeProfileRepository
   private lateinit var viewModel: ChatViewModel
   private val testDispatcher = StandardTestDispatcher()
   private val testChatId = "chat123"
@@ -128,7 +170,8 @@ class ChatViewModelTest {
   fun setUp() {
     Dispatchers.setMain(testDispatcher)
     fakeRepo = FakeChatRepository()
-    viewModel = ChatViewModel(fakeRepo)
+    fakeProfileRepo = FakeProfileRepository()
+    viewModel = ChatViewModel(fakeRepo, fakeProfileRepo)
   }
 
   @After
@@ -744,5 +787,85 @@ class ChatViewModelTest {
     val state = viewModel.uiState.value
     assertEquals(1, state.messages.size)
     assertEquals("Chat 1 message", state.messages[0].content)
+  }
+
+  @Test
+  fun fetchSenderProfiles_loadsProfilesCorrectlyAndHandlesErrors() = runTest {
+    // Test 1: Load profiles for multiple senders (including one with no photo)
+    fakeProfileRepo.addProfile(
+        Profile(uid = "user1", photoUrl = "https://example.com/user1.jpg", username = "Alice"))
+    fakeProfileRepo.addProfile(Profile(uid = "user2", photoUrl = null, username = "Bob"))
+
+    val testMessages =
+        listOf(
+            Message(
+                id = "1",
+                conversationId = testChatId,
+                senderId = "user1",
+                senderName = "Alice",
+                content = "Hello",
+                timestamp = 1000L),
+            Message(
+                id = "2",
+                conversationId = testChatId,
+                senderId = "user2",
+                senderName = "Bob",
+                content = "Hi",
+                timestamp = 2000L),
+            Message(
+                id = "3",
+                conversationId = testChatId,
+                senderId = "user3", // This user doesn't have a profile
+                senderName = "Charlie",
+                content = "Hey",
+                timestamp = 3000L))
+    fakeRepo.setMessages(testChatId, testMessages)
+
+    viewModel.initializeChat(testChatId, testUserId)
+    advanceUntilIdle()
+
+    var state = viewModel.uiState.value
+    // Should have profiles for user1 and user2 (user3 not found is handled gracefully)
+    assertEquals(2, state.senderProfiles.size)
+    assertEquals("https://example.com/user1.jpg", state.senderProfiles["user1"]?.photoUrl)
+    assertNull(state.senderProfiles["user2"]?.photoUrl) // Bob has no photo
+    assertNull(state.senderProfiles["user3"]) // Charlie not found
+    assertNull(state.errorMsg) // No error shown for missing profiles
+
+    // Test 2: Verify deduplication - same sender with multiple messages
+    val moreMessages =
+        listOf(
+            Message(
+                id = "4",
+                conversationId = testChatId,
+                senderId = "user1",
+                senderName = "Alice",
+                content = "Another message",
+                timestamp = 4000L))
+    fakeRepo.setMessages(testChatId, testMessages + moreMessages)
+    advanceUntilIdle()
+
+    state = viewModel.uiState.value
+    // Should still have only 2 profiles (user1 profile not duplicated)
+    assertEquals(2, state.senderProfiles.size)
+
+    // Test 3: Handles repository error gracefully
+    fakeProfileRepo.shouldThrowError = true
+    fakeRepo.setMessages(testChatId, emptyList())
+    val newMessages =
+        listOf(
+            Message(
+                id = "5",
+                conversationId = testChatId,
+                senderId = "user4",
+                senderName = "Dave",
+                content = "Test",
+                timestamp = 5000L))
+    fakeRepo.setMessages(testChatId, newMessages)
+    advanceUntilIdle()
+
+    state = viewModel.uiState.value
+    // Should not crash, profiles may be empty or unchanged
+    assertNull(state.errorMsg) // Profile errors should not be shown to user
   }
 }

@@ -56,6 +56,7 @@ import com.android.joinme.model.chat.MessageType
 import com.android.joinme.ui.profile.ProfilePhotoImage
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.customColors
+import com.android.joinme.ui.theme.getUserColor
 import com.android.joinme.ui.theme.outlinedTextField
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -176,6 +177,7 @@ fun ChatScreen(
               messages = uiState.messages,
               currentUserId = currentUserId,
               currentUserName = currentUserName,
+              senderProfiles = uiState.senderProfiles,
               onSendMessage = { content -> viewModel.sendMessage(content, currentUserName) },
               paddingValues = paddingValues,
               chatColor = effectiveChatColor,
@@ -243,6 +245,7 @@ private fun ChatTopBar(
  * @param messages The list of messages to display
  * @param currentUserId The ID of the current user
  * @param currentUserName The display name of the current user
+ * @param senderProfiles A map of sender IDs to their Profile objects containing photo URLs
  * @param onSendMessage Callback invoked when sending a new message
  * @param paddingValues Padding from the Scaffold
  * @param chatColor The chat color for message bubbles and send button
@@ -253,6 +256,7 @@ private fun ChatContent(
     messages: List<Message>,
     currentUserId: String,
     currentUserName: String,
+    senderProfiles: Map<String, com.android.joinme.model.profile.Profile>,
     onSendMessage: (String) -> Unit,
     paddingValues: PaddingValues,
     chatColor: Color,
@@ -288,11 +292,15 @@ private fun ChatContent(
             }
           } else {
             items(messages, key = { it.id }) { message ->
+              // Get user-specific color for this message sender
+              val userColors = MaterialTheme.customColors.getUserColor(message.senderId)
               MessageItem(
                   message = message,
                   isCurrentUser = message.senderId == currentUserId,
-                  bubbleColor = chatColor,
-                  onBubbleColor = onChatColor)
+                  senderPhotoUrl = senderProfiles[message.senderId]?.photoUrl,
+                  currentUserPhotoUrl = senderProfiles[currentUserId]?.photoUrl,
+                  bubbleColor = userColors.first,
+                  onBubbleColor = userColors.second)
             }
           }
         }
@@ -317,17 +325,19 @@ private fun ChatContent(
  *
  * @param message The message to display
  * @param isCurrentUser Whether the message was sent by the current user
+ * @param senderPhotoUrl Photo URL of the message sender
+ * @param currentUserPhotoUrl Photo URL of the current user (for displaying their avatar)
  * @param bubbleColor The color for the message bubble
  * @param onBubbleColor The color for text on the message bubble (must provide proper contrast)
- * @param currentUserPhotoUrl Photo URL of the current user (for displaying their avatar)
  */
 @Composable
 private fun MessageItem(
     message: Message,
     isCurrentUser: Boolean,
+    senderPhotoUrl: String? = null,
+    currentUserPhotoUrl: String? = null,
     bubbleColor: Color,
-    onBubbleColor: Color,
-    currentUserPhotoUrl: String? = null
+    onBubbleColor: Color
 ) {
   Row(
       modifier =
@@ -337,9 +347,8 @@ private fun MessageItem(
       horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start) {
         if (!isCurrentUser) {
           // Avatar for other users (on left)
-          // TODO(#305): Fetch sender profile photos via ChatViewModel
           UserAvatar(
-              photoUrl = null, // Placeholder until profile fetching is implemented
+              photoUrl = senderPhotoUrl,
               userName = message.senderName,
               modifier = Modifier.align(Alignment.Bottom))
           Spacer(modifier = Modifier.width(Dimens.Spacing.small))

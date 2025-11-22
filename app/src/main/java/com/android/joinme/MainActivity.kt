@@ -29,6 +29,7 @@ import androidx.navigation.navigation
 import com.android.joinme.model.chat.ChatRepositoryProvider
 import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.notification.FCMTokenManager
+import com.android.joinme.model.profile.ProfileRepositoryProvider
 import com.android.joinme.ui.chat.ChatScreen
 import com.android.joinme.ui.chat.ChatViewModel
 import com.android.joinme.ui.groups.CreateGroupScreen
@@ -507,7 +508,10 @@ fun JoinMe(
                             modelClass: Class<T>
                         ): T {
                           @Suppress("UNCHECKED_CAST")
-                          return ChatViewModel(ChatRepositoryProvider.repository) as T
+                          return ChatViewModel(
+                              ChatRepositoryProvider.repository,
+                              ProfileRepositoryProvider.repository)
+                              as T
                         }
                       })
 

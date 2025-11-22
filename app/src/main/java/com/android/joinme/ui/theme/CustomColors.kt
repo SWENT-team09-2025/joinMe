@@ -32,6 +32,8 @@ data class CustomColors(
     val seriePinMark: Color,
     val chatDefault: Color,
     val onChatDefault: Color,
+    val chatUserColors:
+        List<Pair<Color, Color>>, // List of (background, onBackground) color pairs for each user
     val containerColor: Color,
     val selectedIconColor: Color,
     val selectedTextColor: Color,
@@ -83,6 +85,20 @@ val lightCustomColors =
         // CHAT DEFAULT COLORS
         chatDefault = chatDefaultLight,
         onChatDefault = onChatDefaultLight,
+
+        // CHAT USER COLORS - 10 distinct colors for different users
+        chatUserColors =
+            listOf(
+                chatUser1Light to onChatUser1Light,
+                chatUser2Light to onChatUser2Light,
+                chatUser3Light to onChatUser3Light,
+                chatUser4Light to onChatUser4Light,
+                chatUser5Light to onChatUser5Light,
+                chatUser6Light to onChatUser6Light,
+                chatUser7Light to onChatUser7Light,
+                chatUser8Light to onChatUser8Light,
+                chatUser9Light to onChatUser9Light,
+                chatUser10Light to onChatUser10Light),
 
         // BOTTOM NAVIGATION BAR COLORS
         containerColor = primaryLight,
@@ -166,6 +182,20 @@ val darkCustomColors =
         // CHAT DEFAULT COLORS
         chatDefault = chatDefaultDark,
         onChatDefault = onChatDefaultDark,
+
+        // CHAT USER COLORS - 10 distinct colors for different users
+        chatUserColors =
+            listOf(
+                chatUser1Dark to onChatUser1Dark,
+                chatUser2Dark to onChatUser2Dark,
+                chatUser3Dark to onChatUser3Dark,
+                chatUser4Dark to onChatUser4Dark,
+                chatUser5Dark to onChatUser5Dark,
+                chatUser6Dark to onChatUser6Dark,
+                chatUser7Dark to onChatUser7Dark,
+                chatUser8Dark to onChatUser8Dark,
+                chatUser9Dark to onChatUser9Dark,
+                chatUser10Dark to onChatUser10Dark),
 
         // BOTTOM NAVIGATION BAR COLORS
         containerColor = surfaceContainerDark,
@@ -285,4 +315,21 @@ fun CustomColors.outlinedTextField(): TextFieldColors {
       disabledPlaceholderColor = outlinedTextFieldDisabledPlaceholderColor,
       disabledLeadingIconColor = outlinedTextFieldDisabledLeadingIconColor,
       disabledTrailingIconColor = outlinedTextFieldDisabledTrailingIconColor)
+}
+
+/**
+ * Returns a consistent color pair for a user based on their user ID.
+ *
+ * Uses the hash code of the user ID to deterministically assign one of 10 distinct colors. The same
+ * user ID will always get the same color across sessions.
+ *
+ * @param userId The unique identifier of the user
+ * @return A Pair of (background color, text color) for the user's message bubbles
+ */
+@Composable
+@ReadOnlyComposable
+fun CustomColors.getUserColor(userId: String): Pair<Color, Color> {
+  // Use hashCode to deterministically map userId to a color index
+  val colorIndex = kotlin.math.abs(userId.hashCode()) % chatUserColors.size
+  return chatUserColors[colorIndex]
 }
