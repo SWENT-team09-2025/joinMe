@@ -13,7 +13,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Message
-import androidx.compose.material.icons.filled.Message
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,7 +41,7 @@ import com.android.joinme.ui.theme.customColors
  * @param groupId The unique identifier of the group to display.
  * @param viewModel The ViewModel managing the screen state and data.
  * @param onBackClick Callback when the back button is clicked.
- * @param onGroupEventsClick Callback when the "Group Events" button is clicked.
+ * @param onActivityGroupClick Callback when the "Group Events" button is clicked.
  * @param onMemberClick Callback when a member profile is clicked, receives the member's UID.
  * @param onNavigateToChat Callback invoked when the user wants to navigate to the group chat,
  *   receives chatId and chatTitle.
@@ -53,7 +52,7 @@ fun GroupDetailScreen(
     groupId: String,
     viewModel: GroupDetailViewModel = viewModel(factory = GroupDetailViewModelFactory()),
     onBackClick: () -> Unit = {},
-    onGroupEventsClick: () -> Unit = {},
+    onActivityGroupClick: () -> Unit = {},
     onMemberClick: (String) -> Unit = {},
     onNavigateToChat: (String, String) -> Unit = { _, _ -> }
 ) {
@@ -105,7 +104,7 @@ fun GroupDetailScreen(
                   groupDescription = uiState.group!!.description,
                   members = uiState.members,
                   membersCount = uiState.group!!.membersCount,
-                  onGroupEventsClick = onGroupEventsClick,
+                  onGroupEventsClick = onActivityGroupClick,
                   onMemberClick = onMemberClick,
                   onNavigateToChat = onNavigateToChat)
             }
@@ -214,7 +213,7 @@ private fun GroupContent(
                         width = Dimens.BorderWidth.medium, color = groupCategory.getOnColor()),
                 shape = RoundedCornerShape(Dimens.GroupDetail.eventsButtonCornerRadius)) {
                   Text(
-                      text = "Group Events",
+                      text = "Group Activities",
                       style = MaterialTheme.typography.headlineSmall,
                       color = groupCategory.getOnColor(),
                       fontWeight = FontWeight.Medium)
