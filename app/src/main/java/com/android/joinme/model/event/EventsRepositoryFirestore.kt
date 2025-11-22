@@ -109,10 +109,15 @@ class EventsRepositoryFirestore(
   override suspend fun editEvent(eventId: String, newValue: Event) {
     db.collection(EVENTS_COLLECTION_PATH).document(eventId).set(newValue).await()
 
-    // Cancel old notification and reschedule if event is upcoming
+    // Cancel old notification and reschedule only if current user is a participant
     context?.let {
       NotificationScheduler.cancelEventNotification(it, eventId)
-      if (newValue.isUpcoming()) {
+
+      // Only schedule notification if the current user is a participant of the event
+      val currentUserId = Firebase.auth.currentUser?.uid
+      if (newValue.isUpcoming() &&
+          currentUserId != null &&
+          newValue.participants.contains(currentUserId)) {
         NotificationScheduler.scheduleEventNotification(it, newValue)
       }
     }
