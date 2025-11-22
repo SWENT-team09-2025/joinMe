@@ -1,5 +1,8 @@
 package com.android.joinme.model.event
 
+/** Exception message for when an event is not found in the local repository. */
+const val EVENT_NOT_FOUND = "EventsRepositoryLocal: Event not found"
+
 /** Represents a repository that manages a local list of events (for offline mode or testing). */
 class EventsRepositoryLocal : EventsRepository {
   private val events: MutableList<Event> = mutableListOf()
@@ -14,8 +17,7 @@ class EventsRepositoryLocal : EventsRepository {
   }
 
   override suspend fun getEvent(eventId: String): Event {
-    return events.find { it.eventId == eventId }
-        ?: throw Exception("EventsRepositoryLocal: Event not found")
+    return events.find { it.eventId == eventId } ?: throw Exception(EVENT_NOT_FOUND)
   }
 
   override suspend fun addEvent(event: Event) {
@@ -33,7 +35,7 @@ class EventsRepositoryLocal : EventsRepository {
     if (index != -1) {
       events[index] = newValue
     } else {
-      throw Exception("EventsRepositoryLocal: Event not found")
+      throw Exception(EVENT_NOT_FOUND)
     }
   }
 
@@ -42,7 +44,7 @@ class EventsRepositoryLocal : EventsRepository {
     if (index != -1) {
       events.removeAt(index)
     } else {
-      throw Exception("EventsRepositoryLocal: Event not found")
+      throw Exception(EVENT_NOT_FOUND)
     }
   }
 
