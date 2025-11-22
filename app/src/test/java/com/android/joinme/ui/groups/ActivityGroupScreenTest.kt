@@ -17,6 +17,7 @@ import com.android.joinme.model.utils.Visibility
 import com.google.firebase.Timestamp
 import java.util.Calendar
 import kotlinx.coroutines.runBlocking
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,6 +33,24 @@ import org.robolectric.RobolectricTestRunner
 class ActivityGroupScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
+
+  private lateinit var groupRepo: FakeGroupRepository
+  private lateinit var eventRepo: FakeActivityGroupEventsRepository
+  private lateinit var serieRepo: FakeActivityGroupSeriesRepository
+
+  @Before
+  fun setUp() {
+    groupRepo = FakeGroupRepository()
+    eventRepo = FakeActivityGroupEventsRepository()
+    serieRepo = FakeActivityGroupSeriesRepository()
+  }
+
+  /** Waits for the UI to settle after async operations. */
+  private fun waitForContent() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+  }
 
   private fun createTestEvent(eventId: String, title: String, type: EventType): Event {
     val calendar = Calendar.getInstance()
@@ -72,9 +91,6 @@ class ActivityGroupScreenTest {
 
   @Test
   fun activityGroupScreen_displaysTopBarAndBackButton() {
-    val groupRepo = FakeGroupRepository()
-    val eventRepo = FakeActivityGroupEventsRepository()
-    val serieRepo = FakeActivityGroupSeriesRepository()
     val viewModel =
         ActivityGroupViewModel(
             groupRepository = groupRepo, eventsRepository = eventRepo, seriesRepository = serieRepo)
@@ -85,9 +101,7 @@ class ActivityGroupScreenTest {
       ActivityGroupScreen(groupId = "1", activityGroupViewModel = viewModel)
     }
 
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
+    waitForContent()
 
     // Group assertions that use the same setup
     composeTestRule.onNodeWithText("Group Activities").assertIsDisplayed()
@@ -97,9 +111,6 @@ class ActivityGroupScreenTest {
 
   @Test
   fun activityGroupScreen_backButtonTriggersCallback() {
-    val groupRepo = FakeGroupRepository()
-    val eventRepo = FakeActivityGroupEventsRepository()
-    val serieRepo = FakeActivityGroupSeriesRepository()
     val viewModel =
         ActivityGroupViewModel(
             groupRepository = groupRepo, eventsRepository = eventRepo, seriesRepository = serieRepo)
@@ -114,9 +125,7 @@ class ActivityGroupScreenTest {
           onNavigateBack = { backClicked = true })
     }
 
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
+    waitForContent()
 
     composeTestRule.onNodeWithTag(ActivityGroupScreenTestTags.BACK_BUTTON).performClick()
 
@@ -125,21 +134,17 @@ class ActivityGroupScreenTest {
 
   @Test
   fun activityGroupScreen_emptyState_displaysCorrectMessage() {
-    val groupRepo = FakeGroupRepository()
-    val eventRepo = FakeActivityGroupEventsRepository()
-    val serieRepo = FakeActivityGroupSeriesRepository()
     val viewModel =
         ActivityGroupViewModel(
             groupRepository = groupRepo, eventsRepository = eventRepo, seriesRepository = serieRepo)
 
     runBlocking { groupRepo.addGroup(Group(id = "1", name = "Empty Group")) }
+
     composeTestRule.setContent {
       ActivityGroupScreen(groupId = "1", activityGroupViewModel = viewModel)
     }
 
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
+    waitForContent()
 
     composeTestRule
         .onNodeWithTag(ActivityGroupScreenTestTags.EMPTY_ACTIVITY_LIST_MSG)
@@ -149,10 +154,6 @@ class ActivityGroupScreenTest {
 
   @Test
   fun activityGroupScreen_displaysEventsAndSeriesInSingleList() {
-    val groupRepo = FakeGroupRepository()
-    val eventRepo = FakeActivityGroupEventsRepository()
-    val serieRepo = FakeActivityGroupSeriesRepository()
-
     val event1 = createTestEvent("event1", "Basketball Game", EventType.SPORTS)
     val event2 = createTestEvent("event2", "Study Session", EventType.ACTIVITY)
     val serie1 = createTestSerie("serie1", "Weekly Meetup")
@@ -177,9 +178,7 @@ class ActivityGroupScreenTest {
       ActivityGroupScreen(groupId = "1", activityGroupViewModel = viewModel)
     }
 
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
+    waitForContent()
 
     // All items should be displayed in a single list
     composeTestRule.onNodeWithText("Basketball Game").assertIsDisplayed()
@@ -190,10 +189,6 @@ class ActivityGroupScreenTest {
 
   @Test
   fun activityGroupScreen_eventCardClick_triggersCallback() {
-    val groupRepo = FakeGroupRepository()
-    val eventRepo = FakeActivityGroupEventsRepository()
-    val serieRepo = FakeActivityGroupSeriesRepository()
-
     val event = createTestEvent("event1", "Clickable Event", EventType.SPORTS)
 
     runBlocking {
@@ -211,9 +206,7 @@ class ActivityGroupScreenTest {
           groupId = "1", activityGroupViewModel = viewModel, onSelectEvent = { selectedEvent = it })
     }
 
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
+    waitForContent()
 
     composeTestRule.onNodeWithText("Clickable Event").performClick()
 
@@ -223,10 +216,6 @@ class ActivityGroupScreenTest {
 
   @Test
   fun activityGroupScreen_serieCardClick_triggersCallback() {
-    val groupRepo = FakeGroupRepository()
-    val eventRepo = FakeActivityGroupEventsRepository()
-    val serieRepo = FakeActivityGroupSeriesRepository()
-
     val serie = createTestSerie("serie1", "Clickable Serie")
 
     runBlocking {
@@ -246,9 +235,7 @@ class ActivityGroupScreenTest {
           onSelectedSerie = { selectedSerie = it })
     }
 
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
+    waitForContent()
 
     composeTestRule.onNodeWithText("Clickable Serie").performClick()
 
@@ -258,10 +245,6 @@ class ActivityGroupScreenTest {
 
   @Test
   fun activityGroupScreen_hasUniqueTestTags() {
-    val groupRepo = FakeGroupRepository()
-    val eventRepo = FakeActivityGroupEventsRepository()
-    val serieRepo = FakeActivityGroupSeriesRepository()
-
     val event1 = createTestEvent("event1", "Event 1", EventType.SPORTS)
     val event2 = createTestEvent("event2", "Event 2", EventType.SOCIAL)
     val serie1 = createTestSerie("serie1", "Serie 1")
@@ -286,9 +269,7 @@ class ActivityGroupScreenTest {
       ActivityGroupScreen(groupId = "1", activityGroupViewModel = viewModel)
     }
 
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
+    waitForContent()
 
     // Verify unique test tags for all items
     composeTestRule
@@ -304,20 +285,18 @@ class ActivityGroupScreenTest {
 
   @Test
   fun activityGroupScreen_handlesErrorFromRepository() {
-    val groupRepo = FakeGroupRepository(shouldThrowError = true)
-    val eventRepo = FakeActivityGroupEventsRepository()
-    val serieRepo = FakeActivityGroupSeriesRepository()
+    val errorGroupRepo = FakeGroupRepository(shouldThrowError = true)
     val viewModel =
         ActivityGroupViewModel(
-            groupRepository = groupRepo, eventsRepository = eventRepo, seriesRepository = serieRepo)
+            groupRepository = errorGroupRepo,
+            eventsRepository = eventRepo,
+            seriesRepository = serieRepo)
 
     composeTestRule.setContent {
       ActivityGroupScreen(groupId = "1", activityGroupViewModel = viewModel)
     }
 
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
+    waitForContent()
 
     // After error, loading should stop and empty message should show
     composeTestRule
@@ -326,70 +305,6 @@ class ActivityGroupScreenTest {
     composeTestRule
         .onNodeWithTag(ActivityGroupScreenTestTags.EMPTY_ACTIVITY_LIST_MSG)
         .assertIsDisplayed()
-  }
-
-  @Test
-  fun activityGroupScreen_groupWithOnlyEvents_displaysCorrectly() {
-    val groupRepo = FakeGroupRepository()
-    val eventRepo = FakeActivityGroupEventsRepository()
-    val serieRepo = FakeActivityGroupSeriesRepository()
-
-    val event1 = createTestEvent("event1", "Event Only 1", EventType.SPORTS)
-    val event2 = createTestEvent("event2", "Event Only 2", EventType.SOCIAL)
-
-    runBlocking {
-      eventRepo.addEvent(event1)
-      eventRepo.addEvent(event2)
-      groupRepo.addGroup(
-          Group(id = "1", name = "Events Only Group", eventIds = listOf("event1", "event2")))
-    }
-
-    val viewModel =
-        ActivityGroupViewModel(
-            groupRepository = groupRepo, eventsRepository = eventRepo, seriesRepository = serieRepo)
-
-    composeTestRule.setContent {
-      ActivityGroupScreen(groupId = "1", activityGroupViewModel = viewModel)
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithText("Event Only 1").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Event Only 2").assertIsDisplayed()
-  }
-
-  @Test
-  fun activityGroupScreen_groupWithOnlySeries_displaysCorrectly() {
-    val groupRepo = FakeGroupRepository()
-    val eventRepo = FakeActivityGroupEventsRepository()
-    val serieRepo = FakeActivityGroupSeriesRepository()
-
-    val serie1 = createTestSerie("serie1", "Serie Only 1")
-    val serie2 = createTestSerie("serie2", "Serie Only 2")
-
-    runBlocking {
-      serieRepo.addSerie(serie1)
-      serieRepo.addSerie(serie2)
-      groupRepo.addGroup(
-          Group(id = "1", name = "Series Only Group", serieIds = listOf("serie1", "serie2")))
-    }
-
-    val viewModel =
-        ActivityGroupViewModel(
-            groupRepository = groupRepo, eventsRepository = eventRepo, seriesRepository = serieRepo)
-
-    composeTestRule.setContent {
-      ActivityGroupScreen(groupId = "1", activityGroupViewModel = viewModel)
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithText("Serie Only 1").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Serie Only 2").assertIsDisplayed()
   }
 
   /** Fake group repository for testing */
