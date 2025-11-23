@@ -2,22 +2,14 @@ package com.android.joinme.ui.overview
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.android.joinme.model.event.Event
-import com.android.joinme.model.event.EventFilter
-import com.android.joinme.model.event.EventsRepository
-import com.android.joinme.model.event.EventsRepositoryProvider
-import com.android.joinme.model.event.isUpcoming
 import com.android.joinme.model.eventItem.EventItem
 import com.android.joinme.model.filter.FilterRepository
 import com.android.joinme.model.filter.FilterState
-import com.android.joinme.model.serie.Serie
-import com.android.joinme.model.serie.SerieFilter
-import com.android.joinme.model.serie.SeriesRepository
-import com.android.joinme.model.serie.SeriesRepositoryProvider
-import kotlinx.coroutines.async
+import com.android.joinme.model.filter.FilteredEventsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 /**
@@ -38,28 +30,19 @@ data class SearchUIState(
 /**
  * ViewModel for the Search screen.
  *
- * Manages the search query and delegates filter management to FilterRepository. Fetches events and
- * series from the repositories and applies filters to display relevant results. Filter state is
- * shared across the application through FilterRepository.
+ * Manages the search query and delegates filter management to FilterRepository. Uses
+ * FilteredEventsRepository to access centrally managed filtered events and series data. Filter
+ * state is shared across the application through FilterRepository.
  *
- * @property eventRepository Repository for fetching event data
- * @property seriesRepository Repository for fetching series data
+ * @property filteredEventsRepository Repository for accessing filtered events and series data
  * @property filterRepository Repository for managing filter state (defaults to FilterRepository
  *   singleton)
  */
 class SearchViewModel(
-    private val eventRepository: EventsRepository? = null,
-    private val seriesRepository: SeriesRepository? = null,
+    private val filteredEventsRepository: FilteredEventsRepository =
+        FilteredEventsRepository.getInstance(),
     private val filterRepository: FilterRepository = FilterRepository
 ) : ViewModel() {
-
-  private val eventRepo: EventsRepository by lazy {
-    eventRepository ?: EventsRepositoryProvider.getRepository(isOnline = true)
-  }
-
-  private val seriesRepo: SeriesRepository by lazy {
-    seriesRepository ?: SeriesRepositoryProvider.repository
-  }
 
   // Search UI state
   private val _uiState = MutableStateFlow(SearchUIState())
@@ -68,33 +51,37 @@ class SearchViewModel(
   // Expose filter state from FilterRepository
   val filterState: StateFlow<FilterState> = filterRepository.filterState
 
-  // Store all events and series fetched from repositories
-  private var allEvents: List<Event> = emptyList()
-  private var allSeries: List<Serie> = emptyList()
-
   init {
-    // Observe filter changes and apply them to events and series
-    viewModelScope.launch { filterRepository.filterState.collect { applyFiltersToUIState() } }
+    // Observe filtered events and series from repository and apply search query
+    viewModelScope.launch {
+      combine(filteredEventsRepository.filteredEvents, filteredEventsRepository.filteredSeries) {
+              _,
+              _ ->
+            Unit
+          }
+          .collect { applySearchQueryToUIState() }
+    }
+    // Observe errors from repository
+    viewModelScope.launch {
+      filteredEventsRepository.errorMsg.collect { error ->
+        _uiState.value = _uiState.value.copy(errorMsg = error)
+      }
+    }
   }
 
   /** Clears the error message in the UI state. */
   fun clearErrorMsg() {
-    _uiState.value = _uiState.value.copy(errorMsg = null)
-  }
-
-  /** Sets an error message in the UI state. */
-  private fun setErrorMsg(errorMsg: String) {
-    _uiState.value = _uiState.value.copy(errorMsg = errorMsg)
+    filteredEventsRepository.clearErrorMsg()
   }
 
   /**
-   * Updates the search query and re-applies filters.
+   * Updates the search query and re-applies it to the filtered events.
    *
    * @param query The new search query text
    */
   fun setQuery(query: String) {
     _uiState.value = _uiState.value.copy(query = query)
-    applyFiltersToUIState()
+    applySearchQueryToUIState()
   }
 
   /** Toggles the "Social" filter. Delegates to FilterRepository. */
@@ -131,87 +118,44 @@ class SearchViewModel(
   }
 
   /**
-   * Sets the events list (for testing purposes).
-   *
-   * @param events The list of events to display
-   */
-  fun setEvents(events: List<Event>) {
-    allEvents = events
-    applyFiltersToUIState()
-  }
-
-  /**
-   * Sets the series list (for testing purposes).
-   *
-   * @param series The list of series to display
-   */
-  fun setSeries(series: List<Serie>) {
-    allSeries = series
-    applyFiltersToUIState()
-  }
-
-  /**
    * Refreshes the UI state by fetching all events and series from the repositories.
    *
-   * This method triggers a fetch of all events and series from the repositories and applies the
-   * current filters to update the displayed items list. It should be called when the screen first
-   * loads or when the user wants to refresh the data.
+   * This method triggers a fetch of all events and series from FilteredEventsRepository and applies
+   * the current search query to update the displayed items list. It should be called when the
+   * screen first loads or when the user wants to refresh the data.
    *
    * If fetching data fails, an error message is set in the UI state which can be displayed to the
    * user.
-   *
-   * @see getAllEventsAndSeries
-   * @see applyFiltersToUIState
    */
   fun refreshUIState() {
-    getAllEventsAndSeries()
+    filteredEventsRepository.refresh()
   }
 
   /**
-   * Fetches all events and series from the repositories and updates the UI state.
+   * Applies search query to filtered events and series, then updates the UI state.
    *
-   * This method fetches both events and series in parallel, filters them, and updates the UI state
-   * with the combined results.
-   */
-  private fun getAllEventsAndSeries() {
-    viewModelScope.launch {
-      try {
-        // Fetch events and series in parallel
-        val eventsDeferred = async {
-          eventRepo.getAllEvents(EventFilter.EVENTS_FOR_SEARCH_SCREEN).filter { it.isUpcoming() }
-        }
-        val seriesDeferred = async { seriesRepo.getAllSeries(SerieFilter.SERIES_FOR_SEARCH_SCREEN) }
-
-        allEvents = eventsDeferred.await()
-        allSeries = seriesDeferred.await()
-        applyFiltersToUIState()
-      } catch (e: Exception) {
-        setErrorMsg("Failed to load events and series: ${e.message}")
-      }
-    }
-  }
-
-  /**
-   * Applies filters and search query to all events and series, then updates the UI state.
+   * This method combines filtered events and series into a single list of EventItems, applies
+   * search query filters, and sorts the results by date. Events that belong to series are excluded
+   * - only the serie card is shown for those events.
    *
-   * This method combines events and series into a single list of EventItems, applies category
-   * filters, search query filters, and sorts the results by date. Events that belong to series are
-   * excluded - only the serie card is shown for those events.
+   * Note: Category filters (Social, Activity, Sports) are already applied by
+   * FilteredEventsRepository.
    */
-  private fun applyFiltersToUIState() {
-    // Apply category filters (Social, Activity, Sports) to events
-    val filteredEvents = filterRepository.applyFilters(allEvents)
+  private fun applySearchQueryToUIState() {
+    // Get already filtered events and series from repository
+    val filteredEvents = filteredEventsRepository.filteredEvents.value
+    val filteredSeries = filteredEventsRepository.filteredSeries.value
 
     // Identify events that belong to series
-    val serieEventIds = allSeries.flatMap { it.eventIds }.toSet()
+    val serieEventIds = filteredSeries.flatMap { it.eventIds }.toSet()
 
     // Filter out standalone events (events not in any serie)
     val standaloneEvents = filteredEvents.filterNot { it.eventId in serieEventIds }
 
-    // Convert standalone events and all series to EventItems
+    // Convert standalone events and filtered series to EventItems
     val eventItems = mutableListOf<EventItem>()
     eventItems.addAll(standaloneEvents.map { EventItem.SingleEvent(it) })
-    eventItems.addAll(allSeries.map { EventItem.EventSerie(it) })
+    eventItems.addAll(filteredSeries.map { EventItem.EventSerie(it) })
 
     // Apply search query filter if query is not empty
     val query = _uiState.value.query

@@ -14,6 +14,8 @@ import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.map.LocationRepository
 import com.android.joinme.model.map.NominatimLocationRepository
+import com.android.joinme.model.profile.ProfileRepository
+import com.android.joinme.model.profile.ProfileRepositoryProvider
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
@@ -23,6 +25,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
+/** Note: This file was co-written with the help of AI (Claude) */
 
 /** UI state for the CreateEvent screen. */
 data class CreateEventUIState(
@@ -79,12 +83,17 @@ data class CreateEventUIState(
 class CreateEventViewModel(
     private val repository: EventsRepository =
         EventsRepositoryProvider.getRepository(isOnline = true),
+    private val profileRepository: ProfileRepository = ProfileRepositoryProvider.repository,
     private val groupRepository: GroupRepository = GroupRepositoryProvider.repository,
     locationRepository: LocationRepository = NominatimLocationRepository(HttpClientProvider.client)
 ) : BaseEventFormViewModel(locationRepository) {
 
   override val _uiState = MutableStateFlow(CreateEventUIState())
   val uiState: StateFlow<CreateEventUIState> = _uiState.asStateFlow()
+
+  companion object {
+    private const val DEFAULT_GROUP_EVENT_MAX_PARTICIPANTS = 300
+  }
 
   init {
     loadUserGroups()
@@ -108,8 +117,15 @@ class CreateEventViewModel(
     }
   }
 
-  /** Adds a new event to the repository. If a group is selected, adds the event to the group. */
-  suspend fun createEvent(): Boolean {
+  /**
+   * Adds a new event to the repository. Suspends until the save is complete.
+   *
+   * This method also increments the owner's eventsJoinedCount since the owner is automatically
+   * added as a participant when creating an event.
+   *
+   * @param userId The user ID of the event owner. Defaults to the current Firebase Auth user.
+   */
+  suspend fun createEvent(userId: String? = null): Boolean {
     val state = _uiState.value
     if (!state.isValid) {
       setErrorMsg("At least one field is not valid")
@@ -130,6 +146,7 @@ class CreateEventViewModel(
       return false
     }
 
+    val ownerId = userId ?: (Firebase.auth.currentUser?.uid ?: "unknown")
     // Get group if selected, for both members and event list update
     val selectedGroup =
         state.selectedGroupId?.let { groupId ->
@@ -155,30 +172,61 @@ class CreateEventViewModel(
             participants = selectedGroup?.memberIds ?: emptyList(),
             maxParticipants = state.maxParticipants.toInt(),
             visibility = EventVisibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
-            ownerId = Firebase.auth.currentUser?.uid ?: "unknown")
+            ownerId = ownerId)
 
-    return try {
-      repository.addEvent(event)
-
-      // If a group is selected, add the event ID to the group's event list
-      selectedGroup?.let { group ->
+    // Fetch owner profile first to validate it exists
+    val ownerProfile =
         try {
-          val updatedGroup = group.copy(eventIds = group.eventIds + eventId)
-          groupRepository.editGroup(group.id, updatedGroup)
+          profileRepository.getProfile(ownerId)
         } catch (e: Exception) {
-          Log.e("CreateEventViewModel", "Error adding event to group", e)
-          setErrorMsg("Event created but failed to add to group: ${e.message}")
+          Log.e("CreateEventViewModel", "Error fetching owner profile", e)
+          setErrorMsg("Failed to load your profile. Cannot create event: ${e.message}")
           return false
         }
-      }
 
-      clearErrorMsg()
-      true
+    if (ownerProfile == null) {
+      setErrorMsg("Failed to load your profile. Cannot create event.")
+      return false
+    }
+
+    // Create the event
+    try {
+      repository.addEvent(event)
     } catch (e: Exception) {
       Log.e("CreateEventViewModel", "Error creating event", e)
       setErrorMsg("Failed to create event: ${e.message}")
-      false
+      return false
     }
+
+    // If a group is selected, add the event ID to the group's event list
+    selectedGroup?.let { group ->
+      try {
+        val updatedGroup = group.copy(eventIds = group.eventIds + eventId)
+        groupRepository.editGroup(group.id, updatedGroup)
+      } catch (e: Exception) {
+        Log.e("CreateEventViewModel", "Error adding event to group", e)
+        setErrorMsg("Event created but failed to add to group: ${e.message}")
+        return false
+      }
+    }
+
+    // Increment owner's eventsJoinedCount since they're automatically added as participant
+    try {
+      val updatedProfile = ownerProfile.copy(eventsJoinedCount = ownerProfile.eventsJoinedCount + 1)
+      profileRepository.createOrUpdateProfile(updatedProfile)
+    } catch (e: Exception) {
+      // Rollback: delete the event since profile update failed
+      try {
+        repository.deleteEvent(event.eventId)
+      } catch (deleteError: Exception) {
+        Log.e("CreateEventViewModel", "Failed to rollback event creation", deleteError)
+      }
+      setErrorMsg("Failed to update your profile. Cannot create event: ${e.message}")
+      return false
+    }
+
+    clearErrorMsg()
+    return true
   }
 
   fun setLocation(location: String) {
@@ -210,8 +258,31 @@ class CreateEventViewModel(
 
   /** Updates the selected group for the event. Pass null for standalone events. */
   fun setSelectedGroup(groupId: String?) {
-    _uiState.value = _uiState.value.copy(selectedGroupId = groupId)
-    // Re-validate maxParticipants when group selection changes
-    setMaxParticipants(_uiState.value.maxParticipants)
+    val selectedGroup = groupId?.let { id -> _uiState.value.availableGroups.find { it.id == id } }
+
+    if (selectedGroup != null) {
+      // For group events, auto-set type, maxParticipants (set to accommodate group growth),
+      // and visibility
+      _uiState.value =
+          _uiState.value.copy(
+              selectedGroupId = groupId,
+              type = selectedGroup.category.name.uppercase(Locale.ROOT),
+              maxParticipants = DEFAULT_GROUP_EVENT_MAX_PARTICIPANTS.toString(),
+              visibility = EventVisibility.PRIVATE.name,
+              invalidTypeMsg = null,
+              invalidMaxParticipantsMsg = null,
+              invalidVisibilityMsg = null)
+    } else {
+      // For standalone events, clear the fields
+      _uiState.value =
+          _uiState.value.copy(
+              selectedGroupId = null,
+              type = "",
+              maxParticipants = "",
+              visibility = "",
+              invalidTypeMsg = null,
+              invalidMaxParticipantsMsg = null,
+              invalidVisibilityMsg = null)
+    }
   }
 }
