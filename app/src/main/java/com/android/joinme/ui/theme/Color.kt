@@ -115,49 +115,4 @@ val onChatDefaultLight = onPrimaryContainerLight
 val chatDefaultDark = primaryContainerDark
 val onChatDefaultDark = onPrimaryContainerDark
 
-// Chat user colors - 10 distinct colors for different users in chat
-// Light mode versions
-val chatUser1Light = Color(0xFF6E44A0) // Purple
-val onChatUser1Light = Color(0xFFFFFFFF)
-val chatUser2Light = Color(0xFF1976D2) // Blue
-val onChatUser2Light = Color(0xFFFFFFFF)
-val chatUser3Light = Color(0xFF388E3C) // Green
-val onChatUser3Light = Color(0xFFFFFFFF)
-val chatUser4Light = Color(0xFFD84315) // Deep Orange
-val onChatUser4Light = Color(0xFFFFFFFF)
-val chatUser5Light = Color(0xFFC2185B) // Pink
-val onChatUser5Light = Color(0xFFFFFFFF)
-val chatUser6Light = Color(0xFF0097A7) // Cyan
-val onChatUser6Light = Color(0xFFFFFFFF)
-val chatUser7Light = Color(0xFFAFB42B) // Lime
-val onChatUser7Light = Color(0xFF000000)
-val chatUser8Light = Color(0xFF7B1FA2) // Deep Purple
-val onChatUser8Light = Color(0xFFFFFFFF)
-val chatUser9Light = Color(0xFF5D4037) // Brown
-val onChatUser9Light = Color(0xFFFFFFFF)
-val chatUser10Light = Color(0xFF455A64) // Blue Grey
-val onChatUser10Light = Color(0xFFFFFFFF)
-
-// Dark mode versions - lighter/desaturated for better visibility on dark background
-val chatUser1Dark = Color(0xFFB39DDB) // Light Purple
-val onChatUser1Dark = Color(0xFF000000)
-val chatUser2Dark = Color(0xFF90CAF9) // Light Blue
-val onChatUser2Dark = Color(0xFF000000)
-val chatUser3Dark = Color(0xFF81C784) // Light Green
-val onChatUser3Dark = Color(0xFF000000)
-val chatUser4Dark = Color(0xFFFF8A65) // Light Deep Orange
-val onChatUser4Dark = Color(0xFF000000)
-val chatUser5Dark = Color(0xFFF48FB1) // Light Pink
-val onChatUser5Dark = Color(0xFF000000)
-val chatUser6Dark = Color(0xFF80DEEA) // Light Cyan
-val onChatUser6Dark = Color(0xFF000000)
-val chatUser7Dark = Color(0xFFDCE775) // Light Lime
-val onChatUser7Dark = Color(0xFF000000)
-val chatUser8Dark = Color(0xFFCE93D8) // Light Deep Purple
-val onChatUser8Dark = Color(0xFF000000)
-val chatUser9Dark = Color(0xFFBCAAA4) // Light Brown
-val onChatUser9Dark = Color(0xFF000000)
-val chatUser10Dark = Color(0xFFB0BEC5) // Light Blue Grey
-val onChatUser10Dark = Color(0xFF000000)
-
 val TransparentColor = Color.Transparent

@@ -293,7 +293,7 @@ private fun ChatContent(
           } else {
             items(messages, key = { it.id }) { message ->
               // Get user-specific color for this message sender
-              val userColors = MaterialTheme.customColors.getUserColor(message.senderId)
+              val userColors = getUserColor(message.senderId)
               MessageItem(
                   message = message,
                   isCurrentUser = message.senderId == currentUserId,
