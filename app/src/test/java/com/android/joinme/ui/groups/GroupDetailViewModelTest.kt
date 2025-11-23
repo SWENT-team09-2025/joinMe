@@ -127,6 +127,15 @@ class GroupDetailViewModelTest {
       return profiles[uid]
     }
 
+    override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? {
+      if (uids.isEmpty()) return emptyList()
+      return try {
+        uids.map { uid -> getProfile(uid) ?: return null }
+      } catch (e: Exception) {
+        null
+      }
+    }
+
     override suspend fun createOrUpdateProfile(profile: Profile) {
       profiles[profile.uid] = profile
     }

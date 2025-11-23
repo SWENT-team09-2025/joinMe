@@ -59,6 +59,12 @@ class ViewProfileScreenTest {
     override suspend fun deleteProfilePhoto(uid: String) {
       TODO("Not yet implemented")
     }
+
+    override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? {
+      if (uids.isEmpty()) return emptyList()
+      val results = uids.mapNotNull { uid -> stored?.takeIf { it.uid == uid } }
+      return if (results.size == uids.size) results else null
+    }
   }
 
   // Helper function to scroll and assert

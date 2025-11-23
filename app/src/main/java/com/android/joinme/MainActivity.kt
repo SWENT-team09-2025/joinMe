@@ -64,6 +64,14 @@ object HttpClientProvider {
   var client: OkHttpClient = OkHttpClient()
 }
 
+/** Exception message for when a serie ID is null. */
+const val SERIES_ID_NULL = "Serie ID is null"
+
+/** Key for the series ID in the bundle. */
+const val SERIES_ID = "serieId"
+
+/** Key for the event ID in the bundle. */
+const val EVENT_ID = "eventId"
 /**
  * MainActivity is the single activity for the JoinMe application.
  *
@@ -236,17 +244,17 @@ fun JoinMe(
             onGoBack = { navigationActions.goBack() })
       }
       composable(Screen.CreateEventForSerie.route) { navBackStackEntry ->
-        val serieId = navBackStackEntry.arguments?.getString("serieId")
+        val serieId = navBackStackEntry.arguments?.getString(SERIES_ID)
 
         serieId?.let {
           CreateEventForSerieScreen(
               serieId = serieId,
               onDone = { navigationActions.navigateTo(Screen.Overview) },
               onGoBack = { navigationActions.goBack() })
-        } ?: run { Toast.makeText(context, "Serie ID is null", Toast.LENGTH_SHORT).show() }
+        } ?: run { Toast.makeText(context, SERIES_ID_NULL, Toast.LENGTH_SHORT).show() }
       }
       composable(Screen.EditEvent.route) { navBackStackEntry ->
-        val eventId = navBackStackEntry.arguments?.getString("eventId")
+        val eventId = navBackStackEntry.arguments?.getString(EVENT_ID)
 
         eventId?.let {
           EditEventScreen(
@@ -262,8 +270,8 @@ fun JoinMe(
             onGoBack = { navigationActions.goBack() })
       }
       composable(Screen.ShowEventScreen.route) { navBackStackEntry ->
-        val eventId = navBackStackEntry.arguments?.getString("eventId")
-        val serieId = navBackStackEntry.arguments?.getString("serieId")
+        val eventId = navBackStackEntry.arguments?.getString(EVENT_ID)
+        val serieId = navBackStackEntry.arguments?.getString(SERIES_ID)
 
         eventId?.let {
           ShowEventScreen(
@@ -280,7 +288,7 @@ fun JoinMe(
         } ?: run { Toast.makeText(context, "Event UID is null", Toast.LENGTH_SHORT).show() }
       }
       composable(Screen.SerieDetails.route) { navBackStackEntry ->
-        val serieId = navBackStackEntry.arguments?.getString("serieId")
+        val serieId = navBackStackEntry.arguments?.getString(SERIES_ID)
 
         serieId?.let {
           SerieDetailsScreen(
@@ -294,32 +302,32 @@ fun JoinMe(
               },
               onEditSerieClick = { id -> navigationActions.navigateTo(Screen.EditSerie(id)) },
               onQuitSerieSuccess = { navigationActions.goBack() })
-        } ?: run { Toast.makeText(context, "Serie ID is null", Toast.LENGTH_SHORT).show() }
+        } ?: run { Toast.makeText(context, SERIES_ID_NULL, Toast.LENGTH_SHORT).show() }
       }
       composable(Screen.EditSerie.route) { navBackStackEntry ->
-        val serieId = navBackStackEntry.arguments?.getString("serieId")
+        val serieId = navBackStackEntry.arguments?.getString(SERIES_ID)
 
         serieId?.let {
           EditSerieScreen(
               serieId = serieId,
               onGoBack = { navigationActions.goBack() },
               onDone = { navigationActions.navigateTo(Screen.Overview) })
-        } ?: run { Toast.makeText(context, "Serie ID is null", Toast.LENGTH_SHORT).show() }
+        } ?: run { Toast.makeText(context, SERIES_ID_NULL, Toast.LENGTH_SHORT).show() }
       }
       composable(Screen.CreateEventForSerie.route) { navBackStackEntry ->
-        val serieId = navBackStackEntry.arguments?.getString("serieId")
+        val serieId = navBackStackEntry.arguments?.getString(SERIES_ID)
 
         serieId?.let {
           CreateEventForSerieScreen(
               serieId = serieId,
               onDone = { navigationActions.navigateTo(Screen.Overview) },
               onGoBack = { navigationActions.goBack() })
-        } ?: run { Toast.makeText(context, "Serie ID is null", Toast.LENGTH_SHORT).show() }
+        } ?: run { Toast.makeText(context, SERIES_ID_NULL, Toast.LENGTH_SHORT).show() }
       }
 
       composable(Screen.EditEventForSerie.route) { navBackStackEntry ->
-        val serieId = navBackStackEntry.arguments?.getString("serieId")
-        val eventId = navBackStackEntry.arguments?.getString("eventId")
+        val serieId = navBackStackEntry.arguments?.getString(SERIES_ID)
+        val eventId = navBackStackEntry.arguments?.getString(EVENT_ID)
 
         if (serieId != null && eventId != null) {
           EditEventForSerieScreen(
