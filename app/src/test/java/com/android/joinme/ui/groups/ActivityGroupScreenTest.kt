@@ -17,6 +17,7 @@ import com.android.joinme.model.utils.Visibility
 import com.google.firebase.Timestamp
 import java.util.Calendar
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -44,6 +45,14 @@ class ActivityGroupScreenTest {
     eventRepo = FakeActivityGroupEventsRepository()
     serieRepo = FakeActivityGroupSeriesRepository()
   }
+
+  private fun createViewModel(
+      groupRepo: GroupRepository = this.groupRepo,
+      eventRepo: EventsRepository = this.eventRepo,
+      serieRepo: SeriesRepository = this.serieRepo
+  ) =
+      ActivityGroupViewModel(
+          groupRepository = groupRepo, eventsRepository = eventRepo, seriesRepository = serieRepo)
 
   /** Waits for the UI to settle after async operations. */
   private fun waitForContent() {
@@ -91,9 +100,7 @@ class ActivityGroupScreenTest {
 
   @Test
   fun activityGroupScreen_displaysTopBarAndBackButton() {
-    val viewModel =
-        ActivityGroupViewModel(
-            groupRepository = groupRepo, eventsRepository = eventRepo, seriesRepository = serieRepo)
+    val viewModel = createViewModel()
 
     runBlocking { groupRepo.addGroup(Group(id = "1", name = "Test Group")) }
 
@@ -111,10 +118,8 @@ class ActivityGroupScreenTest {
 
   @Test
   fun activityGroupScreen_backButtonTriggersCallback() {
-    val viewModel =
-        ActivityGroupViewModel(
-            groupRepository = groupRepo, eventsRepository = eventRepo, seriesRepository = serieRepo)
     var backClicked = false
+    val viewModel = createViewModel()
 
     runBlocking { groupRepo.addGroup(Group(id = "1", name = "Test Group")) }
 
@@ -129,14 +134,12 @@ class ActivityGroupScreenTest {
 
     composeTestRule.onNodeWithTag(ActivityGroupScreenTestTags.BACK_BUTTON).performClick()
 
-    assert(backClicked)
+    assertTrue(backClicked)
   }
 
   @Test
   fun activityGroupScreen_emptyState_displaysCorrectMessage() {
-    val viewModel =
-        ActivityGroupViewModel(
-            groupRepository = groupRepo, eventsRepository = eventRepo, seriesRepository = serieRepo)
+    val viewModel = createViewModel()
 
     runBlocking { groupRepo.addGroup(Group(id = "1", name = "Empty Group")) }
 
@@ -170,9 +173,7 @@ class ActivityGroupScreenTest {
               serieIds = listOf("serie1")))
     }
 
-    val viewModel =
-        ActivityGroupViewModel(
-            groupRepository = groupRepo, eventsRepository = eventRepo, seriesRepository = serieRepo)
+    val viewModel = createViewModel()
 
     composeTestRule.setContent {
       ActivityGroupScreen(groupId = "1", activityGroupViewModel = viewModel)
@@ -190,16 +191,14 @@ class ActivityGroupScreenTest {
   @Test
   fun activityGroupScreen_eventCardClick_triggersCallback() {
     val event = createTestEvent("event1", "Clickable Event", EventType.SPORTS)
+    var selectedEventId: String? = null
 
     runBlocking {
       eventRepo.addEvent(event)
       groupRepo.addGroup(Group(id = "1", name = "Test Group", eventIds = listOf("event1")))
     }
 
-    val viewModel =
-        ActivityGroupViewModel(
-            groupRepository = groupRepo, eventsRepository = eventRepo, seriesRepository = serieRepo)
-    var selectedEventId: String? = null
+    val viewModel = createViewModel()
 
     composeTestRule.setContent {
       ActivityGroupScreen(
@@ -212,23 +211,21 @@ class ActivityGroupScreenTest {
 
     composeTestRule.onNodeWithText("Clickable Event").performClick()
 
-    assert(selectedEventId != null)
-    assert(selectedEventId == "event1")
+    assertTrue(selectedEventId != null)
+    assertTrue(selectedEventId == "event1")
   }
 
   @Test
   fun activityGroupScreen_serieCardClick_triggersCallback() {
     val serie = createTestSerie("serie1", "Clickable Serie")
+    var selectedSerieId: String? = null
 
     runBlocking {
       serieRepo.addSerie(serie)
       groupRepo.addGroup(Group(id = "1", name = "Test Group", serieIds = listOf("serie1")))
     }
 
-    val viewModel =
-        ActivityGroupViewModel(
-            groupRepository = groupRepo, eventsRepository = eventRepo, seriesRepository = serieRepo)
-    var selectedSerieId: String? = null
+    val viewModel = createViewModel()
 
     composeTestRule.setContent {
       ActivityGroupScreen(
@@ -241,8 +238,8 @@ class ActivityGroupScreenTest {
 
     composeTestRule.onNodeWithText("Clickable Serie").performClick()
 
-    assert(selectedSerieId != null)
-    assert(selectedSerieId == "serie1")
+    assertTrue(selectedSerieId != null)
+    assertTrue(selectedSerieId == "serie1")
   }
 
   @Test
@@ -263,9 +260,7 @@ class ActivityGroupScreenTest {
               serieIds = listOf("serie1")))
     }
 
-    val viewModel =
-        ActivityGroupViewModel(
-            groupRepository = groupRepo, eventsRepository = eventRepo, seriesRepository = serieRepo)
+    val viewModel = createViewModel()
 
     composeTestRule.setContent {
       ActivityGroupScreen(groupId = "1", activityGroupViewModel = viewModel)
@@ -289,10 +284,7 @@ class ActivityGroupScreenTest {
   fun activityGroupScreen_handlesErrorFromRepository() {
     val errorGroupRepo = FakeGroupRepository(shouldThrowError = true)
     val viewModel =
-        ActivityGroupViewModel(
-            groupRepository = errorGroupRepo,
-            eventsRepository = eventRepo,
-            seriesRepository = serieRepo)
+        createViewModel(groupRepo = errorGroupRepo, eventRepo = eventRepo, serieRepo = serieRepo)
 
     composeTestRule.setContent {
       ActivityGroupScreen(groupId = "1", activityGroupViewModel = viewModel)

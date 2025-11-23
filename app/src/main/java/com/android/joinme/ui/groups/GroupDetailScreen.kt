@@ -41,7 +41,7 @@ import com.android.joinme.ui.theme.customColors
  * @param groupId The unique identifier of the group to display.
  * @param viewModel The ViewModel managing the screen state and data.
  * @param onBackClick Callback when the back button is clicked.
- * @param onActivityGroupClick Callback when the "Group Events" button is clicked.
+ * @param onActivityGroupClick Callback when the "Group Activities" button is clicked.
  * @param onMemberClick Callback when a member profile is clicked, receives the member's UID.
  * @param onNavigateToChat Callback invoked when the user wants to navigate to the group chat,
  *   receives chatId and chatTitle.
@@ -185,7 +185,7 @@ private fun GroupContent(
     Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.Padding.large)) {
-      // Row to hold chat FAB and Group Events button
+      // Row to hold chat FAB and Group Activities button
       Row(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small),
@@ -203,7 +203,7 @@ private fun GroupContent(
                   )
                 }
 
-            // Group Events button - now using weight to fill remaining space
+            // Group Activities button - now using weight to fill remaining space
             Button(
                 onClick = onGroupEventsClick,
                 modifier = Modifier.weight(1f).height(Dimens.Button.standardHeight),
