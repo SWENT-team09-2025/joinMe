@@ -907,8 +907,8 @@ class EventsRepositoryFirestoreTest {
 
     every { mockCollection.whereArrayContains("participants", userId) } returns mockQuery
     every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
-    every { mockQuerySnapshot.iterator() } returns mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
-
+    every { mockQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
 
     val now = System.currentTimeMillis()
     val laterDate = Date(now + 3600000) // 1 hour later

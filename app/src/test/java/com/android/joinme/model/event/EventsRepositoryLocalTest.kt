@@ -200,7 +200,7 @@ class EventsRepositoryLocalTest {
       val e1 = sampleEvent.copy(eventId = "1", participants = listOf("user1", "user2"))
       val e2 = sampleEvent.copy(eventId = "2", participants = listOf("user2"))
       val e3 = sampleEvent.copy(eventId = "3", participants = listOf("user1", "user3"))
-        repo.clear()
+      repo.clear()
       repo.addEvent(e1)
       repo.addEvent(e2)
       repo.addEvent(e3)
@@ -233,8 +233,8 @@ class EventsRepositoryLocalTest {
   @Test
   fun getCommonEvents_returnsEmptyListWhenNoCommonEvents() {
     runBlocking {
-      val e1 = sampleEvent.copy(eventId = "1", participants = listOf("user1","user3"))
-      val e2 = sampleEvent.copy(eventId = "2", participants = listOf("user1","user3"))
+      val e1 = sampleEvent.copy(eventId = "1", participants = listOf("user1", "user3"))
+      val e2 = sampleEvent.copy(eventId = "2", participants = listOf("user1", "user3"))
       repo.addEvent(e1)
       repo.addEvent(e2)
 
@@ -248,9 +248,15 @@ class EventsRepositoryLocalTest {
   fun getCommonEvents_sortsByDateAscending() {
     runBlocking {
       val now = System.currentTimeMillis() / 1000
-      val e1 = sampleEvent.copy(eventId = "1", participants = listOf("user1"), date = Timestamp(now + 3600, 0))
-      val e2 = sampleEvent.copy(eventId = "2", participants = listOf("user1"), date = Timestamp(now + 1800, 0))
-      val e3 = sampleEvent.copy(eventId = "3", participants = listOf("user1"), date = Timestamp(now + 7200, 0))
+      val e1 =
+          sampleEvent.copy(
+              eventId = "1", participants = listOf("user1"), date = Timestamp(now + 3600, 0))
+      val e2 =
+          sampleEvent.copy(
+              eventId = "2", participants = listOf("user1"), date = Timestamp(now + 1800, 0))
+      val e3 =
+          sampleEvent.copy(
+              eventId = "3", participants = listOf("user1"), date = Timestamp(now + 7200, 0))
       repo.addEvent(e1)
       repo.addEvent(e2)
       repo.addEvent(e3)

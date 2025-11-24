@@ -562,9 +562,10 @@ class CreateEventForSerieViewModelTest {
           override suspend fun deleteEvent(eventId: String) {}
 
           override suspend fun getEventsByIds(eventIds: List<String>): List<Event> = emptyList()
-            override suspend fun getCommonEvents(userIds: List<String>): List<Event> = emptyList()
 
-            override suspend fun getEvent(eventId: String): Event {
+          override suspend fun getCommonEvents(userIds: List<String>): List<Event> = emptyList()
+
+          override suspend fun getEvent(eventId: String): Event {
             throw NoSuchElementException()
           }
 

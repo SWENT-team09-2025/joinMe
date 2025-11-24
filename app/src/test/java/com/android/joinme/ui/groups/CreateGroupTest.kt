@@ -92,9 +92,7 @@ class CreateGroupScreenTest {
 
     override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
       if (userIds.isEmpty()) return emptyList()
-      return groups.filter { group ->
-        userIds.all { userId -> group.memberIds.contains(userId) }
-      }
+      return groups.filter { group -> userIds.all { userId -> group.memberIds.contains(userId) } }
     }
   }
 

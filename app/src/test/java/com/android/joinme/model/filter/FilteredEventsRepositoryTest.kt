@@ -308,9 +308,9 @@ class FilteredEventsRepositoryTest {
     override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
       if (shouldThrowError) throw Exception("Test error")
       if (userIds.isEmpty()) return emptyList()
-      return eventsToReturn.filter { event ->
-        userIds.all { userId -> event.participants.contains(userId) }
-      }.sortedBy { it.date.toDate().time }
+      return eventsToReturn
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
     }
   }
 

@@ -56,8 +56,7 @@ interface EventsRepository {
   suspend fun getEventsByIds(eventIds: List<String>): List<Event>
 
   /**
-   * Retrieves all events that are common to all specified users (where all users are
-   * participants).
+   * Retrieves all events that are common to all specified users (where all users are participants).
    *
    * @param userIds The list of user IDs to find common events for.
    * @return A list of Event items where all specified users are participants.

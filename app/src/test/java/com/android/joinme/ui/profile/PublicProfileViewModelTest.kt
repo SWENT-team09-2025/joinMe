@@ -257,8 +257,7 @@ class PublicProfileViewModelTest {
 
   @Test
   fun `loadPublicProfile handles exception when fetching profile`() = runTest {
-    coEvery { mockProfileRepository.getProfile(otherUserId) } throws
-        Exception("Network error")
+    coEvery { mockProfileRepository.getProfile(otherUserId) } throws Exception("Network error")
 
     viewModel.loadPublicProfile(otherUserId, currentUserId)
     testDispatcher.scheduler.advanceUntilIdle()
