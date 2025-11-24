@@ -1,5 +1,8 @@
 package com.android.joinme.ui.overview
 
+import com.android.joinme.model.event.EventType
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepository
@@ -60,7 +63,40 @@ class CreateSerieViewModelTest {
     override fun getNewSerieId(): String = "fake-serie-id-1"
   }
 
+  // ---- Simple fake group repo ----
+  private class FakeGroupRepository : GroupRepository {
+    val groups = mutableListOf<Group>()
+    private var idCounter = 1
+
+    override fun getNewGroupId(): String = "group-${idCounter++}"
+
+    override suspend fun getAllGroups(): List<Group> = groups.toList()
+
+    override suspend fun getGroup(groupId: String): Group =
+        groups.find { it.id == groupId } ?: throw NoSuchElementException("Group not found")
+
+    override suspend fun addGroup(group: Group) {
+      groups += group
+    }
+
+    override suspend fun editGroup(groupId: String, newValue: Group) {
+      val index = groups.indexOfFirst { it.id == groupId }
+      if (index != -1) {
+        groups[index] = newValue
+      }
+    }
+
+    override suspend fun deleteGroup(groupId: String, userId: String) {
+      groups.removeIf { it.id == groupId }
+    }
+
+    override suspend fun leaveGroup(groupId: String, userId: String) {}
+
+    override suspend fun joinGroup(groupId: String, userId: String) {}
+  }
+
   private lateinit var repo: FakeSeriesRepository
+  private lateinit var groupRepo: FakeGroupRepository
   private lateinit var vm: CreateSerieViewModel
   private val testDispatcher = StandardTestDispatcher()
 
@@ -79,7 +115,8 @@ class CreateSerieViewModelTest {
     every { mockUser.uid } returns "test-user-id"
 
     repo = FakeSeriesRepository()
-    vm = CreateSerieViewModel(repo)
+    groupRepo = FakeGroupRepository()
+    vm = CreateSerieViewModel(repo, groupRepo)
   }
 
   @After
@@ -466,7 +503,9 @@ class CreateSerieViewModelTest {
     every { mockAuth.currentUser } returns null
 
     val unauthRepo = FakeSeriesRepository()
-    val unauthVm = CreateSerieViewModel(unauthRepo)
+    val unauthGroupRepo = FakeGroupRepository()
+    val unauthVm = CreateSerieViewModel(unauthRepo, unauthGroupRepo)
+    advanceUntilIdle() // Wait for init block to complete
 
     // Fill all fields
     unauthVm.setTitle("Test Serie")
@@ -514,7 +553,9 @@ class CreateSerieViewModelTest {
           override fun getNewSerieId(): String = "fake-id"
         }
 
-    val errorVm = CreateSerieViewModel(errorRepo)
+    val errorGroupRepo = FakeGroupRepository()
+    val errorVm = CreateSerieViewModel(errorRepo, errorGroupRepo)
+    advanceUntilIdle() // Wait for init block to complete
 
     // Fill all fields
     errorVm.setTitle("Error Serie")
@@ -690,5 +731,176 @@ class CreateSerieViewModelTest {
 
     // Serie should NOT be deleted
     assertEquals(1, repo.added.size)
+  }
+
+  // ---------- Group selection tests ----------
+
+  @Test
+  fun groupSelection_loadsGroupsOnInit_autoFillsFieldsForGroup_createsSerieWithGroupId() = runTest {
+    // Setup: Add test groups
+    val sportsGroup =
+        Group(
+            id = "group-1",
+            name = "Basketball Club",
+            category = EventType.SPORTS,
+            description = "Weekly basketball games",
+            ownerId = "test-user-id",
+            memberIds = listOf("test-user-id", "user-2", "user-3"))
+    groupRepo.groups.add(sportsGroup)
+
+    val socialGroup =
+        Group(
+            id = "group-2",
+            name = "Movie Night",
+            category = EventType.SOCIAL,
+            description = "Monthly movie nights",
+            ownerId = "test-user-id",
+            memberIds = listOf("test-user-id", "user-4"))
+    groupRepo.groups.add(socialGroup)
+
+    // Create new ViewModel to trigger init block
+    vm = CreateSerieViewModel(repo, groupRepo)
+    advanceUntilIdle()
+
+    // Verify groups are loaded
+    assertEquals(2, vm.uiState.value.availableGroups.size)
+    assertNull(vm.uiState.value.selectedGroupId)
+
+    // Test 1: Select group auto-fills fields
+    vm.setSelectedGroup("group-1")
+    val stateAfterSelection = vm.uiState.value
+    assertEquals("group-1", stateAfterSelection.selectedGroupId)
+    assertEquals("300", stateAfterSelection.maxParticipants) // Default group max
+    assertEquals("PRIVATE", stateAfterSelection.visibility)
+    assertNull(stateAfterSelection.invalidMaxParticipantsMsg)
+    assertNull(stateAfterSelection.invalidVisibilityMsg)
+
+    // Test 2: Create serie with group
+    vm.setTitle("Basketball Tournament")
+    vm.setDescription("Weekly tournament series")
+    vm.setDate("25/12/2025")
+    vm.setTime("18:00")
+
+    assertTrue(vm.uiState.value.isValid)
+
+    val serieId = vm.createSerie()
+    advanceUntilIdle()
+
+    assertNotNull(serieId)
+    assertEquals(1, repo.added.size)
+
+    // Test 3: Verify serie properties
+    val createdSerie = repo.added.first()
+    assertEquals("group-1", createdSerie.groupId)
+    assertEquals(300, createdSerie.maxParticipants)
+    assertEquals(
+        listOf("test-user-id", "user-2", "user-3"), createdSerie.participants) // Group members
+
+    // Test 4: Verify group's serieIds updated
+    val updatedGroup = groupRepo.groups.find { it.id == "group-1" }
+    assertNotNull(updatedGroup)
+    assertTrue(updatedGroup!!.serieIds.contains(serieId))
+
+    // Test 5: Deselect group clears fields
+    vm.setSelectedGroup(null)
+    val stateAfterDeselection = vm.uiState.value
+    assertNull(stateAfterDeselection.selectedGroupId)
+    assertEquals("", stateAfterDeselection.maxParticipants)
+    assertEquals("", stateAfterDeselection.visibility)
+  }
+
+  @Test
+  fun groupSelection_standaloneSerie_requiresManualFieldsAndNoGroupId() = runTest {
+    // Don't select a group
+    assertNull(vm.uiState.value.selectedGroupId)
+
+    // Fill all fields manually
+    vm.setTitle("Standalone Serie")
+    vm.setDescription("No group required")
+    vm.setDate("25/12/2025")
+    vm.setTime("14:00")
+    vm.setMaxParticipants("15")
+    vm.setVisibility("PUBLIC")
+
+    assertTrue(vm.uiState.value.isValid)
+
+    val serieId = vm.createSerie()
+    advanceUntilIdle()
+
+    assertNotNull(serieId)
+    val serie = repo.added.first()
+    assertNull(serie.groupId) // No group
+    assertEquals(15, serie.maxParticipants)
+    assertEquals(listOf("test-user-id"), serie.participants) // Only owner
+  }
+
+  @Test
+  fun groupSelection_switchingBetweenGroups_updatesFieldsCorrectly() = runTest {
+    val group1 =
+        Group(
+            id = "group-1",
+            name = "Group 1",
+            category = EventType.SPORTS,
+            ownerId = "test-user-id",
+            memberIds = listOf("test-user-id", "user-2"))
+    val group2 =
+        Group(
+            id = "group-2",
+            name = "Group 2",
+            category = EventType.SOCIAL,
+            ownerId = "test-user-id",
+            memberIds = listOf("test-user-id", "user-3", "user-4"))
+    groupRepo.groups.addAll(listOf(group1, group2))
+
+    vm = CreateSerieViewModel(repo, groupRepo)
+    advanceUntilIdle()
+
+    // Select first group
+    vm.setSelectedGroup("group-1")
+    assertEquals("group-1", vm.uiState.value.selectedGroupId)
+    assertEquals("300", vm.uiState.value.maxParticipants)
+
+    // Switch to second group
+    vm.setSelectedGroup("group-2")
+    assertEquals("group-2", vm.uiState.value.selectedGroupId)
+    assertEquals("300", vm.uiState.value.maxParticipants) // Still auto-filled
+
+    // Deselect (go standalone)
+    vm.setSelectedGroup(null)
+    assertNull(vm.uiState.value.selectedGroupId)
+    assertEquals("", vm.uiState.value.maxParticipants) // Cleared
+    assertEquals("", vm.uiState.value.visibility) // Cleared
+  }
+
+  @Test
+  fun groupSelection_groupRepositoryError_handlesGracefully() = runTest {
+    val errorGroupRepo =
+        object : GroupRepository {
+          override fun getNewGroupId(): String = "group-id"
+
+          override suspend fun getAllGroups(): List<Group> {
+            throw RuntimeException("Network error")
+          }
+
+          override suspend fun getGroup(groupId: String): Group {
+            throw NoSuchElementException("Group not found")
+          }
+
+          override suspend fun addGroup(group: Group) {}
+
+          override suspend fun editGroup(groupId: String, newValue: Group) {}
+
+          override suspend fun deleteGroup(groupId: String, userId: String) {}
+
+          override suspend fun leaveGroup(groupId: String, userId: String) {}
+
+          override suspend fun joinGroup(groupId: String, userId: String) {}
+        }
+
+    val errorVm = CreateSerieViewModel(repo, errorGroupRepo)
+    advanceUntilIdle()
+
+    // Groups should be empty due to error (logged but not thrown)
+    assertTrue(errorVm.uiState.value.availableGroups.isEmpty())
   }
 }

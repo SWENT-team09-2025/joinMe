@@ -79,7 +79,8 @@ data class CreateSerieUIState(
           description.isNotBlank() &&
           date.isNotBlank() &&
           time.isNotBlank() &&
-          (selectedGroup || maxParticipants.isNotBlank()) && // maxParticipants required only if no group
+          (selectedGroup ||
+              maxParticipants.isNotBlank()) && // maxParticipants required only if no group
           (selectedGroup || visibility.isNotBlank()) // visibility required only if no group
     }
 }
@@ -223,7 +224,8 @@ class CreateSerieViewModel(
             maxParticipants = state.maxParticipants.toInt(),
             visibility = Visibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
             eventIds = emptyList(),
-            ownerId = currentUserId)
+            ownerId = currentUserId,
+            groupId = state.selectedGroupId)
 
     return try {
       repository.addSerie(serie)
