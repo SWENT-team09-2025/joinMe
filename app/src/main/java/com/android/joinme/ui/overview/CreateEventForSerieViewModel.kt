@@ -6,6 +6,8 @@ import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
+import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.map.LocationRepository
 import com.android.joinme.model.map.NominatimLocationRepository
 import com.android.joinme.model.serie.Serie
@@ -46,6 +48,7 @@ class CreateEventForSerieViewModel(
     private val eventRepository: EventsRepository =
         EventsRepositoryProvider.getRepository(isOnline = true),
     private val serieRepository: SeriesRepository = SeriesRepositoryProvider.repository,
+    private val groupRepository: GroupRepository = GroupRepositoryProvider.repository,
     locationRepository: LocationRepository = NominatimLocationRepository(HttpClientProvider.client)
 ) : BaseEventForSerieViewModel(locationRepository) {
 
@@ -88,6 +91,9 @@ class CreateEventForSerieViewModel(
       // Load the serie
       val serie = serieRepository.getSerie(serieId)
 
+      // Determine the event type by finding the group this serie belongs to
+      val eventType = determineEventType(serieId)
+
       // Calculate the event date based on the serie's existing events
       val eventDate = calculateEventDate(serie)
 
@@ -96,7 +102,7 @@ class CreateEventForSerieViewModel(
       val event =
           Event(
               eventId = newEventId,
-              type = EventType.valueOf(state.type.uppercase()),
+              type = eventType,
               title = state.title,
               description = state.description,
               location = state.selectedLocation!!,

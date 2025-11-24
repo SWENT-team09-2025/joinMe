@@ -1,5 +1,10 @@
 package com.android.joinme.ui.overview
 
+import android.util.Log
+import androidx.lifecycle.viewModelScope
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
@@ -8,6 +13,7 @@ import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /** Note: This file was written with the help of AI (Claude) */
 
@@ -43,6 +49,8 @@ data class CreateSerieUIState(
     val isLoading: Boolean = false,
     override val errorMsg: String? = null,
     val createdSerieId: String? = null, // Stores the ID of the created serie to prevent duplicates
+    val selectedGroupId: String? = null, // null means standalone serie
+    val availableGroups: List<Group> = emptyList(),
 
     // validation messages
     override val invalidTitleMsg: String? = null,
@@ -58,19 +66,22 @@ data class CreateSerieUIState(
    * @return True if all validation messages are null and all fields are not blank
    */
   val isValid: Boolean
-    get() =
-        invalidTitleMsg == null &&
-            invalidDescriptionMsg == null &&
-            invalidMaxParticipantsMsg == null &&
-            invalidDateMsg == null &&
-            invalidTimeMsg == null &&
-            invalidVisibilityMsg == null &&
-            title.isNotBlank() &&
-            description.isNotBlank() &&
-            maxParticipants.isNotBlank() &&
-            date.isNotBlank() &&
-            time.isNotBlank() &&
-            visibility.isNotBlank()
+    get() {
+      // When a group is selected, maxParticipants and visibility are auto-filled and always valid
+      val selectedGroup = selectedGroupId != null
+      return invalidTitleMsg == null &&
+          invalidDescriptionMsg == null &&
+          invalidMaxParticipantsMsg == null &&
+          invalidDateMsg == null &&
+          invalidTimeMsg == null &&
+          invalidVisibilityMsg == null &&
+          title.isNotBlank() &&
+          description.isNotBlank() &&
+          date.isNotBlank() &&
+          time.isNotBlank() &&
+          (selectedGroup || maxParticipants.isNotBlank()) && // maxParticipants required only if no group
+          (selectedGroup || visibility.isNotBlank()) // visibility required only if no group
+    }
 }
 
 /**
@@ -82,16 +93,62 @@ data class CreateSerieUIState(
  * @property repository The SeriesRepository used for data operations
  */
 class CreateSerieViewModel(
-    private val repository: SeriesRepository = SeriesRepositoryProvider.repository
+    private val repository: SeriesRepository = SeriesRepositoryProvider.repository,
+    private val groupRepository: GroupRepository = GroupRepositoryProvider.repository
 ) : BaseSerieFormViewModel() {
 
   override val _uiState = MutableStateFlow(CreateSerieUIState())
   val uiState: StateFlow<CreateSerieUIState> = _uiState.asStateFlow()
 
+  companion object {
+    private const val DEFAULT_GROUP_SERIE_MAX_PARTICIPANTS = 300
+  }
+
+  init {
+    loadUserGroups()
+  }
+
   override fun getState(): SerieFormUIState = _uiState.value
 
   override fun updateState(transform: (SerieFormUIState) -> SerieFormUIState) {
     _uiState.value = transform(_uiState.value) as CreateSerieUIState
+  }
+
+  /** Loads the list of groups the current user belongs to. */
+  private fun loadUserGroups() {
+    viewModelScope.launch {
+      try {
+        val groups = groupRepository.getAllGroups()
+        _uiState.value = _uiState.value.copy(availableGroups = groups)
+      } catch (e: Exception) {
+        Log.e("CreateSerieViewModel", "Error loading user groups", e)
+      }
+    }
+  }
+
+  /** Updates the selected group for the serie. Pass null for standalone series. */
+  fun setSelectedGroup(groupId: String?) {
+    val selectedGroup = groupId?.let { id -> _uiState.value.availableGroups.find { it.id == id } }
+
+    if (selectedGroup != null) {
+      // For group series, auto-set maxParticipants and visibility
+      _uiState.value =
+          _uiState.value.copy(
+              selectedGroupId = groupId,
+              maxParticipants = DEFAULT_GROUP_SERIE_MAX_PARTICIPANTS.toString(),
+              visibility = Visibility.PRIVATE.name,
+              invalidMaxParticipantsMsg = null,
+              invalidVisibilityMsg = null)
+    } else {
+      // For standalone series, clear the fields
+      _uiState.value =
+          _uiState.value.copy(
+              selectedGroupId = null,
+              maxParticipants = "",
+              visibility = "",
+              invalidMaxParticipantsMsg = null,
+              invalidVisibilityMsg = null)
+    }
   }
 
   /**
@@ -142,6 +199,19 @@ class CreateSerieViewModel(
       return null
     }
 
+    // Get group if selected
+    val selectedGroup =
+        state.selectedGroupId?.let { groupId ->
+          try {
+            groupRepository.getGroup(groupId)
+          } catch (e: Exception) {
+            Log.e("CreateSerieViewModel", "Error getting group", e)
+            setErrorMsg("Failed to get group: ${e.message}")
+            setLoadingState(false)
+            return null
+          }
+        }
+
     val serieId = repository.getNewSerieId()
     val serie =
         Serie(
@@ -149,7 +219,7 @@ class CreateSerieViewModel(
             title = state.title,
             description = state.description,
             date = parsedDate,
-            participants = listOf(currentUserId),
+            participants = selectedGroup?.memberIds ?: listOf(currentUserId),
             maxParticipants = state.maxParticipants.toInt(),
             visibility = Visibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
             eventIds = emptyList(),
@@ -157,6 +227,20 @@ class CreateSerieViewModel(
 
     return try {
       repository.addSerie(serie)
+
+      // If a group is selected, add the serie ID to the group's serie list
+      selectedGroup?.let { group ->
+        try {
+          val updatedGroup = group.copy(serieIds = group.serieIds + serieId)
+          groupRepository.editGroup(group.id, updatedGroup)
+        } catch (e: Exception) {
+          Log.e("CreateSerieViewModel", "Error adding serie to group", e)
+          setErrorMsg("Serie created but failed to add to group: ${e.message}")
+          setLoadingState(false)
+          return null
+        }
+      }
+
       clearErrorMsg()
       setLoadingState(false)
       // Store the created serie ID to prevent duplicates

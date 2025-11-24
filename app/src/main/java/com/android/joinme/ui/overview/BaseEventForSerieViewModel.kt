@@ -1,17 +1,14 @@
 package com.android.joinme.ui.overview
 
 import androidx.lifecycle.ViewModel
-import com.android.joinme.model.event.EventType
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.map.LocationRepository
-import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /** Note: This file was created with the help of IA (Claude) */
 
 /** Base interface for event for serie form UI state. */
 interface EventForSerieFormUIState {
-  val type: String
   val title: String
   val description: String
   val duration: String
@@ -21,7 +18,6 @@ interface EventForSerieFormUIState {
   val selectedLocation: Location?
   val isLoading: Boolean
   val errorMsg: String?
-  val invalidTypeMsg: String?
   val invalidTitleMsg: String?
   val invalidDescriptionMsg: String?
   val invalidDurationMsg: String?
@@ -33,7 +29,6 @@ interface EventForSerieFormUIState {
  *
  * Used by both CreateEventForSerieViewModel and EditEventForSerieViewModel.
  *
- * @property type The event type (SPORTS, ACTIVITY, or SOCIAL)
  * @property title The event title
  * @property description The event description
  * @property duration The event duration in minutes as a string
@@ -43,14 +38,12 @@ interface EventForSerieFormUIState {
  * @property selectedLocation The selected Location object
  * @property isLoading Indicates whether the event is currently being saved
  * @property errorMsg Global error message for the form
- * @property invalidTypeMsg Validation message for the type field
  * @property invalidTitleMsg Validation message for the title field
  * @property invalidDescriptionMsg Validation message for the description field
  * @property invalidDurationMsg Validation message for the duration field
  * @property invalidLocationMsg Validation message for the location field
  */
 data class EventForSerieFormState(
-    override val type: String = "",
     override val title: String = "",
     override val description: String = "",
     override val duration: String = "",
@@ -62,7 +55,6 @@ data class EventForSerieFormState(
     override val errorMsg: String? = null,
 
     // validation messages
-    override val invalidTypeMsg: String? = null,
     override val invalidTitleMsg: String? = null,
     override val invalidDescriptionMsg: String? = null,
     override val invalidDurationMsg: String? = null,
@@ -75,12 +67,10 @@ data class EventForSerieFormState(
    */
   val isValid: Boolean
     get() =
-        invalidTypeMsg == null &&
-            invalidTitleMsg == null &&
+        invalidTitleMsg == null &&
             invalidDescriptionMsg == null &&
             invalidDurationMsg == null &&
             invalidLocationMsg == null &&
-            type.isNotBlank() &&
             title.isNotBlank() &&
             description.isNotBlank() &&
             duration.isNotBlank() &&
@@ -122,26 +112,6 @@ abstract class BaseEventForSerieViewModel(protected val locationRepository: Loca
     updateState { state ->
       when (state) {
         is EventForSerieFormState -> state.copy(errorMsg = msg)
-        else -> state
-      }
-    }
-  }
-
-  /**
-   * Updates the event type and validates it.
-   *
-   * @param type The new type value (SPORTS, ACTIVITY, or SOCIAL)
-   */
-  fun setType(type: String) {
-    val validTypes = EventType.values().map { it.name.uppercase(Locale.ROOT) }
-    val invalidMsg =
-        if (type.isBlank()) "Event type cannot be empty"
-        else if (type.uppercase(Locale.ROOT) !in validTypes)
-            "Type must be one of: SPORTS, ACTIVITY, SOCIAL, etc."
-        else null
-    updateState { state ->
-      when (state) {
-        is EventForSerieFormState -> state.copy(type = type, invalidTypeMsg = invalidMsg)
         else -> state
       }
     }
