@@ -31,6 +31,18 @@ class MainActivityNavigationTest {
 
   @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
+  /**
+   * Waits until a node with the given test tag exists in the composition.
+   *
+   * @param tag The test tag to wait for
+   * @param timeoutMillis Maximum time to wait in milliseconds (default 10 seconds)
+   */
+  private fun waitUntilExists(tag: String, timeoutMillis: Long = 10000) {
+    composeTestRule.waitUntil(timeoutMillis) {
+      composeTestRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+    }
+  }
+
   private fun createTestEvent(id: String, title: String, ownerId: String = "test-user-id"): Event {
     // Create event with future date to ensure it appears in upcoming items
     val futureDate = Date(System.currentTimeMillis() + 3600000) // 1 hour from now
@@ -803,6 +815,9 @@ class MainActivityNavigationTest {
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
 
+    // Wait for Edit Serie button to be rendered
+    waitUntilExists(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON)
+
     // Verify Edit Serie button exists (should be visible since user is owner)
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON).assertExists()
 
@@ -831,6 +846,9 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
+
+    // Wait for Edit Serie button to be rendered
+    waitUntilExists(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON)
 
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON).performClick()
     composeTestRule.waitForIdle()
@@ -863,6 +881,9 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
+
+    // Wait for Edit Serie button to be rendered
+    waitUntilExists(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON)
 
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON).performClick()
     composeTestRule.waitForIdle()
@@ -913,6 +934,9 @@ class MainActivityNavigationTest {
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
 
+    // Wait for Add Event button to be rendered
+    waitUntilExists(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT)
+
     // Verify Add Event button exists (should be visible since user is owner)
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT).assertExists()
 
@@ -946,6 +970,9 @@ class MainActivityNavigationTest {
     // Wait for buttons to appear
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
+
+    // Wait for Add Event button to be rendered
+    waitUntilExists(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT)
 
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT).performClick()
     composeTestRule.waitForIdle()
@@ -1098,6 +1125,9 @@ class MainActivityNavigationTest {
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.SCREEN).assertExists()
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_TITLE).assertExists()
 
+    // Wait for Edit button to be rendered
+    waitUntilExists(ShowEventScreenTestTags.EDIT_BUTTON)
+
     // Click Edit button (should trigger onEditEventForSerie callback since serieId is present)
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EDIT_BUTTON).performClick()
     composeTestRule.waitForIdle()
@@ -1218,6 +1248,9 @@ class MainActivityNavigationTest {
     // Verify we're on ShowEvent screen
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.SCREEN).assertExists()
 
+    // Wait for Chat FAB to be rendered
+    waitUntilExists(ShowEventScreenTestTags.CHAT_FAB)
+
     // Verify Chat FAB is visible (user is owner)
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.CHAT_FAB).assertExists()
   }
@@ -1269,6 +1302,9 @@ class MainActivityNavigationTest {
 
     // Verify we're on ShowEvent screen
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.SCREEN).assertExists()
+
+    // Wait for Chat FAB to be rendered
+    waitUntilExists(ShowEventScreenTestTags.CHAT_FAB)
 
     // Click Chat FAB
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.CHAT_FAB).performClick()
