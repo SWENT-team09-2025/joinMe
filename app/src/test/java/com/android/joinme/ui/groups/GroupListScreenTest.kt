@@ -78,6 +78,13 @@ private class FakeGroupRepository : GroupRepository {
     if (group.memberIds.contains(userId)) throw Exception("User is already a member of this group")
     editGroup(groupId, group.copy(memberIds = group.memberIds + userId))
   }
+
+  override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
+    if (userIds.isEmpty()) return emptyList()
+    return groups.filter { group ->
+      userIds.all { userId -> group.memberIds.contains(userId) }
+    }
+  }
 }
 
 @RunWith(RobolectricTestRunner::class)

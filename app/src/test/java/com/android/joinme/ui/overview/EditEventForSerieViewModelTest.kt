@@ -91,6 +91,14 @@ class EditEventForSerieViewModelTest {
             return it.values.toList().sortedBy { event -> event.date.toDate().time }
           }
     }
+
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+      if (shouldThrowError) throw RuntimeException("Network error")
+      if (userIds.isEmpty()) return emptyList()
+      return events.values
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
+    }
   }
 
   private class FakeSeriesRepository : SeriesRepository {
