@@ -158,4 +158,70 @@ class EventTest {
     assertFalse(standaloneEvent.partOfASerie)
     assertTrue(serieEvent.partOfASerie)
   }
+
+  @Test
+  fun `groupId property works correctly for all cases`() {
+    // Default to null
+    assertEquals(null, sampleEvent.groupId)
+
+    // Can be set via copy
+    val groupEvent = sampleEvent.copy(groupId = "group123")
+    assertEquals("group123", groupEvent.groupId)
+
+    // Standalone event with null groupId
+    val standaloneEvent =
+        Event(
+            eventId = "456",
+            type = EventType.SOCIAL,
+            title = "Bar Night",
+            description = "Casual bar outing",
+            location = sampleLocation,
+            date = sampleTimestamp,
+            duration = 120,
+            participants = listOf("Charlie", "Dave"),
+            maxParticipants = 15,
+            visibility = EventVisibility.PRIVATE,
+            ownerId = "owner456",
+            partOfASerie = false,
+            groupId = null)
+
+    // Event with explicit groupId
+    val explicitGroupEvent =
+        Event(
+            eventId = "789",
+            type = EventType.ACTIVITY,
+            title = "Group Bowling",
+            description = "Group bowling session",
+            location = sampleLocation,
+            date = sampleTimestamp,
+            duration = 90,
+            participants = listOf("Eve", "Frank"),
+            maxParticipants = 8,
+            visibility = EventVisibility.PRIVATE,
+            ownerId = "owner789",
+            partOfASerie = false,
+            groupId = "group456")
+
+    // Event belonging to both serie and group
+    val serieGroupEvent =
+        Event(
+            eventId = "999",
+            type = EventType.SPORTS,
+            title = "Team Training",
+            description = "Weekly training session",
+            location = sampleLocation,
+            date = sampleTimestamp,
+            duration = 120,
+            participants = listOf("Alice", "Bob", "Charlie"),
+            maxParticipants = 20,
+            visibility = EventVisibility.PRIVATE,
+            ownerId = "owner999",
+            partOfASerie = true,
+            groupId = "group789")
+
+    assertEquals(null, standaloneEvent.groupId)
+    assertEquals("group456", explicitGroupEvent.groupId)
+    assertTrue(serieGroupEvent.partOfASerie)
+    assertEquals("group789", serieGroupEvent.groupId)
+  }
 }

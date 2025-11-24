@@ -4,16 +4,18 @@ package com.android.joinme.ui.chat
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import com.android.joinme.model.chat.ChatRepository
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
+import com.android.joinme.model.profile.Profile
+import com.android.joinme.model.profile.ProfileRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before
@@ -33,12 +35,14 @@ class ChatScreenTest {
   @get:Rule val composeTestRule = createComposeRule()
 
   private lateinit var fakeChatRepository: FakeChatRepository
+  private lateinit var fakeProfileRepository: FakeProfileRepository
   private lateinit var viewModel: ChatViewModel
 
   @Before
   fun setup() {
     fakeChatRepository = FakeChatRepository()
-    viewModel = ChatViewModel(fakeChatRepository)
+    fakeProfileRepository = FakeProfileRepository()
+    viewModel = ChatViewModel(fakeChatRepository, fakeProfileRepository)
   }
 
   // ============================================================================
@@ -88,7 +92,9 @@ class ChatScreenTest {
     composeTestRule.onNodeWithText("Basketball Game").assertIsDisplayed()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_LIST).assertExists()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_INPUT).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).assertIsDisplayed()
+    // Mic button is shown when text field is empty (send button appears when typing)
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.MIC_BUTTON).assertIsDisplayed()
   }
 
   // ============================================================================
@@ -154,14 +160,17 @@ class ChatScreenTest {
   // ============================================================================
 
   @Test
-  fun messageInput_sendButtonEnabledState() {
+  fun messageInput_sendButtonAppearsAndIsEnabled_whenTextEntered() {
     setupChatScreen()
 
-    // Button is disabled when input is empty
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsNotEnabled()
+    // Initially mic button is shown, not send button
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.MIC_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertDoesNotExist()
 
-    // Button is enabled when input has text
+    // When input has text, send button appears and is enabled
     composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_INPUT).performTextInput("Hello!")
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsDisplayed()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsEnabled()
   }
 
@@ -221,8 +230,159 @@ class ChatScreenTest {
   }
 
   // ============================================================================
+  // Attachment Button Tests
+  // ============================================================================
+
+  @Test
+  fun attachmentButton_opensAttachmentMenu_whenClicked() {
+    setupChatScreen()
+
+    // Menu should not be visible initially
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertDoesNotExist()
+
+    // Click attachment button
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Menu should now be visible
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertIsDisplayed()
+  }
+
+  // ============================================================================
+  // Mic/Send Button Toggle Tests
+  // ============================================================================
+
+  @Test
+  fun buttonToggle_switchesBetweenMicAndSend_basedOnTextInput() {
+    setupChatScreen()
+
+    // Initially mic button is shown when text is empty
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.MIC_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertDoesNotExist()
+
+    // Type some text - should switch to send button
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_INPUT).performTextInput("Hello")
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.MIC_BUTTON).assertDoesNotExist()
+
+    // Clear the text - should switch back to mic button
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_INPUT).performTextClearance()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.MIC_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertDoesNotExist()
+  }
+
+  // ============================================================================
+  // Attachment Menu Tests
+  // ============================================================================
+
+  @Test
+  fun attachmentMenu_displaysOptionsWithLabels() {
+    setupChatScreen()
+
+    // Open the attachment menu
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify all options are displayed with their labels
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_GALLERY).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Gallery").assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_LOCATION).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Location").assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_POLL).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Poll").assertIsDisplayed()
+  }
+
+  @Test
+  fun attachmentMenu_optionsCloseMenu_whenClicked() {
+    setupChatScreen()
+
+    // Test Gallery option closes menu
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_GALLERY).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertDoesNotExist()
+
+    // Test Location option closes menu
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_LOCATION).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertDoesNotExist()
+
+    // Test Poll option closes menu
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_POLL).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertDoesNotExist()
+  }
+
+  @Test
+  fun attachmentMenu_canBeReopened_afterClosing() {
+    setupChatScreen()
+
+    // Open the attachment menu
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertIsDisplayed()
+
+    // Close by clicking an option
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_GALLERY).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertDoesNotExist()
+
+    // Reopen the menu
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Menu should be visible again
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertIsDisplayed()
+  }
+
+  @Test
+  fun sendMessage_clearsInputAndShowsMicButton() {
+    setupChatScreen()
+
+    // Type a message
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_INPUT).performTextInput("Test message")
+    composeTestRule.waitForIdle()
+
+    // Verify send button is shown
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsDisplayed()
+
+    // Send the message
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Input should be cleared and mic button should reappear
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.MIC_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertDoesNotExist()
+  }
+
+  // ============================================================================
   // Fake Repository for Testing
   // ============================================================================
+
+  private class FakeProfileRepository : ProfileRepository {
+    override suspend fun getProfile(uid: String): Profile? = null
+
+    override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? = emptyList()
+
+    override suspend fun createOrUpdateProfile(profile: Profile) {}
+
+    override suspend fun deleteProfile(uid: String) {}
+
+    override suspend fun uploadProfilePhoto(
+        context: android.content.Context,
+        uid: String,
+        imageUri: android.net.Uri
+    ): String = ""
+
+    override suspend fun deleteProfilePhoto(uid: String) {}
+  }
 
   private class FakeChatRepository : ChatRepository {
     private val messagesFlow = MutableStateFlow<List<Message>>(emptyList())
