@@ -193,7 +193,6 @@ fun ChatScreen(
           ChatContent(
               messages = uiState.messages,
               currentUserId = currentUserId,
-              currentUserName = currentUserName,
               senderProfiles = uiState.senderProfiles,
               onSendMessage = { content -> viewModel.sendMessage(content, currentUserName) },
               paddingValues = paddingValues,
@@ -259,7 +258,6 @@ private fun ChatTopBar(
  *
  * @param messages The list of messages to display
  * @param currentUserId The ID of the current user
- * @param currentUserName The display name of the current user
  * @param senderProfiles A map of sender IDs to their Profile objects containing photo URLs
  * @param onSendMessage Callback invoked when sending a new message
  * @param paddingValues Padding from the Scaffold
@@ -270,7 +268,6 @@ private fun ChatTopBar(
 private fun ChatContent(
     messages: List<Message>,
     currentUserId: String,
-    currentUserName: String,
     senderProfiles: Map<String, com.android.joinme.model.profile.Profile>,
     onSendMessage: (String) -> Unit,
     paddingValues: PaddingValues,
