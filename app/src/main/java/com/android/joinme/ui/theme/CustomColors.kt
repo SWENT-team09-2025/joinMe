@@ -286,3 +286,57 @@ fun CustomColors.outlinedTextField(): TextFieldColors {
       disabledLeadingIconColor = outlinedTextFieldDisabledLeadingIconColor,
       disabledTrailingIconColor = outlinedTextFieldDisabledTrailingIconColor)
 }
+
+/**
+ * Generates a consistent color pair for a user based on their user ID.
+ *
+ * Uses the user ID hash to deterministically generate a unique color for each user The same user ID
+ * will always get the same color. Automatically adapts for light/dark mode with appropriate
+ * saturation and lightness.
+ *
+ * @param userId The unique identifier of the user
+ * @param isDark Whether dark mode is enabled
+ * @return A Pair of (background color, text color) for the user's message bubbles
+ */
+fun getUserColor(userId: String, isDark: Boolean): Pair<Color, Color> {
+  // Use hash code to generate a hue value (0-360 degrees)
+  val hash = userId.hashCode()
+  val hue = kotlin.math.abs(hash) % 360
+
+  // Dark mode: lighter, pastel colors with black text for visibility on dark background
+  // Light mode: darker, saturated colors with white text for visibility on light background
+  val saturation = if (isDark) 0.45f else 0.65f
+  val lightness = if (isDark) 0.75f else 0.50f
+
+  val backgroundColor = Color.hsl(hue.toFloat(), saturation, lightness)
+  val textColor = if (isDark) Color.Black else Color.White
+
+  return backgroundColor to textColor
+}
+
+/**
+ * Returns a consistent color pair for a user based on their user ID.
+ *
+ * This is a convenience Composable extension that automatically detects dark mode.
+ *
+ * @param userId The unique identifier of the user
+ * @return A Pair of (background color, text color) for the user's message bubbles
+ */
+@Composable
+@ReadOnlyComposable
+fun getUserColor(userId: String): Pair<Color, Color> {
+  val isDark = !MaterialTheme.colorScheme.isLight()
+  return getUserColor(userId, isDark)
+}
+
+/** Helper to determine if a color scheme is in light mode */
+private fun androidx.compose.material3.ColorScheme.isLight(): Boolean {
+  // In light mode, background is light (high luminance)
+  // In dark mode, background is dark (low luminance)
+  return this.background.luminance() > 0.5f
+}
+
+/** Calculate relative luminance of a color */
+private fun Color.luminance(): Float {
+  return (0.299f * red + 0.587f * green + 0.114f * blue)
+}
