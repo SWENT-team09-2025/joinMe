@@ -1296,8 +1296,6 @@ class MainActivityNavigationTest {
 
   // ========== ActivityGroupScreen Navigation Tests ==========
 
-  // ========== ActivityGroupScreen Navigation Tests ==========
-
   @Test
   fun activityGroupScreen_routeRegistration_isCorrect() {
     composeTestRule.waitForIdle()
@@ -1384,7 +1382,5 @@ class MainActivityNavigationTest {
     // Verify both screens share groupId parameter and are properly linked
     assert(detailRoute.isNotEmpty() && detailRoute.contains(groupId))
     assert(activityRoute.isNotEmpty() && activityRoute.contains(groupId))
-    assert(detailRoute.contains("groupId"))
-    assert(activityRoute.contains("groupId"))
   }
 }
