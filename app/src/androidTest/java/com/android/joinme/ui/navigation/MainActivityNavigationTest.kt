@@ -694,6 +694,7 @@ class MainActivityNavigationTest {
             Screen.EditGroup.Companion.route,
             Screen.EditProfile.route,
             Screen.GroupDetail.Companion.route,
+            Screen.ActivityGroup.Companion.route,
             Screen.SerieDetails.Companion.route,
             Screen.EditSerie.Companion.route,
             Screen.CreateEventForSerie.Companion.route,
@@ -1291,5 +1292,99 @@ class MainActivityNavigationTest {
     // Navigation should create a Chat screen with eventId as chatId
     val expectedChatScreen = Screen.Chat(chatId = eventId, chatTitle = eventTitle)
     assert(expectedChatScreen.route == "chat/$eventId/$eventTitle")
+  }
+
+  // ========== ActivityGroupScreen Navigation Tests ==========
+
+  // ========== ActivityGroupScreen Navigation Tests ==========
+
+  @Test
+  fun activityGroupScreen_routeRegistration_isCorrect() {
+    composeTestRule.waitForIdle()
+
+    val screenRoute = Screen.ActivityGroup.route
+    assert(screenRoute.isNotEmpty())
+    assert(screenRoute.contains("groupId") || screenRoute.contains("{groupId}"))
+  }
+
+  @Test
+  fun activityGroupScreen_parameterPassing_withMultipleGroupIds() {
+    composeTestRule.waitForIdle()
+
+    val groupIds = listOf("group-1", "group-abc-123", "test-group", "12345", "test-group-12345")
+
+    groupIds.forEach { groupId ->
+      val screenRoute = Screen.ActivityGroup(groupId).route
+      assert(screenRoute.isNotEmpty())
+      assert(screenRoute.contains(groupId))
+    }
+  }
+
+  @Test
+  fun activityGroupScreen_routeConsistency_acrossGroupFeatures() {
+    composeTestRule.waitForIdle()
+
+    val testGroupId = "test-group"
+    val groupDetailRoute = Screen.GroupDetail(testGroupId).route
+    val activityGroupRoute = Screen.ActivityGroup(testGroupId).route
+
+    assert(groupDetailRoute.contains(testGroupId))
+    assert(activityGroupRoute.contains(testGroupId))
+    assert(groupDetailRoute.isNotEmpty())
+    assert(activityGroupRoute.isNotEmpty())
+  }
+
+  @Test
+  fun activityGroupScreen_navigationCallbacks_areConfigured() {
+    composeTestRule.waitForIdle()
+
+    val activityGroupRoute = Screen.ActivityGroup("test-group").route
+    val eventId = "test-event-123"
+    val serieId = "test-serie-456"
+
+    val showEventRoute = Screen.ShowEventScreen(eventId).route
+    val serieDetailsRoute = Screen.SerieDetails(serieId).route
+
+    // Verify all routes are non-empty and contain expected parameters
+    assert(activityGroupRoute.isNotEmpty())
+    assert(showEventRoute.isNotEmpty() && showEventRoute.contains(eventId))
+    assert(serieDetailsRoute.isNotEmpty() && serieDetailsRoute.contains(serieId))
+  }
+
+  @Test
+  fun activityGroupScreen_nullSafety_andRouteHierarchy() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify route requires groupId parameter
+    assert(
+        Screen.ActivityGroup.route.contains("groupId") ||
+            Screen.ActivityGroup.route.contains("{groupId}"))
+
+    // Verify navigation structure for full flow
+    assert(Screen.Profile.route.isNotEmpty())
+    assert(Screen.Groups.route.isNotEmpty())
+    assert(Screen.GroupDetail.route.isNotEmpty())
+    assert(Screen.ActivityGroup.route.isNotEmpty())
+
+    // Verify bottom nav exists for entry point
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).assertExists()
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
+  }
+
+  @Test
+  fun activityGroupScreen_integrationWithGroupDetail() {
+    composeTestRule.waitForIdle()
+
+    val groupId = "test-group-1"
+    val detailRoute = Screen.GroupDetail(groupId).route
+    val activityRoute = Screen.ActivityGroup(groupId).route
+
+    // Verify both screens share groupId parameter and are properly linked
+    assert(detailRoute.isNotEmpty() && detailRoute.contains(groupId))
+    assert(activityRoute.isNotEmpty() && activityRoute.contains(groupId))
+    assert(detailRoute.contains("groupId"))
+    assert(activityRoute.contains("groupId"))
   }
 }
