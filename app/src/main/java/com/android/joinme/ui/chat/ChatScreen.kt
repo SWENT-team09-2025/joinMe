@@ -2,6 +2,7 @@ package com.android.joinme.ui.chat
 
 // Implemented with help of Claude AI
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -56,9 +57,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import com.android.joinme.R
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
 import com.android.joinme.ui.profile.ProfilePhotoImage
@@ -245,7 +249,7 @@ private fun ChatTopBar(
                           .testTag(ChatScreenTestTags.LEAVE_BUTTON)) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                        contentDescription = "Leave chat",
+                        contentDescription = stringResource(R.string.leave_chat),
                         tint = onTopBarColor,
                         modifier = Modifier.size(Dimens.IconSize.small))
                   }
@@ -297,7 +301,7 @@ private fun ChatContent(
             item {
               Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "No messages yet. Start the conversation!",
+                    text = stringResource(R.string.empty_chat_message),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -445,7 +449,7 @@ private fun MessageItem(
 private fun UserAvatar(photoUrl: String?, userName: String, modifier: Modifier = Modifier) {
   ProfilePhotoImage(
       photoUrl = photoUrl,
-      contentDescription = "$userName's avatar",
+      contentDescription = stringResource(R.string.user_avatar_description, userName),
       modifier = modifier,
       size = Dimens.IconSize.medium,
       shape = CircleShape,
@@ -477,6 +481,8 @@ private fun MessageInput(
     onSendButtonColor: Color
 ) {
   var showAttachmentMenu by remember { mutableStateOf(false) }
+  val context = LocalContext.current
+  val notImplementedMsg = stringResource(R.string.not_yet_implemented)
 
   Surface(shadowElevation = Dimens.Elevation.small, color = MaterialTheme.colorScheme.surface) {
     Row(
@@ -493,7 +499,7 @@ private fun MessageInput(
                       .testTag(ChatScreenTestTags.ATTACHMENT_BUTTON)) {
                 Icon(
                     imageVector = Icons.Default.AttachFile,
-                    contentDescription = "Add attachment",
+                    contentDescription = stringResource(R.string.add_attachment),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
               }
 
@@ -504,7 +510,7 @@ private fun MessageInput(
               modifier = Modifier.weight(1f).testTag(ChatScreenTestTags.MESSAGE_INPUT),
               placeholder = {
                 Text(
-                    text = "Type your message here...",
+                    text = stringResource(R.string.message_placeholder),
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
               },
               shape = RoundedCornerShape(Dimens.CornerRadius.pill),
@@ -514,8 +520,9 @@ private fun MessageInput(
           // Dynamic send/mic button (right)
           if (text.isEmpty()) {
             // Microphone button (placeholder for future audio recording)
+            // TODO(#364 and #367): Audio recording - Feature coming soon
             IconButton(
-                onClick = { /* TODO(#364 and #367): Audio recording - Feature coming soon */},
+                onClick = { Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show() },
                 modifier =
                     Modifier.size(Dimens.TouchTarget.minimum)
                         .background(
@@ -523,7 +530,7 @@ private fun MessageInput(
                         .testTag(ChatScreenTestTags.MIC_BUTTON)) {
                   Icon(
                       imageVector = Icons.Default.Mic,
-                      contentDescription = "Record audio",
+                      contentDescription = stringResource(R.string.record_audio),
                       tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
           } else {
@@ -536,7 +543,7 @@ private fun MessageInput(
                         .testTag(ChatScreenTestTags.SEND_BUTTON)) {
                   Icon(
                       imageVector = Icons.AutoMirrored.Filled.Send,
-                      contentDescription = "Send message",
+                      contentDescription = stringResource(R.string.send_message),
                       tint = onSendButtonColor)
                 }
           }
@@ -563,6 +570,8 @@ private fun MessageInput(
 @Composable
 private fun AttachmentMenu(onDismiss: () -> Unit) {
   val sheetState = rememberModalBottomSheetState()
+  val context = LocalContext.current
+  val notImplementedMsg = stringResource(R.string.not_yet_implemented)
 
   ModalBottomSheet(
       onDismissRequest = onDismiss,
@@ -574,31 +583,34 @@ private fun AttachmentMenu(onDismiss: () -> Unit) {
           Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
 
             // Gallery option
+            // TODO (#352): Implement image sending
             AttachmentOption(
                 icon = Icons.Default.Image,
-                label = "Gallery",
+                label = stringResource(R.string.gallery),
                 onClick = {
-                  // TODO (#352): Implement image sending
+                  Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show()
                   onDismiss()
                 },
                 modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_GALLERY))
 
             // Location option
+            // TODO (#362): Implement location sharing
             AttachmentOption(
                 icon = Icons.Default.LocationOn,
-                label = "Location",
+                label = stringResource(R.string.location),
                 onClick = {
-                  // TODO (#362): Implement location sharing
+                  Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show()
                   onDismiss()
                 },
                 modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_LOCATION))
 
             // Poll option
+            // TODO (#363): Implement poll creation
             AttachmentOption(
                 icon = Icons.Default.BarChart,
-                label = "Poll",
+                label = stringResource(R.string.poll),
                 onClick = {
-                  // TODO (#363): Implement poll creation
+                  Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show()
                   onDismiss()
                 },
                 modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_POLL))
