@@ -235,7 +235,6 @@ fun JoinMe(
             onSelectedSerie = { navigationActions.navigateTo(Screen.SerieDetails(it.serieId)) },
             onGoToHistory = { navigationActions.navigateTo(Screen.History) },
             navigationActions = navigationActions,
-            credentialManager = credentialManager,
             enableNotificationPermissionRequest = enableNotificationPermissionRequest)
       }
       composable(Screen.CreateEvent.route) {
