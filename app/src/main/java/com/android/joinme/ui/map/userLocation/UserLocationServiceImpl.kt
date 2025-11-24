@@ -74,20 +74,4 @@ class LocationServiceImpl(private val context: Context) : UserLocationService {
       null
     }
   }
-
-  /**
-   * Starts location updates.
-   *
-   * This implementation is currently a no-op since continuous updates are handled directly by
-   * [getUserLocationFlow].
-   */
-  override fun startLocationUpdates() {}
-
-  /**
-   * Stops location updates.
-   *
-   * This implementation is currently a no-op since cleanup is handled automatically when the
-   * [getUserLocationFlow] is closed.
-   */
-  override fun stopLocationUpdates() {}
 }

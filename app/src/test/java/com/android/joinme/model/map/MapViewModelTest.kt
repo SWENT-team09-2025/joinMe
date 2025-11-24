@@ -37,7 +37,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
-import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -138,8 +137,6 @@ class MapViewModelTest {
     val onClearedMethod = viewModel.javaClass.superclass?.getDeclaredMethod("onCleared")
     onClearedMethod?.isAccessible = true
     onClearedMethod?.invoke(viewModel)
-
-    verify(mockLocationService).stopLocationUpdates()
   }
 
   @Test
