@@ -174,7 +174,6 @@ fun ChatScreen(
           ChatContent(
               messages = uiState.messages,
               currentUserId = currentUserId,
-              currentUserName = currentUserName,
               onSendMessage = { content -> viewModel.sendMessage(content, currentUserName) },
               paddingValues = paddingValues,
               chatColor = effectiveChatColor,
@@ -239,7 +238,6 @@ private fun ChatTopBar(
  *
  * @param messages The list of messages to display
  * @param currentUserId The ID of the current user
- * @param currentUserName The display name of the current user
  * @param onSendMessage Callback invoked when sending a new message
  * @param paddingValues Padding from the Scaffold
  * @param chatColor The chat color for message bubbles and send button
@@ -249,7 +247,6 @@ private fun ChatTopBar(
 private fun ChatContent(
     messages: List<Message>,
     currentUserId: String,
-    currentUserName: String,
     onSendMessage: (String) -> Unit,
     paddingValues: PaddingValues,
     chatColor: Color,
