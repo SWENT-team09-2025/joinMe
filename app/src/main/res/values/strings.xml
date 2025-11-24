@@ -3,4 +3,17 @@
     <string name="title_activity_main">JoinMe</string>
     <string name="title_activity_second">SecondActivity</string>
     <string name="default_web_client_id">72336686371-hd2i4tnr0oh60vmkrrebjkkpj8uif129.apps.googleusercontent.com</string>
+
+    <!-- Chat Screen -->
+    <string name="leave_chat">Leave chat</string>
+    <string name="empty_chat_message">No messages yet. Start the conversation!</string>
+    <string name="user_avatar_description">%1$s\'s avatar</string>
+    <string name="add_attachment">Add attachment</string>
+    <string name="message_placeholder">Type your message here…</string>
+    <string name="record_audio">Record audio</string>
+    <string name="send_message">Send message</string>
+    <string name="gallery">Gallery</string>
+    <string name="location">Location</string>
+    <string name="poll">Poll</string>
+    <string name="not_yet_implemented">Not yet implemented</string>
 </resources>

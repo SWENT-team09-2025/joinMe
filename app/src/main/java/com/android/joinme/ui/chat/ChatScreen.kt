@@ -2,8 +2,10 @@ package com.android.joinme.ui.chat
 
 // Implemented with help of Claude AI
 
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,12 +38,18 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -49,6 +57,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -61,11 +70,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import com.android.joinme.R
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
 import com.android.joinme.ui.profile.ProfilePhotoImage
@@ -93,6 +105,12 @@ object ChatScreenTestTags {
   const val MESSAGE_LIST = "messageList"
   const val MESSAGE_INPUT = "messageInput"
   const val SEND_BUTTON = "sendButton"
+  const val MIC_BUTTON = "micButton"
+  const val ATTACHMENT_BUTTON = "attachmentButton"
+  const val ATTACHMENT_MENU = "attachmentMenu"
+  const val ATTACHMENT_GALLERY = "attachmentGallery"
+  const val ATTACHMENT_LOCATION = "attachmentLocation"
+  const val ATTACHMENT_POLL = "attachmentPoll"
   const val LOADING_INDICATOR = "chatLoadingIndicator"
   const val EMPTY_MESSAGE = "emptyMessageText"
 
@@ -250,7 +268,7 @@ private fun ChatTopBar(
                           .testTag(ChatScreenTestTags.LEAVE_BUTTON)) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                        contentDescription = "Leave chat",
+                        contentDescription = stringResource(R.string.leave_chat),
                         tint = onTopBarColor,
                         modifier = Modifier.size(Dimens.IconSize.small))
                   }
@@ -325,7 +343,7 @@ private fun ChatContent(
                         modifier = Modifier.fillParentMaxSize(),
                         contentAlignment = Alignment.Center) {
                           Text(
-                              text = "No messages yet. Start the conversation!",
+                              text = stringResource(R.string.empty_chat_message),
                               style = MaterialTheme.typography.bodyMedium,
                               color = MaterialTheme.colorScheme.onSurfaceVariant,
                               textAlign = TextAlign.Center,
@@ -576,7 +594,7 @@ private fun MessageItem(
 private fun UserAvatar(photoUrl: String?, userName: String, modifier: Modifier = Modifier) {
   ProfilePhotoImage(
       photoUrl = photoUrl,
-      contentDescription = "$userName's avatar",
+      contentDescription = stringResource(R.string.user_avatar_description, userName),
       modifier = modifier,
       size = Dimens.IconSize.medium,
       shape = CircleShape,
@@ -585,7 +603,12 @@ private fun UserAvatar(photoUrl: String?, userName: String, modifier: Modifier =
 }
 
 /**
- * Message input field with send button.
+ * Message input field with attachment button, text field, and dynamic send/mic button.
+ *
+ * Features:
+ * - Attachment button (left): Opens a menu with Gallery, Location, and Poll options
+ * - Text input field (center): For typing messages
+ * - Dynamic button (right): Shows microphone when text is empty, send button when text is present
  *
  * @param text Current input text
  * @param onTextChange Callback when text changes
@@ -593,6 +616,7 @@ private fun UserAvatar(photoUrl: String?, userName: String, modifier: Modifier =
  * @param sendButtonColor The color for the send button background
  * @param onSendButtonColor The color for the send button icon (must provide proper contrast)
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MessageInput(
     text: String,
@@ -601,47 +625,180 @@ private fun MessageInput(
     sendButtonColor: Color,
     onSendButtonColor: Color
 ) {
+  var showAttachmentMenu by remember { mutableStateOf(false) }
+  val context = LocalContext.current
+  val notImplementedMsg = stringResource(R.string.not_yet_implemented)
+
   Surface(shadowElevation = Dimens.Elevation.small, color = MaterialTheme.colorScheme.surface) {
     Row(
         modifier =
             Modifier.fillMaxWidth()
-                .padding(horizontal = Dimens.Padding.medium, vertical = Dimens.Padding.small),
+                .padding(horizontal = Dimens.Padding.small, vertical = Dimens.Padding.small),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
+          // Attachment button (left)
+          IconButton(
+              onClick = { showAttachmentMenu = true },
+              modifier =
+                  Modifier.size(Dimens.TouchTarget.minimum)
+                      .testTag(ChatScreenTestTags.ATTACHMENT_BUTTON)) {
+                Icon(
+                    imageVector = Icons.Default.AttachFile,
+                    contentDescription = stringResource(R.string.add_attachment),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+              }
+
+          // Text input field (center)
           OutlinedTextField(
               value = text,
               onValueChange = onTextChange,
               modifier = Modifier.weight(1f).testTag(ChatScreenTestTags.MESSAGE_INPUT),
               placeholder = {
                 Text(
-                    text = "Type your message here...",
+                    text = stringResource(R.string.message_placeholder),
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
               },
               shape = RoundedCornerShape(Dimens.CornerRadius.pill),
               colors = MaterialTheme.customColors.outlinedTextField(),
               maxLines = 4)
 
-          // Send button
-          IconButton(
-              onClick = onSendClick,
-              enabled = text.isNotBlank(),
-              modifier =
-                  Modifier.size(Dimens.TouchTarget.minimum)
-                      .background(
-                          color =
-                              if (text.isNotBlank()) sendButtonColor
-                              else MaterialTheme.colorScheme.surfaceVariant,
-                          shape = CircleShape)
-                      .testTag(ChatScreenTestTags.SEND_BUTTON)) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Send message button",
-                    tint =
-                        if (text.isNotBlank()) onSendButtonColor
-                        else MaterialTheme.colorScheme.onSurfaceVariant)
-              }
+          // Dynamic send/mic button (right)
+          if (text.isEmpty()) {
+            // Microphone button (placeholder for future audio recording)
+            // TODO(#364 and #367): Audio recording - Feature coming soon
+            IconButton(
+                onClick = { Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show() },
+                modifier =
+                    Modifier.size(Dimens.TouchTarget.minimum)
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant, shape = CircleShape)
+                        .testTag(ChatScreenTestTags.MIC_BUTTON)) {
+                  Icon(
+                      imageVector = Icons.Default.Mic,
+                      contentDescription = stringResource(R.string.record_audio),
+                      tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+          } else {
+            // Send button
+            IconButton(
+                onClick = onSendClick,
+                modifier =
+                    Modifier.size(Dimens.TouchTarget.minimum)
+                        .background(color = sendButtonColor, shape = CircleShape)
+                        .testTag(ChatScreenTestTags.SEND_BUTTON)) {
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Filled.Send,
+                      contentDescription = stringResource(R.string.send_message),
+                      tint = onSendButtonColor)
+                }
+          }
         }
   }
+
+  // Attachment menu bottom sheet
+  if (showAttachmentMenu) {
+    AttachmentMenu(onDismiss = { showAttachmentMenu = false })
+  }
+}
+
+/**
+ * Bottom sheet menu for attachment options.
+ *
+ * Displays three options in a horizontal row:
+ * - Gallery: For sending images (not yet implemented)
+ * - Location: For sharing location (not yet implemented)
+ * - Poll: For creating polls (not yet implemented)
+ *
+ * @param onDismiss Callback when the menu should be dismissed
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AttachmentMenu(onDismiss: () -> Unit) {
+  val sheetState = rememberModalBottomSheetState()
+  val context = LocalContext.current
+  val notImplementedMsg = stringResource(R.string.not_yet_implemented)
+
+  ModalBottomSheet(
+      onDismissRequest = onDismiss,
+      sheetState = sheetState,
+      modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_MENU)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.large)) {
+
+          // Options row - horizontal layout matching Figma
+          Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+
+            // Gallery option
+            // TODO (#352): Implement image sending
+            AttachmentOption(
+                icon = Icons.Default.Image,
+                label = stringResource(R.string.gallery),
+                onClick = {
+                  Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show()
+                  onDismiss()
+                },
+                modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_GALLERY))
+
+            // Location option
+            // TODO (#362): Implement location sharing
+            AttachmentOption(
+                icon = Icons.Default.LocationOn,
+                label = stringResource(R.string.location),
+                onClick = {
+                  Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show()
+                  onDismiss()
+                },
+                modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_LOCATION))
+
+            // Poll option
+            // TODO (#363): Implement poll creation
+            AttachmentOption(
+                icon = Icons.Default.BarChart,
+                label = stringResource(R.string.poll),
+                onClick = {
+                  Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show()
+                  onDismiss()
+                },
+                modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_POLL))
+          }
+
+          Spacer(modifier = Modifier.height(Dimens.Padding.large))
+        }
+      }
+}
+
+/**
+ * Individual attachment option with icon and label.
+ *
+ * @param icon The icon to display
+ * @param label The text label below the icon
+ * @param onClick Callback when the option is clicked
+ * @param modifier Modifier for the component
+ */
+@Composable
+private fun AttachmentOption(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Column(
+      modifier = modifier.clickable(onClick = onClick).padding(Dimens.Padding.medium),
+      horizontalAlignment = Alignment.CenterHorizontally) {
+        // Icon
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(Dimens.IconSize.large))
+
+        Spacer(modifier = Modifier.height(Dimens.Spacing.small))
+
+        // Label
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface)
+      }
 }
 
 /**
