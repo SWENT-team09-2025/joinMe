@@ -52,7 +52,22 @@ class EventsRepositoryLocal : EventsRepository {
     return events.filter { eventIds.contains(it.eventId) }
   }
 
-  /** Clears all events from the repository. Useful for testing. */
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+        if (userIds.isEmpty()) {
+            return emptyList()
+        }
+
+        // The current buggy implementation is likely using .any or some other logic.
+        // Replace it with this .filter using .all
+        return events.filter { event ->
+            // This ensures an event is included ONLY IF it contains ALL of the userIds.
+            userIds.all { userId -> event.participants.contains(userId) }
+        }.sortedBy { it.date }
+    }
+
+
+
+    /** Clears all events from the repository. Useful for testing. */
   fun clear() {
     events.clear()
     counter = 0
