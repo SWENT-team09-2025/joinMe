@@ -2,7 +2,9 @@ package com.android.joinme.ui.chat
 
 // Implemented with help of Claude AI
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,7 +28,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,6 +48,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -47,14 +59,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
 import com.android.joinme.ui.profile.ProfilePhotoImage
 import com.android.joinme.ui.theme.Dimens
+import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
 import com.android.joinme.ui.theme.getUserColor
 import com.android.joinme.ui.theme.outlinedTextField
@@ -128,7 +144,8 @@ fun ChatScreen(
     viewModel: ChatViewModel,
     onBackClick: () -> Unit = {},
     chatColor: Color? = null,
-    onChatColor: Color? = null
+    onChatColor: Color? = null,
+    totalParticipants: Int = 1 // Total number of participants in the event/group
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val snackbarHostState = remember { SnackbarHostState() }
@@ -181,7 +198,9 @@ fun ChatScreen(
               onSendMessage = { content -> viewModel.sendMessage(content, currentUserName) },
               paddingValues = paddingValues,
               chatColor = effectiveChatColor,
-              onChatColor = effectiveOnChatColor)
+              onChatColor = effectiveOnChatColor,
+              viewModel = viewModel,
+              totalParticipants = totalParticipants)
         }
       }
 }
@@ -261,9 +280,16 @@ private fun ChatContent(
     paddingValues: PaddingValues,
     chatColor: Color,
     onChatColor: Color,
+    viewModel: ChatViewModel,
+    totalParticipants: Int
 ) {
   var messageText by remember { mutableStateOf("") }
   val listState = rememberLazyListState()
+  var selectedMessage by remember { mutableStateOf<Message?>(null) }
+  var showEditDialog by remember { mutableStateOf(false) }
+  var showDeleteDialog by remember { mutableStateOf(false) }
+  var showWhoReadDialog by remember { mutableStateOf(false) }
+  val clipboardManager = LocalClipboardManager.current
 
   // Auto-scroll to bottom when new messages arrive
   LaunchedEffect(messages.size) {
@@ -272,51 +298,134 @@ private fun ChatContent(
     }
   }
 
-  Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-    // Messages list
-    LazyColumn(
-        modifier = Modifier.weight(1f).fillMaxWidth().testTag(ChatScreenTestTags.MESSAGE_LIST),
-        state = listState,
-        contentPadding = PaddingValues(Dimens.Padding.medium),
-        verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
-          if (messages.isEmpty()) {
-            item {
-              Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "No messages yet. Start the conversation!",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.testTag(ChatScreenTestTags.EMPTY_MESSAGE))
+  // Mark all messages as read when chat is opened or new messages arrive
+  LaunchedEffect(messages.size) {
+    if (messages.isNotEmpty()) {
+      viewModel.markAllMessagesAsRead()
+    }
+  }
+
+  Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+    Column(
+        modifier =
+            Modifier.fillMaxSize()
+                .then(
+                    if (selectedMessage != null) Modifier.blur(Dimens.Profile.photoBlurRadius * 2)
+                    else Modifier)) {
+          // Messages list
+          LazyColumn(
+              modifier =
+                  Modifier.weight(1f).fillMaxWidth().testTag(ChatScreenTestTags.MESSAGE_LIST),
+              state = listState,
+              contentPadding = PaddingValues(Dimens.Padding.medium),
+              verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
+                if (messages.isEmpty()) {
+                  item {
+                    Box(
+                        modifier = Modifier.fillParentMaxSize(),
+                        contentAlignment = Alignment.Center) {
+                          Text(
+                              text = "No messages yet. Start the conversation!",
+                              style = MaterialTheme.typography.bodyMedium,
+                              color = MaterialTheme.colorScheme.onSurfaceVariant,
+                              textAlign = TextAlign.Center,
+                              modifier = Modifier.testTag(ChatScreenTestTags.EMPTY_MESSAGE))
+                        }
+                  }
+                } else {
+                  items(messages, key = { it.id }) { message ->
+                    // Get user-specific color for this message sender
+                    val userColors = getUserColor(message.senderId)
+                    MessageItem(
+                        message = message,
+                        isCurrentUser = message.senderId == currentUserId,
+                        senderPhotoUrl = senderProfiles[message.senderId]?.photoUrl,
+                        currentUserPhotoUrl = senderProfiles[currentUserId]?.photoUrl,
+                        bubbleColor = userColors.first,
+                        onBubbleColor = userColors.second,
+                        totalUsersInChat = totalParticipants,
+                        onLongPress = { selectedMessage = message })
+                  }
+                }
               }
-            }
-          } else {
-            items(messages, key = { it.id }) { message ->
-              // Get user-specific color for this message sender
-              val userColors = getUserColor(message.senderId)
-              MessageItem(
-                  message = message,
-                  isCurrentUser = message.senderId == currentUserId,
-                  senderPhotoUrl = senderProfiles[message.senderId]?.photoUrl,
-                  currentUserPhotoUrl = senderProfiles[currentUserId]?.photoUrl,
-                  bubbleColor = userColors.first,
-                  onBubbleColor = userColors.second)
-            }
-          }
+
+          // Message input
+          MessageInput(
+              text = messageText,
+              onTextChange = { messageText = it },
+              onSendClick = {
+                if (messageText.isNotBlank()) {
+                  onSendMessage(messageText)
+                  messageText = ""
+                }
+              },
+              sendButtonColor = chatColor,
+              onSendButtonColor = onChatColor)
         }
 
-    // Message input
-    MessageInput(
-        text = messageText,
-        onTextChange = { messageText = it },
-        onSendClick = {
-          if (messageText.isNotBlank()) {
-            onSendMessage(messageText)
-            messageText = ""
-          }
-        },
-        sendButtonColor = chatColor,
-        onSendButtonColor = onChatColor)
+    // Context menu overlay (shown when a message is selected)
+    selectedMessage?.let { message ->
+      MessageContextMenu(
+          message = message,
+          isCurrentUser = message.senderId == currentUserId,
+          onDismiss = { selectedMessage = null },
+          onCopy = {
+            clipboardManager.setText(AnnotatedString(message.content))
+            selectedMessage = null
+          },
+          onEdit = {
+            showEditDialog = true
+            // Keep selectedMessage for the dialog
+          },
+          onDelete = {
+            showDeleteDialog = true
+            // Keep selectedMessage for the dialog
+          },
+          onSeeWhoRead = {
+            showWhoReadDialog = true
+            // Keep selectedMessage for the dialog
+          })
+    }
+
+    // Edit dialog
+    if (showEditDialog && selectedMessage != null) {
+      EditMessageDialog(
+          message = selectedMessage!!,
+          onDismiss = {
+            showEditDialog = false
+            selectedMessage = null
+          },
+          onConfirm = { newContent ->
+            viewModel.editMessage(selectedMessage!!.id, newContent)
+            showEditDialog = false
+            selectedMessage = null
+          })
+    }
+
+    // Delete confirmation dialog
+    if (showDeleteDialog && selectedMessage != null) {
+      DeleteMessageDialog(
+          onDismiss = {
+            showDeleteDialog = false
+            selectedMessage = null
+          },
+          onConfirm = {
+            viewModel.deleteMessage(selectedMessage!!.id)
+            showDeleteDialog = false
+            selectedMessage = null
+          })
+    }
+
+    // Who read dialog
+    if (showWhoReadDialog && selectedMessage != null) {
+      WhoReadDialog(
+          message = selectedMessage!!,
+          senderProfiles = senderProfiles,
+          onDismiss = {
+            showWhoReadDialog = false
+            selectedMessage = null
+          })
+    }
   }
 }
 
@@ -329,7 +438,10 @@ private fun ChatContent(
  * @param currentUserPhotoUrl Photo URL of the current user (for displaying their avatar)
  * @param bubbleColor The color for the message bubble
  * @param onBubbleColor The color for text on the message bubble (must provide proper contrast)
+ * @param totalUsersInChat Total number of users in the chat (for read receipts)
+ * @param onLongPress Callback invoked when the message is long-pressed
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MessageItem(
     message: Message,
@@ -337,7 +449,9 @@ private fun MessageItem(
     senderPhotoUrl: String? = null,
     currentUserPhotoUrl: String? = null,
     bubbleColor: Color,
-    onBubbleColor: Color
+    onBubbleColor: Color,
+    totalUsersInChat: Int = 0,
+    onLongPress: () -> Unit = {}
 ) {
   Row(
       modifier =
@@ -358,7 +472,8 @@ private fun MessageItem(
         Surface(
             modifier =
                 Modifier.widthIn(max = Dimens.Chat.messageBubbleMaxWidth)
-                    .testTag(ChatScreenTestTags.getTestTagForMessageBubble(message.id)),
+                    .testTag(ChatScreenTestTags.getTestTagForMessageBubble(message.id))
+                    .combinedClickable(onClick = {}, onLongClick = onLongPress),
             shape =
                 RoundedCornerShape(
                     topStart = Dimens.CornerRadius.extraLarge,
@@ -396,12 +511,42 @@ private fun MessageItem(
                       style = MaterialTheme.typography.bodyMedium,
                       color = onBubbleColor)
 
-                  // Timestamp
+                  // Timestamp with read receipts and edited indicator
                   Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
-                  Text(
-                      text = formatTimestamp(message.timestamp),
-                      style = MaterialTheme.typography.labelSmall,
-                      color = onBubbleColor.copy(alpha = 0.6f))
+                  Row(
+                      horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.extraSmall),
+                      verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = formatTimestamp(message.timestamp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                        // Show "(edited)" text if message has been edited
+                        if (message.isEdited) {
+                          Text(
+                              text = "edited",
+                              style = MaterialTheme.typography.labelSmall,
+                              color = MaterialTheme.colorScheme.onSurfaceVariant,
+                              fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+                        }
+
+                        // Show read receipts only for current user's messages
+                        if (isCurrentUser && message.type != MessageType.SYSTEM) {
+                          // Calculate if read by all (excluding sender)
+                          val readByOthersCount = message.readBy.count { it != message.senderId }
+                          val otherUsersCount = totalUsersInChat - 1 // Exclude sender
+                          val isReadByAll =
+                              otherUsersCount > 0 && readByOthersCount >= otherUsersCount
+
+                          Icon(
+                              imageVector = Icons.Default.DoneAll,
+                              contentDescription = if (isReadByAll) "Read by all" else "Sent",
+                              modifier = Modifier.size(Dimens.IconSize.small),
+                              tint =
+                                  if (isReadByAll) MaterialTheme.colorScheme.primary
+                                  else MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                      }
                 }
               }
             }
@@ -497,6 +642,203 @@ private fun MessageInput(
               }
         }
   }
+}
+
+/**
+ * Dialog for editing a message.
+ *
+ * @param message The message to edit
+ * @param onDismiss Callback when dialog is dismissed
+ * @param onConfirm Callback when edit is confirmed with new content
+ */
+@Composable
+private fun EditMessageDialog(
+    message: Message,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+  var editedText by remember { mutableStateOf(message.content) }
+
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      title = { Text("Edit Message") },
+      text = {
+        OutlinedTextField(
+            value = editedText,
+            onValueChange = { editedText = it },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Enter new message") },
+            colors = MaterialTheme.customColors.outlinedTextField(),
+            maxLines = 4)
+      },
+      confirmButton = {
+        Button(
+            onClick = { onConfirm(editedText) },
+            enabled = editedText.isNotBlank(),
+            colors = MaterialTheme.customColors.buttonColors()) {
+              Text("Save")
+            }
+      },
+      dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+}
+
+/**
+ * Dialog for confirming message deletion.
+ *
+ * @param onDismiss Callback when dialog is dismissed
+ * @param onConfirm Callback when deletion is confirmed
+ */
+@Composable
+private fun DeleteMessageDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      title = { Text("Delete Message") },
+      text = {
+        Text("Are you sure you want to delete this message? This action cannot be undone.")
+      },
+      confirmButton = {
+        Button(
+            onClick = onConfirm,
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.customColors.deleteButton)) {
+              Text("Delete")
+            }
+      },
+      dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+}
+
+/**
+ * Dialog showing who has read a message.
+ *
+ * @param message The message to show read receipts for
+ * @param senderProfiles Map of user IDs to their profiles
+ * @param onDismiss Callback when dialog is dismissed
+ */
+@Composable
+private fun WhoReadDialog(
+    message: Message,
+    senderProfiles: Map<String, com.android.joinme.model.profile.Profile>,
+    onDismiss: () -> Unit
+) {
+  // Filter out the sender from the readBy list
+  val readByOthers = message.readBy.filter { it != message.senderId }
+
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      title = { Text("Read by") },
+      text = {
+        Column(modifier = Modifier.fillMaxWidth()) {
+          if (readByOthers.isEmpty()) {
+            Text(
+                "No one has read this message yet.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+          } else {
+            readByOthers.forEach { userId ->
+              val profile = senderProfiles[userId]
+              Row(
+                  modifier = Modifier.fillMaxWidth().padding(vertical = Dimens.Padding.extraSmall),
+                  verticalAlignment = Alignment.CenterVertically) {
+                    UserAvatar(
+                        photoUrl = profile?.photoUrl,
+                        userName = profile?.username ?: "Unknown",
+                        modifier = Modifier.size(Dimens.Profile.photoSmall))
+                    Spacer(modifier = Modifier.width(Dimens.Spacing.small))
+                    Text(
+                        text = profile?.username ?: "Unknown User",
+                        style = MaterialTheme.typography.bodyMedium)
+                  }
+            }
+          }
+        }
+      },
+      confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } })
+}
+
+/**
+ * Context menu displayed when a message is long-pressed.
+ *
+ * Shows options based on whether the message belongs to the current user. The menu appears as a
+ * centered overlay with blur effect in the background.
+ *
+ * @param message The selected message
+ * @param isCurrentUser Whether the message belongs to the current user
+ * @param onDismiss Callback to close the menu
+ * @param onCopy Callback to copy message content
+ * @param onEdit Callback to edit the message (only for current user)
+ * @param onDelete Callback to delete the message (only for current user)
+ * @param onSeeWhoRead Callback to see who read the message (only for current user)
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MessageContextMenu(
+    message: Message,
+    isCurrentUser: Boolean,
+    onDismiss: () -> Unit,
+    onCopy: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onSeeWhoRead: () -> Unit
+) {
+  Box(
+      modifier =
+          Modifier.fillMaxSize()
+              .background(MaterialTheme.customColors.scrimOverlay)
+              .combinedClickable(onClick = onDismiss, onLongClick = {}),
+      contentAlignment = Alignment.Center) {
+        Surface(
+            shape = RoundedCornerShape(Dimens.CornerRadius.large),
+            shadowElevation = Dimens.Elevation.large,
+            color = MaterialTheme.colorScheme.surface) {
+              Column(modifier = Modifier.padding(Dimens.Padding.small)) {
+                // Copy option (available for all messages)
+                DropdownMenuItem(
+                    text = { Text("Copy") },
+                    onClick = onCopy,
+                    leadingIcon = {
+                      Icon(
+                          Icons.Default.ContentCopy,
+                          contentDescription = "Copy",
+                          modifier = Modifier.size(Dimens.IconSize.medium))
+                    })
+
+                // Options only for current user's messages
+                if (isCurrentUser) {
+                  DropdownMenuItem(
+                      text = { Text("Edit") },
+                      onClick = onEdit,
+                      leadingIcon = {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            modifier = Modifier.size(Dimens.IconSize.medium))
+                      })
+
+                  DropdownMenuItem(
+                      text = { Text("Delete") },
+                      onClick = onDelete,
+                      leadingIcon = {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.customColors.deleteButton,
+                            modifier = Modifier.size(Dimens.IconSize.medium))
+                      })
+
+                  DropdownMenuItem(
+                      text = { Text("See who read") },
+                      onClick = onSeeWhoRead,
+                      leadingIcon = {
+                        Icon(
+                            Icons.Default.Visibility,
+                            contentDescription = "See who read",
+                            modifier = Modifier.size(Dimens.IconSize.medium))
+                      })
+                }
+              }
+            }
+      }
 }
 
 /**

@@ -55,7 +55,7 @@ fun GroupDetailScreen(
     onBackClick: () -> Unit = {},
     onGroupEventsClick: () -> Unit = {},
     onMemberClick: (String) -> Unit = {},
-    onNavigateToChat: (String, String) -> Unit = { _, _ -> }
+    onNavigateToChat: (String, String, Int) -> Unit = { _, _, _ -> }
 ) {
   LaunchedEffect(groupId) { viewModel.loadGroupDetails(groupId) }
 
@@ -125,7 +125,7 @@ private fun GroupContent(
     membersCount: Int,
     onGroupEventsClick: () -> Unit,
     onMemberClick: (String) -> Unit,
-    onNavigateToChat: (String, String) -> Unit
+    onNavigateToChat: (String, String, Int) -> Unit
 ) {
   Column(modifier = Modifier.fillMaxSize().background(groupCategory.getColor())) {
     Column(modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.large)) {
@@ -193,7 +193,7 @@ private fun GroupContent(
           verticalAlignment = Alignment.CenterVertically) {
             // Chat FAB positioned to the left
             FloatingActionButton(
-                onClick = { onNavigateToChat(groupId, groupName) },
+                onClick = { onNavigateToChat(groupId, groupName, membersCount) },
                 containerColor = groupCategory.getColor(),
                 contentColor = groupCategory.getOnColor(),
                 shape = RoundedCornerShape(Dimens.GroupDetail.eventsButtonCornerRadius),
