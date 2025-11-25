@@ -84,14 +84,4 @@ class GroupRepositoryLocal : GroupRepository {
     // Filter groups where all specified users are members
     return groups.filter { group -> userIds.all { userId -> group.memberIds.contains(userId) } }
   }
-
-  /**
-   * Clears all groups from the repository and resets the counter.
-   *
-   * This method is useful for testing purposes to ensure a clean state between test runs.
-   */
-  fun clear() {
-    groups.clear()
-    counter = 0
-  }
 }
