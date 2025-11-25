@@ -1,5 +1,7 @@
 package com.android.joinme.model.groups.streaks
 
+// Implemented with the help of AI tools, adapted and refactored to follow project pattern.
+
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals

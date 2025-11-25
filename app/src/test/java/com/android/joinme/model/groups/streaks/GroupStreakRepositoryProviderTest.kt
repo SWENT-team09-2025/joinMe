@@ -1,5 +1,7 @@
 package com.android.joinme.model.groups.streaks
 
+// Implemented with the help of AI tools, adapted and refactored to follow project pattern.
+
 import android.content.Context
 import com.google.firebase.FirebaseApp
 import io.mockk.every
