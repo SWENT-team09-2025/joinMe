@@ -1,5 +1,5 @@
 package com.android.joinme.ui.profile
-
+/* This file was implemented with the help of Claude AI */
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

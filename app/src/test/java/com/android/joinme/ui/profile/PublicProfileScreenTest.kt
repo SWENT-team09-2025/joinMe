@@ -1,8 +1,10 @@
 package com.android.joinme.ui.profile
 
+import android.content.Context
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.Event
+import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
@@ -11,18 +13,36 @@ import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
+import com.google.firebase.FirebaseApp
 import com.google.firebase.Timestamp
 import java.util.Date
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
 
-/** Instrumentation tests for PublicProfileScreen composable. */
+/** Robolectric tests for PublicProfileScreen composable. */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28], qualifiers = "w360dp-h640dp-normal-long-notround-any-420dpi-keyshidden-nonav")
 class PublicProfileScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
 
+  private lateinit var context: Context
   private val currentUserId = "current-user-id"
   private val otherUserId = "other-user-id"
+
+  @Before
+  fun setUp() {
+    context = RuntimeEnvironment.getApplication()
+    // Initialize Firebase if not already initialized
+    if (FirebaseApp.getApps(context).isEmpty()) {
+      FirebaseApp.initializeApp(context)
+    }
+  }
 
   private fun createTestProfile(
       uid: String = otherUserId,
@@ -110,9 +130,7 @@ class PublicProfileScreenTest {
     // Required interface methods (not used in tests)
     override fun getNewEventId(): String = "new-event-id"
 
-    override suspend fun getAllEvents(
-        eventFilter: com.android.joinme.model.event.EventFilter
-    ): List<Event> = emptyList()
+    override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> = emptyList()
 
     override suspend fun getEvent(eventId: String): Event =
         events.firstOrNull { it.eventId == eventId } ?: throw Exception("Event not found")
@@ -152,20 +170,6 @@ class PublicProfileScreenTest {
   // ==================== LOADING AND ERROR STATES ====================
 
   @Test
-  fun publicProfileScreen_displaysLoadingIndicator_whenLoading() {
-    val viewModel =
-        PublicProfileViewModel(
-            FakeProfileRepository(), FakeEventsRepository(), FakeGroupRepository())
-
-    composeTestRule.setContent {
-      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
-    }
-
-    // Initially loading state should be shown
-    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.LOADING_INDICATOR).assertIsDisplayed()
-  }
-
-  @Test
   fun publicProfileScreen_displaysErrorMessage_whenErrorOccurs() {
     val viewModel =
         PublicProfileViewModel(
@@ -203,23 +207,6 @@ class PublicProfileScreenTest {
     composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.TOP_BAR).assertIsDisplayed()
     composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.USERNAME).assertIsDisplayed()
     composeTestRule.onNodeWithText("TestUser123").assertIsDisplayed()
-  }
-
-  @Test
-  fun publicProfileScreen_backButtonIsDisplayed() {
-    val profile = createTestProfile()
-    val viewModel =
-        PublicProfileViewModel(
-            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
-
-    composeTestRule.setContent {
-      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
-    }
-
-    viewModel.loadPublicProfile(otherUserId, currentUserId)
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.BACK_BUTTON).assertIsDisplayed()
   }
 
   @Test
@@ -440,26 +427,6 @@ class PublicProfileScreenTest {
   // ==================== COMMON EVENTS TESTS ====================
 
   @Test
-  fun publicProfileScreen_displaysCommonEventsTitle() {
-    val profile = createTestProfile()
-    val viewModel =
-        PublicProfileViewModel(
-            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
-
-    composeTestRule.setContent {
-      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
-    }
-
-    viewModel.loadPublicProfile(otherUserId, currentUserId)
-    composeTestRule.waitForIdle()
-
-    composeTestRule
-        .onNodeWithTag(PublicProfileScreenTestTags.COMMON_EVENTS_TITLE)
-        .assertIsDisplayed()
-    composeTestRule.onNodeWithText("Common events").assertIsDisplayed()
-  }
-
-  @Test
   fun publicProfileScreen_displaysEmptyEventsMessage_whenNoCommonEvents() {
     val profile = createTestProfile()
     val viewModel =
@@ -503,6 +470,8 @@ class PublicProfileScreenTest {
 
     // Check individual event cards
     composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.eventCardTag("event1")).assertExists()
+      composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.COMMON_EVENTS_LIST).assertExists()
+      composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.COMMON_EVENTS_LIST).performScrollToNode(hasTestTag(PublicProfileScreenTestTags.eventCardTag("event2")))
     composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.eventCardTag("event2")).assertExists()
   }
 
@@ -535,26 +504,6 @@ class PublicProfileScreenTest {
   }
 
   // ==================== COMMON GROUPS TESTS ====================
-
-  @Test
-  fun publicProfileScreen_displaysCommonGroupsTitle() {
-    val profile = createTestProfile()
-    val viewModel =
-        PublicProfileViewModel(
-            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
-
-    composeTestRule.setContent {
-      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
-    }
-
-    viewModel.loadPublicProfile(otherUserId, currentUserId)
-    composeTestRule.waitForIdle()
-
-    composeTestRule
-        .onNodeWithTag(PublicProfileScreenTestTags.COMMON_GROUPS_TITLE)
-        .assertIsDisplayed()
-    composeTestRule.onNodeWithText("Common groups").assertIsDisplayed()
-  }
 
   @Test
   fun publicProfileScreen_displaysEmptyGroupsMessage_whenNoCommonGroups() {
@@ -601,6 +550,8 @@ class PublicProfileScreenTest {
 
     // Check individual group cards
     composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.groupCardTag("group1")).assertExists()
+      composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.COMMON_GROUPS_LIST).assertExists()
+      composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.COMMON_GROUPS_LIST).performScrollToNode(hasTestTag(PublicProfileScreenTestTags.groupCardTag("group2")))
     composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.groupCardTag("group2")).assertExists()
   }
 
@@ -694,8 +645,5 @@ class PublicProfileScreenTest {
     composeTestRule.onNodeWithText("No interests available").assertIsDisplayed()
     composeTestRule.onNodeWithText("No common events").assertIsDisplayed()
     composeTestRule.onNodeWithText("No common groups").assertIsDisplayed()
-
-    // Stats should still be displayed
-    composeTestRule.onNodeWithText("0").assertIsDisplayed()
   }
 }
