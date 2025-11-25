@@ -79,11 +79,13 @@ class GroupRepositoryLocal : GroupRepository {
     return groups.filter { group -> userIds.all { userId -> group.memberIds.contains(userId) } }
   }
 
-  /** Clears all groups from the repository. Useful for testing. */
+  /**
+   * Clears all groups from the repository and resets the counter.
+   *
+   * This method is useful for testing purposes to ensure a clean state between test runs.
+   */
   fun clear() {
     groups.clear()
     counter = 0
   }
-  // adding extra space for CI runner to rebuild this file because the cached one is corrupted
-  // TODO: remove it when CI runner is fixed
 }
