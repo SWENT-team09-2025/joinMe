@@ -690,13 +690,14 @@ class NavigationActionsTest {
   fun `navigateTo Chat with chatId and chatTitle navigates to correct route`() {
     val chatId = "test-chat-123"
     val chatTitle = "Test Chat"
+    val totalParticipants = 1
     every { navController.currentDestination?.route } returns Screen.Groups.route
 
-    actions.navigateTo(Screen.Chat(chatId, chatTitle))
+    actions.navigateTo(Screen.Chat(chatId, chatTitle, totalParticipants))
 
     verify {
       navController.navigate(
-          eq("chat/$chatId/$chatTitle"),
+          eq("chat/$chatId/$chatTitle/$totalParticipants"),
           withArg<NavOptionsBuilder.() -> Unit> { block ->
             val options = navOptions(block)
             assertTrue(options.shouldRestoreState())
@@ -708,16 +709,17 @@ class NavigationActionsTest {
 
   @Test
   fun `Chat route companion object matches pattern`() {
-    assertEquals("chat/{chatId}/{chatTitle}", Screen.Chat.Companion.route)
+    assertEquals("chat/{chatId}/{chatTitle}/{totalParticipants}", Screen.Chat.Companion.route)
   }
 
   @Test
   fun chatScreen_hasCorrectRouteAndName() {
     val chatId = "test-chat-789"
     val chatTitle = "My Group Chat"
-    val screen = Screen.Chat(chatId, chatTitle)
+    val totalParticipants = 1
+    val screen = Screen.Chat(chatId, chatTitle, totalParticipants)
 
-    assertEquals("chat/$chatId/$chatTitle", screen.route)
+    assertEquals("chat/$chatId/$chatTitle/$totalParticipants", screen.route)
     assertEquals("Chat", screen.name)
   }
 
@@ -725,13 +727,14 @@ class NavigationActionsTest {
   fun `navigateTo Chat from GroupListScreen works correctly`() {
     val chatId = "group-chat-456"
     val chatTitle = "Team Discussion"
+    val totalParticipants = 1
     every { navController.currentDestination?.route } returns Screen.Groups.route
 
-    actions.navigateTo(Screen.Chat(chatId, chatTitle))
+    actions.navigateTo(Screen.Chat(chatId, chatTitle, totalParticipants))
 
     verify {
       navController.navigate(
-          eq("chat/$chatId/$chatTitle"),
+          eq("chat/$chatId/$chatTitle/$totalParticipants"),
           withArg<NavOptionsBuilder.() -> Unit> { block ->
             val options = navOptions(block)
             assertTrue(options.shouldRestoreState())
@@ -744,12 +747,14 @@ class NavigationActionsTest {
   fun `navigateTo Chat with special characters in chatTitle`() {
     val chatId = "chat-123"
     val chatTitle = "Group Name with Spaces & Symbols!"
+    val totalParticipants = 1
     every { navController.currentDestination?.route } returns Screen.GroupDetail(chatId).route
 
-    actions.navigateTo(Screen.Chat(chatId, chatTitle))
+    actions.navigateTo(Screen.Chat(chatId, chatTitle, totalParticipants))
 
     verify {
-      navController.navigate(eq("chat/$chatId/$chatTitle"), any<NavOptionsBuilder.() -> Unit>())
+      navController.navigate(
+          eq("chat/$chatId/$chatTitle/$totalParticipants"), any<NavOptionsBuilder.() -> Unit>())
     }
   }
 
@@ -759,17 +764,21 @@ class NavigationActionsTest {
 
     val chatId1 = "chat-1"
     val chatTitle1 = "Chat One"
+    val totalParticipants1 = 1
     val chatId2 = "chat-2"
     val chatTitle2 = "Chat Two"
+    val totalParticipants2 = 1
 
-    actions.navigateTo(Screen.Chat(chatId1, chatTitle1))
-    actions.navigateTo(Screen.Chat(chatId2, chatTitle2))
+    actions.navigateTo(Screen.Chat(chatId1, chatTitle1, totalParticipants1))
+    actions.navigateTo(Screen.Chat(chatId2, chatTitle2, totalParticipants2))
 
     verify {
-      navController.navigate(eq("chat/$chatId1/$chatTitle1"), any<NavOptionsBuilder.() -> Unit>())
+      navController.navigate(
+          eq("chat/$chatId1/$chatTitle1/$totalParticipants1"), any<NavOptionsBuilder.() -> Unit>())
     }
     verify {
-      navController.navigate(eq("chat/$chatId2/$chatTitle2"), any<NavOptionsBuilder.() -> Unit>())
+      navController.navigate(
+          eq("chat/$chatId2/$chatTitle2/$totalParticipants2"), any<NavOptionsBuilder.() -> Unit>())
     }
   }
 
@@ -777,14 +786,17 @@ class NavigationActionsTest {
   fun `navigateTo Chat from ShowEventScreen with eventId as chatId works correctly`() {
     val eventId = "event-789"
     val eventTitle = "Basketball Game"
+    val totalParticipants = 1
     every { navController.currentDestination?.route } returns Screen.ShowEventScreen(eventId).route
 
     // When navigating from ShowEvent to Chat, eventId is used as chatId
-    actions.navigateTo(Screen.Chat(chatId = eventId, chatTitle = eventTitle))
+    actions.navigateTo(
+        Screen.Chat(
+            chatId = eventId, chatTitle = eventTitle, totalParticipants = totalParticipants))
 
     verify {
       navController.navigate(
-          eq("chat/$eventId/$eventTitle"),
+          eq("chat/$eventId/$eventTitle/$totalParticipants"),
           withArg<NavOptionsBuilder.() -> Unit> { block ->
             val options = navOptions(block)
             assertTrue(options.shouldRestoreState())
@@ -798,8 +810,10 @@ class NavigationActionsTest {
     // Verify that event chat uses eventId as chatId
     val eventId = "event-456"
     val chatTitle = "Event Chat"
-    val screen = Screen.Chat(chatId = eventId, chatTitle = chatTitle)
+    val totalParticipants = 1
+    val screen =
+        Screen.Chat(chatId = eventId, chatTitle = chatTitle, totalParticipants = totalParticipants)
 
-    assertEquals("chat/$eventId/$chatTitle", screen.route)
+    assertEquals("chat/$eventId/$chatTitle/$totalParticipants", screen.route)
   }
 }
