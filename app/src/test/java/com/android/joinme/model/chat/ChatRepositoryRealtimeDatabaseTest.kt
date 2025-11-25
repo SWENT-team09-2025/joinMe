@@ -116,9 +116,7 @@ class ChatRepositoryRealtimeDatabaseTest {
     every { mockMessageSnapshot1.child("timestamp").getValue(Long::class.java) } returns 1000L
     every { mockMessageSnapshot1.child("type").getValue(String::class.java) } returns "TEXT"
     every {
-      mockMessageSnapshot1
-          .child("readBy")
-          .getValue(any<GenericTypeIndicator<List<String>>>())
+      mockMessageSnapshot1.child("readBy").getValue(any<GenericTypeIndicator<List<String>>>())
     } returns emptyList()
     every { mockMessageSnapshot1.child("isPinned").getValue(Boolean::class.java) } returns false
 
@@ -130,9 +128,7 @@ class ChatRepositoryRealtimeDatabaseTest {
     every { mockMessageSnapshot2.child("timestamp").getValue(Long::class.java) } returns 2000L
     every { mockMessageSnapshot2.child("type").getValue(String::class.java) } returns "TEXT"
     every {
-      mockMessageSnapshot2
-          .child("readBy")
-          .getValue(any<GenericTypeIndicator<List<String>>>())
+      mockMessageSnapshot2.child("readBy").getValue(any<GenericTypeIndicator<List<String>>>())
     } returns emptyList()
     every { mockMessageSnapshot2.child("isPinned").getValue(Boolean::class.java) } returns false
 
@@ -222,9 +218,7 @@ class ChatRepositoryRealtimeDatabaseTest {
     every { mockValidMessage.child("timestamp").getValue(Long::class.java) } returns 1000L
     every { mockValidMessage.child("type").getValue(String::class.java) } returns "TEXT"
     every {
-      mockValidMessage
-          .child("readBy")
-          .getValue(any<GenericTypeIndicator<List<String>>>())
+      mockValidMessage.child("readBy").getValue(any<GenericTypeIndicator<List<String>>>())
     } returns emptyList()
     every { mockValidMessage.child("isPinned").getValue(Boolean::class.java) } returns false
 
@@ -337,9 +331,7 @@ class ChatRepositoryRealtimeDatabaseTest {
 
     every { mockMessageRef.get() } returns mockTask
     every {
-      mockSnapshot
-          .child("readBy")
-          .getValue(any<GenericTypeIndicator<List<String>>>())
+      mockSnapshot.child("readBy").getValue(any<GenericTypeIndicator<List<String>>>())
     } returns listOf("user1")
     every { mockMessageRef.child("readBy") } returns mockReadByRef
     every { mockReadByRef.setValue(any()) } returns mockSetTask
@@ -361,9 +353,7 @@ class ChatRepositoryRealtimeDatabaseTest {
 
     every { mockMessageRef.get() } returns mockTask
     every {
-      mockSnapshot
-          .child("readBy")
-          .getValue(any<GenericTypeIndicator<List<String>>>())
+      mockSnapshot.child("readBy").getValue(any<GenericTypeIndicator<List<String>>>())
     } returns listOf("user1", userId)
     every { mockMessageRef.child("readBy") } returns mockReadByRef
 
