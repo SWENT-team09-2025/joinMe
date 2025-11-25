@@ -13,7 +13,6 @@ import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import com.google.firebase.Timestamp
 import java.util.Date
-import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
 
@@ -111,7 +110,9 @@ class PublicProfileScreenTest {
     // Required interface methods (not used in tests)
     override fun getNewEventId(): String = "new-event-id"
 
-    override suspend fun getAllEvents(eventFilter: com.android.joinme.model.event.EventFilter): List<Event> = emptyList()
+    override suspend fun getAllEvents(
+        eventFilter: com.android.joinme.model.event.EventFilter
+    ): List<Event> = emptyList()
 
     override suspend fun getEvent(eventId: String): Event =
         events.firstOrNull { it.eventId == eventId } ?: throw Exception("Event not found")
@@ -161,9 +162,7 @@ class PublicProfileScreenTest {
     }
 
     // Initially loading state should be shown
-    composeTestRule
-        .onNodeWithTag(PublicProfileScreenTestTags.LOADING_INDICATOR)
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.LOADING_INDICATOR).assertIsDisplayed()
   }
 
   @Test
@@ -233,9 +232,8 @@ class PublicProfileScreenTest {
     var backClicked = false
 
     composeTestRule.setContent {
-      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {
-        backClicked = true
-      })
+      PublicProfileScreen(
+          userId = otherUserId, viewModel = viewModel, onBackClick = { backClicked = true })
     }
 
     viewModel.loadPublicProfile(otherUserId, currentUserId)
@@ -250,7 +248,8 @@ class PublicProfileScreenTest {
 
   @Test
   fun publicProfileScreen_displaysProfileStats() {
-    val profile = createTestProfile(eventsJoinedCount = 42, followersCount = 1500, followingCount = 89)
+    val profile =
+        createTestProfile(eventsJoinedCount = 42, followersCount = 1500, followingCount = 89)
     val viewModel =
         PublicProfileViewModel(
             FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
@@ -483,7 +482,8 @@ class PublicProfileScreenTest {
   @Test
   fun publicProfileScreen_displaysCommonEvents_whenEventsExist() {
     val profile = createTestProfile()
-    val events = listOf(createTestEvent("event1", "Basketball"), createTestEvent("event2", "Tennis"))
+    val events =
+        listOf(createTestEvent("event1", "Basketball"), createTestEvent("event2", "Tennis"))
     val viewModel =
         PublicProfileViewModel(
             FakeProfileRepository(profile), FakeEventsRepository(events), FakeGroupRepository())
@@ -512,7 +512,9 @@ class PublicProfileScreenTest {
     val event = createTestEvent("event1", "Basketball")
     val viewModel =
         PublicProfileViewModel(
-            FakeProfileRepository(profile), FakeEventsRepository(listOf(event)), FakeGroupRepository())
+            FakeProfileRepository(profile),
+            FakeEventsRepository(listOf(event)),
+            FakeGroupRepository())
 
     var clickedEvent: Event? = null
 
@@ -578,7 +580,8 @@ class PublicProfileScreenTest {
   fun publicProfileScreen_displaysCommonGroups_whenGroupsExist() {
     val profile = createTestProfile()
     val groups =
-        listOf(createTestGroup("group1", "Running Club"), createTestGroup("group2", "EPFL Students"))
+        listOf(
+            createTestGroup("group1", "Running Club"), createTestGroup("group2", "EPFL Students"))
     val viewModel =
         PublicProfileViewModel(
             FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository(groups))
@@ -669,7 +672,12 @@ class PublicProfileScreenTest {
   @Test
   fun publicProfileScreen_displaysMinimalProfile() {
     val profile =
-        createTestProfile(bio = null, interests = emptyList(), eventsJoinedCount = 0, followersCount = 0, followingCount = 0)
+        createTestProfile(
+            bio = null,
+            interests = emptyList(),
+            eventsJoinedCount = 0,
+            followersCount = 0,
+            followingCount = 0)
     val viewModel =
         PublicProfileViewModel(
             FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
