@@ -97,48 +97,42 @@ class PublicProfileViewModel(
         return@launch
       }
 
-      try {
+      // Fetch profile
+      val fetchedProfile =
+          try {
+            profileRepository.getProfile(userId)
+          } catch (e: Exception) {
+            Log.e(TAG, "Error fetching profile", e)
+            null
+          }
 
-        // Fetch profile
-        val fetchedProfile =
-            try {
-              profileRepository.getProfile(userId)
-            } catch (e: Exception) {
-              Log.e(TAG, "Error fetching profile", e)
-              null
-            }
-
-        if (fetchedProfile == null) {
-          _error.value = "Profile not found"
-          _isLoading.value = false
-          return@launch
-        }
-
-        _profile.value = fetchedProfile
-
-        // Fetch common events with timeout
-        try {
-          val events = eventsRepository.getCommonEvents(listOf(currentUserId, userId))
-          _commonEvents.value = events
-        } catch (e: Exception) {
-          Log.e(TAG, "Error loading common events", e)
-          _commonEvents.value = emptyList()
-        }
-
-        // Fetch common groups with timeout
-        try {
-          val groups = groupRepository.getCommonGroups(listOf(currentUserId, userId))
-          _commonGroups.value = groups
-        } catch (e: Exception) {
-          Log.e(TAG, "Error loading common groups", e)
-          _commonGroups.value = emptyList()
-        }
-      } catch (e: Exception) {
-        Log.e(TAG, "Error loading public profile", e)
-        _error.value = "Failed to load profile: ${e.message}"
-      } finally {
+      if (fetchedProfile == null) {
+        _error.value = "Profile not found"
         _isLoading.value = false
+        return@launch
       }
+
+      _profile.value = fetchedProfile
+
+      // Fetch common events with timeout
+      try {
+        val events = eventsRepository.getCommonEvents(listOf(currentUserId, userId))
+        _commonEvents.value = events
+      } catch (e: Exception) {
+        Log.e(TAG, "Error loading common events", e)
+        _commonEvents.value = emptyList()
+      }
+
+      // Fetch common groups with timeout
+      try {
+        val groups = groupRepository.getCommonGroups(listOf(currentUserId, userId))
+        _commonGroups.value = groups
+      } catch (e: Exception) {
+        Log.e(TAG, "Error loading common groups", e)
+        _commonGroups.value = emptyList()
+      }
+
+      _isLoading.value = false
     }
   }
 
