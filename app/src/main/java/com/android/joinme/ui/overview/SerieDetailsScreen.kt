@@ -409,7 +409,11 @@ fun SerieDetailsScreen(
                 }
               }
             }
+
+            // Add space at the bottom for better visual appearance
+            Spacer(modifier = Modifier.height(Dimens.Spacing.small))
           }
+
         }
       }
 }

@@ -460,7 +460,11 @@ fun JoinMe(
       composable(route = Screen.CreateGroup.route) {
         CreateGroupScreen(
             onBackClick = { navigationActions.goBack() },
-            onCreateSuccess = { navigationActions.navigateTo(Screen.Groups) })
+            onCreateSuccess = {
+              // Navigate to Groups and clear CreateGroup from back stack
+              navigationActions.navigateAndClearBackStackTo(
+                  screen = Screen.Groups, popUpToRoute = Screen.Profile.route, inclusive = false)
+            })
       }
 
       composable(route = Screen.EditGroup.route) { navBackStackEntry ->
