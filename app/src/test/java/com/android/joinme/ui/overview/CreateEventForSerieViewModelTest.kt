@@ -143,12 +143,11 @@ class CreateEventForSerieViewModelTest {
     override suspend fun leaveGroup(groupId: String, userId: String) {}
 
     override suspend fun joinGroup(groupId: String, userId: String) {}
-      override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
-          if (userIds.isEmpty()) return emptyList()
-          return groups.filter { group ->
-              userIds.all { userId -> group.memberIds.contains(userId) }
-          }
-      }
+
+    override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
+      if (userIds.isEmpty()) return emptyList()
+      return groups.filter { group -> userIds.all { userId -> group.memberIds.contains(userId) } }
+    }
   }
 
   private lateinit var eventRepo: FakeEventsRepository
