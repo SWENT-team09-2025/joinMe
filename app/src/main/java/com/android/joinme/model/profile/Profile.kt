@@ -15,5 +15,7 @@ data class Profile(
     val createdAt: Timestamp? = null,
     val updatedAt: Timestamp? = null,
     val fcmToken: String? = null,
-    val eventsJoinedCount: Int = 0
+    val eventsJoinedCount: Int = 0,
+    val followersCount: Int = 0,
+    val followingCount: Int = 0
 )

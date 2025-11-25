@@ -99,6 +99,14 @@ class GroupDetailViewModelTest {
       val updatedGroup = group.copy(memberIds = updatedMemberIds)
       editGroup(groupId, updatedGroup)
     }
+
+    override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
+      if (shouldThrowError) throw Exception(errorMessage)
+      if (userIds.isEmpty()) return emptyList()
+      return groups.values.filter { group ->
+        userIds.all { userId -> group.memberIds.contains(userId) }
+      }
+    }
   }
 
   private class FakeProfileRepository : ProfileRepository {

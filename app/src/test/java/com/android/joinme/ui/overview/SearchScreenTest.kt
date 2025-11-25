@@ -671,6 +671,15 @@ class SearchScreenTest {
     override suspend fun getEventsByIds(
         eventIds: List<String>
     ): List<com.android.joinme.model.event.Event> = emptyList()
+
+    override suspend fun getCommonEvents(
+        userIds: List<String>
+    ): List<com.android.joinme.model.event.Event> {
+      if (userIds.isEmpty()) return emptyList()
+      return eventsToReturn
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
+    }
   }
 
   private class FakeSeriesRepository : com.android.joinme.model.serie.SeriesRepository {

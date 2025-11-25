@@ -1,0 +1,249 @@
+package com.android.joinme.model.groups
+
+import com.android.joinme.model.event.EventType
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert
+import org.junit.Before
+import org.junit.Test
+
+class GroupRepositoryLocalTest {
+
+  private lateinit var repo: GroupRepositoryLocal
+  private lateinit var sampleGroup: Group
+
+  @Before
+  fun setup() {
+    repo = GroupRepositoryLocal()
+    sampleGroup =
+        Group(
+            id = "1",
+            name = "Basketball Club",
+            category = EventType.SPORTS,
+            description = "Weekly basketball games",
+            ownerId = "owner1",
+            memberIds = listOf("owner1", "member1", "member2"),
+            eventIds = emptyList(),
+            serieIds = emptyList(),
+            photoUrl = null)
+  }
+
+  // ---------------- BASIC CRUD ----------------
+
+  @Test
+  fun addAndGetGroup_success() {
+    runBlocking {
+      repo.addGroup(sampleGroup)
+      val group = repo.getGroup("1")
+      Assert.assertEquals(sampleGroup.name, group.name)
+    }
+  }
+
+  @Test(expected = Exception::class)
+  fun getGroup_notFound_throwsException() {
+    runBlocking { repo.getGroup("unknown") }
+  }
+
+  @Test
+  fun editGroup_updatesSuccessfully() {
+    runBlocking {
+      repo.addGroup(sampleGroup)
+      val updated = sampleGroup.copy(name = "Updated Name")
+      repo.editGroup("1", updated)
+      val group = repo.getGroup("1")
+      Assert.assertEquals("Updated Name", group.name)
+    }
+  }
+
+  @Test
+  fun deleteGroup_removesSuccessfully() {
+    runBlocking {
+      repo.addGroup(sampleGroup)
+      repo.deleteGroup("1", "owner1")
+      val all = repo.getAllGroups()
+      Assert.assertTrue(all.isEmpty())
+    }
+  }
+
+  @Test(expected = Exception::class)
+  fun deleteGroup_nonOwner_throwsException() {
+    runBlocking {
+      repo.addGroup(sampleGroup)
+      repo.deleteGroup("1", "notTheOwner")
+    }
+  }
+
+  // ---------------- JOIN/LEAVE GROUP ----------------
+
+  @Test
+  fun joinGroup_addsUserToMembers() {
+    runBlocking {
+      repo.addGroup(sampleGroup)
+      repo.joinGroup("1", "newUser")
+      val group = repo.getGroup("1")
+      Assert.assertTrue(group.memberIds.contains("newUser"))
+      Assert.assertEquals(4, group.memberIds.size)
+    }
+  }
+
+  @Test(expected = Exception::class)
+  fun joinGroup_alreadyMember_throwsException() {
+    runBlocking {
+      repo.addGroup(sampleGroup)
+      repo.joinGroup("1", "member1")
+    }
+  }
+
+  @Test
+  fun leaveGroup_removesUserFromMembers() {
+    runBlocking {
+      repo.addGroup(sampleGroup)
+      repo.leaveGroup("1", "member1")
+      val group = repo.getGroup("1")
+      Assert.assertFalse(group.memberIds.contains("member1"))
+      Assert.assertEquals(2, group.memberIds.size)
+    }
+  }
+
+  @Test(expected = Exception::class)
+  fun leaveGroup_notMember_throwsException() {
+    runBlocking {
+      repo.addGroup(sampleGroup)
+      repo.leaveGroup("1", "notAMember")
+    }
+  }
+
+  // ---------------- ADDITIONAL TESTS ----------------
+
+  @Test
+  fun addMultipleGroups_storesAll() {
+    runBlocking {
+      val g1 = sampleGroup
+      val g2 = sampleGroup.copy(id = "2", name = "Running Club")
+      val g3 = sampleGroup.copy(id = "3", name = "Cycling Club")
+      repo.addGroup(g1)
+      repo.addGroup(g2)
+      repo.addGroup(g3)
+
+      val all = repo.getAllGroups()
+      Assert.assertEquals(3, all.size)
+      Assert.assertTrue(all.any { it.name == "Cycling Club" })
+    }
+  }
+
+  @Test
+  fun getNewGroupId_incrementsSequentially() {
+    val id1 = repo.getNewGroupId()
+    val id2 = repo.getNewGroupId()
+    val id3 = repo.getNewGroupId()
+    Assert.assertEquals((id1.toInt() + 1).toString(), id2)
+    Assert.assertEquals((id2.toInt() + 1).toString(), id3)
+  }
+
+  @Test
+  fun clear_removesAllGroupsAndResetsCounter() {
+    runBlocking {
+      repo.addGroup(sampleGroup)
+      repo.addGroup(sampleGroup.copy(id = "2"))
+      repo.getNewGroupId() // increment counter
+
+      repo.clear()
+
+      Assert.assertTrue(repo.getAllGroups().isEmpty())
+      Assert.assertEquals("0", repo.getNewGroupId())
+    }
+  }
+
+  // ---------------- GET COMMON GROUPS TESTS ----------------
+
+  @Test
+  fun getCommonGroups_returnsEmptyListWhenNoUserIds() {
+    runBlocking {
+      repo.addGroup(sampleGroup)
+      val result = repo.getCommonGroups(emptyList())
+      Assert.assertTrue(result.isEmpty())
+    }
+  }
+
+  @Test
+  fun getCommonGroups_returnsGroupsWithSingleUser() {
+    runBlocking {
+      val g1 = sampleGroup.copy(id = "1", memberIds = listOf("user1", "user2"))
+      val g2 = sampleGroup.copy(id = "2", memberIds = listOf("user3"))
+      val g3 = sampleGroup.copy(id = "3", memberIds = listOf("user1", "user3"))
+      repo.addGroup(g1)
+      repo.addGroup(g2)
+      repo.addGroup(g3)
+
+      val result = repo.getCommonGroups(listOf("user1"))
+
+      Assert.assertEquals(2, result.size)
+      Assert.assertTrue(result.any { it.id == "1" })
+      Assert.assertTrue(result.any { it.id == "3" })
+    }
+  }
+
+  @Test
+  fun getCommonGroups_returnsGroupsWithMultipleUsers() {
+    runBlocking {
+      val g1 = sampleGroup.copy(id = "1", memberIds = listOf("user1", "user2", "user3"))
+      val g2 = sampleGroup.copy(id = "2", memberIds = listOf("user1", "user2"))
+      val g3 = sampleGroup.copy(id = "3", memberIds = listOf("user1", "user3"))
+      repo.addGroup(g1)
+      repo.addGroup(g2)
+      repo.addGroup(g3)
+
+      val result = repo.getCommonGroups(listOf("user1", "user2"))
+
+      Assert.assertEquals(2, result.size)
+      Assert.assertTrue(result.any { it.id == "1" })
+      Assert.assertTrue(result.any { it.id == "2" })
+    }
+  }
+
+  @Test
+  fun getCommonGroups_returnsEmptyListWhenNoCommonGroups() {
+    runBlocking {
+      val g1 = sampleGroup.copy(id = "1", memberIds = listOf("user1"))
+      val g2 = sampleGroup.copy(id = "2", memberIds = listOf("user2"))
+      repo.addGroup(g1)
+      repo.addGroup(g2)
+
+      val result = repo.getCommonGroups(listOf("user1", "user2"))
+
+      Assert.assertTrue(result.isEmpty())
+    }
+  }
+
+  @Test
+  fun getCommonGroups_requiresAllUsersToBeMembers() {
+    runBlocking {
+      val g1 = sampleGroup.copy(id = "1", memberIds = listOf("user1", "user2", "user3"))
+      val g2 = sampleGroup.copy(id = "2", memberIds = listOf("user1", "user2"))
+      val g3 = sampleGroup.copy(id = "3", memberIds = listOf("user2", "user3"))
+      repo.addGroup(g1)
+      repo.addGroup(g2)
+      repo.addGroup(g3)
+
+      val result = repo.getCommonGroups(listOf("user1", "user2", "user3"))
+
+      Assert.assertEquals(1, result.size)
+      Assert.assertEquals("1", result[0].id)
+    }
+  }
+
+  @Test
+  fun getCommonGroups_worksWithLargeNumberOfUsers() {
+    runBlocking {
+      val users = (1..10).map { "user$it" }
+      val g1 = sampleGroup.copy(id = "1", memberIds = users)
+      val g2 = sampleGroup.copy(id = "2", memberIds = users.take(5))
+      repo.addGroup(g1)
+      repo.addGroup(g2)
+
+      val result = repo.getCommonGroups(users)
+
+      Assert.assertEquals(1, result.size)
+      Assert.assertEquals("1", result[0].id)
+    }
+  }
+}

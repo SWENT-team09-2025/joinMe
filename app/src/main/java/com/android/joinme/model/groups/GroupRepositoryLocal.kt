@@ -77,4 +77,11 @@ class GroupRepositoryLocal : GroupRepository {
     val updatedGroup = group.copy(memberIds = updatedMemberIds)
     editGroup(groupId, updatedGroup)
   }
+
+  override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
+    if (userIds.isEmpty()) return emptyList()
+
+    // Filter groups where all specified users are members
+    return groups.filter { group -> userIds.all { userId -> group.memberIds.contains(userId) } }
+  }
 }
