@@ -803,6 +803,18 @@ class NavigationActionsTest {
     assertEquals("chat/$eventId/$chatTitle", screen.route)
   }
 
+  // ========== ActivityGroup Screen Tests ==========
+
+  @Test
+  fun activityGroup_screen_routeIsProperlyFormatted() {
+    val groupId = "test-group-123"
+    val activityGroupScreen = Screen.ActivityGroup(groupId)
+
+    assert(activityGroupScreen.route == "activity_group/$groupId")
+    assert(activityGroupScreen.name == "Activity Group")
+    assert(!activityGroupScreen.isTopLevelDestination)
+  }
+
   // ========== navigateAndClearBackStackTo Tests ==========
 
   @Test
@@ -810,10 +822,7 @@ class NavigationActionsTest {
     every { navController.currentDestination?.route } returns Screen.CreateGroup.route
 
     actions.navigateAndClearBackStackTo(
-        screen = Screen.Groups,
-        popUpToRoute = Screen.Groups.route,
-        inclusive = false
-    )
+        screen = Screen.Groups, popUpToRoute = Screen.Groups.route, inclusive = false)
 
     verify {
       navController.navigate(
@@ -832,10 +841,7 @@ class NavigationActionsTest {
     every { navController.currentDestination?.route } returns Screen.CreateGroup.route
 
     actions.navigateAndClearBackStackTo(
-        screen = Screen.Groups,
-        popUpToRoute = Screen.Profile.route,
-        inclusive = true
-    )
+        screen = Screen.Groups, popUpToRoute = Screen.Profile.route, inclusive = true)
 
     verify {
       navController.navigate(

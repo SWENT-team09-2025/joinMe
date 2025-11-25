@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.android.joinme.MainActivity
 import com.android.joinme.R
@@ -69,18 +68,15 @@ class JoinMeFirebaseMessagingService : FirebaseMessagingService() {
    * Notification channels are required for Android 8.0 (API level 26) and higher.
    */
   private fun createNotificationChannel() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      val channel =
-          NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH).apply {
-            description = CHANNEL_DESCRIPTION
-            enableVibration(true)
-            enableLights(true)
-          }
+    val channel =
+        NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH).apply {
+          description = CHANNEL_DESCRIPTION
+          enableVibration(true)
+          enableLights(true)
+        }
 
-      val notificationManager =
-          getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-      notificationManager.createNotificationChannel(channel)
-    }
+    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    notificationManager.createNotificationChannel(channel)
   }
 
   /**
