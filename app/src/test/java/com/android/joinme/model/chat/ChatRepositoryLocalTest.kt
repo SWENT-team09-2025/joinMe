@@ -1,10 +1,7 @@
-package com.android.joinme.repository
+package com.android.joinme.model.chat
 
 // Implemented with help of Claude AI
 
-import com.android.joinme.model.chat.ChatRepositoryLocal
-import com.android.joinme.model.chat.Message
-import com.android.joinme.model.chat.MessageType
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert

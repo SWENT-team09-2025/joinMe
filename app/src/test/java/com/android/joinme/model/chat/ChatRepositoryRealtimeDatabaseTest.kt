@@ -1,15 +1,13 @@
-package com.android.joinme.repository
+package com.android.joinme.model.chat
 
 // Implemented with help of Claude AI
 
-import com.android.joinme.model.chat.ChatRepositoryRealtimeDatabase
-import com.android.joinme.model.chat.Message
-import com.android.joinme.model.chat.MessageType
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.GenericTypeIndicator
 import com.google.firebase.database.Query
 import com.google.firebase.database.ValueEventListener
 import io.mockk.*
@@ -120,7 +118,7 @@ class ChatRepositoryRealtimeDatabaseTest {
     every {
       mockMessageSnapshot1
           .child("readBy")
-          .getValue(any<com.google.firebase.database.GenericTypeIndicator<List<String>>>())
+          .getValue(any<GenericTypeIndicator<List<String>>>())
     } returns emptyList()
     every { mockMessageSnapshot1.child("isPinned").getValue(Boolean::class.java) } returns false
 
@@ -134,7 +132,7 @@ class ChatRepositoryRealtimeDatabaseTest {
     every {
       mockMessageSnapshot2
           .child("readBy")
-          .getValue(any<com.google.firebase.database.GenericTypeIndicator<List<String>>>())
+          .getValue(any<GenericTypeIndicator<List<String>>>())
     } returns emptyList()
     every { mockMessageSnapshot2.child("isPinned").getValue(Boolean::class.java) } returns false
 
@@ -226,7 +224,7 @@ class ChatRepositoryRealtimeDatabaseTest {
     every {
       mockValidMessage
           .child("readBy")
-          .getValue(any<com.google.firebase.database.GenericTypeIndicator<List<String>>>())
+          .getValue(any<GenericTypeIndicator<List<String>>>())
     } returns emptyList()
     every { mockValidMessage.child("isPinned").getValue(Boolean::class.java) } returns false
 
@@ -341,7 +339,7 @@ class ChatRepositoryRealtimeDatabaseTest {
     every {
       mockSnapshot
           .child("readBy")
-          .getValue(any<com.google.firebase.database.GenericTypeIndicator<List<String>>>())
+          .getValue(any<GenericTypeIndicator<List<String>>>())
     } returns listOf("user1")
     every { mockMessageRef.child("readBy") } returns mockReadByRef
     every { mockReadByRef.setValue(any()) } returns mockSetTask
@@ -365,7 +363,7 @@ class ChatRepositoryRealtimeDatabaseTest {
     every {
       mockSnapshot
           .child("readBy")
-          .getValue(any<com.google.firebase.database.GenericTypeIndicator<List<String>>>())
+          .getValue(any<GenericTypeIndicator<List<String>>>())
     } returns listOf("user1", userId)
     every { mockMessageRef.child("readBy") } returns mockReadByRef
 

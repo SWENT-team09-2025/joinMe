@@ -1,8 +1,6 @@
 // Implemented with help of Claude AI
-package com.android.joinme.repository
+package com.android.joinme.model.groups
 
-import com.android.joinme.model.groups.Group
-import com.android.joinme.model.groups.GroupRepositoryLocal
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Before
