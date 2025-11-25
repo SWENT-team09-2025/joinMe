@@ -79,10 +79,9 @@ class MainActivityNavigationTest {
     val repoEvents = EventsRepositoryProvider.getRepository(isOnline = false)
     val repoSerie = SeriesRepositoryProvider.repository
     val repoGroups = GroupRepositoryProvider.repository
-    if (
-      repoEvents is EventsRepositoryLocal &&
-      repoSerie is SeriesRepositoryLocal &&
-      repoGroups is GroupRepositoryLocal) {
+    if (repoEvents is EventsRepositoryLocal &&
+        repoSerie is SeriesRepositoryLocal &&
+        repoGroups is GroupRepositoryLocal) {
 
       runBlocking {
         // Clear all data completely using clear() methods
@@ -126,23 +125,21 @@ class MainActivityNavigationTest {
         repoSerie.addSerie(pastSerie)
 
         // Add event first
-        val groupActivity = createTestEvent(
-          id = "test-group-activity-1",
-          title = "Group Activity",
-          ownerId = "test-user-id"
-        )
+        val groupActivity =
+            createTestEvent(
+                id = "test-group-activity-1", title = "Group Activity", ownerId = "test-user-id")
         repoEvents.addEvent(groupActivity)
 
         // Add test group with the event linked to it
-        val testGroup = Group(
-          id = "test-group-1",
-          name = "Test Activity Group",
-          description = "Test group",
-          category = EventType.SPORTS,
-          ownerId = "test-user-id",
-          memberIds = listOf("test-user-id"),
-          eventIds = listOf("test-group-activity-1")
-        )
+        val testGroup =
+            Group(
+                id = "test-group-1",
+                name = "Test Activity Group",
+                description = "Test group",
+                category = EventType.SPORTS,
+                ownerId = "test-user-id",
+                memberIds = listOf("test-user-id"),
+                eventIds = listOf("test-group-activity-1"))
         repoGroups.addGroup(testGroup)
       }
     }

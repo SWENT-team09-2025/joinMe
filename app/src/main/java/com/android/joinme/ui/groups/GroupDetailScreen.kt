@@ -37,7 +37,7 @@ import com.android.joinme.ui.theme.customColors
 
 /** Test tags for GroupDetailScreen components. */
 object GroupDetailScreenTestTags {
-    const val BUTTON_ACTIVITIES = "buttonActivities"
+  const val BUTTON_ACTIVITIES = "buttonActivities"
 }
 
 /**
@@ -217,17 +217,16 @@ private fun GroupContent(
                         width = Dimens.BorderWidth.medium, color = groupCategory.getOnColor()),
                 shape = RoundedCornerShape(Dimens.GroupDetail.eventsButtonCornerRadius),
                 modifier =
-                    Modifier
-                        .weight(1f)
+                    Modifier.weight(1f)
                         .height(Dimens.Button.standardHeight)
                         .testTag(GroupDetailScreenTestTags.BUTTON_ACTIVITIES),
-                ) {
-                  Text(
-                      text = "Group Activities",
-                      style = MaterialTheme.typography.headlineSmall,
-                      color = groupCategory.getOnColor(),
-                      fontWeight = FontWeight.Medium)
-                }
+            ) {
+              Text(
+                  text = "Group Activities",
+                  style = MaterialTheme.typography.headlineSmall,
+                  color = groupCategory.getOnColor(),
+                  fontWeight = FontWeight.Medium)
+            }
           }
 
       Spacer(modifier = Modifier.height(Dimens.Spacing.medium))

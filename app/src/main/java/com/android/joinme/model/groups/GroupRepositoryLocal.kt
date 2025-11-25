@@ -8,7 +8,7 @@ class GroupRepositoryLocal : GroupRepository {
   private val groups: MutableList<Group> = mutableListOf()
   private var counter = 0
 
-    /** Clears all groups from the repository. Useful for testing. */
+  /** Clears all groups from the repository. Useful for testing. */
   fun clear() {
     groups.clear()
     counter = 0
