@@ -84,4 +84,6 @@ class GroupRepositoryLocal : GroupRepository {
     groups.clear()
     counter = 0
   }
+  // adding extra space for CI runner to rebuild this file because the cached one is corrupted
+  // TODO: remove it when CI runner is fixed
 }
