@@ -87,7 +87,7 @@ object ActivityGroupScreenTestTags {
  *
  * @param groupId The unique identifier of the group whose activities are displayed
  * @param activityGroupViewModel ViewModel managing the screen state and business logic
- * @param onSelectEvent Callback invoked when an event is clicked
+ * @param onSelectedEvent Callback invoked when an event is clicked
  * @param onSelectedSerie Callback invoked when a serie is clicked
  * @param onNavigateBack Callback invoked when the back button is clicked
  */
@@ -96,8 +96,8 @@ object ActivityGroupScreenTestTags {
 fun ActivityGroupScreen(
     groupId: String,
     activityGroupViewModel: ActivityGroupViewModel = viewModel(),
-    onSelectEvent: (Event) -> Unit = {},
-    onSelectedSerie: (Serie) -> Unit = {},
+    onSelectedEvent: (String) -> Unit = {},
+    onSelectedSerie: (String) -> Unit = {},
     onNavigateBack: () -> Unit = {},
 ) {
   val context = LocalContext.current
@@ -176,7 +176,7 @@ fun ActivityGroupScreen(
                       EventCard(
                           modifier = Modifier.padding(vertical = Dimens.Padding.small),
                           event = events[index],
-                          onClick = { onSelectEvent(events[index]) },
+                          onClick = { onSelectedEvent(events[index].eventId) },
                           testTag = ActivityGroupScreenTestTags.getTestTagForEvent(events[index]))
                     }
 
@@ -185,7 +185,7 @@ fun ActivityGroupScreen(
                       SerieCard(
                           modifier = Modifier.padding(vertical = Dimens.Padding.small),
                           serie = series[index],
-                          onClick = { onSelectedSerie(series[index]) },
+                          onClick = { onSelectedSerie(series[index].serieId) },
                           testTag = ActivityGroupScreenTestTags.getTestTagForSerie(series[index]))
                     }
                   }

@@ -67,6 +67,13 @@ class EditEventForSerieScreenTest {
             return it.values.toList()
           }
     }
+
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+      if (userIds.isEmpty()) return emptyList()
+      return events.values
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
+    }
   }
 
   private class FakeSeriesRepository : SeriesRepository {

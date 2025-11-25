@@ -6,6 +6,8 @@ import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
+import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.map.LocationRepository
 import com.android.joinme.model.map.NominatimLocationRepository
 import com.android.joinme.model.serie.Serie
@@ -46,6 +48,7 @@ class CreateEventForSerieViewModel(
     private val eventRepository: EventsRepository =
         EventsRepositoryProvider.getRepository(isOnline = true),
     private val serieRepository: SeriesRepository = SeriesRepositoryProvider.repository,
+    private val groupRepository: GroupRepository = GroupRepositoryProvider.repository,
     locationRepository: LocationRepository = NominatimLocationRepository(HttpClientProvider.client)
 ) : BaseEventForSerieViewModel(locationRepository) {
 
@@ -88,6 +91,21 @@ class CreateEventForSerieViewModel(
       // Load the serie
       val serie = serieRepository.getSerie(serieId)
 
+      // Determine the event type
+      // If serie has a group, use the group's category; otherwise use the user's selection
+      val eventType =
+          try {
+            if (serie.groupId != null) {
+              determineEventTypeFromGroup(serie)
+            } else {
+              EventType.valueOf(state.type.uppercase())
+            }
+          } catch (e: Exception) {
+            setErrorMsg("Failed to determine event type: ${e.message}")
+            _uiState.value = _uiState.value.copy(isLoading = false)
+            return false
+          }
+
       // Calculate the event date based on the serie's existing events
       val eventDate = calculateEventDate(serie)
 
@@ -96,7 +114,7 @@ class CreateEventForSerieViewModel(
       val event =
           Event(
               eventId = newEventId,
-              type = EventType.valueOf(state.type.uppercase()),
+              type = eventType,
               title = state.title,
               description = state.description,
               location = state.selectedLocation!!,
@@ -110,7 +128,8 @@ class CreateEventForSerieViewModel(
                     com.android.joinme.model.utils.Visibility.PRIVATE -> EventVisibility.PRIVATE
                   },
               ownerId = serie.ownerId, // Inherit from serie
-              partOfASerie = true // Mark as part of a serie
+              partOfASerie = true, // Mark as part of a serie
+              groupId = serie.groupId // Inherit groupId from serie
               )
 
       // Add the event to the repository
@@ -134,6 +153,22 @@ class CreateEventForSerieViewModel(
       _uiState.value = _uiState.value.copy(isLoading = false)
       false
     }
+  }
+
+  /**
+   * Determines the event type from the serie's group.
+   *
+   * Fetches the group and returns its category as the event type. Throws an exception if the group
+   * cannot be fetched.
+   *
+   * @param serie The serie with a groupId
+   * @return The EventType from the group's category
+   * @throws Exception if the group cannot be fetched
+   */
+  private suspend fun determineEventTypeFromGroup(serie: Serie): EventType {
+    val groupId = serie.groupId ?: throw IllegalStateException("Serie has no groupId")
+    val group = groupRepository.getGroup(groupId)
+    return group.category
   }
 
   /**

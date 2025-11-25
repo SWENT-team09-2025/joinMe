@@ -125,6 +125,35 @@ class EventsRepositoryFirestore(
     context?.let { NotificationScheduler.cancelEventNotification(it, eventId) }
   }
 
+  override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+    if (userIds.isEmpty()) return emptyList()
+    if (userIds.size == 1) {
+      // For a single user, just get all events they're a participant in
+      val snapshot =
+          db.collection(EVENTS_COLLECTION_PATH)
+              .whereArrayContains("participants", userIds[0])
+              .get()
+              .await()
+      return snapshot.mapNotNull { documentToEvent(it) }.sortedBy { it.date.toDate().time }
+    }
+
+    // For multiple users, get events for the first user and filter for others
+    // (Firestore doesn't support multiple arrayContains queries)
+    val snapshot =
+        db.collection(EVENTS_COLLECTION_PATH)
+            .whereArrayContains("participants", userIds[0])
+            .get()
+            .await()
+
+    return snapshot
+        .mapNotNull { documentToEvent(it) }
+        .filter { event ->
+          // Check if all specified users are participants
+          userIds.all { userId -> event.participants.contains(userId) }
+        }
+        .sortedBy { it.date.toDate().time }
+  }
+
   /**
    * Converts a Firestore document to an [Event] object.
    *

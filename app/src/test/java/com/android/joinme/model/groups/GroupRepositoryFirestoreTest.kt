@@ -676,4 +676,242 @@ class GroupRepositoryFirestoreTest {
     assertNotNull(result)
     assertEquals(EventType.ACTIVITY, result.category)
   }
+
+  // ---------------- GET COMMON GROUPS TESTS ----------------
+
+  @Test
+  fun getCommonGroups_returnsEmptyListWhenNoUserIds() = runTest {
+    // When
+    val result = repository.getCommonGroups(emptyList())
+
+    // Then
+    assertEquals(0, result.size)
+  }
+
+  @Test
+  fun getCommonGroups_returnsGroupsWithSingleUser() = runTest {
+    // Given
+    val userId = "user1"
+    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+
+    every { mockCollection.whereArrayContains("memberIds", userId) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
+
+    // First group
+    every { mockSnapshot1.id } returns "group1"
+    every { mockSnapshot1.getString("name") } returns "Basketball Club"
+    every { mockSnapshot1.getString("ownerId") } returns userId
+    every { mockSnapshot1.getString("category") } returns EventType.SPORTS.name
+    every { mockSnapshot1.getString("description") } returns "Sports club"
+    every { mockSnapshot1.get("memberIds") } returns listOf(userId, "user2")
+    every { mockSnapshot1.get("eventIds") } returns emptyList<String>()
+    every { mockSnapshot1.get("serieIds") } returns emptyList<String>()
+    every { mockSnapshot1.getString("photoUrl") } returns null
+
+    // Second group
+    every { mockSnapshot2.id } returns "group2"
+    every { mockSnapshot2.getString("name") } returns "Running Club"
+    every { mockSnapshot2.getString("ownerId") } returns "user2"
+    every { mockSnapshot2.getString("category") } returns EventType.ACTIVITY.name
+    every { mockSnapshot2.getString("description") } returns "Activity club"
+    every { mockSnapshot2.get("memberIds") } returns listOf(userId)
+    every { mockSnapshot2.get("eventIds") } returns emptyList<String>()
+    every { mockSnapshot2.get("serieIds") } returns emptyList<String>()
+    every { mockSnapshot2.getString("photoUrl") } returns null
+
+    // When
+    val result = repository.getCommonGroups(listOf(userId))
+
+    // Then
+    assertEquals(2, result.size)
+    val names = result.map { it.name }
+    assert(names.contains("Basketball Club"))
+    assert(names.contains("Running Club"))
+  }
+
+  @Test
+  fun getCommonGroups_filtersForMultipleUsers() = runTest {
+    // Given
+    val user1 = "user1"
+    val user2 = "user2"
+    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot3 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+
+    every { mockCollection.whereArrayContains("memberIds", user1) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot1, mockSnapshot2, mockSnapshot3).iterator()
+
+    // Group 1 - has both users
+    every { mockSnapshot1.id } returns "group1"
+    every { mockSnapshot1.getString("name") } returns "Common Group"
+    every { mockSnapshot1.getString("ownerId") } returns user1
+    every { mockSnapshot1.getString("category") } returns EventType.SPORTS.name
+    every { mockSnapshot1.getString("description") } returns "Both users"
+    every { mockSnapshot1.get("memberIds") } returns listOf(user1, user2, "user3")
+    every { mockSnapshot1.get("eventIds") } returns emptyList<String>()
+    every { mockSnapshot1.get("serieIds") } returns emptyList<String>()
+    every { mockSnapshot1.getString("photoUrl") } returns null
+
+    // Group 2 - only user1
+    every { mockSnapshot2.id } returns "group2"
+    every { mockSnapshot2.getString("name") } returns "User1 Only"
+    every { mockSnapshot2.getString("ownerId") } returns user1
+    every { mockSnapshot2.getString("category") } returns EventType.ACTIVITY.name
+    every { mockSnapshot2.getString("description") } returns "Only user1"
+    every { mockSnapshot2.get("memberIds") } returns listOf(user1, "user3")
+    every { mockSnapshot2.get("eventIds") } returns emptyList<String>()
+    every { mockSnapshot2.get("serieIds") } returns emptyList<String>()
+    every { mockSnapshot2.getString("photoUrl") } returns null
+
+    // Group 3 - has both users
+    every { mockSnapshot3.id } returns "group3"
+    every { mockSnapshot3.getString("name") } returns "Another Common"
+    every { mockSnapshot3.getString("ownerId") } returns user2
+    every { mockSnapshot3.getString("category") } returns EventType.SOCIAL.name
+    every { mockSnapshot3.getString("description") } returns "Both again"
+    every { mockSnapshot3.get("memberIds") } returns listOf(user1, user2)
+    every { mockSnapshot3.get("eventIds") } returns emptyList<String>()
+    every { mockSnapshot3.get("serieIds") } returns emptyList<String>()
+    every { mockSnapshot3.getString("photoUrl") } returns null
+
+    // When
+    val result = repository.getCommonGroups(listOf(user1, user2))
+
+    // Then - only groups with both users
+    assertEquals(2, result.size)
+    val names = result.map { it.name }
+    assert(names.contains("Common Group"))
+    assert(names.contains("Another Common"))
+    assert(!names.contains("User1 Only"))
+  }
+
+  @Test
+  fun getCommonGroups_returnsEmptyWhenNoCommonGroups() = runTest {
+    // Given
+    val user1 = "user1"
+    val user2 = "user2"
+    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+
+    every { mockCollection.whereArrayContains("memberIds", user1) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.iterator() } returns mutableListOf(mockSnapshot).iterator()
+
+    // Group only has user1, not user2
+    every { mockSnapshot.id } returns "group1"
+    every { mockSnapshot.getString("name") } returns "No Common"
+    every { mockSnapshot.getString("ownerId") } returns user1
+    every { mockSnapshot.getString("category") } returns EventType.SPORTS.name
+    every { mockSnapshot.getString("description") } returns "Only user1"
+    every { mockSnapshot.get("memberIds") } returns listOf(user1)
+    every { mockSnapshot.get("eventIds") } returns emptyList<String>()
+    every { mockSnapshot.get("serieIds") } returns emptyList<String>()
+    every { mockSnapshot.getString("photoUrl") } returns null
+
+    // When
+    val result = repository.getCommonGroups(listOf(user1, user2))
+
+    // Then
+    assertEquals(0, result.size)
+  }
+
+  @Test
+  fun getCommonGroups_handlesInvalidDocuments() = runTest {
+    // Given
+    val userId = "user1"
+    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+
+    every { mockCollection.whereArrayContains("memberIds", userId) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
+
+    // Valid group
+    every { mockSnapshot1.id } returns "group1"
+    every { mockSnapshot1.getString("name") } returns "Valid Group"
+    every { mockSnapshot1.getString("ownerId") } returns userId
+    every { mockSnapshot1.getString("category") } returns EventType.SPORTS.name
+    every { mockSnapshot1.getString("description") } returns "Good"
+    every { mockSnapshot1.get("memberIds") } returns listOf(userId)
+    every { mockSnapshot1.get("eventIds") } returns emptyList<String>()
+    every { mockSnapshot1.get("serieIds") } returns emptyList<String>()
+    every { mockSnapshot1.getString("photoUrl") } returns null
+
+    // Invalid group (missing name)
+    every { mockSnapshot2.id } returns "group2"
+    every { mockSnapshot2.getString("name") } returns null
+    every { mockSnapshot2.getString("ownerId") } returns userId
+    every { mockSnapshot2.getString("category") } returns EventType.ACTIVITY.name
+    every { mockSnapshot2.getString("description") } returns "Bad"
+    every { mockSnapshot2.get("memberIds") } returns listOf(userId)
+    every { mockSnapshot2.get("eventIds") } returns emptyList<String>()
+    every { mockSnapshot2.get("serieIds") } returns emptyList<String>()
+    every { mockSnapshot2.getString("photoUrl") } returns null
+
+    // When
+    val result = repository.getCommonGroups(listOf(userId))
+
+    // Then - only valid group is returned
+    assertEquals(1, result.size)
+    assertEquals("Valid Group", result[0].name)
+  }
+
+  @Test
+  fun getCommonGroups_requiresAllUsersToBeMembers() = runTest {
+    // Given
+    val user1 = "user1"
+    val user2 = "user2"
+    val user3 = "user3"
+    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+
+    every { mockCollection.whereArrayContains("memberIds", user1) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
+
+    // Group 1 - has all three users
+    every { mockSnapshot1.id } returns "group1"
+    every { mockSnapshot1.getString("name") } returns "All Three"
+    every { mockSnapshot1.getString("ownerId") } returns user1
+    every { mockSnapshot1.getString("category") } returns EventType.SPORTS.name
+    every { mockSnapshot1.getString("description") } returns "All members"
+    every { mockSnapshot1.get("memberIds") } returns listOf(user1, user2, user3)
+    every { mockSnapshot1.get("eventIds") } returns emptyList<String>()
+    every { mockSnapshot1.get("serieIds") } returns emptyList<String>()
+    every { mockSnapshot1.getString("photoUrl") } returns null
+
+    // Group 2 - only has user1 and user2
+    every { mockSnapshot2.id } returns "group2"
+    every { mockSnapshot2.getString("name") } returns "Only Two"
+    every { mockSnapshot2.getString("ownerId") } returns user1
+    every { mockSnapshot2.getString("category") } returns EventType.ACTIVITY.name
+    every { mockSnapshot2.getString("description") } returns "Missing user3"
+    every { mockSnapshot2.get("memberIds") } returns listOf(user1, user2)
+    every { mockSnapshot2.get("eventIds") } returns emptyList<String>()
+    every { mockSnapshot2.get("serieIds") } returns emptyList<String>()
+    every { mockSnapshot2.getString("photoUrl") } returns null
+
+    // When
+    val result = repository.getCommonGroups(listOf(user1, user2, user3))
+
+    // Then - only group with all three users
+    assertEquals(1, result.size)
+    assertEquals("All Three", result[0].name)
+  }
 }

@@ -401,6 +401,14 @@ class HistoryViewModelTest {
       if (shouldThrow) throw RuntimeException("Repository error")
       return "new_event_id"
     }
+
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+      if (shouldThrow) throw RuntimeException("Repository error")
+      if (userIds.isEmpty()) return emptyList()
+      return fakeEvents
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
+    }
   }
 
   /** Fake implementation of [SeriesRepository] for isolated ViewModel testing. */
