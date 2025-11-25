@@ -383,7 +383,9 @@ fun JoinMe(
         ViewProfileScreen(
             uid = currentUser?.uid ?: "",
             onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
-            onBackClick = { navigationActions.goBack() },
+            onBackClick = {
+              // Do nothing - Profile is a top-level destination
+            },
             onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
             onSignOutComplete = {
@@ -396,7 +398,10 @@ fun JoinMe(
       composable(Screen.EditProfile.route) {
         EditProfileScreen(
             uid = currentUser?.uid ?: "",
-            onBackClick = { navigationActions.goBack() },
+            onBackClick = {
+              navigationActions.navigateAndClearBackStackTo(
+                  screen = Screen.Profile, popUpToRoute = Screen.Profile.route, inclusive = false)
+            },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
             onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
             onSaveSuccess = { navigationActions.navigateTo(Screen.Profile) })
@@ -421,7 +426,10 @@ fun JoinMe(
               // Navigate to group details
               navigationActions.navigateTo(Screen.GroupDetail(group.id))
             },
-            onBackClick = { navigationActions.goBack() },
+            onBackClick = {
+              navigationActions.navigateAndClearBackStackTo(
+                  screen = Screen.Profile, popUpToRoute = Screen.Profile.route, inclusive = false)
+            },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
             onViewGroupDetails = { navigationActions.navigateTo(Screen.GroupDetail(it.id)) },

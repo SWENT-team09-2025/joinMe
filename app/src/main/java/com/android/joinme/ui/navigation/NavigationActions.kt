@@ -226,8 +226,8 @@ open class NavigationActions(
   /**
    * Navigate to a screen and clear the back stack up to a specific route.
    *
-   * This is useful when you want to navigate to a screen and remove intermediate screens
-   * from the back stack (e.g., after creating a group, go to Groups and remove CreateGroup).
+   * This is useful when you want to navigate to a screen and remove intermediate screens from the
+   * back stack (e.g., after creating a group, go to Groups and remove CreateGroup).
    *
    * @param screen The screen to navigate to
    * @param popUpToRoute The route to pop up to (this route will remain in the stack)
