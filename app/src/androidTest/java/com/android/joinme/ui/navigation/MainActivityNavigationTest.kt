@@ -6,10 +6,15 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.android.joinme.JoinMe
 import com.android.joinme.model.event.*
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepositoryLocal
+import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepositoryLocal
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.model.utils.Visibility
+import com.android.joinme.ui.groups.GroupDetailScreenTestTags
+import com.android.joinme.ui.groups.GroupListScreenTestTags.cardTag
 import com.android.joinme.ui.overview.CreateEventForSerieScreenTestTags
 import com.android.joinme.ui.overview.CreateEventScreenTestTags
 import com.android.joinme.ui.overview.EditSerieScreenTestTags
@@ -71,16 +76,22 @@ class MainActivityNavigationTest {
   fun setup() {
     // Setup repository with test data
     System.setProperty("IS_TEST_ENV", "true")
-    val repo = EventsRepositoryProvider.getRepository(isOnline = false)
+    val repoEvents = EventsRepositoryProvider.getRepository(isOnline = false)
     val repoSerie = SeriesRepositoryProvider.repository
-    if (repo is EventsRepositoryLocal && repoSerie is SeriesRepositoryLocal) {
+    val repoGroups = GroupRepositoryProvider.repository
+    if (
+      repoEvents is EventsRepositoryLocal &&
+      repoSerie is SeriesRepositoryLocal &&
+      repoGroups is GroupRepositoryLocal) {
+
       runBlocking {
         // Clear all data completely using clear() methods
         repoSerie.clear()
-        repo.clear()
+        repoEvents.clear()
+        repoGroups.clear()
 
         // Add test event
-        repo.addEvent(createTestEvent("test-1", "Test Event", "unknown"))
+        repoEvents.addEvent(createTestEvent("test-1", "Test Event", "unknown"))
 
         // Add test serie owned by "unknown" (default currentUserId in SerieDetailsScreen when no
         // auth)
@@ -93,7 +104,7 @@ class MainActivityNavigationTest {
         val event =
             createTestEvent("test-event-5", "Test Event 5", "test-user-id")
                 .copy(participants = listOf("test-user-id"))
-        repo.addEvent(event)
+        repoEvents.addEvent(event)
 
         repoSerie.editSerie(serie.serieId, serie.copy(eventIds = listOf("test-event-5")))
 
@@ -113,6 +124,26 @@ class MainActivityNavigationTest {
                 ownerId = "test-user-id",
                 lastEventEndTime = Timestamp(pastEndDate))
         repoSerie.addSerie(pastSerie)
+
+        // Add event first
+        val groupActivity = createTestEvent(
+          id = "test-group-activity-1",
+          title = "Group Activity",
+          ownerId = "test-user-id"
+        )
+        repoEvents.addEvent(groupActivity)
+
+        // Add test group with the event linked to it
+        val testGroup = Group(
+          id = "test-group-1",
+          name = "Test Activity Group",
+          description = "Test group",
+          category = EventType.SPORTS,
+          ownerId = "test-user-id",
+          memberIds = listOf("test-user-id"),
+          eventIds = listOf("test-group-activity-1")
+        )
+        repoGroups.addGroup(testGroup)
       }
     }
 
@@ -1382,5 +1413,40 @@ class MainActivityNavigationTest {
     // Verify both screens share groupId parameter and are properly linked
     assert(detailRoute.isNotEmpty() && detailRoute.contains(groupId))
     assert(activityRoute.isNotEmpty() && activityRoute.contains(groupId))
+  }
+
+  @Test
+  fun activityGroupScreen_composable_navigateFromGroupDetailToActivityGroup() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Step 1: Navigate to Profile tab
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Step 2: Click Groups button (content description)
+    composeTestRule.onNodeWithContentDescription("Group").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Step 3: Click on test group in GroupListScreen
+    composeTestRule.onNodeWithTag(cardTag("test-group-1")).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Step 4: Click Group Activities button to navigate to ActivityGroupScreen
+    // This executes all 13 lines of the composable block
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_ACTIVITIES).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Step 5: Verify ActivityGroupScreen rendered with event
+    composeTestRule.onNodeWithTag("eventItemtest-group-activity-1").assertExists()
   }
 }

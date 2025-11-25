@@ -35,6 +35,11 @@ import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColorsForEventType
 import com.android.joinme.ui.theme.customColors
 
+/** Test tags for GroupDetailScreen components. */
+object GroupDetailScreenTestTags {
+    const val BUTTON_ACTIVITIES = "buttonActivities"
+}
+
 /**
  * Main screen for displaying group details including members and events.
  *
@@ -206,12 +211,17 @@ private fun GroupContent(
             // Group Activities button - now using weight to fill remaining space
             Button(
                 onClick = onGroupEventsClick,
-                modifier = Modifier.weight(1f).height(Dimens.Button.standardHeight),
                 colors = MaterialTheme.customColors.buttonColorsForEventType(groupCategory),
                 border =
                     BorderStroke(
                         width = Dimens.BorderWidth.medium, color = groupCategory.getOnColor()),
-                shape = RoundedCornerShape(Dimens.GroupDetail.eventsButtonCornerRadius)) {
+                shape = RoundedCornerShape(Dimens.GroupDetail.eventsButtonCornerRadius),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .height(Dimens.Button.standardHeight)
+                        .testTag(GroupDetailScreenTestTags.BUTTON_ACTIVITIES),
+                ) {
                   Text(
                       text = "Group Activities",
                       style = MaterialTheme.typography.headlineSmall,
