@@ -758,8 +758,9 @@ class CreateSerieViewModelTest {
             memberIds = listOf("test-user-id", "user-4"))
     groupRepo.groups.add(socialGroup)
 
-    // Create new ViewModel to trigger init block
+    // Create new ViewModel and load groups
     vm = CreateSerieViewModel(repo, groupRepo)
+    vm.loadUserGroups()
     advanceUntilIdle()
 
     // Verify groups are loaded
@@ -853,6 +854,7 @@ class CreateSerieViewModelTest {
     groupRepo.groups.addAll(listOf(group1, group2))
 
     vm = CreateSerieViewModel(repo, groupRepo)
+    vm.loadUserGroups()
     advanceUntilIdle()
 
     // Select first group
@@ -898,9 +900,243 @@ class CreateSerieViewModelTest {
         }
 
     val errorVm = CreateSerieViewModel(repo, errorGroupRepo)
+    errorVm.loadUserGroups()
     advanceUntilIdle()
 
     // Groups should be empty due to error (logged but not thrown)
     assertTrue(errorVm.uiState.value.availableGroups.isEmpty())
+  }
+
+  // ---------- Transaction-like behavior and rollback tests ----------
+
+  @Test
+  fun createSerie_withGroup_transactionBehavior() = runTest {
+    // Test 1: Group update failure prevents serie creation
+    val repo1 = FakeSeriesRepository()
+    val groupRepo1 = FakeGroupRepository()
+    val failingGroupRepo =
+        object : GroupRepository by groupRepo1 {
+          override suspend fun editGroup(groupId: String, newValue: Group) {
+            throw RuntimeException("Group update failed")
+          }
+        }
+    val vmWithFailingGroup = CreateSerieViewModel(repo1, failingGroupRepo)
+
+    val group1 =
+        Group(
+            id = "group-1",
+            name = "Test Group",
+            category = EventType.SPORTS,
+            ownerId = "test-user-id",
+            memberIds = listOf("test-user-id", "user-2"),
+            serieIds = emptyList())
+    groupRepo1.groups.add(group1)
+    vmWithFailingGroup.loadUserGroups()
+    advanceUntilIdle()
+
+    vmWithFailingGroup.setSelectedGroup("group-1")
+    vmWithFailingGroup.setTitle("Test Serie")
+    vmWithFailingGroup.setDescription("Test description")
+    vmWithFailingGroup.setDate("25/12/2025")
+    vmWithFailingGroup.setTime("18:00")
+
+    val serieId1 = vmWithFailingGroup.createSerie()
+    advanceUntilIdle()
+
+    assertNull(serieId1)
+    assertTrue(repo1.added.isEmpty())
+    assertNotNull(vmWithFailingGroup.uiState.value.errorMsg)
+    assertFalse(vmWithFailingGroup.uiState.value.isLoading)
+
+    // Test 2: Serie creation failure rolls back group update
+    val groupRepo2 = FakeGroupRepository()
+    val failingSeriesRepo =
+        object : SeriesRepository {
+          override suspend fun addSerie(serie: Serie) {
+            throw RuntimeException("Serie creation failed")
+          }
+
+          override suspend fun editSerie(serieId: String, newValue: Serie) {}
+
+          override suspend fun deleteSerie(serieId: String) {}
+
+          override suspend fun getSerie(serieId: String): Serie {
+            throw NoSuchElementException()
+          }
+
+          override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> = emptyList()
+
+          override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> = emptyList()
+
+          override fun getNewSerieId(): String = "serie-1"
+        }
+
+    val vmWithFailingSeries = CreateSerieViewModel(failingSeriesRepo, groupRepo2)
+
+    val group2 =
+        Group(
+            id = "group-1",
+            name = "Test Group",
+            category = EventType.SPORTS,
+            ownerId = "test-user-id",
+            memberIds = listOf("test-user-id", "user-2"),
+            serieIds = emptyList())
+    groupRepo2.groups.add(group2)
+    vmWithFailingSeries.loadUserGroups()
+    advanceUntilIdle()
+
+    vmWithFailingSeries.setSelectedGroup("group-1")
+    vmWithFailingSeries.setTitle("Test Serie")
+    vmWithFailingSeries.setDescription("Test description")
+    vmWithFailingSeries.setDate("25/12/2025")
+    vmWithFailingSeries.setTime("18:00")
+
+    val initialGroupState = groupRepo2.groups.first()
+    assertEquals(0, initialGroupState.serieIds.size)
+
+    val serieId2 = vmWithFailingSeries.createSerie()
+    advanceUntilIdle()
+
+    assertNull(serieId2)
+    assertNotNull(vmWithFailingSeries.uiState.value.errorMsg)
+    val groupAfterRollback = groupRepo2.groups.first()
+    assertEquals(0, groupAfterRollback.serieIds.size)
+
+    // Test 3: Success case - both group and serie are updated
+    val repo3 = FakeSeriesRepository()
+    val groupRepo3 = FakeGroupRepository()
+    val vmSuccess = CreateSerieViewModel(repo3, groupRepo3)
+
+    val group3 =
+        Group(
+            id = "group-1",
+            name = "Test Group",
+            category = EventType.SPORTS,
+            ownerId = "test-user-id",
+            memberIds = listOf("test-user-id", "user-2"),
+            serieIds = emptyList())
+    groupRepo3.groups.add(group3)
+    vmSuccess.loadUserGroups()
+    advanceUntilIdle()
+
+    vmSuccess.setSelectedGroup("group-1")
+    vmSuccess.setTitle("Test Serie")
+    vmSuccess.setDescription("Test description")
+    vmSuccess.setDate("25/12/2025")
+    vmSuccess.setTime("18:00")
+
+    val serieId3 = vmSuccess.createSerie()
+    advanceUntilIdle()
+
+    assertNotNull(serieId3)
+    assertEquals(1, repo3.added.size)
+    val createdSerie = repo3.added.first()
+    assertEquals("group-1", createdSerie.groupId)
+    val updatedGroup = groupRepo3.groups.first()
+    assertTrue(updatedGroup.serieIds.contains(serieId3))
+  }
+
+  @Test
+  fun deleteCreatedSerieIfExists_groupCleanup() = runTest {
+    // Setup: Add a group
+    val group =
+        Group(
+            id = "group-1",
+            name = "Test Group",
+            category = EventType.SPORTS,
+            ownerId = "test-user-id",
+            memberIds = listOf("test-user-id"),
+            serieIds = emptyList())
+    groupRepo.groups.add(group)
+
+    vm.loadUserGroups()
+    advanceUntilIdle()
+
+    // Test 1: With group - removes serie from group
+    vm.setSelectedGroup("group-1")
+    vm.setTitle("Test Serie")
+    vm.setDescription("Test description")
+    vm.setDate("25/12/2025")
+    vm.setTime("18:00")
+
+    val serieId1 = vm.createSerie()
+    advanceUntilIdle()
+
+    assertNotNull(serieId1)
+    val groupBefore = groupRepo.groups.first()
+    assertTrue(groupBefore.serieIds.contains(serieId1))
+
+    vm.deleteCreatedSerieIfExists()
+    advanceUntilIdle()
+
+    assertTrue(repo.added.isEmpty())
+    val groupAfterDelete = groupRepo.groups.first()
+    assertFalse(groupAfterDelete.serieIds.contains(serieId1))
+
+    // Test 2: Without group - does not affect groups
+    vm = CreateSerieViewModel(repo, groupRepo)
+    vm.loadUserGroups()
+    advanceUntilIdle()
+
+    vm.setTitle("Standalone Serie")
+    vm.setDescription("No group")
+    vm.setDate("25/12/2025")
+    vm.setTime("18:00")
+    vm.setMaxParticipants("10")
+    vm.setVisibility("PUBLIC")
+
+    val serieId2 = vm.createSerie()
+    advanceUntilIdle()
+
+    assertNotNull(serieId2)
+    assertNull(vm.uiState.value.selectedGroupId)
+
+    vm.deleteCreatedSerieIfExists()
+    advanceUntilIdle()
+
+    assertTrue(repo.added.isEmpty())
+    val groupUnaffected = groupRepo.groups.first()
+    assertEquals(0, groupUnaffected.serieIds.size)
+  }
+
+  // ---------- loadUserGroups() tests ----------
+
+  @Test
+  fun loadUserGroups_refreshesGroupList() = runTest {
+    // Initially no groups
+    vm.loadUserGroups()
+    advanceUntilIdle()
+    assertEquals(0, vm.uiState.value.availableGroups.size)
+
+    // Add groups to repo
+    val group1 =
+        Group(
+            id = "group-1",
+            name = "Group 1",
+            category = EventType.SPORTS,
+            ownerId = "test-user-id",
+            memberIds = listOf("test-user-id"))
+    groupRepo.groups.add(group1)
+
+    // Reload groups
+    vm.loadUserGroups()
+    advanceUntilIdle()
+    assertEquals(1, vm.uiState.value.availableGroups.size)
+    assertEquals("group-1", vm.uiState.value.availableGroups.first().id)
+
+    // Add another group
+    val group2 =
+        Group(
+            id = "group-2",
+            name = "Group 2",
+            category = EventType.SOCIAL,
+            ownerId = "test-user-id",
+            memberIds = listOf("test-user-id"))
+    groupRepo.groups.add(group2)
+
+    // Reload again
+    vm.loadUserGroups()
+    advanceUntilIdle()
+    assertEquals(2, vm.uiState.value.availableGroups.size)
   }
 }

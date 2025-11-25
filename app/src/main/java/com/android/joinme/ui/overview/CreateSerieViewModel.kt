@@ -105,18 +105,19 @@ class CreateSerieViewModel(
     private const val DEFAULT_GROUP_SERIE_MAX_PARTICIPANTS = 300
   }
 
-  init {
-    loadUserGroups()
-  }
-
   override fun getState(): SerieFormUIState = _uiState.value
 
   override fun updateState(transform: (SerieFormUIState) -> SerieFormUIState) {
     _uiState.value = transform(_uiState.value) as CreateSerieUIState
   }
 
-  /** Loads the list of groups the current user belongs to. */
-  private fun loadUserGroups() {
+  /**
+   * Loads the list of groups the current user belongs to.
+   *
+   * This should be called when the screen is displayed to ensure the group list is up-to-date,
+   * especially if the user has joined new groups since the last visit.
+   */
+  fun loadUserGroups() {
     viewModelScope.launch {
       try {
         val groups = groupRepository.getAllGroups()
@@ -206,7 +207,6 @@ class CreateSerieViewModel(
           try {
             groupRepository.getGroup(groupId)
           } catch (e: Exception) {
-            Log.e("CreateSerieViewModel", "Error getting group", e)
             setErrorMsg("Failed to get group: ${e.message}")
             setLoadingState(false)
             return null
@@ -228,19 +228,32 @@ class CreateSerieViewModel(
             groupId = state.selectedGroupId)
 
     return try {
-      repository.addSerie(serie)
-
-      // If a group is selected, add the serie ID to the group's serie list
+      // If a group is selected, add the serie ID to the group's serie list first
       selectedGroup?.let { group ->
         try {
           val updatedGroup = group.copy(serieIds = group.serieIds + serieId)
           groupRepository.editGroup(group.id, updatedGroup)
         } catch (e: Exception) {
-          Log.e("CreateSerieViewModel", "Error adding serie to group", e)
-          setErrorMsg("Serie created but failed to add to group: ${e.message}")
+          setErrorMsg("Failed to add serie to group: ${e.message}")
           setLoadingState(false)
           return null
         }
+      }
+
+      // Only add the serie to the repository after successfully adding to the group
+      try {
+        repository.addSerie(serie)
+      } catch (e: Exception) {
+        // Roll back the group update if adding the serie fails
+        selectedGroup?.let { group ->
+          try {
+            val revertedGroup = group.copy(serieIds = group.serieIds - serieId)
+            groupRepository.editGroup(group.id, revertedGroup)
+          } catch (rollbackException: Exception) {
+            Log.e("CreateSerieViewModel", "Error rolling back group update", rollbackException)
+          }
+        }
+        throw e
       }
 
       clearErrorMsg()
@@ -259,16 +272,29 @@ class CreateSerieViewModel(
    * Deletes the created serie if the user goes back without completing the flow.
    *
    * This should be called when the user navigates back from CreateSerieScreen after creating a
-   * serie but before completing the event creation.
+   * serie but before completing the event creation. If the serie was associated with a group, it
+   * also removes the serie ID from the group's serie list.
    */
   suspend fun deleteCreatedSerieIfExists() {
     val serieId = _uiState.value.createdSerieId
+    val groupId = _uiState.value.selectedGroupId
     if (serieId != null) {
       try {
         val serie = repository.getSerie(serieId)
         // Only delete if the serie has no events
         if (serie.eventIds.isEmpty()) {
           repository.deleteSerie(serieId)
+
+          // Remove the serie from the group's serie list if it was associated with a group
+          if (groupId != null) {
+            try {
+              val group = groupRepository.getGroup(groupId)
+              val updatedGroup = group.copy(serieIds = group.serieIds - serieId)
+              groupRepository.editGroup(group.id, updatedGroup)
+            } catch (e: Exception) {
+              // Error removing serie from group, ignore
+            }
+          }
         }
       } catch (e: Exception) {
         // Serie doesn't exist or error occurred, ignore
