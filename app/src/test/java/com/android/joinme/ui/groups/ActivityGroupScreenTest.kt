@@ -191,7 +191,7 @@ class ActivityGroupScreenTest {
   @Test
   fun activityGroupScreen_eventCardClick_triggersCallback() {
     val event = createTestEvent("event1", "Clickable Event", EventType.SPORTS)
-    var selectedEvent: Event? = null
+    var selectedEventId: String? = null
 
     runBlocking {
       eventRepo.addEvent(event)
@@ -202,21 +202,23 @@ class ActivityGroupScreenTest {
 
     composeTestRule.setContent {
       ActivityGroupScreen(
-          groupId = "1", activityGroupViewModel = viewModel, onSelectEvent = { selectedEvent = it })
+          groupId = "1",
+          activityGroupViewModel = viewModel,
+          onSelectedEvent = { selectedEventId = it })
     }
 
     waitForContent()
 
     composeTestRule.onNodeWithText("Clickable Event").performClick()
 
-    assertTrue(selectedEvent != null)
-    assertTrue(selectedEvent?.eventId == "event1")
+    assertTrue(selectedEventId != null)
+    assertTrue(selectedEventId == "event1")
   }
 
   @Test
   fun activityGroupScreen_serieCardClick_triggersCallback() {
     val serie = createTestSerie("serie1", "Clickable Serie")
-    var selectedSerie: Serie? = null
+    var selectedSerieId: String? = null
 
     runBlocking {
       serieRepo.addSerie(serie)
@@ -229,15 +231,15 @@ class ActivityGroupScreenTest {
       ActivityGroupScreen(
           groupId = "1",
           activityGroupViewModel = viewModel,
-          onSelectedSerie = { selectedSerie = it })
+          onSelectedSerie = { selectedSerieId = it })
     }
 
     waitForContent()
 
     composeTestRule.onNodeWithText("Clickable Serie").performClick()
 
-    assertTrue(selectedSerie != null)
-    assertTrue(selectedSerie?.serieId == "serie1")
+    assertTrue(selectedSerieId != null)
+    assertTrue(selectedSerieId == "serie1")
   }
 
   @Test

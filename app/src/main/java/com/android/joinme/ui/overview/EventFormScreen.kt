@@ -607,7 +607,7 @@ fun LocationField(
                         color = MaterialTheme.colorScheme.outlineVariant,
                         shape = RoundedCornerShape(Dimens.CornerRadius.large))) {
               LazyColumn(modifier = Modifier.testTag(testTags.inputEventLocationSuggestions)) {
-                itemsIndexed(suggestions) { index, loc ->
+                itemsIndexed(suggestions) { _, loc ->
                   ListItem(
                       headlineContent = { Text(loc.name) },
                       modifier =

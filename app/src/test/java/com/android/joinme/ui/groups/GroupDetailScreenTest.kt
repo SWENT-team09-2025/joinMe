@@ -162,11 +162,11 @@ class GroupDetailScreenTest {
     // The loading indicator itself doesn't have a testTag, so we verify by checking
     // that success-state content doesn't exist yet
     val groupEventsExists =
-        composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
+        composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
 
     if (groupEventsExists) {
       // Loading was too fast, wait and verify success state loaded instead
-      composeTestRule.onNodeWithText("Group Events").assertIsDisplayed()
+      composeTestRule.onNodeWithText("Group Activities").assertIsDisplayed()
     } else {
       // We caught the loading state - verify error content also doesn't exist
       composeTestRule.onNodeWithText("Retry").assertDoesNotExist()
@@ -500,11 +500,11 @@ class GroupDetailScreenTest {
     composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
 
     composeTestRule.waitUntil(timeoutMillis = 3000) {
-      composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
     }
 
-    composeTestRule.onNodeWithText("Group Events").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Group Events").assertHasClickAction()
+    composeTestRule.onNodeWithText("Group Activities").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Group Activities").assertHasClickAction()
   }
 
   @Test
@@ -518,14 +518,16 @@ class GroupDetailScreenTest {
 
     composeTestRule.setContent {
       GroupDetailScreen(
-          groupId = "group1", viewModel = viewModel, onGroupEventsClick = { buttonClicked = true })
+          groupId = "group1",
+          viewModel = viewModel,
+          onActivityGroupClick = { buttonClicked = true })
     }
 
     composeTestRule.waitUntil(timeoutMillis = 3000) {
-      composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
     }
 
-    composeTestRule.onNodeWithText("Group Events").performClick()
+    composeTestRule.onNodeWithText("Group Activities").performClick()
 
     assertTrue(buttonClicked)
   }
@@ -715,8 +717,8 @@ class GroupDetailScreenTest {
       composeTestRule.onAllNodesWithText("Failed to load group").fetchSemanticsNodes().isNotEmpty()
     }
 
-    // Group Events button should not be visible
-    composeTestRule.onNodeWithText("Group Events").assertDoesNotExist()
+    // Group Activities button should not be visible
+    composeTestRule.onNodeWithText("Group Activities").assertDoesNotExist()
   }
 
   @Test
@@ -904,16 +906,16 @@ class GroupDetailScreenTest {
 
     composeTestRule.setContent {
       GroupDetailScreen(
-          groupId = "group1", viewModel = viewModel, onGroupEventsClick = { clickCount++ })
+          groupId = "group1", viewModel = viewModel, onActivityGroupClick = { clickCount++ })
     }
 
     composeTestRule.waitUntil(timeoutMillis = 3000) {
-      composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
     }
 
-    composeTestRule.onNodeWithText("Group Events").performClick()
-    composeTestRule.onNodeWithText("Group Events").performClick()
-    composeTestRule.onNodeWithText("Group Events").performClick()
+    composeTestRule.onNodeWithText("Group Activities").performClick()
+    composeTestRule.onNodeWithText("Group Activities").performClick()
+    composeTestRule.onNodeWithText("Group Activities").performClick()
 
     assertEquals(3, clickCount)
   }
@@ -930,7 +932,7 @@ class GroupDetailScreenTest {
     composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
 
     composeTestRule.waitUntil(timeoutMillis = 3000) {
-      composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
     }
 
     composeTestRule.onNodeWithTag("chatFabBottom").assertIsDisplayed()
@@ -958,7 +960,7 @@ class GroupDetailScreenTest {
     }
 
     composeTestRule.waitUntil(timeoutMillis = 3000) {
-      composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
     }
 
     composeTestRule.onNodeWithTag("chatFabBottom").performClick()
@@ -977,7 +979,7 @@ class GroupDetailScreenTest {
     composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
 
     composeTestRule.waitUntil(timeoutMillis = 3000) {
-      composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
     }
 
     composeTestRule.onNodeWithContentDescription("Open Chat").assertIsDisplayed()
@@ -998,7 +1000,7 @@ class GroupDetailScreenTest {
     }
 
     composeTestRule.waitUntil(timeoutMillis = 3000) {
-      composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
     }
 
     composeTestRule.onNodeWithTag("chatFabBottom").performClick()

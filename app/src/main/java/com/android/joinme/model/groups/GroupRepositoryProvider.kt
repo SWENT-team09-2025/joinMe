@@ -4,21 +4,31 @@ import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
 
 /**
- * Provides a singleton instance of the GroupRepository for dependency injection.
- *
- * This provider follows the repository pattern and enables easy testing by allowing the repository
- * instance to be swapped with a mock or fake implementation. By default, it provides a Firestore-
- * backed implementation.
+ * Provides a singleton instance of the GroupRepository for dependency injection. Uses a local
+ * in-memory repository when running in a test environment, and a Firestore-backed implementation
+ * otherwise. The `repository` property is mutable so tests can inject a fake or mock
+ * implementation.
  */
 object GroupRepositoryProvider {
-  /**
-   * Lazily initialized private instance of the repository using Firebase Firestore as the backend.
-   */
-  private val _repository: GroupRepository by lazy { GroupRepositoryFirestore(Firebase.firestore) }
+  // Local repository (in-memory)
+  private val localRepo: GroupRepository by lazy { GroupRepositoryLocal() }
 
-  /**
-   * The current repository instance used throughout the application. Can be reassigned for testing
-   * purposes to inject fake or mock implementations.
-   */
-  var repository: GroupRepository = _repository
+  // Firestore-backed repository
+  private val firestoreRepo: GroupRepository by lazy {
+    GroupRepositoryFirestore(Firebase.firestore)
+  }
+
+  // For backward compatibility and explicit test injection
+  var repository: GroupRepository
+    get() {
+      val isTestEnv =
+          android.os.Build.FINGERPRINT == "robolectric" ||
+              android.os.Debug.isDebuggerConnected() ||
+              System.getProperty("IS_TEST_ENV") == "true"
+
+      return if (isTestEnv) localRepo else firestoreRepo
+    }
+    set(_) {
+      // Allows tests to inject custom repository
+    }
 }

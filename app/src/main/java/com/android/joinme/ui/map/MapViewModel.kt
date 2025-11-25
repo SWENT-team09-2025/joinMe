@@ -183,6 +183,5 @@ class MapViewModel(
   /** Called when the ViewModel is cleared. Stops location updates to prevent memory leaks. */
   override fun onCleared() {
     super.onCleared()
-    locationService?.stopLocationUpdates()
   }
 }

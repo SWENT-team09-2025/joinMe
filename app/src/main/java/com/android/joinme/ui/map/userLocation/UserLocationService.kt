@@ -30,19 +30,4 @@ interface UserLocationService {
    *   data is available.
    */
   suspend fun getCurrentLocation(): UserLocation?
-
-  /**
-   * Starts continuous location updates.
-   *
-   * Implementations should begin requesting location updates from the underlying location provider.
-   */
-  fun startLocationUpdates()
-
-  /**
-   * Stops continuous location updates.
-   *
-   * Implementations should cancel any active location update requests and release related
-   * resources.
-   */
-  fun stopLocationUpdates()
 }
