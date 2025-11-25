@@ -470,8 +470,10 @@ class PublicProfileScreenTest {
 
     // Check individual event cards
     composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.eventCardTag("event1")).assertExists()
-      composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.COMMON_EVENTS_LIST).assertExists()
-      composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.COMMON_EVENTS_LIST).performScrollToNode(hasTestTag(PublicProfileScreenTestTags.eventCardTag("event2")))
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.COMMON_EVENTS_LIST).assertExists()
+    composeTestRule
+        .onNodeWithTag(PublicProfileScreenTestTags.COMMON_EVENTS_LIST)
+        .performScrollToNode(hasTestTag(PublicProfileScreenTestTags.eventCardTag("event2")))
     composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.eventCardTag("event2")).assertExists()
   }
 
@@ -550,8 +552,10 @@ class PublicProfileScreenTest {
 
     // Check individual group cards
     composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.groupCardTag("group1")).assertExists()
-      composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.COMMON_GROUPS_LIST).assertExists()
-      composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.COMMON_GROUPS_LIST).performScrollToNode(hasTestTag(PublicProfileScreenTestTags.groupCardTag("group2")))
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.COMMON_GROUPS_LIST).assertExists()
+    composeTestRule
+        .onNodeWithTag(PublicProfileScreenTestTags.COMMON_GROUPS_LIST)
+        .performScrollToNode(hasTestTag(PublicProfileScreenTestTags.groupCardTag("group2")))
     composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.groupCardTag("group2")).assertExists()
   }
 
