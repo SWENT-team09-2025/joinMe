@@ -272,7 +272,7 @@ private fun ProfileContent(
                   colors =
                       ButtonDefaults.buttonColors(
                           containerColor = MaterialTheme.colorScheme.primary),
-                  shape = RoundedCornerShape(Dimens.CornerRadius.medium)) {
+                  shape = RoundedCornerShape(Dimens.CornerRadius.circle)) {
                     Text("Follow", color = MaterialTheme.colorScheme.onPrimary)
                   }
             }
@@ -307,7 +307,7 @@ private fun ProfileContent(
                   colors =
                       ButtonDefaults.buttonColors(
                           containerColor = MaterialTheme.colorScheme.secondary),
-                  shape = RoundedCornerShape(Dimens.CornerRadius.medium)) {
+                  shape = RoundedCornerShape(Dimens.CornerRadius.circle)) {
                     Text("Message", color = MaterialTheme.colorScheme.onSecondary)
                   }
             }
