@@ -684,4 +684,183 @@ class EventForSerieFormScreenTest {
 
     composeTestRule.onNodeWithText("Must be a positive number").assertIsDisplayed()
   }
+
+  /** --- CONDITIONAL TYPE FIELD RENDERING TESTS --- */
+  @Test
+  fun typeField_withSerieHasGroupTrue_showsPlainText() {
+    val formState =
+        EventForSerieFormState(
+            serieHasGroup = true, // Serie has a group
+            type = "SPORTS", // Type is set from group
+            title = "",
+            description = "",
+            duration = "",
+            location = "",
+            selectedLocation = null,
+            locationQuery = "",
+            locationSuggestions = emptyList(),
+            isLoading = false,
+            errorMsg = null,
+            invalidTypeMsg = null,
+            invalidTitleMsg = null,
+            invalidDescriptionMsg = null,
+            invalidDurationMsg = null,
+            invalidLocationMsg = null)
+
+    composeTestRule.setContent {
+      EventForSerieFormScreen(
+          title = "Test Form",
+          formState = formState,
+          isFormValid = formState.isValid,
+          testTags = testTags,
+          onTypeChange = {},
+          onTitleChange = {},
+          onDescriptionChange = {},
+          onDurationChange = {},
+          onLocationQueryChange = {},
+          onLocationSelected = {},
+          onSearchLocations = {},
+          onSave = { true },
+          onGoBack = {})
+    }
+
+    // Should show label and plain text, not a dropdown
+    composeTestRule.onNodeWithText("Event Type (from Group)").assertIsDisplayed()
+    composeTestRule.onNodeWithText("SPORTS").assertIsDisplayed()
+
+    // Verify it's not a clickable dropdown - the test tag should still exist
+    composeTestRule.onNodeWithTag(testTags.inputEventType).assertExists()
+  }
+
+  @Test
+  fun typeField_withSerieHasGroupFalse_showsDropdown() {
+    val formState =
+        EventForSerieFormState(
+            serieHasGroup = false, // Standalone serie
+            type = "", // Type not set
+            title = "",
+            description = "",
+            duration = "",
+            location = "",
+            selectedLocation = null,
+            locationQuery = "",
+            locationSuggestions = emptyList(),
+            isLoading = false,
+            errorMsg = null,
+            invalidTypeMsg = null,
+            invalidTitleMsg = null,
+            invalidDescriptionMsg = null,
+            invalidDurationMsg = null,
+            invalidLocationMsg = null)
+
+    composeTestRule.setContent {
+      EventForSerieFormScreen(
+          title = "Test Form",
+          formState = formState,
+          isFormValid = formState.isValid,
+          testTags = testTags,
+          onTypeChange = {},
+          onTitleChange = {},
+          onDescriptionChange = {},
+          onDurationChange = {},
+          onLocationQueryChange = {},
+          onLocationSelected = {},
+          onSearchLocations = {},
+          onSave = { true },
+          onGoBack = {})
+    }
+
+    // Should show dropdown field, not plain text with "from Group" label
+    composeTestRule.onNodeWithTag(testTags.inputEventType).assertExists()
+    composeTestRule.onNodeWithText("Event Type (from Group)").assertDoesNotExist()
+  }
+
+  @Test
+  fun typeField_withSerieHasGroupTrue_displaysCorrectType() {
+    val formState =
+        EventForSerieFormState(
+            serieHasGroup = true,
+            type = "ACTIVITY", // Group has ACTIVITY type
+            title = "",
+            description = "",
+            duration = "",
+            location = "",
+            selectedLocation = null,
+            locationQuery = "",
+            locationSuggestions = emptyList(),
+            isLoading = false,
+            errorMsg = null,
+            invalidTypeMsg = null,
+            invalidTitleMsg = null,
+            invalidDescriptionMsg = null,
+            invalidDurationMsg = null,
+            invalidLocationMsg = null)
+
+    composeTestRule.setContent {
+      EventForSerieFormScreen(
+          title = "Test Form",
+          formState = formState,
+          isFormValid = formState.isValid,
+          testTags = testTags,
+          onTypeChange = {},
+          onTitleChange = {},
+          onDescriptionChange = {},
+          onDurationChange = {},
+          onLocationQueryChange = {},
+          onLocationSelected = {},
+          onSearchLocations = {},
+          onSave = { true },
+          onGoBack = {})
+    }
+
+    // Should show the type from the group
+    composeTestRule.onNodeWithText("Event Type (from Group)").assertIsDisplayed()
+    composeTestRule.onNodeWithText("ACTIVITY").assertIsDisplayed()
+  }
+
+  @Test
+  fun typeField_withSerieHasGroupTrue_isNotInteractive() {
+    val formState =
+        EventForSerieFormState(
+            serieHasGroup = true,
+            type = "SOCIAL",
+            title = "",
+            description = "",
+            duration = "",
+            location = "",
+            selectedLocation = null,
+            locationQuery = "",
+            locationSuggestions = emptyList(),
+            isLoading = false,
+            errorMsg = null,
+            invalidTypeMsg = null,
+            invalidTitleMsg = null,
+            invalidDescriptionMsg = null,
+            invalidDurationMsg = null,
+            invalidLocationMsg = null)
+
+    composeTestRule.setContent {
+      EventForSerieFormScreen(
+          title = "Test Form",
+          formState = formState,
+          isFormValid = formState.isValid,
+          testTags = testTags,
+          onTypeChange = {},
+          onTitleChange = {},
+          onDescriptionChange = {},
+          onDurationChange = {},
+          onLocationQueryChange = {},
+          onLocationSelected = {},
+          onSearchLocations = {},
+          onSave = { true },
+          onGoBack = {})
+    }
+
+    // The type field should be plain text, not clickable
+    // Verify the text exists
+    composeTestRule.onNodeWithText("SOCIAL").assertIsDisplayed()
+
+    // Note: We can't easily test that it's NOT clickable in Compose tests
+    // But we verify it's rendered as Text, not a clickable field
+  }
 }

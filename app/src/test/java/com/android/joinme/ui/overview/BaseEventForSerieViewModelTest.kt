@@ -44,6 +44,11 @@ class BaseEventForSerieViewModelTest {
 
     // Expose for testing
     fun testSetErrorMsg(msg: String) = setErrorMsg(msg)
+
+    // Expose updateState for testing
+    fun testUpdateState(transform: (EventForSerieFormUIState) -> EventForSerieFormUIState) {
+      updateState(transform)
+    }
   }
 
   // ---- Fake Location Repository ----
@@ -434,5 +439,79 @@ class BaseEventForSerieViewModelTest {
     vm.clearLocation()
     assertNull(vm.uiState.value.selectedLocation)
     assertEquals("", vm.uiState.value.locationQuery)
+  }
+
+  // ---------- isValid with serieHasGroup tests ----------
+
+  @Test
+  fun isValid_withSerieHasGroupTrue_doesNotRequireType() = runTest {
+    // Simulate serie with group (type not required)
+    val stateWithGroup = EventForSerieFormState(serieHasGroup = true, type = "")
+    vm.testUpdateState { stateWithGroup }
+
+    // Fill all other required fields
+    vm.setTitle("Event Title")
+    vm.setDescription("Event Description")
+    vm.setDuration("90")
+    vm.selectLocation(Location(latitude = 1.0, longitude = 1.0, name = "Stadium"))
+
+    // Verify form is valid even without type field being manually set
+    val state = vm.uiState.value
+    assertTrue(state.serieHasGroup)
+    assertTrue(state.isValid) // Should be valid without explicit type
+    assertNull(state.invalidTitleMsg)
+    assertNull(state.invalidDescriptionMsg)
+    assertNull(state.invalidDurationMsg)
+    assertNull(state.invalidLocationMsg)
+  }
+
+  @Test
+  fun isValid_withSerieHasGroupFalse_requiresType() = runTest {
+    // Simulate standalone serie (type required)
+    val stateWithoutGroup = EventForSerieFormState(serieHasGroup = false, type = "")
+    vm.testUpdateState { stateWithoutGroup }
+
+    // Fill all fields EXCEPT type
+    vm.setTitle("Event Title")
+    vm.setDescription("Event Description")
+    vm.setDuration("90")
+    vm.selectLocation(Location(latitude = 1.0, longitude = 1.0, name = "Stadium"))
+
+    // Verify form is NOT valid without type
+    val stateBeforeType = vm.uiState.value
+    assertFalse(stateBeforeType.serieHasGroup)
+    assertFalse(stateBeforeType.isValid) // Not valid without type
+
+    // Now add type
+    vm.setType("SPORTS")
+
+    // Verify form is now valid
+    val stateAfterType = vm.uiState.value
+    assertTrue(stateAfterType.isValid)
+    assertEquals("SPORTS", stateAfterType.type)
+    assertNull(stateAfterType.invalidTypeMsg)
+  }
+
+  @Test
+  fun isValid_withSerieHasGroupTrue_typeCanBeBlank() = runTest {
+    // Set serieHasGroup to true with blank type
+    val stateWithGroup =
+        EventForSerieFormState(
+            serieHasGroup = true,
+            type = "", // Blank type should be fine when serieHasGroup is true
+            title = "Event Title",
+            description = "Event Description",
+            duration = "90",
+            location = "Stadium",
+            selectedLocation = Location(1.0, 1.0, "Stadium"),
+            locationQuery = "Stadium")
+
+    vm.testUpdateState { stateWithGroup }
+
+    // Verify form is valid
+    val state = vm.uiState.value
+    assertTrue(state.serieHasGroup)
+    assertEquals("", state.type) // Type is blank
+    assertTrue(state.isValid) // But form is still valid
   }
 }

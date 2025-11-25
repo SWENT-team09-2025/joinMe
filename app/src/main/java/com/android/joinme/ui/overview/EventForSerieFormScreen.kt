@@ -117,13 +117,27 @@ fun EventForSerieFormScreen(
                     .padding(Dimens.Padding.medium)
                     .padding(paddingValues),
             verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
-              // Type dropdown
-              EventTypeField(
-                  value = formState.type,
-                  onValueChange = onTypeChange,
-                  isError = formState.invalidTypeMsg != null,
-                  errorMessage = formState.invalidTypeMsg,
-                  testTag = testTags.inputEventType)
+              // Type field - show text if serie has a group, dropdown otherwise
+              if (formState.serieHasGroup) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                  Text(
+                      text = "Event Type (from Group)",
+                      style = MaterialTheme.typography.labelMedium,
+                      color = MaterialTheme.colorScheme.onSurfaceVariant)
+                  Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
+                  Text(
+                      text = formState.type,
+                      style = MaterialTheme.typography.bodyLarge,
+                      modifier = Modifier.testTag(testTags.inputEventType))
+                }
+              } else {
+                EventTypeField(
+                    value = formState.type,
+                    onValueChange = onTypeChange,
+                    isError = formState.invalidTypeMsg != null,
+                    errorMessage = formState.invalidTypeMsg,
+                    testTag = testTags.inputEventType)
+              }
 
               // Title
               EventTitleField(

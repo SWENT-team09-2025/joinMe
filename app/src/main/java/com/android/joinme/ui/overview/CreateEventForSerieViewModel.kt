@@ -62,6 +62,32 @@ class CreateEventForSerieViewModel(
   }
 
   /**
+   * Loads the serie information and updates the UI state.
+   *
+   * If the serie has a group, sets serieHasGroup to true and loads the group's event type.
+   *
+   * @param serieId The ID of the serie to load
+   */
+  suspend fun loadSerie(serieId: String) {
+    try {
+      val serie = serieRepository.getSerie(serieId)
+      android.util.Log.d("CreateEventForSerieVM", "Loaded serie: groupId=${serie.groupId}")
+      if (serie.groupId != null) {
+        val eventType = determineEventTypeFromGroup(serie)
+        android.util.Log.d("CreateEventForSerieVM", "Serie has group, type=${eventType.name}")
+        _uiState.value =
+            _uiState.value.copy(serieHasGroup = true, type = eventType.name, invalidTypeMsg = null)
+      } else {
+        android.util.Log.d("CreateEventForSerieVM", "Serie has no group")
+        _uiState.value = _uiState.value.copy(serieHasGroup = false)
+      }
+    } catch (e: Exception) {
+      android.util.Log.e("CreateEventForSerieVM", "Failed to load serie", e)
+      setErrorMsg("Failed to load serie: ${e.message}")
+    }
+  }
+
+  /**
    * Creates a new event for the given serie and adds it to the repository.
    *
    * This function performs the following steps:

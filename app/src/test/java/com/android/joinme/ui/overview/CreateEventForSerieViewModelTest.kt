@@ -902,4 +902,172 @@ class CreateEventForSerieViewModelTest {
     assertTrue(vm.uiState.value.errorMsg!!.contains("Failed to determine event type"))
     assertTrue(eventRepo.added.isEmpty())
   }
+
+  // ---------- loadSerie() tests ----------
+
+  @Test
+  fun loadSerie_withGroupSerie_setsSerieHasGroupTrue_autoFillsTypeFromGroup() = runTest {
+    // Setup: Create a group with SOCIAL category
+    val socialGroup =
+        Group(
+            id = "group-1",
+            name = "Social Club",
+            category = EventType.SOCIAL,
+            description = "Social gatherings",
+            ownerId = "owner-1",
+            memberIds = listOf("owner-1", "user-2"))
+    groupRepo.groups.add(socialGroup)
+
+    // Create a serie with the group
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_MONTH, 7)
+    val serieDate = Timestamp(calendar.time)
+
+    val serie =
+        Serie(
+            serieId = "serie-1",
+            title = "Social Serie",
+            description = "Weekly social events",
+            date = serieDate,
+            participants = listOf("owner-1", "user-2"),
+            maxParticipants = 300,
+            visibility = Visibility.PRIVATE,
+            eventIds = emptyList(),
+            ownerId = "owner-1",
+            groupId = "group-1")
+
+    serieRepo.addSerie(serie)
+
+    // Initially, serieHasGroup should be false
+    assertFalse(vm.uiState.value.serieHasGroup)
+    assertEquals("", vm.uiState.value.type)
+
+    // Load the serie
+    vm.loadSerie("serie-1")
+    advanceUntilIdle()
+
+    // Verify serieHasGroup is set to true and type is auto-filled
+    val state = vm.uiState.value
+    assertTrue(state.serieHasGroup)
+    assertEquals("SOCIAL", state.type)
+    assertNull(state.invalidTypeMsg)
+  }
+
+  @Test
+  fun loadSerie_withStandaloneSerie_setsSerieHasGroupFalse_doesNotFillType() = runTest {
+    // Create a standalone serie (no group)
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_MONTH, 7)
+    val serieDate = Timestamp(calendar.time)
+
+    val serie =
+        Serie(
+            serieId = "serie-1",
+            title = "Standalone Serie",
+            description = "No group",
+            date = serieDate,
+            participants = listOf("owner-1"),
+            maxParticipants = 20,
+            visibility = Visibility.PUBLIC,
+            eventIds = emptyList(),
+            ownerId = "owner-1",
+            groupId = null) // No group
+
+    serieRepo.addSerie(serie)
+
+    // Initially, serieHasGroup should be false
+    assertFalse(vm.uiState.value.serieHasGroup)
+
+    // Load the serie
+    vm.loadSerie("serie-1")
+    advanceUntilIdle()
+
+    // Verify serieHasGroup remains false and type is not auto-filled
+    val state = vm.uiState.value
+    assertFalse(state.serieHasGroup)
+    assertEquals("", state.type) // Type should remain empty, user must select
+  }
+
+  @Test
+  fun loadSerie_withNonexistentSerie_setsErrorMsg() = runTest {
+    // Try to load a serie that doesn't exist
+    vm.loadSerie("nonexistent-serie")
+    advanceUntilIdle()
+
+    // Verify error message is set
+    assertNotNull(vm.uiState.value.errorMsg)
+    assertTrue(vm.uiState.value.errorMsg!!.contains("Failed to load serie"))
+  }
+
+  @Test
+  fun loadSerie_withDifferentGroupCategories_setsCorrectType() = runTest {
+    // Test with ACTIVITY group
+    val activityGroup =
+        Group(
+            id = "activity-group",
+            name = "Activity Group",
+            category = EventType.ACTIVITY,
+            description = "Various activities",
+            ownerId = "owner-1",
+            memberIds = listOf("owner-1"))
+    groupRepo.groups.add(activityGroup)
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_MONTH, 7)
+
+    val activitySerie =
+        Serie(
+            serieId = "activity-serie",
+            title = "Activity Serie",
+            description = "Weekly activities",
+            date = Timestamp(calendar.time),
+            participants = listOf("owner-1"),
+            maxParticipants = 300,
+            visibility = Visibility.PRIVATE,
+            eventIds = emptyList(),
+            ownerId = "owner-1",
+            groupId = "activity-group")
+
+    serieRepo.addSerie(activitySerie)
+
+    vm.loadSerie("activity-serie")
+    advanceUntilIdle()
+
+    assertEquals("ACTIVITY", vm.uiState.value.type)
+    assertTrue(vm.uiState.value.serieHasGroup)
+
+    // Test with SPORTS group
+    val sportsGroup =
+        Group(
+            id = "sports-group",
+            name = "Sports Group",
+            category = EventType.SPORTS,
+            description = "Sports events",
+            ownerId = "owner-1",
+            memberIds = listOf("owner-1"))
+    groupRepo.groups.add(sportsGroup)
+
+    val sportsSerie =
+        Serie(
+            serieId = "sports-serie",
+            title = "Sports Serie",
+            description = "Weekly sports",
+            date = Timestamp(calendar.time),
+            participants = listOf("owner-1"),
+            maxParticipants = 300,
+            visibility = Visibility.PRIVATE,
+            eventIds = emptyList(),
+            ownerId = "owner-1",
+            groupId = "sports-group")
+
+    serieRepo.addSerie(sportsSerie)
+
+    // Create new VM to reset state
+    val newVm = CreateEventForSerieViewModel(eventRepo, serieRepo, groupRepo, locationRepo)
+    newVm.loadSerie("sports-serie")
+    advanceUntilIdle()
+
+    assertEquals("SPORTS", newVm.uiState.value.type)
+    assertTrue(newVm.uiState.value.serieHasGroup)
+  }
 }

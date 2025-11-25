@@ -38,6 +38,7 @@ class CreateSerieViewModelTest {
   // ---- Simple fake repo that records added series ----
   private class FakeSeriesRepository : SeriesRepository {
     val added = mutableListOf<Serie>()
+    private var idCounter = 1
 
     override suspend fun addSerie(serie: Serie) {
       added += serie
@@ -60,7 +61,7 @@ class CreateSerieViewModelTest {
       return added.filter { seriesIds.contains(it.serieId) }
     }
 
-    override fun getNewSerieId(): String = "fake-serie-id-1"
+    override fun getNewSerieId(): String = "fake-serie-id-${idCounter++}"
   }
 
   // ---- Simple fake group repo ----
@@ -592,11 +593,10 @@ class CreateSerieViewModelTest {
     advanceUntilIdle()
 
     assertNotNull(serieId)
-    assertEquals("fake-serie-id-1", serieId)
     assertEquals(1, repo.added.size)
 
     val serie = repo.added.first()
-    assertEquals("fake-serie-id-1", serie.serieId)
+    assertEquals(serieId, serie.serieId)
     assertEquals("Volleyball League", serie.title)
     assertEquals("Monthly volleyball games on the beach", serie.description)
     assertEquals(12, serie.maxParticipants)
@@ -632,8 +632,7 @@ class CreateSerieViewModelTest {
     advanceUntilIdle()
 
     assertNotNull(firstSerieId)
-    assertEquals("fake-serie-id-1", firstSerieId)
-    assertEquals("fake-serie-id-1", vm.uiState.value.createdSerieId)
+    assertEquals(firstSerieId, vm.uiState.value.createdSerieId)
     assertEquals(1, repo.added.size)
 
     // Second call - should return the same ID without creating a duplicate
@@ -641,7 +640,6 @@ class CreateSerieViewModelTest {
     advanceUntilIdle()
 
     assertNotNull(secondSerieId)
-    assertEquals("fake-serie-id-1", secondSerieId)
     assertEquals(firstSerieId, secondSerieId)
     // Verify no duplicate was created
     assertEquals(1, repo.added.size)
@@ -673,7 +671,7 @@ class CreateSerieViewModelTest {
 
     // Verify createdSerieId is stored to prevent duplicate creation on re-navigation
     assertNotNull(serieId)
-    assertEquals("fake-serie-id-1", vm.uiState.value.createdSerieId)
+    assertEquals(serieId, vm.uiState.value.createdSerieId)
   }
 
   // ---------- Delete created serie on goBack tests ----------
@@ -1138,5 +1136,50 @@ class CreateSerieViewModelTest {
     vm.loadUserGroups()
     advanceUntilIdle()
     assertEquals(2, vm.uiState.value.availableGroups.size)
+  }
+
+  @Test
+  fun setSelectedGroup_clearsCreatedSerieId() = runTest {
+    // Setup: Add a group
+    val group =
+        Group(
+            id = "group-1",
+            name = "Test Group",
+            category = EventType.SPORTS,
+            ownerId = "test-user-id",
+            memberIds = listOf("test-user-id"),
+            serieIds = emptyList())
+    groupRepo.groups.add(group)
+    vm.loadUserGroups()
+    advanceUntilIdle()
+
+    // Create a serie without a group
+    vm.setTitle("Test Serie")
+    vm.setDescription("Test description")
+    vm.setDate("25/12/2025")
+    vm.setTime("18:00")
+    vm.setMaxParticipants("10")
+    vm.setVisibility("PUBLIC")
+
+    val serieId1 = vm.createSerie()
+    advanceUntilIdle()
+
+    assertNotNull(serieId1)
+    assertNotNull(vm.uiState.value.createdSerieId)
+    assertNull(vm.uiState.value.selectedGroupId)
+
+    // Now select a group - should clear createdSerieId
+    vm.setSelectedGroup("group-1")
+    assertNull(vm.uiState.value.createdSerieId)
+    assertEquals("group-1", vm.uiState.value.selectedGroupId)
+
+    // Create another serie - should create a NEW serie with the group
+    val serieId2 = vm.createSerie()
+    advanceUntilIdle()
+
+    assertNotNull(serieId2)
+    assertNotEquals(serieId1, serieId2)
+    assertEquals(2, repo.added.size)
+    assertEquals("group-1", repo.added.last().groupId)
   }
 }

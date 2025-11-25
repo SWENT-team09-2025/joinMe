@@ -128,11 +128,17 @@ class CreateSerieViewModel(
     }
   }
 
-  /** Updates the selected group for the serie. Pass null for standalone series. */
+  /**
+   * Updates the selected group for the serie. Pass null for standalone series.
+   *
+   * Clears any previously created serie ID since changing the group requires creating a new serie.
+   */
   fun setSelectedGroup(groupId: String?) {
+    android.util.Log.d("CreateSerieViewModel", "setSelectedGroup called with groupId=$groupId")
     val selectedGroup = groupId?.let { id -> _uiState.value.availableGroups.find { it.id == id } }
 
     if (selectedGroup != null) {
+      android.util.Log.d("CreateSerieViewModel", "Setting group, clearing createdSerieId")
       // For group series, auto-set maxParticipants and visibility
       _uiState.value =
           _uiState.value.copy(
@@ -140,8 +146,10 @@ class CreateSerieViewModel(
               maxParticipants = DEFAULT_GROUP_SERIE_MAX_PARTICIPANTS.toString(),
               visibility = Visibility.PRIVATE.name,
               invalidMaxParticipantsMsg = null,
-              invalidVisibilityMsg = null)
+              invalidVisibilityMsg = null,
+              createdSerieId = null) // Clear any existing serie
     } else {
+      android.util.Log.d("CreateSerieViewModel", "Clearing group, clearing createdSerieId")
       // For standalone series, clear the fields
       _uiState.value =
           _uiState.value.copy(
@@ -149,7 +157,8 @@ class CreateSerieViewModel(
               maxParticipants = "",
               visibility = "",
               invalidMaxParticipantsMsg = null,
-              invalidVisibilityMsg = null)
+              invalidVisibilityMsg = null,
+              createdSerieId = null) // Clear any existing serie
     }
   }
 
@@ -177,8 +186,12 @@ class CreateSerieViewModel(
 
     // If serie was already created, return the existing ID
     state.createdSerieId?.let {
+      android.util.Log.d("CreateSerieViewModel", "Returning existing serie ID: $it")
       return it
     }
+
+    android.util.Log.d(
+        "CreateSerieViewModel", "Creating NEW serie with groupId=${state.selectedGroupId}")
 
     if (!state.isValid) {
       setErrorMsg("At least one field is not valid")
