@@ -32,6 +32,7 @@ import com.android.joinme.model.notification.FCMTokenManager
 import com.android.joinme.model.profile.ProfileRepositoryProvider
 import com.android.joinme.ui.chat.ChatScreen
 import com.android.joinme.ui.chat.ChatViewModel
+import com.android.joinme.ui.groups.ActivityGroupScreen
 import com.android.joinme.ui.groups.CreateGroupScreen
 import com.android.joinme.ui.groups.EditGroupScreen
 import com.android.joinme.ui.groups.GroupDetailScreen
@@ -473,8 +474,8 @@ fun JoinMe(
           GroupDetailScreen(
               groupId = groupId,
               onBackClick = { navigationActions.goBack() },
-              onGroupEventsClick = {
-                Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+              onActivityGroupClick = {
+                navigationActions.navigateTo(Screen.ActivityGroup(groupId))
               },
               onMemberClick = {
                 Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
@@ -483,6 +484,22 @@ fun JoinMe(
                 navigationActions.navigateTo(Screen.Chat(chatId, chatTitle))
               })
         }
+      }
+
+      composable(route = Screen.ActivityGroup.route) { navBackStackEntry ->
+        val groupId = navBackStackEntry.arguments?.getString("groupId")
+
+        groupId?.let {
+          ActivityGroupScreen(
+              groupId = groupId,
+              onNavigateBack = { navigationActions.goBack() },
+              onSelectedEvent = { eventId ->
+                navigationActions.navigateTo(Screen.ShowEventScreen(eventId))
+              },
+              onSelectedSerie = { serieId ->
+                navigationActions.navigateTo(Screen.SerieDetails(serieId))
+              })
+        } ?: run { Toast.makeText(context, "Group ID is null", Toast.LENGTH_SHORT).show() }
       }
 
       composable(route = Screen.Chat.route) { navBackStackEntry ->
