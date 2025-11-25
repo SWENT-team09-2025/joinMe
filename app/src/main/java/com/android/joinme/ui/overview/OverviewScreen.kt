@@ -41,7 +41,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.eventItem.EventItem
@@ -113,7 +112,6 @@ object OverviewScreenTestTags {
  * - Pattern matching to render EventCard or SerieCard based on item type
  *
  * @param overviewViewModel ViewModel managing the screen state and business logic
- * @param credentialManager Credential manager for authentication (currently unused)
  * @param onSelectEvent Callback invoked when a standalone event is clicked
  * @param onAddEvent Callback invoked when the create event FAB is clicked
  * @param onSelectedSerie Callback invoked when a serie is clicked
@@ -124,7 +122,6 @@ object OverviewScreenTestTags {
 @Composable
 fun OverviewScreen(
     overviewViewModel: OverviewViewModel = viewModel(),
-    credentialManager: CredentialManager = CredentialManager.create(LocalContext.current),
     onSelectEvent: (Event) -> Unit = {},
     onAddEvent: () -> Unit = {},
     onAddSerie: () -> Unit = {},

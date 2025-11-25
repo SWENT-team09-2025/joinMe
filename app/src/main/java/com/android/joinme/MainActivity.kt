@@ -183,14 +183,21 @@ fun JoinMe(
           try {
             val groupRepository = GroupRepositoryProvider.repository
             groupRepository.joinGroup(initialGroupId, currentUser!!.uid)
-            Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT).show()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+              Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT).show()
+            }
             navigationActions.navigateTo(Screen.GroupDetail(initialGroupId))
           } catch (e: Exception) {
-            Toast.makeText(context, "Failed to join group: ${e.message}", Toast.LENGTH_LONG).show()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+              Toast.makeText(context, "Failed to join group: ${e.message}", Toast.LENGTH_LONG)
+                  .show()
+            }
           }
         }
       } else {
-        Toast.makeText(context, "Please sign in to join the group", Toast.LENGTH_SHORT).show()
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+          Toast.makeText(context, "Please sign in to join the group", Toast.LENGTH_SHORT).show()
+        }
       }
     }
   }
@@ -229,7 +236,6 @@ fun JoinMe(
             onSelectedSerie = { navigationActions.navigateTo(Screen.SerieDetails(it.serieId)) },
             onGoToHistory = { navigationActions.navigateTo(Screen.History) },
             navigationActions = navigationActions,
-            credentialManager = credentialManager,
             enableNotificationPermissionRequest = enableNotificationPermissionRequest)
       }
       composable(Screen.CreateEvent.route) {
@@ -424,7 +430,6 @@ fun JoinMe(
             onBackClick = { navigationActions.goBack() },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
-            onViewGroupDetails = { navigationActions.navigateTo(Screen.GroupDetail(it.id)) },
             onLeaveGroup = { group ->
               groupListViewModel.leaveGroup(
                   groupId = group.id,
@@ -432,19 +437,6 @@ fun JoinMe(
                     Toast.makeText(context, "Left group successfully", Toast.LENGTH_SHORT).show()
                   },
                   onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
-            },
-            onShareGroup = { group ->
-              val deepLink = "joinme://group/${group.id}"
-              val shareIntent =
-                  Intent().apply {
-                    action = Intent.ACTION_SEND
-                    putExtra(Intent.EXTRA_SUBJECT, "Join my group on JoinMe!")
-                    putExtra(
-                        Intent.EXTRA_TEXT,
-                        "Join '${group.name}' on JoinMe!\n\nCategory: ${group.category}\n${if (group.description.isNotBlank()) "Description: ${group.description}\n\n" else "\n"}Click the link to join: $deepLink")
-                    type = "text/plain"
-                  }
-              context.startActivity(Intent.createChooser(shareIntent, "Share Group via"))
             },
             onEditGroup = { group -> navigationActions.navigateTo(Screen.EditGroup(group.id)) },
             onDeleteGroup = { group ->
@@ -526,8 +518,8 @@ fun JoinMe(
               currentUserId = currentUserId,
               currentUserName = currentUserName,
               viewModel = chatViewModel,
-              onBackClick = { navigationActions.goBack() },
-              totalParticipants = totalParticipants)
+              totalParticipants = totalParticipants,
+              onLeaveClick = { navigationActions.goBack() })
         } else {
           Toast.makeText(context, "Chat ID or title is null", Toast.LENGTH_SHORT).show()
         }

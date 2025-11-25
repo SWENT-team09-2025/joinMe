@@ -110,9 +110,6 @@ object GroupListScreenTestTags {
 
   /** Test tag for the "Create a group" bubble action. */
   const val CREATE_GROUP_BUBBLE = "groupCreateBubble"
-
-  // Group card menu bubbles
-  const val VIEW_GROUP_DETAILS_BUBBLE = "viewGroupDetailsBubble"
   const val LEAVE_GROUP_BUBBLE = "leaveGroupBubble"
   const val SHARE_GROUP_BUBBLE = "shareGroupBubble"
   const val EDIT_GROUP_BUBBLE = "editGroupBubble"
@@ -170,9 +167,7 @@ object GroupListScreenTestTags {
  * @param onCreateGroup Callback invoked when user taps "Create a group" option
  * @param onGroup Callback invoked when the user taps on a group card, receiving the selected
  *   [Group].
- * @param onViewGroupDetails Callback invoked when the user taps "View Group Details" for a group.
  * @param onLeaveGroup Callback invoked when the user taps "Leave Group" for a group.
- * @param onShareGroup Callback invoked when the user taps "Share Group" for a group.
  * @param onEditGroup Callback invoked when the user taps "Edit Group" for a group.
  * @param onDeleteGroup Callback invoked when the user taps "Delete Group" for a group.
  * @param onBackClick Callback invoked when the user taps the back button in the top bar.
@@ -186,9 +181,7 @@ fun GroupListScreen(
     onJoinWithLink: (String) -> Unit = {},
     onCreateGroup: () -> Unit = {},
     onGroup: (Group) -> Unit = {},
-    onViewGroupDetails: (Group) -> Unit = {},
     onLeaveGroup: (Group) -> Unit = {},
-    onShareGroup: (Group) -> Unit = {},
     onEditGroup: (Group) -> Unit = {},
     onDeleteGroup: (Group) -> Unit = {},
     onBackClick: () -> Unit = {},
@@ -210,7 +203,6 @@ fun GroupListScreen(
       Firebase.auth.currentUser?.uid
     }
   }
-  val context = LocalContext.current
 
   // State for showing/hiding floating bubbles in the join/create group FAB
   var showJoinBubbles by remember { mutableStateOf(false) }
