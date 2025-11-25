@@ -1,0 +1,693 @@
+package com.android.joinme.ui.profile
+
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createComposeRule
+import com.android.joinme.model.event.Event
+import com.android.joinme.model.event.EventType
+import com.android.joinme.model.event.EventVisibility
+import com.android.joinme.model.event.EventsRepository
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.map.Location
+import com.android.joinme.model.profile.Profile
+import com.android.joinme.model.profile.ProfileRepository
+import com.google.firebase.Timestamp
+import java.util.Date
+import kotlinx.coroutines.flow.MutableStateFlow
+import org.junit.Rule
+import org.junit.Test
+
+/** Instrumentation tests for PublicProfileScreen composable. */
+class PublicProfileScreenTest {
+
+  @get:Rule val composeTestRule = createComposeRule()
+
+  private val currentUserId = "current-user-id"
+  private val otherUserId = "other-user-id"
+
+  private fun createTestProfile(
+      uid: String = otherUserId,
+      username: String = "Mathieu_pfr",
+      bio: String? = "EPFL student in IC section",
+      interests: List<String> = listOf("Musculation", "Ginko"),
+      eventsJoinedCount: Int = 25,
+      followersCount: Int = 150,
+      followingCount: Int = 100
+  ): Profile {
+    return Profile(
+        uid = uid,
+        username = username,
+        email = "user@example.com",
+        dateOfBirth = "15/03/1995",
+        country = "Switzerland",
+        interests = interests,
+        bio = bio,
+        photoUrl = null,
+        createdAt = Timestamp.now(),
+        updatedAt = Timestamp.now(),
+        eventsJoinedCount = eventsJoinedCount,
+        followersCount = followersCount,
+        followingCount = followingCount)
+  }
+
+  private fun createTestEvent(
+      eventId: String = "event1",
+      title: String = "Basketball Game"
+  ): Event {
+    return Event(
+        eventId = eventId,
+        type = EventType.SPORTS,
+        title = title,
+        description = "Friendly basketball game",
+        location = Location(latitude = 46.5197, longitude = 6.6323, name = "Unil sports"),
+        date = Timestamp(Date()),
+        duration = 120,
+        participants = listOf(currentUserId, otherUserId),
+        maxParticipants = 10,
+        visibility = EventVisibility.PUBLIC,
+        ownerId = otherUserId,
+        partOfASerie = false,
+        groupId = null)
+  }
+
+  private fun createTestGroup(groupId: String = "group1", name: String = "Running club"): Group {
+    return Group(
+        id = groupId,
+        name = name,
+        category = EventType.SPORTS,
+        description = "Running group for fitness enthusiasts",
+        ownerId = otherUserId,
+        memberIds = listOf(currentUserId, otherUserId),
+        eventIds = listOf("event1"),
+        serieIds = emptyList(),
+        photoUrl = null)
+  }
+
+  // Fake repositories for testing
+  private class FakeProfileRepository(private var stored: Profile? = null) : ProfileRepository {
+    override suspend fun getProfile(uid: String): Profile? = stored?.takeIf { it.uid == uid }
+
+    override suspend fun createOrUpdateProfile(profile: Profile) {
+      stored = profile
+    }
+
+    override suspend fun deleteProfile(uid: String) {}
+
+    override suspend fun uploadProfilePhoto(
+        context: android.content.Context,
+        uid: String,
+        imageUri: android.net.Uri
+    ): String = ""
+
+    override suspend fun deleteProfilePhoto(uid: String) {}
+
+    override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? = null
+  }
+
+  private class FakeEventsRepository(private val events: List<Event> = emptyList()) :
+      EventsRepository {
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> = events
+
+    // Required interface methods (not used in tests)
+    override fun getNewEventId(): String = "new-event-id"
+
+    override suspend fun getAllEvents(eventFilter: com.android.joinme.model.event.EventFilter): List<Event> = emptyList()
+
+    override suspend fun getEvent(eventId: String): Event =
+        events.firstOrNull { it.eventId == eventId } ?: throw Exception("Event not found")
+
+    override suspend fun addEvent(event: Event) {}
+
+    override suspend fun editEvent(eventId: String, newValue: Event) {}
+
+    override suspend fun deleteEvent(eventId: String) {}
+
+    override suspend fun getEventsByIds(eventIds: List<String>): List<Event> = emptyList()
+  }
+
+  private class FakeGroupRepository(private val groups: List<Group> = emptyList()) :
+      GroupRepository {
+    override suspend fun getCommonGroups(userIds: List<String>): List<Group> = groups
+
+    // Required interface methods (not used in tests)
+    override fun getNewGroupId(): String = "new-group-id"
+
+    override suspend fun getAllGroups(): List<Group> = emptyList()
+
+    override suspend fun getGroup(groupId: String): Group =
+        groups.firstOrNull { it.id == groupId } ?: throw Exception("Group not found")
+
+    override suspend fun addGroup(group: Group) {}
+
+    override suspend fun editGroup(groupId: String, newValue: Group) {}
+
+    override suspend fun deleteGroup(groupId: String, userId: String) {}
+
+    override suspend fun leaveGroup(groupId: String, userId: String) {}
+
+    override suspend fun joinGroup(groupId: String, userId: String) {}
+  }
+
+  // ==================== LOADING AND ERROR STATES ====================
+
+  @Test
+  fun publicProfileScreen_displaysLoadingIndicator_whenLoading() {
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
+    }
+
+    // Initially loading state should be shown
+    composeTestRule
+        .onNodeWithTag(PublicProfileScreenTestTags.LOADING_INDICATOR)
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun publicProfileScreen_displaysErrorMessage_whenErrorOccurs() {
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = "", viewModel = viewModel, onBackClick = {})
+    }
+
+    // Wait for loading to finish
+    composeTestRule.waitForIdle()
+
+    // Error message should be displayed
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Invalid user ID").assertIsDisplayed()
+  }
+
+  // ==================== TOP BAR TESTS ====================
+
+  @Test
+  fun publicProfileScreen_displaysTopBarWithUsername() {
+    val profile = createTestProfile(username = "TestUser123")
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(
+          userId = otherUserId, viewModel = viewModel, onBackClick = {}, onEventClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.TOP_BAR).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.USERNAME).assertIsDisplayed()
+    composeTestRule.onNodeWithText("TestUser123").assertIsDisplayed()
+  }
+
+  @Test
+  fun publicProfileScreen_backButtonIsDisplayed() {
+    val profile = createTestProfile()
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.BACK_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun publicProfileScreen_backButtonInvokesCallback() {
+    val profile = createTestProfile()
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    var backClicked = false
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {
+        backClicked = true
+      })
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.BACK_BUTTON).performClick()
+
+    assert(backClicked)
+  }
+
+  // ==================== PROFILE CONTENT TESTS ====================
+
+  @Test
+  fun publicProfileScreen_displaysProfileStats() {
+    val profile = createTestProfile(eventsJoinedCount = 42, followersCount = 1500, followingCount = 89)
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.STATS_ROW).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(PublicProfileScreenTestTags.EVENTS_JOINED_STAT)
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.FOLLOWERS_STAT).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.FOLLOWING_STAT).assertIsDisplayed()
+
+    // Check stat values
+    composeTestRule.onNodeWithText("42").assertIsDisplayed()
+    composeTestRule.onNodeWithText("1.5k").assertIsDisplayed() // Formatted
+    composeTestRule.onNodeWithText("89").assertIsDisplayed()
+  }
+
+  @Test
+  fun publicProfileScreen_formatsLargeFollowerCounts() {
+    val profile = createTestProfile(followersCount = 28_800_000) // 28.8M
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("28.8m").assertIsDisplayed()
+  }
+
+  @Test
+  fun publicProfileScreen_displaysBio() {
+    val profile = createTestProfile(bio = "Love coding and outdoor activities!")
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.BIO).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Love coding and outdoor activities!").assertIsDisplayed()
+  }
+
+  @Test
+  fun publicProfileScreen_displaysNoBioMessage_whenBioIsNull() {
+    val profile = createTestProfile(bio = null)
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("No bio available").assertIsDisplayed()
+  }
+
+  @Test
+  fun publicProfileScreen_displaysNoBioMessage_whenBioIsBlank() {
+    val profile = createTestProfile(bio = "   ")
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("No bio available").assertIsDisplayed()
+  }
+
+  @Test
+  fun publicProfileScreen_displaysInterests() {
+    val profile = createTestProfile(interests = listOf("Photography", "Hiking", "Gaming"))
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.INTERESTS_SECTION).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Photography, Hiking, Gaming").assertIsDisplayed()
+  }
+
+  @Test
+  fun publicProfileScreen_displaysNoInterestsMessage_whenInterestsEmpty() {
+    val profile = createTestProfile(interests = emptyList())
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("No interests available").assertIsDisplayed()
+  }
+
+  @Test
+  fun publicProfileScreen_displaysEventStreaks() {
+    val profile = createTestProfile()
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(PublicProfileScreenTestTags.EVENT_STREAKS_SECTION)
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithText("Event Streaks").assertIsDisplayed()
+    composeTestRule.onNodeWithText("0 days").assertIsDisplayed()
+  }
+
+  // ==================== BUTTONS TESTS ====================
+
+  @Test
+  fun publicProfileScreen_displaysFollowButton() {
+    val profile = createTestProfile()
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.FOLLOW_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Follow").assertIsDisplayed()
+  }
+
+  @Test
+  fun publicProfileScreen_displaysMessageButton() {
+    val profile = createTestProfile()
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.MESSAGE_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Message").assertIsDisplayed()
+  }
+
+  // ==================== COMMON EVENTS TESTS ====================
+
+  @Test
+  fun publicProfileScreen_displaysCommonEventsTitle() {
+    val profile = createTestProfile()
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(PublicProfileScreenTestTags.COMMON_EVENTS_TITLE)
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithText("Common events").assertIsDisplayed()
+  }
+
+  @Test
+  fun publicProfileScreen_displaysEmptyEventsMessage_whenNoCommonEvents() {
+    val profile = createTestProfile()
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(PublicProfileScreenTestTags.EMPTY_EVENTS_MESSAGE)
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithText("No common events").assertIsDisplayed()
+  }
+
+  @Test
+  fun publicProfileScreen_displaysCommonEvents_whenEventsExist() {
+    val profile = createTestProfile()
+    val events = listOf(createTestEvent("event1", "Basketball"), createTestEvent("event2", "Tennis"))
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(events), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(
+          userId = otherUserId, viewModel = viewModel, onBackClick = {}, onEventClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    // Check that the events list is displayed
+    composeTestRule
+        .onNodeWithTag(PublicProfileScreenTestTags.COMMON_EVENTS_LIST)
+        .assertIsDisplayed()
+
+    // Check individual event cards
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.eventCardTag("event1")).assertExists()
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.eventCardTag("event2")).assertExists()
+  }
+
+  @Test
+  fun publicProfileScreen_eventCardClickInvokesCallback() {
+    val profile = createTestProfile()
+    val event = createTestEvent("event1", "Basketball")
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(listOf(event)), FakeGroupRepository())
+
+    var clickedEvent: Event? = null
+
+    composeTestRule.setContent {
+      PublicProfileScreen(
+          userId = otherUserId,
+          viewModel = viewModel,
+          onBackClick = {},
+          onEventClick = { clickedEvent = it })
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.eventCardTag("event1")).performClick()
+
+    assert(clickedEvent?.eventId == "event1")
+  }
+
+  // ==================== COMMON GROUPS TESTS ====================
+
+  @Test
+  fun publicProfileScreen_displaysCommonGroupsTitle() {
+    val profile = createTestProfile()
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(PublicProfileScreenTestTags.COMMON_GROUPS_TITLE)
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithText("Common groups").assertIsDisplayed()
+  }
+
+  @Test
+  fun publicProfileScreen_displaysEmptyGroupsMessage_whenNoCommonGroups() {
+    val profile = createTestProfile()
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(PublicProfileScreenTestTags.EMPTY_GROUPS_MESSAGE)
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithText("No common groups").assertIsDisplayed()
+  }
+
+  @Test
+  fun publicProfileScreen_displaysCommonGroups_whenGroupsExist() {
+    val profile = createTestProfile()
+    val groups =
+        listOf(createTestGroup("group1", "Running Club"), createTestGroup("group2", "EPFL Students"))
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository(groups))
+
+    composeTestRule.setContent {
+      PublicProfileScreen(
+          userId = otherUserId, viewModel = viewModel, onBackClick = {}, onGroupClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    // Check that the groups list is displayed
+    composeTestRule
+        .onNodeWithTag(PublicProfileScreenTestTags.COMMON_GROUPS_LIST)
+        .assertIsDisplayed()
+
+    // Check individual group cards
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.groupCardTag("group1")).assertExists()
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.groupCardTag("group2")).assertExists()
+  }
+
+  @Test
+  fun publicProfileScreen_groupCardClickInvokesCallback() {
+    val profile = createTestProfile()
+    val group = createTestGroup("group1", "Running Club")
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile),
+            FakeEventsRepository(),
+            FakeGroupRepository(listOf(group)))
+
+    var clickedGroup: Group? = null
+
+    composeTestRule.setContent {
+      PublicProfileScreen(
+          userId = otherUserId,
+          viewModel = viewModel,
+          onBackClick = {},
+          onGroupClick = { clickedGroup = it })
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.groupCardTag("group1")).performClick()
+
+    assert(clickedGroup?.id == "group1")
+  }
+
+  // ==================== FULL INTEGRATION TESTS ====================
+
+  @Test
+  fun publicProfileScreen_displaysCompleteProfileWithEventsAndGroups() {
+    val profile = createTestProfile(username = "CompleteUser", bio = "Complete profile test")
+    val events = listOf(createTestEvent("event1", "Event1"))
+    val groups = listOf(createTestGroup("group1", "Group1"))
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile),
+            FakeEventsRepository(events),
+            FakeGroupRepository(groups))
+
+    composeTestRule.setContent {
+      PublicProfileScreen(
+          userId = otherUserId,
+          viewModel = viewModel,
+          onBackClick = {},
+          onEventClick = {},
+          onGroupClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    // Verify screen is displayed
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.SCREEN).assertIsDisplayed()
+
+    // Verify profile info
+    composeTestRule.onNodeWithText("CompleteUser").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Complete profile test").assertIsDisplayed()
+
+    // Verify events and groups sections
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.eventCardTag("event1")).assertExists()
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.groupCardTag("group1")).assertExists()
+  }
+
+  @Test
+  fun publicProfileScreen_displaysMinimalProfile() {
+    val profile =
+        createTestProfile(bio = null, interests = emptyList(), eventsJoinedCount = 0, followersCount = 0, followingCount = 0)
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    // Should show default messages
+    composeTestRule.onNodeWithText("No bio available").assertIsDisplayed()
+    composeTestRule.onNodeWithText("No interests available").assertIsDisplayed()
+    composeTestRule.onNodeWithText("No common events").assertIsDisplayed()
+    composeTestRule.onNodeWithText("No common groups").assertIsDisplayed()
+
+    // Stats should still be displayed
+    composeTestRule.onNodeWithText("0").assertIsDisplayed()
+  }
+}
