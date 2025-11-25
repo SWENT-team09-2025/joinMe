@@ -2,15 +2,19 @@ package com.android.joinme.ui.chat
 
 // Implemented with help of Claude AI
 
+import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.test.core.app.ApplicationProvider
+import com.android.joinme.R
 import com.android.joinme.model.chat.ChatRepository
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
@@ -360,6 +364,164 @@ class ChatScreenTest {
     // Input should be cleared and mic button should reappear
     composeTestRule.onNodeWithTag(ChatScreenTestTags.MIC_BUTTON).assertIsDisplayed()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertDoesNotExist()
+  }
+
+  // ============================================================================
+  // Message Interactions Tests
+  // ============================================================================
+
+  @Test
+  fun editedMessage_displaysEditedIndicator() {
+    val messages =
+        listOf(
+            Message(
+                id = "msg1",
+                conversationId = "chat1",
+                senderId = "user1",
+                senderName = "Alice",
+                content = "Edited message",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.TEXT,
+                readBy = emptyList(),
+                isPinned = false,
+                isEdited = true))
+    fakeChatRepository.setMessages(messages)
+
+    setupChatScreen()
+
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Edited message").assertIsDisplayed()
+    val editedText =
+        ApplicationProvider.getApplicationContext<Context>().getString(R.string.message_edited)
+    composeTestRule.onNodeWithText(editedText).assertIsDisplayed()
+  }
+
+  @Test
+  fun nonEditedMessage_doesNotDisplayEditedIndicator() {
+    val messages =
+        listOf(
+            Message(
+                id = "msg1",
+                conversationId = "chat1",
+                senderId = "user1",
+                senderName = "Alice",
+                content = "Regular message",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.TEXT,
+                readBy = emptyList(),
+                isPinned = false,
+                isEdited = false))
+    fakeChatRepository.setMessages(messages)
+
+    setupChatScreen()
+
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Regular message").assertIsDisplayed()
+    val editedText =
+        ApplicationProvider.getApplicationContext<Context>().getString(R.string.message_edited)
+    composeTestRule.onNodeWithText(editedText).assertDoesNotExist()
+  }
+
+  @Test
+  fun ownMessage_notReadByAll_displaysGreyCheckmarks() {
+    // Chat with 3 participants, message only read by sender and one other user
+    val messages =
+        listOf(
+            Message(
+                id = "msg1",
+                conversationId = "chat1",
+                senderId = "user1",
+                senderName = "Alice",
+                content = "My message",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.TEXT,
+                readBy = listOf("user1", "user2"), // Not read by user3
+                isPinned = false,
+                isEdited = false))
+    fakeChatRepository.setMessages(messages)
+
+    composeTestRule.setContent {
+      ChatScreen(
+          chatId = "chat1",
+          chatTitle = "Test Chat",
+          currentUserId = "user1",
+          currentUserName = "Alice",
+          viewModel = viewModel,
+          totalParticipants = 3)
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("My message").assertIsDisplayed()
+    // Checkmarks should appear with contentDescription from string resource (not read by all)
+    val sentDescription =
+        ApplicationProvider.getApplicationContext<Context>().getString(R.string.message_sent)
+    composeTestRule.onNodeWithContentDescription(sentDescription).assertExists()
+  }
+
+  @Test
+  fun ownMessage_readByAll_displaysCheckmarks() {
+    // Chat with 3 participants, message read by all
+    val messages =
+        listOf(
+            Message(
+                id = "msg1",
+                conversationId = "chat1",
+                senderId = "user1",
+                senderName = "Alice",
+                content = "My message",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.TEXT,
+                readBy = listOf("user1", "user2", "user3"),
+                isPinned = false,
+                isEdited = false))
+    fakeChatRepository.setMessages(messages)
+
+    composeTestRule.setContent {
+      ChatScreen(
+          chatId = "chat1",
+          chatTitle = "Test Chat",
+          currentUserId = "user1",
+          currentUserName = "Alice",
+          viewModel = viewModel,
+          totalParticipants = 3)
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("My message").assertIsDisplayed()
+    // Checkmarks should appear with contentDescription from string resource
+    val readByAllDescription =
+        ApplicationProvider.getApplicationContext<Context>().getString(R.string.read_by_all)
+    composeTestRule.onNodeWithContentDescription(readByAllDescription).assertExists()
+  }
+
+  @Test
+  fun otherUsersMessage_doesNotDisplayCheckmarks() {
+    val messages =
+        listOf(
+            Message(
+                id = "msg1",
+                conversationId = "chat1",
+                senderId = "user2",
+                senderName = "Bob",
+                content = "Bob's message",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.TEXT,
+                readBy = listOf("user1", "user2"),
+                isPinned = false,
+                isEdited = false))
+    fakeChatRepository.setMessages(messages)
+
+    setupChatScreen(currentUserId = "user1")
+
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Bob's message").assertIsDisplayed()
+    // No checkmarks for other users' messages
+    val sentDescription =
+        ApplicationProvider.getApplicationContext<Context>().getString(R.string.message_sent)
+    val readByAllDescription =
+        ApplicationProvider.getApplicationContext<Context>().getString(R.string.read_by_all)
+    composeTestRule.onNodeWithContentDescription(sentDescription).assertDoesNotExist()
+    composeTestRule.onNodeWithContentDescription(readByAllDescription).assertDoesNotExist()
   }
 
   // ============================================================================

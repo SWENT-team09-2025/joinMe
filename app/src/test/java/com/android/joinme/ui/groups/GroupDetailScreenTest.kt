@@ -943,7 +943,7 @@ class GroupDetailScreenTest {
       GroupDetailScreen(
           groupId = "group1",
           viewModel = viewModel,
-          onNavigateToChat = { id, title ->
+          onNavigateToChat = { id, title, _ ->
             chatId = id
             chatTitle = title
           })
@@ -986,7 +986,7 @@ class GroupDetailScreenTest {
 
     composeTestRule.setContent {
       GroupDetailScreen(
-          groupId = "group1", viewModel = viewModel, onNavigateToChat = { _, _ -> clickCount++ })
+          groupId = "group1", viewModel = viewModel, onNavigateToChat = { _, _, _ -> clickCount++ })
     }
 
     composeTestRule.waitUntil(timeoutMillis = 3000) {

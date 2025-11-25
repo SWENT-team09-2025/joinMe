@@ -30,19 +30,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -70,8 +70,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -539,10 +539,10 @@ private fun MessageItem(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-                        // Show "(edited)" text if message has been edited
+                        // Show "edited" text if message has been edited
                         if (message.isEdited) {
                           Text(
-                              text = "edited",
+                              text = stringResource(R.string.message_edited),
                               style = MaterialTheme.typography.labelSmall,
                               color = MaterialTheme.colorScheme.onSurfaceVariant,
                               fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
@@ -558,7 +558,10 @@ private fun MessageItem(
 
                           Icon(
                               imageVector = Icons.Default.DoneAll,
-                              contentDescription = if (isReadByAll) "Read by all" else "Sent",
+                              contentDescription =
+                                  stringResource(
+                                      if (isReadByAll) R.string.read_by_all
+                                      else R.string.message_sent),
                               modifier = Modifier.size(Dimens.IconSize.small),
                               tint =
                                   if (isReadByAll) MaterialTheme.colorScheme.primary
@@ -818,13 +821,13 @@ private fun EditMessageDialog(
 
   AlertDialog(
       onDismissRequest = onDismiss,
-      title = { Text("Edit Message") },
+      title = { Text(stringResource(R.string.edit_message_title)) },
       text = {
         OutlinedTextField(
             value = editedText,
             onValueChange = { editedText = it },
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Enter new message") },
+            placeholder = { Text(stringResource(R.string.edit_message_placeholder)) },
             colors = MaterialTheme.customColors.outlinedTextField(),
             maxLines = 4)
       },
@@ -833,10 +836,10 @@ private fun EditMessageDialog(
             onClick = { onConfirm(editedText) },
             enabled = editedText.isNotBlank(),
             colors = MaterialTheme.customColors.buttonColors()) {
-              Text("Save")
+              Text(stringResource(R.string.save))
             }
       },
-      dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+      dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } })
 }
 
 /**
@@ -849,20 +852,18 @@ private fun EditMessageDialog(
 private fun DeleteMessageDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
   AlertDialog(
       onDismissRequest = onDismiss,
-      title = { Text("Delete Message") },
-      text = {
-        Text("Are you sure you want to delete this message? This action cannot be undone.")
-      },
+      title = { Text(stringResource(R.string.delete_message_title)) },
+      text = { Text(stringResource(R.string.delete_message_confirmation)) },
       confirmButton = {
         Button(
             onClick = onConfirm,
             colors =
                 ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.customColors.deleteButton)) {
-              Text("Delete")
+              Text(stringResource(R.string.delete))
             }
       },
-      dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+      dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } })
 }
 
 /**
@@ -883,12 +884,12 @@ private fun WhoReadDialog(
 
   AlertDialog(
       onDismissRequest = onDismiss,
-      title = { Text("Read by") },
+      title = { Text(stringResource(R.string.read_by_title)) },
       text = {
         Column(modifier = Modifier.fillMaxWidth()) {
           if (readByOthers.isEmpty()) {
             Text(
-                "No one has read this message yet.",
+                stringResource(R.string.no_one_read_yet),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
           } else {
@@ -899,18 +900,18 @@ private fun WhoReadDialog(
                   verticalAlignment = Alignment.CenterVertically) {
                     UserAvatar(
                         photoUrl = profile?.photoUrl,
-                        userName = profile?.username ?: "Unknown",
+                        userName = profile?.username ?: stringResource(R.string.unknown_user),
                         modifier = Modifier.size(Dimens.Profile.photoSmall))
                     Spacer(modifier = Modifier.width(Dimens.Spacing.small))
                     Text(
-                        text = profile?.username ?: "Unknown User",
+                        text = profile?.username ?: stringResource(R.string.unknown_user),
                         style = MaterialTheme.typography.bodyMedium)
                   }
             }
           }
         }
       },
-      confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } })
+      confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } })
 }
 
 /**
@@ -951,45 +952,45 @@ private fun MessageContextMenu(
               Column(modifier = Modifier.padding(Dimens.Padding.small)) {
                 // Copy option (available for all messages)
                 DropdownMenuItem(
-                    text = { Text("Copy") },
+                    text = { Text(stringResource(R.string.copy)) },
                     onClick = onCopy,
                     leadingIcon = {
                       Icon(
                           Icons.Default.ContentCopy,
-                          contentDescription = "Copy",
+                          contentDescription = stringResource(R.string.copy),
                           modifier = Modifier.size(Dimens.IconSize.medium))
                     })
 
                 // Options only for current user's messages
                 if (isCurrentUser) {
                   DropdownMenuItem(
-                      text = { Text("Edit") },
+                      text = { Text(stringResource(R.string.edit)) },
                       onClick = onEdit,
                       leadingIcon = {
                         Icon(
                             Icons.Default.Edit,
-                            contentDescription = "Edit",
+                            contentDescription = stringResource(R.string.edit),
                             modifier = Modifier.size(Dimens.IconSize.medium))
                       })
 
                   DropdownMenuItem(
-                      text = { Text("Delete") },
+                      text = { Text(stringResource(R.string.delete)) },
                       onClick = onDelete,
                       leadingIcon = {
                         Icon(
                             Icons.Default.Delete,
-                            contentDescription = "Delete",
+                            contentDescription = stringResource(R.string.delete),
                             tint = MaterialTheme.customColors.deleteButton,
                             modifier = Modifier.size(Dimens.IconSize.medium))
                       })
 
                   DropdownMenuItem(
-                      text = { Text("See who read") },
+                      text = { Text(stringResource(R.string.see_who_read)) },
                       onClick = onSeeWhoRead,
                       leadingIcon = {
                         Icon(
                             Icons.Default.Visibility,
-                            contentDescription = "See who read",
+                            contentDescription = stringResource(R.string.see_who_read),
                             modifier = Modifier.size(Dimens.IconSize.medium))
                       })
                 }
