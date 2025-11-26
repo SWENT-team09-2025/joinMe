@@ -54,6 +54,7 @@ import com.android.joinme.ui.overview.SearchScreen
 import com.android.joinme.ui.overview.SerieDetailsScreen
 import com.android.joinme.ui.overview.ShowEventScreen
 import com.android.joinme.ui.profile.EditProfileScreen
+import com.android.joinme.ui.profile.PublicProfileScreen
 import com.android.joinme.ui.profile.ViewProfileScreen
 import com.android.joinme.ui.signIn.SignInScreen
 import com.android.joinme.ui.theme.JoinMeTheme
@@ -398,7 +399,21 @@ fun JoinMe(
               navigationActions.navigateTo(Screen.Auth)
             })
       }
+      composable(Screen.PublicProfile.route) { navBackStackEntry ->
+        val userId = navBackStackEntry.arguments?.getString("userId")
 
+        userId?.let {
+          PublicProfileScreen(
+              userId = userId,
+              onBackClick = { navigationActions.goBack() },
+              onEventClick = { event ->
+                navigationActions.navigateTo(Screen.ShowEventScreen(event.eventId))
+              },
+              onGroupClick = { group ->
+                navigationActions.navigateTo(Screen.GroupDetail(group.id))
+              })
+        } ?: run { Toast.makeText(context, "UserId is null", Toast.LENGTH_SHORT).show() }
+      }
       composable(Screen.EditProfile.route) {
         EditProfileScreen(
             uid = currentUser?.uid ?: "",
@@ -486,8 +501,8 @@ fun JoinMe(
               onActivityGroupClick = {
                 navigationActions.navigateTo(Screen.ActivityGroup(groupId))
               },
-              onMemberClick = {
-                Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+              onMemberClick = { userId ->
+                navigationActions.navigateTo(Screen.PublicProfile(userId))
               },
               onNavigateToChat = { chatId, chatTitle, totalParticipants ->
                 navigationActions.navigateTo(Screen.Chat(chatId, chatTitle, totalParticipants))

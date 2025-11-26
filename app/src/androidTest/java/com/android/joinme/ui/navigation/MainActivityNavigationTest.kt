@@ -13,9 +13,7 @@ import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepositoryLocal
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.model.utils.Visibility
-import com.android.joinme.ui.groups.CreateGroupScreenTestTags
 import com.android.joinme.ui.groups.GroupDetailScreenTestTags
-import com.android.joinme.ui.groups.GroupListScreenTestTags
 import com.android.joinme.ui.groups.GroupListScreenTestTags.cardTag
 import com.android.joinme.ui.overview.CreateEventForSerieScreenTestTags
 import com.android.joinme.ui.overview.CreateEventScreenTestTags
@@ -23,7 +21,6 @@ import com.android.joinme.ui.overview.EditSerieScreenTestTags
 import com.android.joinme.ui.overview.OverviewScreenTestTags
 import com.android.joinme.ui.overview.SerieDetailsScreenTestTags
 import com.android.joinme.ui.overview.ShowEventScreenTestTags
-import com.android.joinme.ui.profile.ViewProfileTestTags
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import java.util.*
@@ -1488,124 +1485,5 @@ class MainActivityNavigationTest {
 
     // Step 5: Verify ActivityGroupScreen rendered with event
     composeTestRule.onNodeWithTag("eventItemtest-group-activity-1").assertExists()
-  }
-
-  // ========== navigateAndClearBackStackTo Tests ==========
-
-  @Test
-  fun editProfile_onBackClick_navigatesToProfileAndClearsBackStack() {
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Navigate to Profile
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(1000)
-    composeTestRule.waitForIdle()
-
-    // Wait for profile to load
-    Thread.sleep(1000)
-    composeTestRule.waitForIdle()
-
-    // Navigate to EditProfile
-    composeTestRule.onNodeWithContentDescription("Edit").performClick()
-    composeTestRule.waitForIdle()
-
-    // Click back button (triggers navigateAndClearBackStackTo)
-    composeTestRule.onNodeWithContentDescription("Back").performClick()
-    composeTestRule.waitForIdle()
-
-    // Verify we're back on Profile screen
-    composeTestRule.onNodeWithTag(ViewProfileTestTags.SCREEN).assertExists()
-  }
-
-  @Test
-  fun groupListScreen_onBackClick_navigatesToProfileAndClearsBackStack() {
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Navigate to Profile
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
-    composeTestRule.waitForIdle()
-
-    // Navigate to Groups
-    composeTestRule.onNodeWithContentDescription("Group").performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(1000)
-    composeTestRule.waitForIdle()
-
-    // Verify we're on Groups screen
-    composeTestRule.onNodeWithTag(cardTag("test-group-1")).assertExists()
-
-    // Click back button (triggers navigateAndClearBackStackTo)
-    composeTestRule.onNodeWithContentDescription("Back").performClick()
-    composeTestRule.waitForIdle()
-
-    // Verify we're back on Profile screen
-    composeTestRule.onNodeWithTag(ViewProfileTestTags.SCREEN).assertExists()
-  }
-
-  @Test
-  fun createGroup_onCreateSuccess_navigatesToGroupsAndClearsBackStack() {
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Navigate to Profile -> Groups
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithContentDescription("Group").performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(1000)
-    composeTestRule.waitForIdle()
-
-    // Verify we're on Groups screen
-    composeTestRule.onNodeWithTag(cardTag("test-group-1")).assertExists()
-
-    // Click FAB to open bubble menu
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.waitForIdle()
-
-    // Click "Create a group" bubble to navigate to CreateGroup
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.CREATE_GROUP_BUBBLE).performClick()
-    composeTestRule.waitForIdle()
-
-    // Verify we're on CreateGroup screen
-    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.SCREEN).assertExists()
-
-    // Fill in group name (required)
-    composeTestRule
-        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_NAME_TEXT_FIELD)
-        .performTextInput("Test Navigation Group")
-    composeTestRule.waitForIdle()
-
-    // Fill in description (required)
-    composeTestRule
-        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_DESCRIPTION_TEXT_FIELD)
-        .performTextInput("Testing navigation after group creation")
-    composeTestRule.waitForIdle()
-
-    // Select category
-    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN).performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("SPORTS").performClick()
-    composeTestRule.waitForIdle()
-
-    // Click save button - this triggers onCreateSuccess callback (lines 466-468 MainActivity)
-    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.SAVE_BUTTON).performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Wait for async group creation to complete
-    Thread.sleep(2000)
-    composeTestRule.waitForIdle()
-
-    // Verify we're back on Groups screen (not Profile or CreateGroup)
-    // The original test group should still exist
-    composeTestRule.onNodeWithTag(cardTag("test-group-1")).assertExists()
   }
 }

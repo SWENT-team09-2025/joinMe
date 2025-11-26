@@ -38,6 +38,8 @@ import com.android.joinme.ui.theme.customColors
 /** Test tags for GroupDetailScreen components. */
 object GroupDetailScreenTestTags {
   const val BUTTON_ACTIVITIES = "buttonActivities"
+
+  fun memberItemTag(userId: String) = "memberItem:$userId"
 }
 
 /**
@@ -182,7 +184,8 @@ private fun GroupContent(
                   MemberItem(
                       profile = member,
                       categoryColor = groupCategory,
-                      onClick = { onMemberClick(member.uid) })
+                      onClick = { onMemberClick(member.uid) },
+                      testTag = GroupDetailScreenTestTags.memberItemTag(member.uid))
                 }
               }
         }
@@ -243,11 +246,17 @@ private fun GroupContent(
 }
 
 @Composable
-private fun MemberItem(profile: Profile, categoryColor: EventType, onClick: () -> Unit = {}) {
+private fun MemberItem(
+    profile: Profile,
+    categoryColor: EventType,
+    onClick: () -> Unit = {},
+    testTag: String = ""
+) {
   Row(
       modifier =
           Modifier.fillMaxWidth()
               .clickable { onClick() }
+              .testTag(testTag)
               .padding(vertical = Dimens.Padding.extraSmall),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.Start) {
