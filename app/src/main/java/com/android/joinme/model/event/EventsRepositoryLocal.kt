@@ -57,14 +57,12 @@ class EventsRepositoryLocal : EventsRepository {
       return emptyList()
     }
 
-    // The current buggy implementation is likely using .any or some other logic.
-    // Replace it with this .filter using .all
     return events
         .filter { event ->
           // This ensures an event is included ONLY IF it contains ALL of the userIds.
           userIds.all { userId -> event.participants.contains(userId) }
         }
-        .sortedBy { it.date }
+        .sortedBy { it.date.toDate().time }
   }
 
   /** Clears all events from the repository. Useful for testing. */

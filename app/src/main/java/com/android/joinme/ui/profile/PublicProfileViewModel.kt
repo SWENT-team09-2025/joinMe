@@ -114,7 +114,7 @@ class PublicProfileViewModel(
 
       _profile.value = fetchedProfile
 
-      // Fetch common events with timeout
+      // Fetch common events
       try {
         val events = eventsRepository.getCommonEvents(listOf(currentUserId, userId))
         _commonEvents.value = events
@@ -123,7 +123,7 @@ class PublicProfileViewModel(
         _commonEvents.value = emptyList()
       }
 
-      // Fetch common groups with timeout
+      // Fetch common groups
       try {
         val groups = groupRepository.getCommonGroups(listOf(currentUserId, userId))
         _commonGroups.value = groups
