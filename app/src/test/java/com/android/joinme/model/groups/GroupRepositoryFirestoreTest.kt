@@ -1,10 +1,7 @@
 // Implemented with help of Claude AI
-package com.android.joinme.repository
+package com.android.joinme.model.groups
 
 import com.android.joinme.model.event.EventType
-import com.android.joinme.model.groups.GROUPS_COLLECTION_PATH
-import com.android.joinme.model.groups.Group
-import com.android.joinme.model.groups.GroupRepositoryFirestore
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -12,6 +9,8 @@ import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.QueryDocumentSnapshot
 import com.google.firebase.firestore.QuerySnapshot
 import io.mockk.every
 import io.mockk.mockk
@@ -88,7 +87,7 @@ class GroupRepositoryFirestoreTest {
   fun addGroup_callsFirestoreSet() = runTest {
     // Given
     val testGroup =
-        com.android.joinme.model.groups.Group(
+        Group(
             id = testGroupId,
             name = "Test Group",
             description = "A test group",
@@ -131,7 +130,7 @@ class GroupRepositoryFirestoreTest {
   fun editGroup_callsFirestoreUpdate() = runTest {
     // Given
     val updatedGroup =
-        com.android.joinme.model.groups.Group(
+        Group(
             id = testGroupId,
             name = "Updated Name",
             description = "Updated description",
@@ -189,10 +188,10 @@ class GroupRepositoryFirestoreTest {
     every { mockAuth.currentUser } returns mockUser
     every { mockUser.uid } returns testUserId
 
-    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+    val mockQuery = mockk<Query>(relaxed = true)
     val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
-    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
-    val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<QueryDocumentSnapshot>(relaxed = true)
 
     every { mockCollection.whereArrayContains("memberIds", testUserId) } returns mockQuery
     every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
