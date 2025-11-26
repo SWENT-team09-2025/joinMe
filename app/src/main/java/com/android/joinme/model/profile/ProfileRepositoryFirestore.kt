@@ -332,7 +332,8 @@ class ProfileRepositoryFirestore(
     val followsSnapshot =
         followsCollection
             .whereEqualTo("followerId", userId)
-            .orderBy(FieldPath.documentId(), com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .orderBy(
+                FieldPath.documentId(), com.google.firebase.firestore.Query.Direction.DESCENDING)
             .limit(limit.toLong())
             .get()
             .await()
@@ -343,11 +344,9 @@ class ProfileRepositoryFirestore(
 
     // Fetch profiles in batches (Firestore 'in' query limit is 10)
     return followedIds.chunked(10).flatMap { chunk ->
-      profilesCollection
-          .whereIn(FieldPath.documentId(), chunk)
-          .get()
-          .await()
-          .mapNotNull { documentToProfile(it) }
+      profilesCollection.whereIn(FieldPath.documentId(), chunk).get().await().mapNotNull {
+        documentToProfile(it)
+      }
     }
   }
 
@@ -356,7 +355,8 @@ class ProfileRepositoryFirestore(
     val followsSnapshot =
         followsCollection
             .whereEqualTo("followedId", userId)
-            .orderBy(FieldPath.documentId(), com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .orderBy(
+                FieldPath.documentId(), com.google.firebase.firestore.Query.Direction.DESCENDING)
             .limit(limit.toLong())
             .get()
             .await()
@@ -367,11 +367,9 @@ class ProfileRepositoryFirestore(
 
     // Fetch profiles in batches (Firestore 'in' query limit is 10)
     return followerIds.chunked(10).flatMap { chunk ->
-      profilesCollection
-          .whereIn(FieldPath.documentId(), chunk)
-          .get()
-          .await()
-          .mapNotNull { documentToProfile(it) }
+      profilesCollection.whereIn(FieldPath.documentId(), chunk).get().await().mapNotNull {
+        documentToProfile(it)
+      }
     }
   }
 
@@ -401,11 +399,9 @@ class ProfileRepositoryFirestore(
 
     // Fetch profiles in batches
     return mutualIds.chunked(10).flatMap { chunk ->
-      profilesCollection
-          .whereIn(FieldPath.documentId(), chunk)
-          .get()
-          .await()
-          .mapNotNull { documentToProfile(it) }
+      profilesCollection.whereIn(FieldPath.documentId(), chunk).get().await().mapNotNull {
+        documentToProfile(it)
+      }
     }
   }
 }

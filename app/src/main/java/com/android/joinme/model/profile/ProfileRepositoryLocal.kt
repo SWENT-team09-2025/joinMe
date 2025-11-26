@@ -160,18 +160,22 @@ class ProfileRepositoryLocal : ProfileRepository {
 
   override suspend fun getFollowing(userId: String, limit: Int): List<Profile> {
     val followedIds =
-        follows.filter { it.followerId == userId }.sortedByDescending { it.id }.take(limit).map {
-          it.followedId
-        }
+        follows
+            .filter { it.followerId == userId }
+            .sortedByDescending { it.id }
+            .take(limit)
+            .map { it.followedId }
 
     return profiles.values.filter { it.uid in followedIds }
   }
 
   override suspend fun getFollowers(userId: String, limit: Int): List<Profile> {
     val followerIds =
-        follows.filter { it.followedId == userId }.sortedByDescending { it.id }.take(limit).map {
-          it.followerId
-        }
+        follows
+            .filter { it.followedId == userId }
+            .sortedByDescending { it.id }
+            .take(limit)
+            .map { it.followerId }
 
     return profiles.values.filter { it.uid in followerIds }
   }

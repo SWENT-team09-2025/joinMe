@@ -1,5 +1,6 @@
 package com.android.joinme.ui.profile
 /* This file was implemented with the help of Claude AI */
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -42,11 +43,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import android.widget.Toast
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
 import com.android.joinme.model.event.Event
@@ -196,9 +196,7 @@ fun PublicProfileScreen(
                       profile = profile!!,
                       isFollowing = isFollowing,
                       isFollowLoading = isFollowLoading,
-                      onFollowClick = {
-                        currentUserId?.let { viewModel.toggleFollow(it, userId) }
-                      },
+                      onFollowClick = { currentUserId?.let { viewModel.toggleFollow(it, userId) } },
                       commonEvents = commonEvents,
                       commonGroups = commonGroups,
                       onEventClick = onEventClick,
