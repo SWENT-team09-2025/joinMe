@@ -1,8 +1,9 @@
 package com.android.joinme.model.groups.streaks
 
-import com.google.firebase.Timestamp
+import android.util.Log
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -15,6 +16,7 @@ import kotlinx.coroutines.tasks.await
 class GroupStreakRepositoryFirestore(private val db: FirebaseFirestore) : GroupStreakRepository {
 
   companion object {
+    private const val TAG = "GroupStreakRepoFirestore"
     private const val GROUPS_COLLECTION = "groups"
     private const val STREAKS_SUBCOLLECTION = "streaks"
   }
@@ -25,7 +27,7 @@ class GroupStreakRepositoryFirestore(private val db: FirebaseFirestore) : GroupS
             .document(groupId)
             .collection(STREAKS_SUBCOLLECTION)
             .get()
-            .await()
+            .await() ?: throw Exception("$TAG: Failed to fetch streaks for group $groupId")
 
     return snapshot.documents.mapNotNull { doc -> documentToGroupStreak(doc, groupId) }
   }
@@ -38,6 +40,7 @@ class GroupStreakRepositoryFirestore(private val db: FirebaseFirestore) : GroupS
             .document(userId)
             .get()
             .await()
+            ?: throw Exception("$TAG: Failed to fetch streak for user $userId in group $groupId")
 
     return if (doc.exists()) documentToGroupStreak(doc, groupId) else null
   }
@@ -49,8 +52,9 @@ class GroupStreakRepositoryFirestore(private val db: FirebaseFirestore) : GroupS
         .document(groupId)
         .collection(STREAKS_SUBCOLLECTION)
         .document(userId)
-        .set(data)
+        .set(data, SetOptions.merge())
         .await()
+        ?: throw Exception("$TAG: Failed to update streak for user $userId in group $groupId")
   }
 
   /**
@@ -67,11 +71,12 @@ class GroupStreakRepositoryFirestore(private val db: FirebaseFirestore) : GroupS
           userId = doc.id,
           currentStreakWeeks = doc.getLong("currentStreakWeeks")?.toInt() ?: 0,
           currentStreakActivities = doc.getLong("currentStreakActivities")?.toInt() ?: 0,
-          currentStreakStartDate = doc.getTimestamp("currentStreakStartDate") ?: Timestamp.now(),
-          lastActiveWeekStart = doc.getTimestamp("lastActiveWeekStart") ?: Timestamp.now(),
+          currentStreakStartDate = doc.getTimestamp("currentStreakStartDate"),
+          lastActiveWeekStart = doc.getTimestamp("lastActiveWeekStart"),
           bestStreakWeeks = doc.getLong("bestStreakWeeks")?.toInt() ?: 0,
           bestStreakActivities = doc.getLong("bestStreakActivities")?.toInt() ?: 0)
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to convert document ${doc.id} to GroupStreak", e)
       null
     }
   }
@@ -85,7 +90,7 @@ class GroupStreakRepositoryFirestore(private val db: FirebaseFirestore) : GroupS
    * @param streak The GroupStreak to convert.
    * @return A Map representing the streak data.
    */
-  private fun groupStreakToMap(streak: GroupStreak): Map<String, Any> {
+  private fun groupStreakToMap(streak: GroupStreak): Map<String, Any?> {
     return mapOf(
         "currentStreakWeeks" to streak.currentStreakWeeks,
         "currentStreakActivities" to streak.currentStreakActivities,
