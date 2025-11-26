@@ -226,8 +226,43 @@ class ViewProfileScreenTest {
     assert(group)
     composeTestRule.onNodeWithContentDescription("Edit").performClick()
     assert(edit)
+
+    // Click logout button - this should show the confirmation dialog
     composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_BUTTON).performClick()
+
+    // Verify dialog is shown
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_CONFIRM_DIALOG).assertIsDisplayed()
+
+    // Click confirm button in dialog
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_CONFIRM_BUTTON).performClick()
+
+    // Now logout should be triggered
     assert(logoutClicked)
+  }
+
+  @Test
+  fun viewProfileScreen_logoutDialog_cancelButton_dismissesDialog() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
+    val viewModel = ProfileViewModel(repo)
+    var logoutClicked = false
+
+    composeTestRule.setContent {
+      ViewProfileScreen(
+          uid = testUid, profileViewModel = viewModel, onSignOutComplete = { logoutClicked = true })
+    }
+
+    // Click logout button to show dialog
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_BUTTON).performClick()
+
+    // Verify dialog is shown
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_CONFIRM_DIALOG).assertIsDisplayed()
+
+    // Click cancel button
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_CANCEL_BUTTON).performClick()
+
+    // Dialog should be dismissed and logout should NOT be triggered
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_CONFIRM_DIALOG).assertDoesNotExist()
+    assert(!logoutClicked)
   }
 
   @Test
