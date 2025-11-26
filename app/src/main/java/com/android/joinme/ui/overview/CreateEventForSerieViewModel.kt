@@ -14,6 +14,7 @@ import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.google.firebase.Timestamp
+import java.time.Instant
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -137,7 +138,8 @@ class CreateEventForSerieViewModel(
 
       // Calculate the end time of the new event
       val newEventEndTime = event.date.toDate().time + (event.duration * MILLIS_PER_MINUTE)
-      val newEventEndTimestamp = Timestamp(java.util.Date(newEventEndTime))
+      val instant = Instant.ofEpochMilli(newEventEndTime)
+      val newEventEndTimestamp = Timestamp(instant.epochSecond, instant.nano)
 
       // Update the serie to include the new event ID and update lastEventEndTime
       val updatedSerie =
@@ -198,7 +200,8 @@ class CreateEventForSerieViewModel(
     // Calculate when the last event ends
     val lastEvent = serieEvents.last()
     val lastEventEndTime = lastEvent.date.toDate().time + (lastEvent.duration * MILLIS_PER_MINUTE)
+    val instant = Instant.ofEpochMilli(lastEventEndTime)
 
-    return Timestamp(java.util.Date(lastEventEndTime))
+    return Timestamp(instant.epochSecond, instant.nano)
   }
 }
