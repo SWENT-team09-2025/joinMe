@@ -138,6 +138,13 @@ sealed class Screen(
   /** User profile view screen (Top-level destination) */
   object Profile : Screen(route = "profile", name = "Profile", isTopLevelDestination = true)
 
+  data class PublicProfile(val userId: String) :
+      Screen(route = "public_profile/${userId}", name = "Public Profile") {
+    companion object {
+      const val route = "public_profile/{userId}"
+    }
+  }
+
   /** Profile editing screen */
   object EditProfile : Screen(route = "edit_profile", name = "Edit Profile")
 

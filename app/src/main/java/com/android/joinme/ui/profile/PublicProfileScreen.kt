@@ -256,7 +256,8 @@ private fun ProfileContent(
                     text =
                         if (profile.bio?.isNotBlank() == true) profile.bio
                         else stringResource(R.string.no_bio_available),
-                    style = MaterialTheme.typography.bodyMedium)
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 3)
               }
               // Follow Button on the right
               Button(
