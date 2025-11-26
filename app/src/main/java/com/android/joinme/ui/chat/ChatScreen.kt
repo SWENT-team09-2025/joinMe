@@ -302,7 +302,6 @@ private fun ChatContent(
   var showEditDialog by remember { mutableStateOf(false) }
   var showDeleteDialog by remember { mutableStateOf(false) }
   var showWhoReadDialog by remember { mutableStateOf(false) }
-  val clipboardManager = LocalClipboardManager.current
 
   // Auto-scroll to bottom when new messages arrive
   LaunchedEffect(messages.size) {
@@ -354,27 +353,30 @@ private fun ChatContent(
         selectedMessage = selectedMessage,
         currentUserId = currentUserId,
         senderProfiles = senderProfiles,
-        showEditDialog = showEditDialog,
-        showDeleteDialog = showDeleteDialog,
-        showWhoReadDialog = showWhoReadDialog,
-        clipboardManager = clipboardManager,
-        viewModel = viewModel,
-        onDismissContextMenu = { selectedMessage = null },
-        onShowEditDialog = { showEditDialog = true },
-        onShowDeleteDialog = { showDeleteDialog = true },
-        onShowWhoReadDialog = { showWhoReadDialog = true },
-        onDismissEditDialog = {
-          showEditDialog = false
-          selectedMessage = null
-        },
-        onDismissDeleteDialog = {
-          showDeleteDialog = false
-          selectedMessage = null
-        },
-        onDismissWhoReadDialog = {
-          showWhoReadDialog = false
-          selectedMessage = null
-        })
+        dialogState =
+            DialogState(
+                showEditDialog = showEditDialog,
+                showDeleteDialog = showDeleteDialog,
+                showWhoReadDialog = showWhoReadDialog),
+        callbacks =
+            DialogCallbacks(
+                onDismissContextMenu = { selectedMessage = null },
+                onShowEditDialog = { showEditDialog = true },
+                onShowDeleteDialog = { showDeleteDialog = true },
+                onShowWhoReadDialog = { showWhoReadDialog = true },
+                onDismissEditDialog = {
+                  showEditDialog = false
+                  selectedMessage = null
+                },
+                onDismissDeleteDialog = {
+                  showDeleteDialog = false
+                  selectedMessage = null
+                },
+                onDismissWhoReadDialog = {
+                  showWhoReadDialog = false
+                  selectedMessage = null
+                }),
+        viewModel = viewModel)
   }
 }
 
@@ -434,83 +436,101 @@ private fun MessageList(
 }
 
 /**
+ * State holder for dialog visibility states.
+ *
+ * @property showEditDialog Whether to show the edit dialog
+ * @property showDeleteDialog Whether to show the delete dialog
+ * @property showWhoReadDialog Whether to show the "who read" dialog
+ */
+private data class DialogState(
+    val showEditDialog: Boolean = false,
+    val showDeleteDialog: Boolean = false,
+    val showWhoReadDialog: Boolean = false
+)
+
+/**
+ * Callbacks for dialog state changes.
+ *
+ * @property onDismissContextMenu Callback to dismiss the context menu
+ * @property onShowEditDialog Callback to show the edit dialog
+ * @property onShowDeleteDialog Callback to show the delete dialog
+ * @property onShowWhoReadDialog Callback to show the "who read" dialog
+ * @property onDismissEditDialog Callback to dismiss the edit dialog
+ * @property onDismissDeleteDialog Callback to dismiss the delete dialog
+ * @property onDismissWhoReadDialog Callback to dismiss the "who read" dialog
+ */
+private data class DialogCallbacks(
+    val onDismissContextMenu: () -> Unit,
+    val onShowEditDialog: () -> Unit,
+    val onShowDeleteDialog: () -> Unit,
+    val onShowWhoReadDialog: () -> Unit,
+    val onDismissEditDialog: () -> Unit,
+    val onDismissDeleteDialog: () -> Unit,
+    val onDismissWhoReadDialog: () -> Unit
+)
+
+/**
  * Manages all message interaction overlays (context menu and dialogs).
  *
  * @param selectedMessage The currently selected message
  * @param currentUserId The ID of the current user
  * @param senderProfiles A map of sender IDs to their Profile objects
- * @param showEditDialog Whether to show the edit dialog
- * @param showDeleteDialog Whether to show the delete dialog
- * @param showWhoReadDialog Whether to show the "who read" dialog
- * @param clipboardManager Clipboard manager for copying text
+ * @param dialogState State of all dialogs
+ * @param callbacks Callbacks for dialog interactions
  * @param viewModel ChatViewModel for edit/delete operations
- * @param onDismissContextMenu Callback to dismiss the context menu
- * @param onShowEditDialog Callback to show the edit dialog
- * @param onShowDeleteDialog Callback to show the delete dialog
- * @param onShowWhoReadDialog Callback to show the "who read" dialog
- * @param onDismissEditDialog Callback to dismiss the edit dialog
- * @param onDismissDeleteDialog Callback to dismiss the delete dialog
- * @param onDismissWhoReadDialog Callback to dismiss the "who read" dialog
  */
 @Composable
 private fun MessageInteractionOverlays(
     selectedMessage: Message?,
     currentUserId: String,
     senderProfiles: Map<String, Profile>,
-    showEditDialog: Boolean,
-    showDeleteDialog: Boolean,
-    showWhoReadDialog: Boolean,
-    clipboardManager: androidx.compose.ui.platform.ClipboardManager,
-    viewModel: ChatViewModel,
-    onDismissContextMenu: () -> Unit,
-    onShowEditDialog: () -> Unit,
-    onShowDeleteDialog: () -> Unit,
-    onShowWhoReadDialog: () -> Unit,
-    onDismissEditDialog: () -> Unit,
-    onDismissDeleteDialog: () -> Unit,
-    onDismissWhoReadDialog: () -> Unit
+    dialogState: DialogState,
+    callbacks: DialogCallbacks,
+    viewModel: ChatViewModel
 ) {
+  val clipboardManager = LocalClipboardManager.current
+
   // Context menu overlay (shown when a message is selected)
   selectedMessage?.let { message ->
     MessageContextMenu(
         isCurrentUser = message.senderId == currentUserId,
-        onDismiss = onDismissContextMenu,
+        onDismiss = callbacks.onDismissContextMenu,
         onCopy = {
           clipboardManager.setText(AnnotatedString(message.content))
-          onDismissContextMenu()
+          callbacks.onDismissContextMenu()
         },
-        onEdit = onShowEditDialog,
-        onDelete = onShowDeleteDialog,
-        onSeeWhoRead = onShowWhoReadDialog)
+        onEdit = callbacks.onShowEditDialog,
+        onDelete = callbacks.onShowDeleteDialog,
+        onSeeWhoRead = callbacks.onShowWhoReadDialog)
   }
 
   // Edit dialog
-  if (showEditDialog && selectedMessage != null) {
+  if (dialogState.showEditDialog && selectedMessage != null) {
     EditMessageDialog(
         message = selectedMessage,
-        onDismiss = onDismissEditDialog,
+        onDismiss = callbacks.onDismissEditDialog,
         onConfirm = { newContent ->
           viewModel.editMessage(selectedMessage.id, newContent)
-          onDismissEditDialog()
+          callbacks.onDismissEditDialog()
         })
   }
 
   // Delete confirmation dialog
-  if (showDeleteDialog && selectedMessage != null) {
+  if (dialogState.showDeleteDialog && selectedMessage != null) {
     DeleteMessageDialog(
-        onDismiss = onDismissDeleteDialog,
+        onDismiss = callbacks.onDismissDeleteDialog,
         onConfirm = {
           viewModel.deleteMessage(selectedMessage.id)
-          onDismissDeleteDialog()
+          callbacks.onDismissDeleteDialog()
         })
   }
 
   // Who read dialog
-  if (showWhoReadDialog && selectedMessage != null) {
+  if (dialogState.showWhoReadDialog && selectedMessage != null) {
     WhoReadDialog(
         message = selectedMessage,
         senderProfiles = senderProfiles,
-        onDismiss = onDismissWhoReadDialog)
+        onDismiss = callbacks.onDismissWhoReadDialog)
   }
 }
 
