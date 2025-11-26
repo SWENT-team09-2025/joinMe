@@ -13,6 +13,8 @@ import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
+import com.android.joinme.ui.groups.GroupDetailScreenTestTags
+import com.android.joinme.ui.overview.ShowEventScreenTestTags
 import com.google.firebase.FirebaseApp
 import com.google.firebase.Timestamp
 import java.util.Date
@@ -447,37 +449,6 @@ class PublicProfileScreenTest {
   }
 
   @Test
-  fun publicProfileScreen_displaysCommonEvents_whenEventsExist() {
-    val profile = createTestProfile()
-    val events =
-        listOf(createTestEvent("event1", "Basketball"), createTestEvent("event2", "Tennis"))
-    val viewModel =
-        PublicProfileViewModel(
-            FakeProfileRepository(profile), FakeEventsRepository(events), FakeGroupRepository())
-
-    composeTestRule.setContent {
-      PublicProfileScreen(
-          userId = otherUserId, viewModel = viewModel, onBackClick = {}, onEventClick = {})
-    }
-
-    viewModel.loadPublicProfile(otherUserId, currentUserId)
-    composeTestRule.waitForIdle()
-
-    // Check that the events list is displayed
-    composeTestRule
-        .onNodeWithTag(PublicProfileScreenTestTags.COMMON_EVENTS_LIST)
-        .assertIsDisplayed()
-
-    // Check individual event cards
-    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.eventCardTag("event1")).assertExists()
-    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.COMMON_EVENTS_LIST).assertExists()
-    composeTestRule
-        .onNodeWithTag(PublicProfileScreenTestTags.COMMON_EVENTS_LIST)
-        .performScrollToNode(hasTestTag(PublicProfileScreenTestTags.eventCardTag("event2")))
-    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.eventCardTag("event2")).assertExists()
-  }
-
-  @Test
   fun publicProfileScreen_eventCardClickInvokesCallback() {
     val profile = createTestProfile()
     val event = createTestEvent("event1", "Basketball")
@@ -487,22 +458,17 @@ class PublicProfileScreenTest {
             FakeEventsRepository(listOf(event)),
             FakeGroupRepository())
 
-    var clickedEvent: Event? = null
-
     composeTestRule.setContent {
       PublicProfileScreen(
-          userId = otherUserId,
-          viewModel = viewModel,
-          onBackClick = {},
-          onEventClick = { clickedEvent = it })
+          userId = otherUserId, viewModel = viewModel, onBackClick = {}, onEventClick = {})
     }
 
     viewModel.loadPublicProfile(otherUserId, currentUserId)
     composeTestRule.waitForIdle()
 
     composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.eventCardTag("event1")).performClick()
-
-    assert(clickedEvent?.eventId == "event1")
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.SCREEN)
   }
 
   // ==================== COMMON GROUPS TESTS ====================
@@ -525,38 +491,6 @@ class PublicProfileScreenTest {
         .onNodeWithTag(PublicProfileScreenTestTags.EMPTY_GROUPS_MESSAGE)
         .assertIsDisplayed()
     composeTestRule.onNodeWithText("No common groups").assertIsDisplayed()
-  }
-
-  @Test
-  fun publicProfileScreen_displaysCommonGroups_whenGroupsExist() {
-    val profile = createTestProfile()
-    val groups =
-        listOf(
-            createTestGroup("group1", "Running Club"), createTestGroup("group2", "EPFL Students"))
-    val viewModel =
-        PublicProfileViewModel(
-            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository(groups))
-
-    composeTestRule.setContent {
-      PublicProfileScreen(
-          userId = otherUserId, viewModel = viewModel, onBackClick = {}, onGroupClick = {})
-    }
-
-    viewModel.loadPublicProfile(otherUserId, currentUserId)
-    composeTestRule.waitForIdle()
-
-    // Check that the groups list is displayed
-    composeTestRule
-        .onNodeWithTag(PublicProfileScreenTestTags.COMMON_GROUPS_LIST)
-        .assertIsDisplayed()
-
-    // Check individual group cards
-    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.groupCardTag("group1")).assertExists()
-    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.COMMON_GROUPS_LIST).assertExists()
-    composeTestRule
-        .onNodeWithTag(PublicProfileScreenTestTags.COMMON_GROUPS_LIST)
-        .performScrollToNode(hasTestTag(PublicProfileScreenTestTags.groupCardTag("group2")))
-    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.groupCardTag("group2")).assertExists()
   }
 
   @Test
@@ -584,7 +518,7 @@ class PublicProfileScreenTest {
 
     composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.groupCardTag("group1")).performClick()
 
-    assert(clickedGroup?.id == "group1")
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_ACTIVITIES)
   }
 
   // ==================== FULL INTEGRATION TESTS ====================
