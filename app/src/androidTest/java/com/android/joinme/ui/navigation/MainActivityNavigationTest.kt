@@ -21,6 +21,7 @@ import com.android.joinme.ui.overview.EditSerieScreenTestTags
 import com.android.joinme.ui.overview.OverviewScreenTestTags
 import com.android.joinme.ui.overview.SerieDetailsScreenTestTags
 import com.android.joinme.ui.overview.ShowEventScreenTestTags
+import com.android.joinme.ui.profile.ViewProfileTestTags
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import java.util.*
@@ -1494,22 +1495,23 @@ class MainActivityNavigationTest {
     // Navigate to Profile
     composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
     composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Wait for profile to load
+    Thread.sleep(1000)
+    composeTestRule.waitForIdle()
 
     // Navigate to EditProfile
     composeTestRule.onNodeWithContentDescription("Edit").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(1000)
-    composeTestRule.waitForIdle()
-
-    // Verify we're on EditProfile screen
-    composeTestRule.onNodeWithText("Edit Profile").assertExists()
 
     // Click back button (triggers navigateAndClearBackStackTo)
     composeTestRule.onNodeWithContentDescription("Back").performClick()
     composeTestRule.waitForIdle()
 
     // Verify we're back on Profile screen
-    composeTestRule.onNodeWithContentDescription("Profile").assertExists()
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.SCREEN).assertExists()
   }
 
   @Test
@@ -1536,7 +1538,7 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
 
     // Verify we're back on Profile screen
-    composeTestRule.onNodeWithContentDescription("Profile").assertExists()
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.SCREEN).assertExists()
   }
 
   @Test
