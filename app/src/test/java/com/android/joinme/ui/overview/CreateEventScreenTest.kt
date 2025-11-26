@@ -69,6 +69,13 @@ class CreateEventScreenTest {
     override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> = added.toList()
 
     override fun getNewEventId(): String = "fake-id-1"
+
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+      if (userIds.isEmpty()) return emptyList()
+      return added
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
+    }
   }
 
   private class FakeGroupRepository : GroupRepository {
@@ -105,6 +112,13 @@ class CreateEventScreenTest {
     override suspend fun joinGroup(groupId: String, userId: String) {
       val group = groups[groupId] ?: return
       groups[groupId] = group.copy(memberIds = group.memberIds + userId)
+    }
+
+    override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
+      if (userIds.isEmpty()) return emptyList()
+      return groups.values.filter { group ->
+        userIds.all { userId -> group.memberIds.contains(userId) }
+      }
     }
   }
 

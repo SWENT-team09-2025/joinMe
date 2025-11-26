@@ -304,6 +304,14 @@ class FilteredEventsRepositoryTest {
     override suspend fun deleteEvent(eventId: String) {}
 
     override suspend fun getEventsByIds(eventIds: List<String>): List<Event> = emptyList()
+
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+      if (shouldThrowError) throw Exception("Test error")
+      if (userIds.isEmpty()) return emptyList()
+      return eventsToReturn
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
+    }
   }
 
   private class FakeSeriesRepository : SeriesRepository {

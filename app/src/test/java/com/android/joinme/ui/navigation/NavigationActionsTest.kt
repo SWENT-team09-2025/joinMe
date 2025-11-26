@@ -816,4 +816,16 @@ class NavigationActionsTest {
 
     assertEquals("chat/$eventId/$chatTitle/$totalParticipants", screen.route)
   }
+
+  // ========== ActivityGroup Screen Tests ==========
+
+  @Test
+  fun activityGroup_screen_routeIsProperlyFormatted() {
+    val groupId = "test-group-123"
+    val activityGroupScreen = Screen.ActivityGroup(groupId)
+
+    assert(activityGroupScreen.route == "activity_group/$groupId")
+    assert(activityGroupScreen.name == "Activity Group")
+    assert(!activityGroupScreen.isTopLevelDestination)
+  }
 }

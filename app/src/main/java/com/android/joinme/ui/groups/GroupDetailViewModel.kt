@@ -57,11 +57,6 @@ class GroupDetailViewModel(
         // Fetch group details
         val group = groupRepository.getGroup(groupId)
 
-        if (group == null) {
-          _uiState.update { it.copy(isLoading = false, error = "Group not found") }
-          return@launch
-        }
-
         // Fetch all member profiles
         val members = fetchMemberProfiles(group.memberIds)
 

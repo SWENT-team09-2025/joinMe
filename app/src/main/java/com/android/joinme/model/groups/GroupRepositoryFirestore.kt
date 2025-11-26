@@ -93,6 +93,34 @@ class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupReposit
     editGroup(groupId, updatedGroup)
   }
 
+  override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
+    if (userIds.isEmpty()) return emptyList()
+    if (userIds.size == 1) {
+      // For a single user, just get all groups they're a member of
+      val snapshot =
+          db.collection(GROUPS_COLLECTION_PATH)
+              .whereArrayContains("memberIds", userIds[0])
+              .get()
+              .await()
+      return snapshot.mapNotNull { documentToGroup(it) }
+    }
+
+    // For multiple users, get groups for the first user and filter for others
+    // (Firestore doesn't support multiple arrayContains queries)
+    val snapshot =
+        db.collection(GROUPS_COLLECTION_PATH)
+            .whereArrayContains("memberIds", userIds[0])
+            .get()
+            .await()
+
+    return snapshot
+        .mapNotNull { documentToGroup(it) }
+        .filter { group ->
+          // Check if all specified users are members
+          userIds.all { userId -> group.memberIds.contains(userId) }
+        }
+  }
+
   /**
    * Converts a Firestore document to a [Group] object.
    *

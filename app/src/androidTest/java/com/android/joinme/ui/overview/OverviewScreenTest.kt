@@ -64,6 +64,13 @@ class EventsRepositoryMock(private val shouldThrowError: Boolean = false) : Even
   override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
     return events.filter { eventIds.contains(it.eventId) }
   }
+
+  override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+    if (userIds.isEmpty()) return emptyList()
+    return events
+        .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+        .sortedBy { it.date.toDate().time }
+  }
 }
 
 /** Mock series repository for testing */

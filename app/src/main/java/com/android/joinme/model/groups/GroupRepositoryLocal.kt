@@ -8,6 +8,12 @@ class GroupRepositoryLocal : GroupRepository {
   private val groups: MutableList<Group> = mutableListOf()
   private var counter = 0
 
+  /** Clears all groups from the repository. Useful for testing. */
+  fun clear() {
+    groups.clear()
+    counter = 0
+  }
+
   override fun getNewGroupId(): String {
     return (counter++).toString()
   }
@@ -70,5 +76,12 @@ class GroupRepositoryLocal : GroupRepository {
     val updatedMemberIds = group.memberIds + userId
     val updatedGroup = group.copy(memberIds = updatedMemberIds)
     editGroup(groupId, updatedGroup)
+  }
+
+  override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
+    if (userIds.isEmpty()) return emptyList()
+
+    // Filter groups where all specified users are members
+    return groups.filter { group -> userIds.all { userId -> group.memberIds.contains(userId) } }
   }
 }

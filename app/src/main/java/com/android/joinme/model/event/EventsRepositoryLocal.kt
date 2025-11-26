@@ -52,6 +52,19 @@ class EventsRepositoryLocal : EventsRepository {
     return events.filter { eventIds.contains(it.eventId) }
   }
 
+  override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+    if (userIds.isEmpty()) {
+      return emptyList()
+    }
+
+    return events
+        .filter { event ->
+          // This ensures an event is included ONLY IF it contains ALL of the userIds.
+          userIds.all { userId -> event.participants.contains(userId) }
+        }
+        .sortedBy { it.date.toDate().time }
+  }
+
   /** Clears all events from the repository. Useful for testing. */
   fun clear() {
     events.clear()

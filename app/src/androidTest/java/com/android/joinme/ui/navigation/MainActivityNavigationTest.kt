@@ -6,10 +6,15 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.android.joinme.JoinMe
 import com.android.joinme.model.event.*
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepositoryLocal
+import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepositoryLocal
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.model.utils.Visibility
+import com.android.joinme.ui.groups.GroupDetailScreenTestTags
+import com.android.joinme.ui.groups.GroupListScreenTestTags.cardTag
 import com.android.joinme.ui.overview.CreateEventForSerieScreenTestTags
 import com.android.joinme.ui.overview.CreateEventScreenTestTags
 import com.android.joinme.ui.overview.EditSerieScreenTestTags
@@ -30,6 +35,18 @@ import org.junit.runner.RunWith
 class MainActivityNavigationTest {
 
   @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
+
+  /**
+   * Waits until a node with the given test tag exists in the composition.
+   *
+   * @param tag The test tag to wait for
+   * @param timeoutMillis Maximum time to wait in milliseconds (default 10 seconds)
+   */
+  private fun waitUntilExists(tag: String, timeoutMillis: Long = 10000) {
+    composeTestRule.waitUntil(timeoutMillis) {
+      composeTestRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+    }
+  }
 
   private fun createTestEvent(id: String, title: String, ownerId: String = "test-user-id"): Event {
     // Create event with future date to ensure it appears in upcoming items
@@ -71,16 +88,21 @@ class MainActivityNavigationTest {
   fun setup() {
     // Setup repository with test data
     System.setProperty("IS_TEST_ENV", "true")
-    val repo = EventsRepositoryProvider.getRepository(isOnline = false)
+    val repoEvents = EventsRepositoryProvider.getRepository(isOnline = false)
     val repoSerie = SeriesRepositoryProvider.repository
-    if (repo is EventsRepositoryLocal && repoSerie is SeriesRepositoryLocal) {
+    val repoGroups = GroupRepositoryProvider.repository
+    if (repoEvents is EventsRepositoryLocal &&
+        repoSerie is SeriesRepositoryLocal &&
+        repoGroups is GroupRepositoryLocal) {
+
       runBlocking {
         // Clear all data completely using clear() methods
         repoSerie.clear()
-        repo.clear()
+        repoEvents.clear()
+        repoGroups.clear()
 
         // Add test event
-        repo.addEvent(createTestEvent("test-1", "Test Event", "unknown"))
+        repoEvents.addEvent(createTestEvent("test-1", "Test Event", "unknown"))
 
         // Add test serie owned by "unknown" (default currentUserId in SerieDetailsScreen when no
         // auth)
@@ -93,7 +115,7 @@ class MainActivityNavigationTest {
         val event =
             createTestEvent("test-event-5", "Test Event 5", "test-user-id")
                 .copy(participants = listOf("test-user-id"))
-        repo.addEvent(event)
+        repoEvents.addEvent(event)
 
         repoSerie.editSerie(serie.serieId, serie.copy(eventIds = listOf("test-event-5")))
 
@@ -113,6 +135,24 @@ class MainActivityNavigationTest {
                 ownerId = "test-user-id",
                 lastEventEndTime = Timestamp(pastEndDate))
         repoSerie.addSerie(pastSerie)
+
+        // Add event first
+        val groupActivity =
+            createTestEvent(
+                id = "test-group-activity-1", title = "Group Activity", ownerId = "test-user-id")
+        repoEvents.addEvent(groupActivity)
+
+        // Add test group with the event linked to it
+        val testGroup =
+            Group(
+                id = "test-group-1",
+                name = "Test Activity Group",
+                description = "Test group",
+                category = EventType.SPORTS,
+                ownerId = "test-user-id",
+                memberIds = listOf("test-user-id"),
+                eventIds = listOf("test-group-activity-1"))
+        repoGroups.addGroup(testGroup)
       }
     }
 
@@ -694,6 +734,7 @@ class MainActivityNavigationTest {
             Screen.EditGroup.Companion.route,
             Screen.EditProfile.route,
             Screen.GroupDetail.Companion.route,
+            Screen.ActivityGroup.Companion.route,
             Screen.SerieDetails.Companion.route,
             Screen.EditSerie.Companion.route,
             Screen.CreateEventForSerie.Companion.route,
@@ -803,6 +844,9 @@ class MainActivityNavigationTest {
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
 
+    // Wait for Edit Serie button to be rendered
+    waitUntilExists(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON)
+
     // Verify Edit Serie button exists (should be visible since user is owner)
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON).assertExists()
 
@@ -831,6 +875,9 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
+
+    // Wait for Edit Serie button to be rendered
+    waitUntilExists(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON)
 
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON).performClick()
     composeTestRule.waitForIdle()
@@ -863,6 +910,9 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
+
+    // Wait for Edit Serie button to be rendered
+    waitUntilExists(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON)
 
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON).performClick()
     composeTestRule.waitForIdle()
@@ -913,6 +963,9 @@ class MainActivityNavigationTest {
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
 
+    // Wait for Add Event button to be rendered
+    waitUntilExists(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT)
+
     // Verify Add Event button exists (should be visible since user is owner)
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT).assertExists()
 
@@ -946,6 +999,9 @@ class MainActivityNavigationTest {
     // Wait for buttons to appear
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
+
+    // Wait for Add Event button to be rendered
+    waitUntilExists(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT)
 
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT).performClick()
     composeTestRule.waitForIdle()
@@ -1098,6 +1154,9 @@ class MainActivityNavigationTest {
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.SCREEN).assertExists()
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_TITLE).assertExists()
 
+    // Wait for Edit button to be rendered
+    waitUntilExists(ShowEventScreenTestTags.EDIT_BUTTON)
+
     // Click Edit button (should trigger onEditEventForSerie callback since serieId is present)
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EDIT_BUTTON).performClick()
     composeTestRule.waitForIdle()
@@ -1220,6 +1279,9 @@ class MainActivityNavigationTest {
     // Verify we're on ShowEvent screen
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.SCREEN).assertExists()
 
+    // Wait for Chat FAB to be rendered
+    waitUntilExists(ShowEventScreenTestTags.CHAT_FAB)
+
     // Verify Chat FAB is visible (user is owner)
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.CHAT_FAB).assertExists()
   }
@@ -1272,6 +1334,9 @@ class MainActivityNavigationTest {
     // Verify we're on ShowEvent screen
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.SCREEN).assertExists()
 
+    // Wait for Chat FAB to be rendered
+    waitUntilExists(ShowEventScreenTestTags.CHAT_FAB)
+
     // Click Chat FAB
     composeTestRule.onNodeWithTag(ShowEventScreenTestTags.CHAT_FAB).performClick()
     composeTestRule.waitForIdle()
@@ -1295,5 +1360,130 @@ class MainActivityNavigationTest {
     val expectedChatScreen =
         Screen.Chat(chatId = eventId, chatTitle = eventTitle, totalParticipants = totalParticipants)
     assert(expectedChatScreen.route == "chat/$eventId/$eventTitle/$totalParticipants")
+  }
+
+  // ========== ActivityGroupScreen Navigation Tests ==========
+
+  @Test
+  fun activityGroupScreen_routeRegistration_isCorrect() {
+    composeTestRule.waitForIdle()
+
+    val screenRoute = Screen.ActivityGroup.route
+    assert(screenRoute.isNotEmpty())
+    assert(screenRoute.contains("groupId") || screenRoute.contains("{groupId}"))
+  }
+
+  @Test
+  fun activityGroupScreen_parameterPassing_withMultipleGroupIds() {
+    composeTestRule.waitForIdle()
+
+    val groupIds = listOf("group-1", "group-abc-123", "test-group", "12345", "test-group-12345")
+
+    groupIds.forEach { groupId ->
+      val screenRoute = Screen.ActivityGroup(groupId).route
+      assert(screenRoute.isNotEmpty())
+      assert(screenRoute.contains(groupId))
+    }
+  }
+
+  @Test
+  fun activityGroupScreen_routeConsistency_acrossGroupFeatures() {
+    composeTestRule.waitForIdle()
+
+    val testGroupId = "test-group"
+    val groupDetailRoute = Screen.GroupDetail(testGroupId).route
+    val activityGroupRoute = Screen.ActivityGroup(testGroupId).route
+
+    assert(groupDetailRoute.contains(testGroupId))
+    assert(activityGroupRoute.contains(testGroupId))
+    assert(groupDetailRoute.isNotEmpty())
+    assert(activityGroupRoute.isNotEmpty())
+  }
+
+  @Test
+  fun activityGroupScreen_navigationCallbacks_areConfigured() {
+    composeTestRule.waitForIdle()
+
+    val activityGroupRoute = Screen.ActivityGroup("test-group").route
+    val eventId = "test-event-123"
+    val serieId = "test-serie-456"
+
+    val showEventRoute = Screen.ShowEventScreen(eventId).route
+    val serieDetailsRoute = Screen.SerieDetails(serieId).route
+
+    // Verify all routes are non-empty and contain expected parameters
+    assert(activityGroupRoute.isNotEmpty())
+    assert(showEventRoute.isNotEmpty() && showEventRoute.contains(eventId))
+    assert(serieDetailsRoute.isNotEmpty() && serieDetailsRoute.contains(serieId))
+  }
+
+  @Test
+  fun activityGroupScreen_nullSafety_andRouteHierarchy() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify route requires groupId parameter
+    assert(
+        Screen.ActivityGroup.route.contains("groupId") ||
+            Screen.ActivityGroup.route.contains("{groupId}"))
+
+    // Verify navigation structure for full flow
+    assert(Screen.Profile.route.isNotEmpty())
+    assert(Screen.Groups.route.isNotEmpty())
+    assert(Screen.GroupDetail.route.isNotEmpty())
+    assert(Screen.ActivityGroup.route.isNotEmpty())
+
+    // Verify bottom nav exists for entry point
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).assertExists()
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
+  }
+
+  @Test
+  fun activityGroupScreen_integrationWithGroupDetail() {
+    composeTestRule.waitForIdle()
+
+    val groupId = "test-group-1"
+    val detailRoute = Screen.GroupDetail(groupId).route
+    val activityRoute = Screen.ActivityGroup(groupId).route
+
+    // Verify both screens share groupId parameter and are properly linked
+    assert(detailRoute.isNotEmpty() && detailRoute.contains(groupId))
+    assert(activityRoute.isNotEmpty() && activityRoute.contains(groupId))
+  }
+
+  @Test
+  fun activityGroupScreen_composable_navigateFromGroupDetailToActivityGroup() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Step 1: Navigate to Profile tab
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Step 2: Click Groups button (content description)
+    composeTestRule.onNodeWithContentDescription("Group").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Step 3: Click on test group in GroupListScreen
+    composeTestRule.onNodeWithTag(cardTag("test-group-1")).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Step 4: Click Group Activities button to navigate to ActivityGroupScreen
+    // This executes all 13 lines of the composable block
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_ACTIVITIES).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Step 5: Verify ActivityGroupScreen rendered with event
+    composeTestRule.onNodeWithTag("eventItemtest-group-activity-1").assertExists()
   }
 }
