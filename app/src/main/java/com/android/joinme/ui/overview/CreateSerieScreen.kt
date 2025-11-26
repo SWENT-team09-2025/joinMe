@@ -6,6 +6,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 
+/** Note: this file was co-written with AI (Claude). */
+
 /**
  * Test tags for UI testing of the Create Serie screen components.
  *

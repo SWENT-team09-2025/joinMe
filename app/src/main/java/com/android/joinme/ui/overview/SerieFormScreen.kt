@@ -21,6 +21,8 @@ import com.android.joinme.ui.theme.customColors
 import com.android.joinme.ui.theme.outlinedTextField
 import java.util.*
 
+/** Note: This file was co-written with AI (Claude). */
+
 /** Data class representing the test tags for serie form fields. */
 data class SerieFormTestTags(
     val inputSerieTitle: String,
