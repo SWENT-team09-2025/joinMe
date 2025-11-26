@@ -145,9 +145,6 @@ internal fun createMarkerForColor(color: Color): BitmapDescriptor {
 fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: NavigationActions? = null) {
   val context = LocalContext.current
 
-  // --- Initialization of localisation service ---
-  LaunchedEffect(Unit) { viewModel.initLocationService(LocationServiceImpl(context)) }
-
   // --- Collect the current UI state from the ViewModel ---
   val uiState by
       produceState(initialValue = MapUIState(), viewModel) {
@@ -178,6 +175,14 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
     viewModel.fetchLocalizableEvents()
   }
 
+  // --- Reinitialize location service when permissions are granted ---
+  LaunchedEffect(locationPermissionsState.allPermissionsGranted) {
+    if (locationPermissionsState.allPermissionsGranted) {
+      // Reinitialize service to ensure it starts with proper permissions
+      viewModel.initLocationService(LocationServiceImpl(context))
+    }
+  }
+
   // --- Initialize the map camera position ---
   val cameraPositionState = rememberCameraPositionState()
 
@@ -191,6 +196,9 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
   // --- Track if the map has been initialized (to avoid detecting initial map movements) ---
   var isMapInitialized by remember { mutableStateOf(false) }
 
+  // --- Mark map as initialized once the camera position state is ready ---
+  LaunchedEffect(cameraPositionState) { isMapInitialized = true }
+
   // --- Center the map when the user location changes (only if following is enabled) ---
   LaunchedEffect(currentLat, currentLng, isFollowingUser) {
     if (currentLat != null && currentLng != null && isFollowingUser) {
@@ -199,12 +207,9 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
         cameraPositionState.animate(
             update = CameraUpdateFactory.newLatLngZoom(LatLng(currentLat, currentLng), 15f),
             durationMs = 1000)
-        isProgrammaticMove = false
-
-        if (!isMapInitialized) {
-          isMapInitialized = true
-        }
       } catch (e: Exception) {
+        // Animation was interrupted or failed
+      } finally {
         isProgrammaticMove = false
       }
     }
