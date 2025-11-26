@@ -33,6 +33,9 @@ object ViewProfileTestTags {
   const val RETRY_BUTTON = "viewProfileRetryButton"
   const val PROFILE_TITLE = "viewProfileTitle"
   const val LOGOUT_BUTTON = "viewProfileLogoutButton"
+  const val LOGOUT_CONFIRM_DIALOG = "viewProfileLogoutConfirmDialog"
+  const val LOGOUT_CONFIRM_BUTTON = "viewProfileLogoutConfirmButton"
+  const val LOGOUT_CANCEL_BUTTON = "viewProfileLogoutCancelButton"
   const val SCROLL_CONTAINER = "viewProfileScrollContainer"
   const val PROFILE_PICTURE = "viewProfilePicture"
   const val USERNAME_FIELD = "viewProfileUsernameField"
@@ -123,6 +126,8 @@ fun ViewProfileScreen(
 /** The main content of the profile screen, displaying profile details in read-only mode. */
 @Composable
 private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
+  var showLogoutDialog by remember { mutableStateOf(false) }
+
   Column(
       modifier =
           Modifier.fillMaxSize()
@@ -143,7 +148,7 @@ private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
                   fontWeight = FontWeight.Bold,
                   modifier = Modifier.testTag(ViewProfileTestTags.PROFILE_TITLE))
               OutlinedButton(
-                  onClick = onLogoutClick,
+                  onClick = { showLogoutDialog = true },
                   shape = RoundedCornerShape(Dimens.CornerRadius.pill),
                   border =
                       BorderStroke(Dimens.BorderWidth.medium, MaterialTheme.colorScheme.primary),
@@ -205,6 +210,32 @@ private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
                   testTag = ViewProfileTestTags.BIO_FIELD)
             }
       }
+
+  // Logout confirmation dialog
+  if (showLogoutDialog) {
+    AlertDialog(
+        onDismissRequest = { showLogoutDialog = false },
+        title = { Text("Log Out") },
+        text = { Text("Are you sure you want to log out?") },
+        confirmButton = {
+          TextButton(
+              onClick = {
+                showLogoutDialog = false
+                onLogoutClick()
+              },
+              modifier = Modifier.testTag(ViewProfileTestTags.LOGOUT_CONFIRM_BUTTON)) {
+                Text("Log Out", color = MaterialTheme.colorScheme.primary)
+              }
+        },
+        dismissButton = {
+          TextButton(
+              onClick = { showLogoutDialog = false },
+              modifier = Modifier.testTag(ViewProfileTestTags.LOGOUT_CANCEL_BUTTON)) {
+                Text("Cancel")
+              }
+        },
+        modifier = Modifier.testTag(ViewProfileTestTags.LOGOUT_CONFIRM_DIALOG))
+  }
 }
 
 /** A reusable composable for displaying a profile field with a label and value. */
