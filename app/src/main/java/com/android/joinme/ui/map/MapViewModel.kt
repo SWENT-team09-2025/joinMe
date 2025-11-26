@@ -126,6 +126,13 @@ class MapViewModel(
   private fun startLocationUpdates() {
     locationService?.let { service ->
       viewModelScope.launch {
+        // First, try to get the last known location for immediate initial centering
+        val lastKnownLocation = service.getCurrentLocation()
+        if (lastKnownLocation != null) {
+          _uiState.value = _uiState.value.copy(userLocation = lastKnownLocation)
+        }
+
+        // Then start continuous location updates
         service.getUserLocationFlow().filterNotNull().collect { location ->
           _uiState.value = _uiState.value.copy(userLocation = location)
         }
