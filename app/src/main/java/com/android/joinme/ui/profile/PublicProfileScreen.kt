@@ -1,5 +1,6 @@
 package com.android.joinme.ui.profile
 /* This file was implemented with the help of Claude AI */
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +41,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -116,6 +118,7 @@ fun PublicProfileScreen(
     onEventClick: (Event) -> Unit = {},
     onGroupClick: (Group) -> Unit = {}
 ) {
+
   val profile by viewModel.profile.collectAsState()
   val commonEvents by viewModel.commonEvents.collectAsState()
   val commonGroups by viewModel.commonGroups.collectAsState()
@@ -206,6 +209,7 @@ private fun ProfileContent(
     onEventClick: (Event) -> Unit,
     onGroupClick: (Group) -> Unit
 ) {
+  val context = LocalContext.current
   Column(
       modifier =
           Modifier.fillMaxSize()
@@ -262,7 +266,10 @@ private fun ProfileContent(
               }
               // Follow Button on the right
               Button(
-                  onClick = { /* TODO: Implement follow functionality */},
+                  onClick = { /* TODO: Implement follow functionality */
+                    Toast.makeText(context, "Follow functionality coming soon!", Toast.LENGTH_SHORT)
+                        .show()
+                  },
                   modifier =
                       Modifier.height(Dimens.Button.minHeight)
                           .testTag(PublicProfileScreenTestTags.FOLLOW_BUTTON)
@@ -299,7 +306,11 @@ private fun ProfileContent(
                   }
               // Message Button on the right
               Button(
-                  onClick = { /* TODO: Implement message functionality */},
+                  onClick = { /* TODO: Implement message functionality */
+                    Toast.makeText(
+                            context, "Message functionality coming soon!", Toast.LENGTH_SHORT)
+                        .show()
+                  },
                   modifier =
                       Modifier.height(Dimens.Button.minHeight)
                           .width(Dimens.PublicProfile.buttonWidth)
