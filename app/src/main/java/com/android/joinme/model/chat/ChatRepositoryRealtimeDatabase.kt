@@ -29,6 +29,7 @@ import kotlinx.coroutines.tasks.await
  *         type: "TEXT"
  *         readBy: ["userId1", "userId2"]
  *         isPinned: false
+ *         isEdited: false
  * ```
  *
  * This provides real-time synchronization where all clients receive updates instantly when messages
@@ -49,6 +50,7 @@ class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : C
     private const val FIELD_TYPE = "type"
     private const val FIELD_READ_BY = "readBy"
     private const val FIELD_IS_PINNED = "isPinned"
+    private const val FIELD_IS_EDITED = "isEdited"
 
     // Default values
     private const val DEFAULT_MESSAGE_TYPE = "TEXT"
@@ -150,7 +152,8 @@ class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : C
         FIELD_TIMESTAMP to message.timestamp,
         FIELD_TYPE to message.type.name,
         FIELD_READ_BY to message.readBy,
-        FIELD_IS_PINNED to message.isPinned)
+        FIELD_IS_PINNED to message.isPinned,
+        FIELD_IS_EDITED to message.isEdited)
   }
 
   /**
@@ -179,6 +182,7 @@ class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : C
 
       val readBy = snapshot.child(FIELD_READ_BY).getValue(STRING_LIST_TYPE_INDICATOR) ?: emptyList()
       val isPinned = snapshot.child(FIELD_IS_PINNED).getValue(Boolean::class.java) ?: false
+      val isEdited = snapshot.child(FIELD_IS_EDITED).getValue(Boolean::class.java) ?: false
 
       Message(
           id = id,
@@ -189,7 +193,8 @@ class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : C
           timestamp = timestamp,
           type = type,
           readBy = readBy,
-          isPinned = isPinned)
+          isPinned = isPinned,
+          isEdited = isEdited)
     } catch (e: Exception) {
       Log.e(TAG, "Error converting snapshot to Message", e)
       null

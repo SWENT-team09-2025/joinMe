@@ -194,7 +194,7 @@ class ChatViewModel(
           return@launch
         }
 
-        val updatedMessage = message.copy(content = newContent)
+        val updatedMessage = message.copy(content = newContent, isEdited = true)
         chatRepository.editMessage(currentConversationId, messageId, updatedMessage)
       } catch (e: Exception) {
         setErrorMsg("Failed to edit message: ${e.message}")

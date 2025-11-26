@@ -307,8 +307,9 @@ class JoinMeNavigationTest {
   fun screen_Chat_generatesCorrectRouteWithParams() {
     val chatId = "test-chat-123"
     val chatTitle = "Test Chat"
-    val chatScreen = Screen.Chat(chatId, chatTitle)
-    assertEquals("chat/$chatId/$chatTitle", chatScreen.route)
+    val totalParticipants = 1
+    val chatScreen = Screen.Chat(chatId, chatTitle, totalParticipants)
+    assertEquals("chat/$chatId/$chatTitle/$totalParticipants", chatScreen.route)
     assertEquals("Chat", chatScreen.name)
     assertFalse(chatScreen.isTopLevelDestination)
   }
@@ -317,16 +318,18 @@ class JoinMeNavigationTest {
   fun screen_Chat_handlesSpecialCharactersInParams() {
     val chatId = "test-chat-!@#"
     val chatTitle = "Group Name with Spaces"
-    val chatScreen = Screen.Chat(chatId, chatTitle)
-    assertEquals("chat/$chatId/$chatTitle", chatScreen.route)
+    val totalParticipants = 1
+    val chatScreen = Screen.Chat(chatId, chatTitle, totalParticipants)
+    assertEquals("chat/$chatId/$chatTitle/$totalParticipants", chatScreen.route)
   }
 
   @Test
   fun screen_Chat_handlesEmptyTitle() {
     val chatId = "test-chat-456"
     val chatTitle = ""
-    val chatScreen = Screen.Chat(chatId, chatTitle)
-    assertEquals("chat/$chatId/$chatTitle", chatScreen.route)
+    val totalParticipants = 1
+    val chatScreen = Screen.Chat(chatId, chatTitle, totalParticipants)
+    assertEquals("chat/$chatId/$chatTitle/$totalParticipants", chatScreen.route)
   }
 
   @Test
@@ -345,9 +348,9 @@ class JoinMeNavigationTest {
 
   @Test
   fun chatRoute_followsExpectedPattern() {
-    val pattern = "chat/\\{chatId\\}/\\{chatTitle\\}".toRegex()
+    val pattern = "chat/\\{chatId\\}/\\{chatTitle\\}/\\{totalParticipants\\}".toRegex()
     assertTrue(
-        "Chat route should match pattern 'chat/{chatId}/{chatTitle}'",
+        "Chat route should match pattern 'chat/{chatId}/{chatTitle}/{totalParticipants}'",
         pattern.matches(Screen.Chat.Companion.route))
   }
 
@@ -356,8 +359,10 @@ class JoinMeNavigationTest {
     // Verify that event chat can use eventId as chatId
     val eventId = "event-789"
     val eventTitle = "Basketball Game"
-    val chatScreen = Screen.Chat(chatId = eventId, chatTitle = eventTitle)
-    assertEquals("chat/$eventId/$eventTitle", chatScreen.route)
+    val totalParticipants = 1
+    val chatScreen =
+        Screen.Chat(chatId = eventId, chatTitle = eventTitle, totalParticipants = totalParticipants)
+    assertEquals("chat/$eventId/$eventTitle/$totalParticipants", chatScreen.route)
     assertEquals("Chat", chatScreen.name)
     assertFalse(chatScreen.isTopLevelDestination)
   }

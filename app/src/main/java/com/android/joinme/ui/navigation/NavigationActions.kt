@@ -199,11 +199,12 @@ sealed class Screen(
    *
    * @param chatId The ID of the chat/conversation to display
    * @param chatTitle The title to display in the chat (e.g., group name or event name)
+   * @param totalParticipants Total number of participants in the event/group
    */
-  data class Chat(val chatId: String, val chatTitle: String) :
-      Screen(route = "chat/${chatId}/${chatTitle}", name = "Chat") {
+  data class Chat(val chatId: String, val chatTitle: String, val totalParticipants: Int = 1) :
+      Screen(route = "chat/${chatId}/${chatTitle}/${totalParticipants}", name = "Chat") {
     companion object {
-      const val route = "chat/{chatId}/{chatTitle}"
+      const val route = "chat/{chatId}/{chatTitle}/{totalParticipants}"
     }
   }
 }
