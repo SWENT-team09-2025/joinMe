@@ -54,7 +54,6 @@ class GroupStreakRepositoryFirestore(private val db: FirebaseFirestore) : GroupS
         .document(userId)
         .set(data, SetOptions.merge())
         .await()
-        ?: throw Exception("$TAG: Failed to update streak for user $userId in group $groupId")
   }
 
   /**
