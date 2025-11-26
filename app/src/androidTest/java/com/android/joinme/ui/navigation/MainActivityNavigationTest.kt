@@ -1549,7 +1549,7 @@ class MainActivityNavigationTest {
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
-    // Navigate to Profile -> Groups -> CreateGroup
+    // Navigate to Profile -> Groups
     composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
     composeTestRule.waitForIdle()
 
@@ -1557,6 +1557,9 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
+
+    // Verify we're on Groups screen
+    composeTestRule.onNodeWithTag(cardTag("test-group-1")).assertExists()
 
     // Click FAB to open bubble menu
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
@@ -1569,10 +1572,36 @@ class MainActivityNavigationTest {
     // Verify we're on CreateGroup screen
     composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.SCREEN).assertExists()
 
-    // This test verifies the navigation configuration is correct
-    // The onCreateSuccess callback uses navigateAndClearBackStackTo to go to Groups screen
-    // while clearing the back stack up to Profile (not inclusive)
-    assert(Screen.CreateGroup.route == "create_group")
-    assert(Screen.Groups.route == "groups")
+    // Fill in group name (required)
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_NAME_TEXT_FIELD)
+        .performTextInput("Test Navigation Group")
+    composeTestRule.waitForIdle()
+
+    // Fill in description (required)
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_DESCRIPTION_TEXT_FIELD)
+        .performTextInput("Testing navigation after group creation")
+    composeTestRule.waitForIdle()
+
+    // Select category
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.CATEGORY_DROPDOWN).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("SPORTS").performClick()
+    composeTestRule.waitForIdle()
+
+    // Click save button - this triggers onCreateSuccess callback (lines 466-468 MainActivity)
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.SAVE_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Wait for async group creation to complete
+    Thread.sleep(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify we're back on Groups screen (not Profile or CreateGroup)
+    // The original test group should still exist
+    composeTestRule.onNodeWithTag(cardTag("test-group-1")).assertExists()
   }
 }

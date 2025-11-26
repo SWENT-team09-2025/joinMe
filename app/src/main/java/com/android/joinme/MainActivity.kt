@@ -390,9 +390,6 @@ fun JoinMe(
         ViewProfileScreen(
             uid = currentUser?.uid ?: "",
             onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
-            onBackClick = {
-              // Do nothing - Profile is a top-level destination
-            },
             onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
             onSignOutComplete = {
