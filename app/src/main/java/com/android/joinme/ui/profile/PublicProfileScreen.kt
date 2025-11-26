@@ -1,6 +1,5 @@
 package com.android.joinme.ui.profile
 /* This file was implemented with the help of Claude AI */
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +42,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import android.widget.Toast
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -124,6 +125,8 @@ fun PublicProfileScreen(
   val commonGroups by viewModel.commonGroups.collectAsState()
   val isLoading by viewModel.isLoading.collectAsState()
   val error by viewModel.error.collectAsState()
+  val isFollowing by viewModel.isFollowing.collectAsState()
+  val isFollowLoading by viewModel.isFollowLoading.collectAsState()
 
   // Get current user ID
   val currentUserId = Firebase.auth.currentUser?.uid
@@ -191,6 +194,11 @@ fun PublicProfileScreen(
                   // Content state
                   ProfileContent(
                       profile = profile!!,
+                      isFollowing = isFollowing,
+                      isFollowLoading = isFollowLoading,
+                      onFollowClick = {
+                        currentUserId?.let { viewModel.toggleFollow(it, userId) }
+                      },
                       commonEvents = commonEvents,
                       commonGroups = commonGroups,
                       onEventClick = onEventClick,
@@ -204,11 +212,15 @@ fun PublicProfileScreen(
 @Composable
 private fun ProfileContent(
     profile: Profile,
+    isFollowing: Boolean,
+    isFollowLoading: Boolean,
+    onFollowClick: () -> Unit,
     commonEvents: List<Event>,
     commonGroups: List<Group>,
     onEventClick: (Event) -> Unit,
     onGroupClick: (Group) -> Unit
 ) {
+  // Provide a Compose context for showing Toasts
   val context = LocalContext.current
   Column(
       modifier =
@@ -266,21 +278,34 @@ private fun ProfileContent(
               }
               // Follow Button on the right
               Button(
-                  onClick = { /* TODO: Implement follow functionality */
-                    Toast.makeText(context, "Follow functionality coming soon!", Toast.LENGTH_SHORT)
-                        .show()
-                  },
+                  onClick = onFollowClick,
+                  enabled = !isFollowLoading,
                   modifier =
                       Modifier.height(Dimens.Button.minHeight)
                           .testTag(PublicProfileScreenTestTags.FOLLOW_BUTTON)
                           .width(Dimens.PublicProfile.buttonWidth),
                   colors =
                       ButtonDefaults.buttonColors(
-                          containerColor = MaterialTheme.colorScheme.primary),
+                          containerColor =
+                              if (isFollowing) MaterialTheme.colorScheme.surfaceVariant
+                              else MaterialTheme.colorScheme.primary),
                   shape = RoundedCornerShape(Dimens.CornerRadius.circle)) {
-                    Text(
-                        stringResource(R.string.follow),
-                        color = MaterialTheme.colorScheme.onPrimary)
+                    if (isFollowLoading) {
+                      CircularProgressIndicator(
+                          modifier = Modifier.size(20.dp),
+                          strokeWidth = 2.dp,
+                          color =
+                              if (isFollowing) MaterialTheme.colorScheme.onSurfaceVariant
+                              else MaterialTheme.colorScheme.onPrimary)
+                    } else {
+                      Text(
+                          text =
+                              stringResource(
+                                  if (isFollowing) R.string.following else R.string.follow),
+                          color =
+                              if (isFollowing) MaterialTheme.colorScheme.onSurfaceVariant
+                              else MaterialTheme.colorScheme.onPrimary)
+                    }
                   }
             }
 

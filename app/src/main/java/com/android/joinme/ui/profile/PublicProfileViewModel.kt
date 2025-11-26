@@ -60,6 +60,12 @@ class PublicProfileViewModel(
   private val _error = MutableStateFlow<String?>(null)
   val error: StateFlow<String?> = _error.asStateFlow()
 
+  private val _isFollowing = MutableStateFlow(false)
+  val isFollowing: StateFlow<Boolean> = _isFollowing.asStateFlow()
+
+  private val _isFollowLoading = MutableStateFlow(false)
+  val isFollowLoading: StateFlow<Boolean> = _isFollowLoading.asStateFlow()
+
   /**
    * Loads the public profile for a specific user along with common events and groups.
    *
@@ -114,6 +120,14 @@ class PublicProfileViewModel(
 
       _profile.value = fetchedProfile
 
+      // Check if current user follows this profile
+      try {
+        _isFollowing.value = profileRepository.isFollowing(currentUserId, userId)
+      } catch (e: Exception) {
+        Log.e(TAG, "Error checking follow status", e)
+        _isFollowing.value = false
+      }
+
       // Fetch common events
       try {
         val events = eventsRepository.getCommonEvents(listOf(currentUserId, userId))
@@ -139,5 +153,47 @@ class PublicProfileViewModel(
   /** Clears the current error state. */
   fun clearError() {
     _error.value = null
+  }
+
+  /**
+   * Toggles the follow status for the current profile.
+   *
+   * If currently following, unfollows the user. If not following, follows the user. Updates local
+   * state immediately for responsive UI.
+   *
+   * @param currentUserId The current user's ID (the one performing the action)
+   * @param profileUserId The profile user's ID (the one being followed/unfollowed)
+   */
+  fun toggleFollow(currentUserId: String, profileUserId: String) {
+    viewModelScope.launch {
+      _isFollowLoading.value = true
+
+      try {
+        if (_isFollowing.value) {
+          // Unfollow
+          profileRepository.unfollowUser(currentUserId, profileUserId)
+          _isFollowing.value = false
+
+          // Update local follower count
+          _profile.value?.let { profile ->
+            _profile.value = profile.copy(followersCount = profile.followersCount - 1)
+          }
+        } else {
+          // Follow
+          profileRepository.followUser(currentUserId, profileUserId)
+          _isFollowing.value = true
+
+          // Update local follower count
+          _profile.value?.let { profile ->
+            _profile.value = profile.copy(followersCount = profile.followersCount + 1)
+          }
+        }
+      } catch (e: Exception) {
+        Log.e(TAG, "Error toggling follow", e)
+        _error.value = "Failed to update follow status: ${e.message}"
+      } finally {
+        _isFollowLoading.value = false
+      }
+    }
   }
 }
