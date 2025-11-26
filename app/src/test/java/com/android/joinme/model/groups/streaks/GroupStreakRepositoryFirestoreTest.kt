@@ -1,7 +1,5 @@
 package com.android.joinme.model.groups.streaks
 
-// Implemented with the help of AI tools, adapted and refactored to follow project pattern.
-
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.CollectionReference
@@ -9,6 +7,7 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.SetOptions
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -196,7 +195,8 @@ class GroupStreakRepositoryFirestoreTest {
             lastActiveWeekStart = lastActive,
             bestStreakWeeks = 5,
             bestStreakActivities = 15)
-    every { mockStreakDocument.set(any<Map<String, Any>>()) } returns Tasks.forResult(null)
+    every { mockStreakDocument.set(any<Map<String, Any?>>(), any<SetOptions>()) } returns
+        Tasks.forResult(null)
 
     // When
     repository.updateStreak(testGroupId, testUserId, streak)
@@ -204,7 +204,7 @@ class GroupStreakRepositoryFirestoreTest {
     // Then
     verify {
       mockStreakDocument.set(
-          match<Map<String, Any>> { data ->
+          match<Map<String, Any?>> { data ->
             data["currentStreakWeeks"] == 3 &&
                 data["currentStreakActivities"] == 8 &&
                 data["currentStreakStartDate"] == startDate &&
@@ -213,7 +213,8 @@ class GroupStreakRepositoryFirestoreTest {
                 data["bestStreakActivities"] == 15 &&
                 !data.containsKey("groupId") &&
                 !data.containsKey("userId")
-          })
+          },
+          eq(SetOptions.merge()))
     }
   }
 }
