@@ -846,6 +846,23 @@ class NavigationActionsTest {
             assertTrue(options.shouldRestoreState())
             // PublicProfile is not a top-level destination, so shouldn't have launchSingleTop
             assertFalse(options.shouldLaunchSingleTop())
+  // ========== navigateAndClearBackStackTo Tests ==========
+
+  @Test
+  fun `navigateAndClearBackStackTo with inclusive false keeps popUpToRoute in stack`() {
+    every { navController.currentDestination?.route } returns Screen.CreateGroup.route
+
+    actions.navigateAndClearBackStackTo(
+        screen = Screen.Groups, popUpToRoute = Screen.Groups.route, inclusive = false)
+
+    verify {
+      navController.navigate(
+          eq(Screen.Groups.route),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldLaunchSingleTop())
+            assertEquals(Screen.Groups.route, options.popUpToRoute)
+            assertFalse(options.isPopUpToInclusive())
           })
     }
   }
@@ -914,6 +931,23 @@ class NavigationActionsTest {
 
     verify {
       navController.navigate(eq("public_profile/$userId"), any<NavOptionsBuilder.() -> Unit>())
+    }
+  }
+  fun `navigateAndClearBackStackTo with inclusive true removes popUpToRoute from stack`() {
+    every { navController.currentDestination?.route } returns Screen.CreateGroup.route
+
+    actions.navigateAndClearBackStackTo(
+        screen = Screen.Groups, popUpToRoute = Screen.Profile.route, inclusive = true)
+
+    verify {
+      navController.navigate(
+          eq(Screen.Groups.route),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldLaunchSingleTop())
+            assertEquals(Screen.Profile.route, options.popUpToRoute)
+            assertTrue(options.isPopUpToInclusive())
+          })
     }
   }
 }

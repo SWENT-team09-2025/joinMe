@@ -67,6 +67,7 @@ fun ViewProfileScreen(
       topBar = {
         ProfileTopBar(
             currentScreen = ProfileScreen.VIEW_PROFILE,
+            showBackButton = false,
             onBackClick = onBackClick,
             onProfileClick = {},
             onGroupClick = onGroupClick,
