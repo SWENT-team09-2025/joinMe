@@ -13,7 +13,9 @@ import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepositoryLocal
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.model.utils.Visibility
+import com.android.joinme.ui.groups.CreateGroupScreenTestTags
 import com.android.joinme.ui.groups.GroupDetailScreenTestTags
+import com.android.joinme.ui.groups.GroupListScreenTestTags
 import com.android.joinme.ui.groups.GroupListScreenTestTags.cardTag
 import com.android.joinme.ui.overview.CreateEventForSerieScreenTestTags
 import com.android.joinme.ui.overview.CreateEventScreenTestTags
@@ -1556,8 +1558,20 @@ class MainActivityNavigationTest {
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
 
-    // TODO: Navigate to CreateGroup screen and test onCreateSuccess callback
+    // Click FAB to open bubble menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
+    composeTestRule.waitForIdle()
+
+    // Click "Create a group" bubble to navigate to CreateGroup
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.CREATE_GROUP_BUBBLE).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're on CreateGroup screen
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.SCREEN).assertExists()
+
     // This test verifies the navigation configuration is correct
+    // The onCreateSuccess callback uses navigateAndClearBackStackTo to go to Groups screen
+    // while clearing the back stack up to Profile (not inclusive)
     assert(Screen.CreateGroup.route == "create_group")
     assert(Screen.Groups.route == "groups")
   }
