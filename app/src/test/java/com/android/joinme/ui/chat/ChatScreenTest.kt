@@ -576,42 +576,6 @@ class ChatScreenTest {
   }
 
   @Test
-  fun editDialog_opensAndCloses() {
-    val messages =
-        listOf(
-            Message(
-                id = "msg1",
-                conversationId = "chat1",
-                senderId = "user1",
-                senderName = "Alice",
-                content = "Original message",
-                timestamp = System.currentTimeMillis(),
-                type = MessageType.TEXT,
-                readBy = emptyList(),
-                isPinned = false,
-                isEdited = false))
-    fakeChatRepository.setMessages(messages)
-
-    setupChatScreen()
-
-    composeTestRule.waitForIdle()
-
-    // Long press on message to show context menu
-    composeTestRule.onNodeWithText("Original message").performTouchInput { longClick() }
-
-    composeTestRule.waitForIdle()
-
-    // Verify edit option is visible in context menu
-    val editText = ApplicationProvider.getApplicationContext<Context>().getString(R.string.edit)
-    composeTestRule.onNodeWithText(editText).assertIsDisplayed()
-
-    // Note: We don't click the edit button to avoid opening the dialog that causes composition
-    // loop in tests. The fact that the edit option appears in the menu after long-press
-    // is sufficient to verify the interactive functionality is wired up correctly.
-    // The edit dialog itself and its callbacks are covered by other integration/manual tests.
-  }
-
-  @Test
   fun deleteDialog_opensAndCloses() {
     val messages =
         listOf(

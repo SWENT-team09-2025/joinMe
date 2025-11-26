@@ -80,6 +80,7 @@ import androidx.compose.ui.text.style.TextAlign
 import com.android.joinme.R
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
+import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.profile.ProfilePhotoImage
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
@@ -293,7 +294,7 @@ private fun ChatContent(
     messages: List<Message>,
     currentUserId: String,
     currentUserName: String,
-    senderProfiles: Map<String, com.android.joinme.model.profile.Profile>,
+    senderProfiles: Map<String, Profile>,
     onSendMessage: (String) -> Unit,
     paddingValues: PaddingValues,
     chatColor: Color,
@@ -331,41 +332,14 @@ private fun ChatContent(
                     if (selectedMessage != null) Modifier.blur(Dimens.Profile.photoBlurRadius * 2)
                     else Modifier)) {
           // Messages list
-          LazyColumn(
-              modifier =
-                  Modifier.weight(1f).fillMaxWidth().testTag(ChatScreenTestTags.MESSAGE_LIST),
-              state = listState,
-              contentPadding = PaddingValues(Dimens.Padding.medium),
-              verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
-                if (messages.isEmpty()) {
-                  item {
-                    Box(
-                        modifier = Modifier.fillParentMaxSize(),
-                        contentAlignment = Alignment.Center) {
-                          Text(
-                              text = stringResource(R.string.empty_chat_message),
-                              style = MaterialTheme.typography.bodyMedium,
-                              color = MaterialTheme.colorScheme.onSurfaceVariant,
-                              textAlign = TextAlign.Center,
-                              modifier = Modifier.testTag(ChatScreenTestTags.EMPTY_MESSAGE))
-                        }
-                  }
-                } else {
-                  items(messages, key = { it.id }) { message ->
-                    // Get user-specific color for this message sender
-                    val userColors = getUserColor(message.senderId)
-                    MessageItem(
-                        message = message,
-                        isCurrentUser = message.senderId == currentUserId,
-                        senderPhotoUrl = senderProfiles[message.senderId]?.photoUrl,
-                        currentUserPhotoUrl = senderProfiles[currentUserId]?.photoUrl,
-                        bubbleColor = userColors.first,
-                        onBubbleColor = userColors.second,
-                        totalUsersInChat = totalParticipants,
-                        onLongPress = { selectedMessage = message })
-                  }
-                }
-              }
+          MessageList(
+              messages = messages,
+              currentUserId = currentUserId,
+              senderProfiles = senderProfiles,
+              totalParticipants = totalParticipants,
+              listState = listState,
+              onMessageLongPress = { selectedMessage = it },
+              modifier = Modifier.weight(1f))
 
           // Message input
           MessageInput(
@@ -381,69 +355,168 @@ private fun ChatContent(
               onSendButtonColor = onChatColor)
         }
 
-    // Context menu overlay (shown when a message is selected)
-    selectedMessage?.let { message ->
-      MessageContextMenu(
-          message = message,
-          isCurrentUser = message.senderId == currentUserId,
-          onDismiss = { selectedMessage = null },
-          onCopy = {
-            clipboardManager.setText(AnnotatedString(message.content))
-            selectedMessage = null
-          },
-          onEdit = {
-            showEditDialog = true
-            // Keep selectedMessage for the dialog
-          },
-          onDelete = {
-            showDeleteDialog = true
-            // Keep selectedMessage for the dialog
-          },
-          onSeeWhoRead = {
-            showWhoReadDialog = true
-            // Keep selectedMessage for the dialog
-          })
-    }
+    // Message interaction overlays
+    MessageInteractionOverlays(
+        selectedMessage = selectedMessage,
+        currentUserId = currentUserId,
+        senderProfiles = senderProfiles,
+        showEditDialog = showEditDialog,
+        showDeleteDialog = showDeleteDialog,
+        showWhoReadDialog = showWhoReadDialog,
+        clipboardManager = clipboardManager,
+        viewModel = viewModel,
+        onDismissContextMenu = { selectedMessage = null },
+        onShowEditDialog = { showEditDialog = true },
+        onShowDeleteDialog = { showDeleteDialog = true },
+        onShowWhoReadDialog = { showWhoReadDialog = true },
+        onDismissEditDialog = {
+          showEditDialog = false
+          selectedMessage = null
+        },
+        onDismissDeleteDialog = {
+          showDeleteDialog = false
+          selectedMessage = null
+        },
+        onDismissWhoReadDialog = {
+          showWhoReadDialog = false
+          selectedMessage = null
+        })
+  }
+}
 
-    // Edit dialog
-    if (showEditDialog && selectedMessage != null) {
-      EditMessageDialog(
-          message = selectedMessage!!,
-          onDismiss = {
-            showEditDialog = false
-            selectedMessage = null
-          },
-          onConfirm = { newContent ->
-            viewModel.editMessage(selectedMessage!!.id, newContent)
-            showEditDialog = false
-            selectedMessage = null
-          })
-    }
+/**
+ * Displays the list of messages in a LazyColumn.
+ *
+ * @param messages The list of messages to display
+ * @param currentUserId The ID of the current user
+ * @param senderProfiles A map of sender IDs to their Profile objects
+ * @param totalParticipants Total number of participants in the chat
+ * @param listState LazyListState for controlling scroll
+ * @param onMessageLongPress Callback when a message is long-pressed
+ * @param modifier Modifier for the LazyColumn
+ */
+@Composable
+private fun MessageList(
+    messages: List<Message>,
+    currentUserId: String,
+    senderProfiles: Map<String, Profile>,
+    totalParticipants: Int,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    onMessageLongPress: (Message) -> Unit,
+    modifier: Modifier = Modifier
+) {
+  LazyColumn(
+      modifier = modifier.fillMaxWidth().testTag(ChatScreenTestTags.MESSAGE_LIST),
+      state = listState,
+      contentPadding = PaddingValues(Dimens.Padding.medium),
+      verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
+        if (messages.isEmpty()) {
+          item {
+            Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+              Text(
+                  text = stringResource(R.string.empty_chat_message),
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                  textAlign = TextAlign.Center,
+                  modifier = Modifier.testTag(ChatScreenTestTags.EMPTY_MESSAGE))
+            }
+          }
+        } else {
+          items(messages, key = { it.id }) { message ->
+            // Get user-specific color for this message sender
+            val userColors = getUserColor(message.senderId)
+            MessageItem(
+                message = message,
+                isCurrentUser = message.senderId == currentUserId,
+                senderPhotoUrl = senderProfiles[message.senderId]?.photoUrl,
+                currentUserPhotoUrl = senderProfiles[currentUserId]?.photoUrl,
+                bubbleColor = userColors.first,
+                onBubbleColor = userColors.second,
+                totalUsersInChat = totalParticipants,
+                onLongPress = { onMessageLongPress(message) })
+          }
+        }
+      }
+}
 
-    // Delete confirmation dialog
-    if (showDeleteDialog && selectedMessage != null) {
-      DeleteMessageDialog(
-          onDismiss = {
-            showDeleteDialog = false
-            selectedMessage = null
-          },
-          onConfirm = {
-            viewModel.deleteMessage(selectedMessage!!.id)
-            showDeleteDialog = false
-            selectedMessage = null
-          })
-    }
+/**
+ * Manages all message interaction overlays (context menu and dialogs).
+ *
+ * @param selectedMessage The currently selected message
+ * @param currentUserId The ID of the current user
+ * @param senderProfiles A map of sender IDs to their Profile objects
+ * @param showEditDialog Whether to show the edit dialog
+ * @param showDeleteDialog Whether to show the delete dialog
+ * @param showWhoReadDialog Whether to show the "who read" dialog
+ * @param clipboardManager Clipboard manager for copying text
+ * @param viewModel ChatViewModel for edit/delete operations
+ * @param onDismissContextMenu Callback to dismiss the context menu
+ * @param onShowEditDialog Callback to show the edit dialog
+ * @param onShowDeleteDialog Callback to show the delete dialog
+ * @param onShowWhoReadDialog Callback to show the "who read" dialog
+ * @param onDismissEditDialog Callback to dismiss the edit dialog
+ * @param onDismissDeleteDialog Callback to dismiss the delete dialog
+ * @param onDismissWhoReadDialog Callback to dismiss the "who read" dialog
+ */
+@Composable
+private fun MessageInteractionOverlays(
+    selectedMessage: Message?,
+    currentUserId: String,
+    senderProfiles: Map<String, Profile>,
+    showEditDialog: Boolean,
+    showDeleteDialog: Boolean,
+    showWhoReadDialog: Boolean,
+    clipboardManager: androidx.compose.ui.platform.ClipboardManager,
+    viewModel: ChatViewModel,
+    onDismissContextMenu: () -> Unit,
+    onShowEditDialog: () -> Unit,
+    onShowDeleteDialog: () -> Unit,
+    onShowWhoReadDialog: () -> Unit,
+    onDismissEditDialog: () -> Unit,
+    onDismissDeleteDialog: () -> Unit,
+    onDismissWhoReadDialog: () -> Unit
+) {
+  // Context menu overlay (shown when a message is selected)
+  selectedMessage?.let { message ->
+    MessageContextMenu(
+        isCurrentUser = message.senderId == currentUserId,
+        onDismiss = onDismissContextMenu,
+        onCopy = {
+          clipboardManager.setText(AnnotatedString(message.content))
+          onDismissContextMenu()
+        },
+        onEdit = onShowEditDialog,
+        onDelete = onShowDeleteDialog,
+        onSeeWhoRead = onShowWhoReadDialog)
+  }
 
-    // Who read dialog
-    if (showWhoReadDialog && selectedMessage != null) {
-      WhoReadDialog(
-          message = selectedMessage!!,
-          senderProfiles = senderProfiles,
-          onDismiss = {
-            showWhoReadDialog = false
-            selectedMessage = null
-          })
-    }
+  // Edit dialog
+  if (showEditDialog && selectedMessage != null) {
+    EditMessageDialog(
+        message = selectedMessage,
+        onDismiss = onDismissEditDialog,
+        onConfirm = { newContent ->
+          viewModel.editMessage(selectedMessage.id, newContent)
+          onDismissEditDialog()
+        })
+  }
+
+  // Delete confirmation dialog
+  if (showDeleteDialog && selectedMessage != null) {
+    DeleteMessageDialog(
+        onDismiss = onDismissDeleteDialog,
+        onConfirm = {
+          viewModel.deleteMessage(selectedMessage.id)
+          onDismissDeleteDialog()
+        })
+  }
+
+  // Who read dialog
+  if (showWhoReadDialog && selectedMessage != null) {
+    WhoReadDialog(
+        message = selectedMessage,
+        senderProfiles = senderProfiles,
+        onDismiss = onDismissWhoReadDialog)
   }
 }
 
@@ -537,14 +610,14 @@ private fun MessageItem(
                         Text(
                             text = formatTimestamp(message.timestamp),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            color = onBubbleColor)
 
                         // Show "edited" text if message has been edited
                         if (message.isEdited) {
                           Text(
                               text = stringResource(R.string.message_edited),
                               style = MaterialTheme.typography.labelSmall,
-                              color = MaterialTheme.colorScheme.onSurfaceVariant,
+                              color = onBubbleColor,
                               fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
                         }
 
@@ -565,7 +638,7 @@ private fun MessageItem(
                               modifier = Modifier.size(Dimens.IconSize.small),
                               tint =
                                   if (isReadByAll) MaterialTheme.colorScheme.primary
-                                  else MaterialTheme.colorScheme.onSurfaceVariant)
+                                  else onBubbleColor)
                         }
                       }
                 }
@@ -876,7 +949,7 @@ private fun DeleteMessageDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
 @Composable
 private fun WhoReadDialog(
     message: Message,
-    senderProfiles: Map<String, com.android.joinme.model.profile.Profile>,
+    senderProfiles: Map<String, Profile>,
     onDismiss: () -> Unit
 ) {
   // Filter out the sender from the readBy list
@@ -920,7 +993,6 @@ private fun WhoReadDialog(
  * Shows options based on whether the message belongs to the current user. The menu appears as a
  * centered overlay with blur effect in the background.
  *
- * @param message The selected message
  * @param isCurrentUser Whether the message belongs to the current user
  * @param onDismiss Callback to close the menu
  * @param onCopy Callback to copy message content
@@ -931,7 +1003,6 @@ private fun WhoReadDialog(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MessageContextMenu(
-    message: Message,
     isCurrentUser: Boolean,
     onDismiss: () -> Unit,
     onCopy: () -> Unit,
