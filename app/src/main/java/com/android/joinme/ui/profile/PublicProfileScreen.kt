@@ -40,24 +40,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.R
 import com.android.joinme.model.event.Event
-import com.android.joinme.model.event.EventType
-import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.groups.Group
-import com.android.joinme.model.map.Location
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.components.EventCard
 import com.android.joinme.ui.components.GroupCard
 import com.android.joinme.ui.theme.Dimens
 import com.google.firebase.Firebase
-import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
-import java.util.Date
 
 /**
  * Contains test tags for UI elements in the PublicProfileScreen.
@@ -150,7 +146,7 @@ fun PublicProfileScreen(
                     modifier = Modifier.testTag(PublicProfileScreenTestTags.BACK_BUTTON)) {
                       Icon(
                           imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                          contentDescription = "Back")
+                          contentDescription = stringResource(R.string.back))
                     }
               },
               colors =
@@ -179,7 +175,7 @@ fun PublicProfileScreen(
                   // Error state
                   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = error ?: "Unknown error",
+                        text = error ?: stringResource(R.string.unknown_error),
                         modifier =
                             Modifier.padding(Dimens.Padding.large)
                                 .testTag(PublicProfileScreenTestTags.ERROR_MESSAGE),
@@ -227,20 +223,20 @@ private fun ProfileContent(
               Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.SpaceEvenly) {
                 StatItem(
                     value = profile.eventsJoinedCount.toString(),
-                    label = "Events Joined",
+                    label = stringResource(R.string.events_joined),
                     testTag = PublicProfileScreenTestTags.EVENTS_JOINED_STAT)
                 StatItem(
                     value = formatCount(profile.followersCount),
-                    label = "Followers",
+                    label = stringResource(R.string.followers),
                     testTag = PublicProfileScreenTestTags.FOLLOWERS_STAT)
                 StatItem(
                     value = profile.followingCount.toString(),
-                    label = "Following",
+                    label = stringResource(R.string.following),
                     testTag = PublicProfileScreenTestTags.FOLLOWING_STAT)
               }
               ProfilePhotoImage(
                   photoUrl = profile.photoUrl,
-                  contentDescription = "Profile photo",
+                  contentDescription = stringResource(R.string.profile_photo),
                   size = 100.dp,
                   modifier = Modifier.testTag(PublicProfileScreenTestTags.PROFILE_PHOTO))
             }
@@ -253,13 +249,14 @@ private fun ProfileContent(
               // Bio on the left
               Column(modifier = Modifier.weight(1f).testTag(PublicProfileScreenTestTags.BIO)) {
                 Text(
-                    text = "Bio",
+                    text = stringResource(R.string.bio),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
                 Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
                 Text(
                     text =
-                        if (profile.bio?.isNotBlank() == true) profile.bio else "No bio available",
+                        if (profile.bio?.isNotBlank() == true) profile.bio
+                        else stringResource(R.string.no_bio_available),
                     style = MaterialTheme.typography.bodyMedium)
               }
               // Follow Button on the right
@@ -273,7 +270,9 @@ private fun ProfileContent(
                       ButtonDefaults.buttonColors(
                           containerColor = MaterialTheme.colorScheme.primary),
                   shape = RoundedCornerShape(Dimens.CornerRadius.circle)) {
-                    Text("Follow", color = MaterialTheme.colorScheme.onPrimary)
+                    Text(
+                        stringResource(R.string.follow),
+                        color = MaterialTheme.colorScheme.onPrimary)
                   }
             }
 
@@ -287,14 +286,14 @@ private fun ProfileContent(
                   modifier =
                       Modifier.weight(1f).testTag(PublicProfileScreenTestTags.INTERESTS_SECTION)) {
                     Text(
-                        text = "Interests",
+                        text = stringResource(R.string.interests),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
                     Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
                     Text(
                         text =
                             if (profile.interests.isNotEmpty()) profile.interests.joinToString(", ")
-                            else "No interests available",
+                            else stringResource(R.string.no_interests_available),
                         style = MaterialTheme.typography.bodyMedium)
                   }
               // Message Button on the right
@@ -308,7 +307,9 @@ private fun ProfileContent(
                       ButtonDefaults.buttonColors(
                           containerColor = MaterialTheme.colorScheme.secondary),
                   shape = RoundedCornerShape(Dimens.CornerRadius.circle)) {
-                    Text("Message", color = MaterialTheme.colorScheme.onSecondary)
+                    Text(
+                        stringResource(R.string.message),
+                        color = MaterialTheme.colorScheme.onSecondary)
                   }
             }
 
@@ -318,20 +319,22 @@ private fun ProfileContent(
                 Modifier.fillMaxWidth()
                     .testTag(PublicProfileScreenTestTags.EVENT_STREAKS_SECTION)) {
               Text(
-                  text = "Event Streaks",
+                  text = stringResource(R.string.event_streaks),
                   style = MaterialTheme.typography.labelMedium,
                   color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
               Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
               Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(text = "🔥", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.width(Dimens.Spacing.small))
-                Text(text = "0 days", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = stringResource(R.string.zero_days),
+                    style = MaterialTheme.typography.bodyMedium)
               }
             }
 
         // Common Events Section
         Text(
-            text = "Common events",
+            text = stringResource(R.string.common_events),
             modifier =
                 Modifier.fillMaxWidth()
                     .padding(top = Dimens.Spacing.medium)
@@ -349,7 +352,7 @@ private fun ProfileContent(
                   CardDefaults.cardColors(
                       containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                 Text(
-                    text = "No common events",
+                    text = stringResource(R.string.no_common_events),
                     modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.medium),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
@@ -373,7 +376,7 @@ private fun ProfileContent(
 
         // Common Groups Section
         Text(
-            text = "Common groups",
+            text = stringResource(R.string.common_groups),
             modifier =
                 Modifier.fillMaxWidth()
                     .padding(top = Dimens.Spacing.medium)
@@ -391,7 +394,7 @@ private fun ProfileContent(
                   CardDefaults.cardColors(
                       containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                 Text(
-                    text = "No common groups",
+                    text = stringResource(R.string.no_common_groups),
                     modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.medium),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
@@ -442,175 +445,5 @@ private fun formatCount(count: Int): String {
     count >= 1_000_000 -> "%.1fm".format(count / 1_000_000.0)
     count >= 1_000 -> "%.1fk".format(count / 1_000.0)
     else -> count.toString()
-  }
-}
-
-// ========================================
-// Preview Functions
-// ========================================
-
-/** Creates sample profile data for preview purposes. */
-private fun createSampleProfile(): Profile {
-  return Profile(
-      uid = "user123",
-      photoUrl = null,
-      username = "Mathieu_pfr",
-      email = "mathieu@example.com",
-      dateOfBirth = "15/03/1995",
-      country = "Switzerland",
-      interests = listOf("Musculation", "Ginko"),
-      bio = "EPFL student in IC section🎓",
-      createdAt = Timestamp.now(),
-      updatedAt = Timestamp.now(),
-      fcmToken = null,
-      eventsJoinedCount = 6956,
-      followersCount = 28_800_000,
-      followingCount = 218)
-}
-
-/** Creates sample event data for preview purposes. */
-private fun createSampleEvents(): List<Event> {
-  val now = Date()
-  return listOf(
-      Event(
-          eventId = "event1",
-          type = EventType.SPORTS,
-          title = "BasketBall",
-          description = "Friendly basketball game at Unil sports center",
-          location = Location(latitude = 46.5197, longitude = 6.6323, name = "Unil sports"),
-          date = Timestamp(now),
-          duration = 120,
-          participants = listOf("user123", "currentUser"),
-          maxParticipants = 10,
-          visibility = EventVisibility.PUBLIC,
-          ownerId = "user123",
-          partOfASerie = false,
-          groupId = null),
-      Event(
-          eventId = "event2",
-          type = EventType.ACTIVITY,
-          title = "Study Session",
-          description = "Group study for algorithms exam",
-          location = Location(latitude = 46.5191, longitude = 6.5668, name = "BC Building"),
-          date = Timestamp(Date(now.time + 86400000)), // +1 day
-          duration = 180,
-          participants = listOf("user123", "currentUser", "user456"),
-          maxParticipants = 6,
-          visibility = EventVisibility.PUBLIC,
-          ownerId = "currentUser",
-          partOfASerie = false,
-          groupId = null))
-}
-
-/** Creates sample group data for preview purposes. */
-private fun createSampleGroups(): List<Group> {
-  return listOf(
-      Group(
-          id = "group1",
-          name = "Running club",
-          category = EventType.SPORTS,
-          description = "We just like running between men.",
-          ownerId = "user123",
-          memberIds = listOf("user123", "currentUser", "user456", "user789"),
-          eventIds = listOf("event1", "event2"),
-          serieIds = emptyList(),
-          photoUrl = null),
-      Group(
-          id = "group2",
-          name = "EPFL Students",
-          category = EventType.ACTIVITY,
-          description = "Group for EPFL IC students to organize study sessions and hangouts",
-          ownerId = "currentUser",
-          memberIds = listOf("user123", "currentUser", "user999"),
-          eventIds = emptyList(),
-          serieIds = emptyList(),
-          photoUrl = null))
-}
-
-/** Preview helper that shows the full screen with TopAppBar. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PublicProfileScreenPreviewWrapper(
-    profile: Profile,
-    commonEvents: List<Event>,
-    commonGroups: List<Group>
-) {
-  Scaffold(
-      modifier = Modifier.fillMaxSize(),
-      topBar = {
-        Column {
-          CenterAlignedTopAppBar(
-              title = {
-                Text(text = profile.username, style = MaterialTheme.typography.titleLarge)
-              },
-              navigationIcon = {
-                IconButton(onClick = {}) {
-                  Icon(
-                      imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                      contentDescription = "Back")
-                }
-              },
-              colors =
-                  TopAppBarDefaults.centerAlignedTopAppBarColors(
-                      containerColor = MaterialTheme.colorScheme.surface))
-          HorizontalDivider(
-              color = MaterialTheme.colorScheme.primary, thickness = Dimens.BorderWidth.thin)
-        }
-      }) { paddingValues ->
-        Box(
-            modifier =
-                Modifier.fillMaxSize()
-                    .padding(paddingValues)
-                    .background(MaterialTheme.colorScheme.background)) {
-              ProfileContent(
-                  profile = profile,
-                  commonEvents = commonEvents,
-                  commonGroups = commonGroups,
-                  onEventClick = {},
-                  onGroupClick = {})
-            }
-      }
-}
-
-/** Preview of the PublicProfileScreen with sample data showing a complete profile. */
-@Preview(showBackground = true)
-@Composable
-fun PublicProfileScreenPreview() {
-  MaterialTheme {
-    PublicProfileScreenPreviewWrapper(
-        profile = createSampleProfile(),
-        commonEvents = createSampleEvents(),
-        commonGroups = createSampleGroups())
-  }
-}
-
-/** Preview of the PublicProfileScreen with no common events or groups. */
-@Preview(showBackground = true)
-@Composable
-fun PublicProfileScreenEmptyPreview() {
-  MaterialTheme {
-    PublicProfileScreenPreviewWrapper(
-        profile = createSampleProfile(), commonEvents = emptyList(), commonGroups = emptyList())
-  }
-}
-
-/** Preview of the PublicProfileScreen with minimal profile information. */
-@Preview(showBackground = true)
-@Composable
-fun PublicProfileScreenMinimalPreview() {
-  MaterialTheme {
-    PublicProfileScreenPreviewWrapper(
-        profile =
-            Profile(
-                uid = "user456",
-                username = "john_doe",
-                email = "john@example.com",
-                interests = emptyList(),
-                bio = null,
-                eventsJoinedCount = 42,
-                followersCount = 1_250,
-                followingCount = 89),
-        commonEvents = createSampleEvents().take(1),
-        commonGroups = createSampleGroups().take(1))
   }
 }

@@ -16,4 +16,24 @@
     <string name="location">Location</string>
     <string name="poll">Poll</string>
     <string name="not_yet_implemented">Not yet implemented</string>
+
+    <!-- Public Profile Screen -->
+    <string name="back">Back</string>
+    <string name="unknown_error">Unknown error</string>
+    <string name="events_joined">Events Joined</string>
+    <string name="followers">Followers</string>
+    <string name="following">Following</string>
+    <string name="profile_photo">Profile photo</string>
+    <string name="bio">Bio</string>
+    <string name="no_bio_available">No bio available</string>
+    <string name="follow">Follow</string>
+    <string name="interests">Interests</string>
+    <string name="no_interests_available">No interests available</string>
+    <string name="message">Message</string>
+    <string name="event_streaks">Event Streaks</string>
+    <string name="zero_days">0 days</string>
+    <string name="common_events">Common events</string>
+    <string name="no_common_events">No common events</string>
+    <string name="common_groups">Common groups</string>
+    <string name="no_common_groups">No common groups</string>
 </resources>
