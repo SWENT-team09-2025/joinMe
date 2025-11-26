@@ -9,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material3.*
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.navigation.BottomNavigationMenu
@@ -212,25 +214,28 @@ private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
       }
 
   // Logout confirmation dialog
+  // Logout confirmation dialog
   if (showLogoutDialog) {
     AlertDialog(
         onDismissRequest = { showLogoutDialog = false },
         title = { Text("Log Out") },
         text = { Text("Are you sure you want to log out?") },
         confirmButton = {
-          TextButton(
+          OutlinedButton(
               onClick = {
                 showLogoutDialog = false
                 onLogoutClick()
               },
-              modifier = Modifier.testTag(ViewProfileTestTags.LOGOUT_CONFIRM_BUTTON)) {
-                Text("Log Out", color = MaterialTheme.colorScheme.primary)
+              modifier = Modifier.testTag(ViewProfileTestTags.LOGOUT_CONFIRM_BUTTON),
+              border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)) {
+                Text("Log Out", color = MaterialTheme.colorScheme.error)
               }
         },
         dismissButton = {
-          TextButton(
+          OutlinedButton(
               onClick = { showLogoutDialog = false },
-              modifier = Modifier.testTag(ViewProfileTestTags.LOGOUT_CANCEL_BUTTON)) {
+              modifier = Modifier.testTag(ViewProfileTestTags.LOGOUT_CANCEL_BUTTON),
+              border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)) {
                 Text("Cancel")
               }
         },
