@@ -687,7 +687,7 @@ class EventForSerieFormScreenTest {
 
   /** --- CONDITIONAL TYPE FIELD RENDERING TESTS --- */
   @Test
-  fun typeField_withSerieHasGroupTrue_showsPlainText() {
+  fun typeField_withSerieHasGroupTrue_showsPlainTextBoldAndCentered() {
     val formState =
         EventForSerieFormState(
             serieHasGroup = true, // Serie has a group
@@ -724,7 +724,7 @@ class EventForSerieFormScreenTest {
           onGoBack = {})
     }
 
-    // Should show label and plain text, not a dropdown
+    // Should show label and plain text (bold and centered), not a dropdown
     composeTestRule.onNodeWithText("Event Type (from Group)").assertIsDisplayed()
     composeTestRule.onNodeWithText("SPORTS").assertIsDisplayed()
 

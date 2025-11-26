@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** Note: This file was refactored using IA (Claude) */
+/** Note: This file was co-written with AI (Claude) */
 
 /** Milliseconds per second conversion factor */
 private const val MILLIS_PER_SECOND = 1000L
@@ -71,14 +71,11 @@ class CreateEventForSerieViewModel(
   suspend fun loadSerie(serieId: String) {
     try {
       val serie = serieRepository.getSerie(serieId)
-      android.util.Log.d("CreateEventForSerieVM", "Loaded serie: groupId=${serie.groupId}")
       if (serie.groupId != null) {
         val eventType = determineEventTypeFromGroup(serie)
-        android.util.Log.d("CreateEventForSerieVM", "Serie has group, type=${eventType.name}")
         _uiState.value =
             _uiState.value.copy(serieHasGroup = true, type = eventType.name, invalidTypeMsg = null)
       } else {
-        android.util.Log.d("CreateEventForSerieVM", "Serie has no group")
         _uiState.value = _uiState.value.copy(serieHasGroup = false)
       }
     } catch (e: Exception) {

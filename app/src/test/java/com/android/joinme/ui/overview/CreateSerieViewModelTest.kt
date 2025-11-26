@@ -772,6 +772,7 @@ class CreateSerieViewModelTest {
 
     // Test 1: Select group auto-fills fields
     vm.setSelectedGroup("group-1")
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     val stateAfterSelection = vm.uiState.value
     assertEquals("group-1", stateAfterSelection.selectedGroupId)
     assertEquals("300", stateAfterSelection.maxParticipants) // Default group max
@@ -807,6 +808,7 @@ class CreateSerieViewModelTest {
 
     // Test 5: Deselect group clears fields
     vm.setSelectedGroup(null)
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     val stateAfterDeselection = vm.uiState.value
     assertNull(stateAfterDeselection.selectedGroupId)
     assertEquals("", stateAfterDeselection.maxParticipants)
@@ -862,16 +864,19 @@ class CreateSerieViewModelTest {
 
     // Select first group
     vm.setSelectedGroup("group-1")
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     assertEquals("group-1", vm.uiState.value.selectedGroupId)
     assertEquals("300", vm.uiState.value.maxParticipants)
 
     // Switch to second group
     vm.setSelectedGroup("group-2")
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     assertEquals("group-2", vm.uiState.value.selectedGroupId)
     assertEquals("300", vm.uiState.value.maxParticipants) // Still auto-filled
 
     // Deselect (go standalone)
     vm.setSelectedGroup(null)
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     assertNull(vm.uiState.value.selectedGroupId)
     assertEquals("", vm.uiState.value.maxParticipants) // Cleared
     assertEquals("", vm.uiState.value.visibility) // Cleared
@@ -942,6 +947,7 @@ class CreateSerieViewModelTest {
     advanceUntilIdle()
 
     vmWithFailingGroup.setSelectedGroup("group-1")
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     vmWithFailingGroup.setTitle("Test Serie")
     vmWithFailingGroup.setDescription("Test description")
     vmWithFailingGroup.setDate("25/12/2025")
@@ -993,6 +999,7 @@ class CreateSerieViewModelTest {
     advanceUntilIdle()
 
     vmWithFailingSeries.setSelectedGroup("group-1")
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     vmWithFailingSeries.setTitle("Test Serie")
     vmWithFailingSeries.setDescription("Test description")
     vmWithFailingSeries.setDate("25/12/2025")
@@ -1027,6 +1034,7 @@ class CreateSerieViewModelTest {
     advanceUntilIdle()
 
     vmSuccess.setSelectedGroup("group-1")
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     vmSuccess.setTitle("Test Serie")
     vmSuccess.setDescription("Test description")
     vmSuccess.setDate("25/12/2025")
@@ -1061,6 +1069,7 @@ class CreateSerieViewModelTest {
 
     // Test 1: With group - removes serie from group
     vm.setSelectedGroup("group-1")
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     vm.setTitle("Test Serie")
     vm.setDescription("Test description")
     vm.setDate("25/12/2025")
@@ -1148,7 +1157,7 @@ class CreateSerieViewModelTest {
   }
 
   @Test
-  fun setSelectedGroup_clearsCreatedSerieId() = runTest {
+  fun setSelectedGroup_deletesExistingSerieAndClearsCreatedSerieId() = runTest {
     // Setup: Add a group
     val group =
         Group(
@@ -1176,11 +1185,16 @@ class CreateSerieViewModelTest {
     assertNotNull(serieId1)
     assertNotNull(vm.uiState.value.createdSerieId)
     assertNull(vm.uiState.value.selectedGroupId)
+    assertEquals(1, repo.added.size)
 
-    // Now select a group - should clear createdSerieId
+    // Now select a group - should delete the old serie and clear createdSerieId
     vm.setSelectedGroup("group-1")
+    advanceUntilIdle()
+
     assertNull(vm.uiState.value.createdSerieId)
     assertEquals("group-1", vm.uiState.value.selectedGroupId)
+    // The old serie should be deleted since it had no events
+    assertEquals(0, repo.added.size)
 
     // Create another serie - should create a NEW serie with the group
     val serieId2 = vm.createSerie()
@@ -1188,7 +1202,7 @@ class CreateSerieViewModelTest {
 
     assertNotNull(serieId2)
     assertNotEquals(serieId1, serieId2)
-    assertEquals(2, repo.added.size)
-    assertEquals("group-1", repo.added.last().groupId)
+    assertEquals(1, repo.added.size) // Only the new serie
+    assertEquals("group-1", repo.added.first().groupId)
   }
 }
