@@ -242,6 +242,27 @@ open class NavigationActions(
   }
 
   /**
+   * Navigate to a screen and clear the back stack up to a specific route.
+   *
+   * This is useful when you want to navigate to a screen and remove intermediate screens from the
+   * back stack (e.g., after creating a group, go to Groups and remove CreateGroup).
+   *
+   * @param screen The screen to navigate to
+   * @param popUpToRoute The route to pop up to (this route will remain in the stack)
+   * @param inclusive If true, also pop the popUpToRoute from the stack
+   */
+  open fun navigateAndClearBackStackTo(
+      screen: Screen,
+      popUpToRoute: String,
+      inclusive: Boolean = false
+  ) {
+    navController.navigate(screen.route) {
+      popUpTo(popUpToRoute) { this.inclusive = inclusive }
+      launchSingleTop = true
+    }
+  }
+
+  /**
    * Navigate back to the previous screen.
    *
    * Pops the current destination from the back stack.

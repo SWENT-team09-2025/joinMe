@@ -390,7 +390,6 @@ fun JoinMe(
         ViewProfileScreen(
             uid = currentUser?.uid ?: "",
             onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
-            onBackClick = { navigationActions.goBack() },
             onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
             onSignOutComplete = {
@@ -403,7 +402,10 @@ fun JoinMe(
       composable(Screen.EditProfile.route) {
         EditProfileScreen(
             uid = currentUser?.uid ?: "",
-            onBackClick = { navigationActions.goBack() },
+            onBackClick = {
+              navigationActions.navigateAndClearBackStackTo(
+                  screen = Screen.Profile, popUpToRoute = Screen.Profile.route, inclusive = false)
+            },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
             onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
             onSaveSuccess = { navigationActions.navigateTo(Screen.Profile) })
@@ -428,7 +430,10 @@ fun JoinMe(
               // Navigate to group details
               navigationActions.navigateTo(Screen.GroupDetail(group.id))
             },
-            onBackClick = { navigationActions.goBack() },
+            onBackClick = {
+              navigationActions.navigateAndClearBackStackTo(
+                  screen = Screen.Profile, popUpToRoute = Screen.Profile.route, inclusive = false)
+            },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
             onLeaveGroup = { group ->
@@ -453,7 +458,11 @@ fun JoinMe(
       composable(route = Screen.CreateGroup.route) {
         CreateGroupScreen(
             onBackClick = { navigationActions.goBack() },
-            onCreateSuccess = { navigationActions.navigateTo(Screen.Groups) })
+            onCreateSuccess = {
+              // Navigate to Groups and clear CreateGroup from back stack
+              navigationActions.navigateAndClearBackStackTo(
+                  screen = Screen.Groups, popUpToRoute = Screen.Profile.route, inclusive = false)
+            })
       }
 
       composable(route = Screen.EditGroup.route) { navBackStackEntry ->
