@@ -1,6 +1,7 @@
 package com.android.joinme.ui.profile
 /* This file was implemented with the help of Claude AI */
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -363,6 +364,11 @@ private fun ProfileContent(
               modifier =
                   Modifier.fillMaxWidth()
                       .weight(1f)
+                      .border(
+                          width = Dimens.BorderWidth.thin,
+                          color = MaterialTheme.colorScheme.primary,
+                          shape = RoundedCornerShape(Dimens.CornerRadius.medium))
+                      .padding(Dimens.Padding.small)
                       .testTag(PublicProfileScreenTestTags.COMMON_EVENTS_LIST),
               verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
                 items(commonEvents) { event ->
@@ -405,6 +411,11 @@ private fun ProfileContent(
               modifier =
                   Modifier.fillMaxWidth()
                       .weight(1f)
+                      .border(
+                          width = Dimens.BorderWidth.thin,
+                          color = MaterialTheme.colorScheme.primary,
+                          shape = RoundedCornerShape(Dimens.CornerRadius.medium))
+                      .padding(Dimens.Padding.small)
                       .testTag(PublicProfileScreenTestTags.COMMON_GROUPS_LIST),
               verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
                 items(commonGroups) { group ->
