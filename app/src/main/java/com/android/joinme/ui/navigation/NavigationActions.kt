@@ -138,6 +138,13 @@ sealed class Screen(
   /** User profile view screen (Top-level destination) */
   object Profile : Screen(route = "profile", name = "Profile", isTopLevelDestination = true)
 
+  data class PublicProfile(val userId: String) :
+      Screen(route = "public_profile/${userId}", name = "Public Profile") {
+    companion object {
+      const val route = "public_profile/{userId}"
+    }
+  }
+
   /** Profile editing screen */
   object EditProfile : Screen(route = "edit_profile", name = "Edit Profile")
 
@@ -192,11 +199,12 @@ sealed class Screen(
    *
    * @param chatId The ID of the chat/conversation to display
    * @param chatTitle The title to display in the chat (e.g., group name or event name)
+   * @param totalParticipants Total number of participants in the event/group
    */
-  data class Chat(val chatId: String, val chatTitle: String) :
-      Screen(route = "chat/${chatId}/${chatTitle}", name = "Chat") {
+  data class Chat(val chatId: String, val chatTitle: String, val totalParticipants: Int = 1) :
+      Screen(route = "chat/${chatId}/${chatTitle}/${totalParticipants}", name = "Chat") {
     companion object {
-      const val route = "chat/{chatId}/{chatTitle}"
+      const val route = "chat/{chatId}/{chatTitle}/{totalParticipants}"
     }
   }
 }
@@ -237,6 +245,27 @@ open class NavigationActions(
         // Restore state when navigating to a previously selected item
         restoreState = true
       }
+    }
+  }
+
+  /**
+   * Navigate to a screen and clear the back stack up to a specific route.
+   *
+   * This is useful when you want to navigate to a screen and remove intermediate screens from the
+   * back stack (e.g., after creating a group, go to Groups and remove CreateGroup).
+   *
+   * @param screen The screen to navigate to
+   * @param popUpToRoute The route to pop up to (this route will remain in the stack)
+   * @param inclusive If true, also pop the popUpToRoute from the stack
+   */
+  open fun navigateAndClearBackStackTo(
+      screen: Screen,
+      popUpToRoute: String,
+      inclusive: Boolean = false
+  ) {
+    navController.navigate(screen.route) {
+      popUpTo(popUpToRoute) { this.inclusive = inclusive }
+      launchSingleTop = true
     }
   }
 

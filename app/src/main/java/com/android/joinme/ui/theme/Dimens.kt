@@ -684,4 +684,17 @@ object Dimens {
     /** 280dp - Maximum width for message bubbles (70% of typical phone screen) */
     val messageBubbleMaxWidth: Dp = 280.dp
   }
+
+  /**
+   * Public Profile Dimensions
+   *
+   * Dimensions specific to the PublicProfileScreen.
+   */
+  object PublicProfile {
+    /** 120.dp - button width for follow/message buttons */
+    val buttonWidth: Dp = 120.dp
+
+    /** 100.dp - photo size for public profile photo */
+    val photoSize: Dp = 100.dp
+  }
 }

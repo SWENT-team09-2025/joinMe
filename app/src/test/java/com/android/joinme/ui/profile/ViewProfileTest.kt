@@ -209,7 +209,6 @@ class ViewProfileScreenTest {
   fun viewProfileScreen_topBar_allNavigationButtonsWork() = runTest {
     val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
-    var back = false
     var group = false
     var edit = false
     var logoutClicked = false
@@ -218,14 +217,11 @@ class ViewProfileScreenTest {
       ViewProfileScreen(
           uid = testUid,
           profileViewModel = viewModel,
-          onBackClick = { back = true },
           onGroupClick = { group = true },
           onEditClick = { edit = true },
           onSignOutComplete = { logoutClicked = true })
     }
 
-    composeTestRule.onNodeWithContentDescription("Back").performClick()
-    assert(back)
     composeTestRule.onNodeWithContentDescription("Group").performClick()
     assert(group)
     composeTestRule.onNodeWithContentDescription("Edit").performClick()

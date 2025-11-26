@@ -119,6 +119,7 @@ class ChatRepositoryRealtimeDatabaseTest {
       mockMessageSnapshot1.child("readBy").getValue(any<GenericTypeIndicator<List<String>>>())
     } returns emptyList()
     every { mockMessageSnapshot1.child("isPinned").getValue(Boolean::class.java) } returns false
+    every { mockMessageSnapshot1.child("isEdited").getValue(Boolean::class.java) } returns false
 
     // Setup message 2
     every { mockMessageSnapshot2.key } returns "msg2"
@@ -131,6 +132,7 @@ class ChatRepositoryRealtimeDatabaseTest {
       mockMessageSnapshot2.child("readBy").getValue(any<GenericTypeIndicator<List<String>>>())
     } returns emptyList()
     every { mockMessageSnapshot2.child("isPinned").getValue(Boolean::class.java) } returns false
+    every { mockMessageSnapshot2.child("isEdited").getValue(Boolean::class.java) } returns false
 
     every { mockSnapshot.children } returns listOf(mockMessageSnapshot1, mockMessageSnapshot2)
 
@@ -221,6 +223,7 @@ class ChatRepositoryRealtimeDatabaseTest {
       mockValidMessage.child("readBy").getValue(any<GenericTypeIndicator<List<String>>>())
     } returns emptyList()
     every { mockValidMessage.child("isPinned").getValue(Boolean::class.java) } returns false
+    every { mockValidMessage.child("isEdited").getValue(Boolean::class.java) } returns false
 
     // Invalid message (missing senderId)
     every { mockInvalidMessage.key } returns "msg2"

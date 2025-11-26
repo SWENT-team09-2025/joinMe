@@ -1,5 +1,5 @@
 package com.android.joinme.ui.profile
-
+/** This file was implemented with the help of AI */
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
