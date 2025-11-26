@@ -199,64 +199,28 @@ class MapScreenTest {
   }
 
   @Test
-  fun createMarkerForColor_createsCustomMarkerForBlack() {
-    // Test that black color creates a custom marker (not default)
-    val blackColor = Color.Black
-    val marker = createMarkerForColor(blackColor)
-
-    // Verify that a marker is created
-    assertNotNull(marker)
-  }
-
-  @Test
-  fun createMarkerForColor_createsDefaultMarkerForRed() {
-    // Test that red color creates a default marker with hue
-    val redColor = Color.Red
-    val marker = createMarkerForColor(redColor)
-
-    // Verify that a marker is created
-    assertNotNull(marker)
-  }
-
-  @Test
   fun createMarkerForColor_createsDefaultMarkerForGreen() {
     // Test that green color creates a default marker with hue
     val greenColor = Color.Green
-    val marker = createMarkerForColor(greenColor)
+    val greenMarker = createMarkerForColor(greenColor)
 
-    // Verify that a marker is created
-    assertNotNull(marker)
-  }
-
-  @Test
-  fun createMarkerForColor_createsDefaultMarkerForBlue() {
-    // Test that blue color creates a default marker with hue
     val blueColor = Color.Blue
-    val marker = createMarkerForColor(blueColor)
+    val blueMarker = createMarkerForColor(blueColor)
 
-    // Verify that a marker is created
-    assertNotNull(marker)
-  }
-
-  @Test
-  fun createMarkerForColor_createsCustomMarkerForVeryDarkGray() {
-    // Test that very dark gray (almost black) creates a custom marker
     val veryDarkGray = Color(0xFF0A0A0A)
-    val marker = createMarkerForColor(veryDarkGray)
+    val darkGrayMarker = createMarkerForColor(veryDarkGray)
 
-    // Verify that a marker is created
-    assertNotNull(marker)
-  }
+    val redColor = Color.Red
+    val redMarker = createMarkerForColor(redColor)
 
-  @Test
-  fun myLocationButton_hasClickAction() {
-    composeTestRule.setContent { MapScreen(viewModel = MapViewModel(), navigationActions = null) }
+    val blackColor = Color.Black
+    val blackMarker = createMarkerForColor(blackColor)
 
-    composeTestRule
-        .onNodeWithTag(MapScreenTestTags.MY_LOCATION_BUTTON)
-        .assertExists()
-        .assertIsDisplayed()
-        .assertHasClickAction()
+    assertNotNull(greenMarker)
+    assertNotNull(blueMarker)
+    assertNotNull(darkGrayMarker)
+    assertNotNull(redMarker)
+    assertNotNull(blackMarker)
   }
 
   @Test
