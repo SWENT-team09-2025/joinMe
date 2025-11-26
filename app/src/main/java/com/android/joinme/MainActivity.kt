@@ -54,6 +54,7 @@ import com.android.joinme.ui.overview.SearchScreen
 import com.android.joinme.ui.overview.SerieDetailsScreen
 import com.android.joinme.ui.overview.ShowEventScreen
 import com.android.joinme.ui.profile.EditProfileScreen
+import com.android.joinme.ui.profile.PublicProfileScreen
 import com.android.joinme.ui.profile.ViewProfileScreen
 import com.android.joinme.ui.signIn.SignInScreen
 import com.android.joinme.ui.theme.JoinMeTheme
@@ -290,8 +291,8 @@ fun JoinMe(
               onEditEventForSerie = { sId, eId ->
                 navigationActions.navigateTo(Screen.EditEventForSerie(sId, eId))
               },
-              onNavigateToChat = { chatId, chatTitle ->
-                navigationActions.navigateTo(Screen.Chat(chatId, chatTitle))
+              onNavigateToChat = { chatId, chatTitle, totalParticipants ->
+                navigationActions.navigateTo(Screen.Chat(chatId, chatTitle, totalParticipants))
               })
         } ?: run { Toast.makeText(context, "Event UID is null", Toast.LENGTH_SHORT).show() }
       }
@@ -390,9 +391,6 @@ fun JoinMe(
         ViewProfileScreen(
             uid = currentUser?.uid ?: "",
             onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
-            onBackClick = {
-              // Do nothing - Profile is a top-level destination
-            },
             onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
             onSignOutComplete = {
@@ -401,7 +399,21 @@ fun JoinMe(
               navigationActions.navigateTo(Screen.Auth)
             })
       }
+      composable(Screen.PublicProfile.route) { navBackStackEntry ->
+        val userId = navBackStackEntry.arguments?.getString("userId")
 
+        userId?.let {
+          PublicProfileScreen(
+              userId = userId,
+              onBackClick = { navigationActions.goBack() },
+              onEventClick = { event ->
+                navigationActions.navigateTo(Screen.ShowEventScreen(event.eventId))
+              },
+              onGroupClick = { group ->
+                navigationActions.navigateTo(Screen.GroupDetail(group.id))
+              })
+        } ?: run { Toast.makeText(context, "UserId is null", Toast.LENGTH_SHORT).show() }
+      }
       composable(Screen.EditProfile.route) {
         EditProfileScreen(
             uid = currentUser?.uid ?: "",
@@ -489,11 +501,11 @@ fun JoinMe(
               onActivityGroupClick = {
                 navigationActions.navigateTo(Screen.ActivityGroup(groupId))
               },
-              onMemberClick = {
-                Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+              onMemberClick = { userId ->
+                navigationActions.navigateTo(Screen.PublicProfile(userId))
               },
-              onNavigateToChat = { chatId, chatTitle ->
-                navigationActions.navigateTo(Screen.Chat(chatId, chatTitle))
+              onNavigateToChat = { chatId, chatTitle, totalParticipants ->
+                navigationActions.navigateTo(Screen.Chat(chatId, chatTitle, totalParticipants))
               })
         }
       }
@@ -517,6 +529,8 @@ fun JoinMe(
       composable(route = Screen.Chat.route) { navBackStackEntry ->
         val chatId = navBackStackEntry.arguments?.getString("chatId")
         val chatTitle = navBackStackEntry.arguments?.getString("chatTitle")
+        val totalParticipants =
+            navBackStackEntry.arguments?.getString("totalParticipants")?.toIntOrNull() ?: 1
 
         if (chatId != null && chatTitle != null) {
           // Use viewModel() factory pattern to get a properly scoped ViewModel
@@ -545,6 +559,7 @@ fun JoinMe(
               currentUserId = currentUserId,
               currentUserName = currentUserName,
               viewModel = chatViewModel,
+              totalParticipants = totalParticipants,
               onLeaveClick = { navigationActions.goBack() })
         } else {
           Toast.makeText(context, "Chat ID or title is null", Toast.LENGTH_SHORT).show()

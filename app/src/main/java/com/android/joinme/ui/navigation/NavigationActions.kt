@@ -138,6 +138,13 @@ sealed class Screen(
   /** User profile view screen (Top-level destination) */
   object Profile : Screen(route = "profile", name = "Profile", isTopLevelDestination = true)
 
+  data class PublicProfile(val userId: String) :
+      Screen(route = "public_profile/${userId}", name = "Public Profile") {
+    companion object {
+      const val route = "public_profile/{userId}"
+    }
+  }
+
   /** Profile editing screen */
   object EditProfile : Screen(route = "edit_profile", name = "Edit Profile")
 
@@ -192,11 +199,12 @@ sealed class Screen(
    *
    * @param chatId The ID of the chat/conversation to display
    * @param chatTitle The title to display in the chat (e.g., group name or event name)
+   * @param totalParticipants Total number of participants in the event/group
    */
-  data class Chat(val chatId: String, val chatTitle: String) :
-      Screen(route = "chat/${chatId}/${chatTitle}", name = "Chat") {
+  data class Chat(val chatId: String, val chatTitle: String, val totalParticipants: Int = 1) :
+      Screen(route = "chat/${chatId}/${chatTitle}/${totalParticipants}", name = "Chat") {
     companion object {
-      const val route = "chat/{chatId}/{chatTitle}"
+      const val route = "chat/{chatId}/{chatTitle}/{totalParticipants}"
     }
   }
 }

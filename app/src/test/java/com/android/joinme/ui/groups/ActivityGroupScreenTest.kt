@@ -336,6 +336,13 @@ class ActivityGroupScreenTest {
     }
 
     override fun getNewGroupId(): String = (groups.size + 1).toString()
+
+    override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
+      if (userIds.isEmpty()) return emptyList()
+      return groups.values.filter { group ->
+        userIds.all { userId -> group.memberIds.contains(userId) }
+      }
+    }
   }
 
   /** Fake events repository for testing */
@@ -370,6 +377,13 @@ class ActivityGroupScreenTest {
 
     override fun getNewEventId(): String {
       return (events.size + 1).toString()
+    }
+
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+      if (userIds.isEmpty()) return emptyList()
+      return events.values
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
     }
   }
 

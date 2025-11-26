@@ -16,6 +16,7 @@ import io.mockk.mockkStatic
 import io.mockk.verify
 import java.util.Date
 import kotlinx.coroutines.test.runTest
+import org.bouncycastle.util.test.SimpleTest.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Before
@@ -882,5 +883,214 @@ class EventsRepositoryFirestoreTest {
     // Then - only valid event is returned
     assertEquals(1, result.size)
     assertEquals("Event 1", result[0].title)
+  }
+
+  // ---------------- GET COMMON EVENTS TESTS ----------------
+
+  @Test
+  fun getCommonEvents_returnsEmptyListWhenNoUserIds() = runTest {
+    // When
+    val result = repository.getCommonEvents(emptyList())
+
+    // Then
+    assertEquals(0, result.size)
+  }
+
+  @Test
+  fun getCommonEvents_returnsSortedEventsWithSingleUser() = runTest {
+    // Given
+    val userId = "user1"
+    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+
+    every { mockCollection.whereArrayContains("participants", userId) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
+
+    val now = System.currentTimeMillis()
+    val laterDate = Date(now + 3600000) // 1 hour later
+    val earlierDate = Date(now)
+
+    // First event - later date
+    every { mockSnapshot1.id } returns "event1"
+    every { mockSnapshot1.getString("type") } returns EventType.SOCIAL.name
+    every { mockSnapshot1.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot1.getString("title") } returns "Later Event"
+    every { mockSnapshot1.getString("description") } returns "Desc 1"
+    every { mockSnapshot1.getTimestamp("date") } returns Timestamp(laterDate)
+    every { mockSnapshot1.getLong("duration") } returns 60L
+    every { mockSnapshot1.get("participants") } returns listOf(userId)
+    every { mockSnapshot1.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot1.getString("ownerId") } returns userId
+    every { mockSnapshot1.get("location") } returns null
+
+    // Second event - earlier date
+    every { mockSnapshot2.id } returns "event2"
+    every { mockSnapshot2.getString("type") } returns EventType.SPORTS.name
+    every { mockSnapshot2.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot2.getString("title") } returns "Earlier Event"
+    every { mockSnapshot2.getString("description") } returns "Desc 2"
+    every { mockSnapshot2.getTimestamp("date") } returns Timestamp(earlierDate)
+    every { mockSnapshot2.getLong("duration") } returns 90L
+    every { mockSnapshot2.get("participants") } returns listOf(userId)
+    every { mockSnapshot2.getLong("maxParticipants") } returns 8L
+    every { mockSnapshot2.getString("ownerId") } returns userId
+    every { mockSnapshot2.get("location") } returns null
+
+    // When
+    val result = repository.getCommonEvents(listOf(userId))
+
+    // Then - events should be sorted by date
+    assertEquals(2, result.size)
+    assertEquals("Earlier Event", result[0].title)
+    assertEquals("Later Event", result[1].title)
+  }
+
+  @Test
+  fun getCommonEvents_filtersForMultipleUsers() = runTest {
+    // Given
+    val user1 = "user1"
+    val user2 = "user2"
+    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot3 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+
+    every { mockCollection.whereArrayContains("participants", user1) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot1, mockSnapshot2, mockSnapshot3).iterator()
+
+    // Event 1 - has both users
+    every { mockSnapshot1.id } returns "event1"
+    every { mockSnapshot1.getString("type") } returns EventType.SOCIAL.name
+    every { mockSnapshot1.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot1.getString("title") } returns "Common Event"
+    every { mockSnapshot1.getString("description") } returns "Both users"
+    every { mockSnapshot1.getTimestamp("date") } returns Timestamp(Date())
+    every { mockSnapshot1.getLong("duration") } returns 60L
+    every { mockSnapshot1.get("participants") } returns listOf(user1, user2, "user3")
+    every { mockSnapshot1.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot1.getString("ownerId") } returns user1
+    every { mockSnapshot1.get("location") } returns null
+
+    // Event 2 - only user1
+    every { mockSnapshot2.id } returns "event2"
+    every { mockSnapshot2.getString("type") } returns EventType.SPORTS.name
+    every { mockSnapshot2.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot2.getString("title") } returns "User1 Only"
+    every { mockSnapshot2.getString("description") } returns "Only user1"
+    every { mockSnapshot2.getTimestamp("date") } returns Timestamp(Date())
+    every { mockSnapshot2.getLong("duration") } returns 90L
+    every { mockSnapshot2.get("participants") } returns listOf(user1, "user3")
+    every { mockSnapshot2.getLong("maxParticipants") } returns 8L
+    every { mockSnapshot2.getString("ownerId") } returns user1
+    every { mockSnapshot2.get("location") } returns null
+
+    // Event 3 - has both users
+    every { mockSnapshot3.id } returns "event3"
+    every { mockSnapshot3.getString("type") } returns EventType.ACTIVITY.name
+    every { mockSnapshot3.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot3.getString("title") } returns "Another Common"
+    every { mockSnapshot3.getString("description") } returns "Both again"
+    every { mockSnapshot3.getTimestamp("date") } returns Timestamp(Date())
+    every { mockSnapshot3.getLong("duration") } returns 45L
+    every { mockSnapshot3.get("participants") } returns listOf(user1, user2)
+    every { mockSnapshot3.getLong("maxParticipants") } returns 5L
+    every { mockSnapshot3.getString("ownerId") } returns user2
+    every { mockSnapshot3.get("location") } returns null
+
+    // When
+    val result = repository.getCommonEvents(listOf(user1, user2))
+
+    // Then - only events with both users
+    assertEquals(2, result.size)
+    val titles = result.map { it.title }
+    assert(titles.contains("Common Event"))
+    assert(titles.contains("Another Common"))
+    assert(!titles.contains("User1 Only"))
+  }
+
+  @Test
+  fun getCommonEvents_returnsEmptyWhenNoCommonEvents() = runTest {
+    // Given
+    val user1 = "user1"
+    val user2 = "user2"
+    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+
+    every { mockCollection.whereArrayContains("participants", user1) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.iterator() } returns mutableListOf(mockSnapshot).iterator()
+
+    // Event only has user1, not user2
+    every { mockSnapshot.id } returns "event1"
+    every { mockSnapshot.getString("type") } returns EventType.SOCIAL.name
+    every { mockSnapshot.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot.getString("title") } returns "No Common"
+    every { mockSnapshot.getString("description") } returns "Only user1"
+    every { mockSnapshot.getTimestamp("date") } returns Timestamp(Date())
+    every { mockSnapshot.getLong("duration") } returns 60L
+    every { mockSnapshot.get("participants") } returns listOf(user1)
+    every { mockSnapshot.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot.getString("ownerId") } returns user1
+    every { mockSnapshot.get("location") } returns null
+
+    // When
+    val result = repository.getCommonEvents(listOf(user1, user2))
+
+    // Then
+    assertEquals(0, result.size)
+  }
+
+  @Test
+  fun getCommonEvents_handlesInvalidDocuments() = runTest {
+    // Given
+    val userId = "user1"
+    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+
+    every { mockCollection.whereArrayContains("participants", userId) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
+
+    // Valid event
+    every { mockSnapshot1.id } returns "event1"
+    every { mockSnapshot1.getString("type") } returns EventType.SOCIAL.name
+    every { mockSnapshot1.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot1.getString("title") } returns "Valid Event"
+    every { mockSnapshot1.getString("description") } returns "Good"
+    every { mockSnapshot1.getTimestamp("date") } returns Timestamp(Date())
+    every { mockSnapshot1.getLong("duration") } returns 60L
+    every { mockSnapshot1.get("participants") } returns listOf(userId)
+    every { mockSnapshot1.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot1.getString("ownerId") } returns userId
+    every { mockSnapshot1.get("location") } returns null
+
+    // Invalid event (missing title)
+    every { mockSnapshot2.id } returns "event2"
+    every { mockSnapshot2.getString("type") } returns EventType.SPORTS.name
+    every { mockSnapshot2.getString("title") } returns null
+    every { mockSnapshot2.getString("description") } returns "Bad"
+    every { mockSnapshot2.getTimestamp("date") } returns Timestamp(Date())
+    every { mockSnapshot2.getLong("duration") } returns 90L
+    every { mockSnapshot2.get("participants") } returns listOf(userId)
+    every { mockSnapshot2.getLong("maxParticipants") } returns 8L
+    every { mockSnapshot2.getString("ownerId") } returns userId
+
+    // When
+    val result = repository.getCommonEvents(listOf(userId))
+
+    // Then - only valid event is returned
+    assertEquals(1, result.size)
+    assertEquals("Valid Event", result[0].title)
   }
 }

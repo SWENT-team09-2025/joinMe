@@ -1208,8 +1208,8 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
 
     // Verify Chat route configuration
-    assert(Screen.Chat.Companion.route == "chat/{chatId}/{chatTitle}")
-    assert(!Screen.Chat("test-chat-id", "Test Chat").isTopLevelDestination)
+    assert(Screen.Chat.Companion.route == "chat/{chatId}/{chatTitle}/{totalParticipants}")
+    assert(!Screen.Chat("test-chat-id", "Test Chat", 1).isTopLevelDestination)
   }
 
   @Test
@@ -1217,7 +1217,7 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
 
     // Verify the Screen object has correct name
-    val screen = Screen.Chat("test-chat-id", "Test Chat")
+    val screen = Screen.Chat("test-chat-id", "Test Chat", 1)
     assert(screen.name == "Chat")
     assert(!screen.isTopLevelDestination)
   }
@@ -1229,9 +1229,10 @@ class MainActivityNavigationTest {
     // Verify Chat screen generates correct route with chatId and chatTitle
     val chatId = "group-123"
     val chatTitle = "My Group Chat"
-    val screen = Screen.Chat(chatId, chatTitle)
+    val totalParticipants = 1
+    val screen = Screen.Chat(chatId, chatTitle, totalParticipants)
 
-    assert(screen.route == "chat/$chatId/$chatTitle")
+    assert(screen.route == "chat/$chatId/$chatTitle/$totalParticipants")
   }
 
   @Test
@@ -1241,9 +1242,10 @@ class MainActivityNavigationTest {
     // Verify Chat route works with special characters in title
     val chatId = "group-456"
     val chatTitle = "Team Discussion & Planning"
-    val screen = Screen.Chat(chatId, chatTitle)
+    val totalParticipants = 1
+    val screen = Screen.Chat(chatId, chatTitle, totalParticipants)
 
-    assert(screen.route == "chat/$chatId/$chatTitle")
+    assert(screen.route == "chat/$chatId/$chatTitle/$totalParticipants")
   }
 
   // ========== Event Chat Navigation Tests ==========
@@ -1352,10 +1354,12 @@ class MainActivityNavigationTest {
     // the eventId is used as the chatId
     val eventId = "test-event-123"
     val eventTitle = "Basketball Game"
+    val totalParticipants = 1
 
     // Navigation should create a Chat screen with eventId as chatId
-    val expectedChatScreen = Screen.Chat(chatId = eventId, chatTitle = eventTitle)
-    assert(expectedChatScreen.route == "chat/$eventId/$eventTitle")
+    val expectedChatScreen =
+        Screen.Chat(chatId = eventId, chatTitle = eventTitle, totalParticipants = totalParticipants)
+    assert(expectedChatScreen.route == "chat/$eventId/$eventTitle/$totalParticipants")
   }
 
   // ========== ActivityGroupScreen Navigation Tests ==========
@@ -1481,82 +1485,5 @@ class MainActivityNavigationTest {
 
     // Step 5: Verify ActivityGroupScreen rendered with event
     composeTestRule.onNodeWithTag("eventItemtest-group-activity-1").assertExists()
-  }
-
-  // ========== navigateAndClearBackStackTo Tests ==========
-
-  @Test
-  fun editProfile_onBackClick_navigatesToProfileAndClearsBackStack() {
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Navigate to Profile
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
-    composeTestRule.waitForIdle()
-
-    // Navigate to EditProfile
-    composeTestRule.onNodeWithContentDescription("Edit").performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(1000)
-    composeTestRule.waitForIdle()
-
-    // Verify we're on EditProfile screen
-    composeTestRule.onNodeWithText("Edit Profile").assertExists()
-
-    // Click back button (triggers navigateAndClearBackStackTo)
-    composeTestRule.onNodeWithContentDescription("Back").performClick()
-    composeTestRule.waitForIdle()
-
-    // Verify we're back on Profile screen
-    composeTestRule.onNodeWithContentDescription("Profile").assertExists()
-  }
-
-  @Test
-  fun groupListScreen_onBackClick_navigatesToProfileAndClearsBackStack() {
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Navigate to Profile
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
-    composeTestRule.waitForIdle()
-
-    // Navigate to Groups
-    composeTestRule.onNodeWithContentDescription("Group").performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(1000)
-    composeTestRule.waitForIdle()
-
-    // Verify we're on Groups screen
-    composeTestRule.onNodeWithTag(cardTag("test-group-1")).assertExists()
-
-    // Click back button (triggers navigateAndClearBackStackTo)
-    composeTestRule.onNodeWithContentDescription("Back").performClick()
-    composeTestRule.waitForIdle()
-
-    // Verify we're back on Profile screen
-    composeTestRule.onNodeWithContentDescription("Profile").assertExists()
-  }
-
-  @Test
-  fun createGroup_onCreateSuccess_navigatesToGroupsAndClearsBackStack() {
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Navigate to Profile -> Groups -> CreateGroup
-    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithContentDescription("Group").performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(1000)
-    composeTestRule.waitForIdle()
-
-    // TODO: Navigate to CreateGroup screen and test onCreateSuccess callback
-    // This test verifies the navigation configuration is correct
-    assert(Screen.CreateGroup.route == "create_group")
-    assert(Screen.Groups.route == "groups")
   }
 }

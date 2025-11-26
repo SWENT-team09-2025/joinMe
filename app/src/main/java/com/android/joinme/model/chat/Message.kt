@@ -29,6 +29,7 @@ enum class MessageType {
  * @property type Type of message (TEXT, SYSTEM, IMAGE)
  * @property readBy List of user IDs who have read this message
  * @property isPinned Whether this message is pinned in the conversation
+ * @property isEdited Whether this message has been edited
  */
 data class Message(
     val id: String = "",
@@ -39,5 +40,6 @@ data class Message(
     val timestamp: Long = 0L,
     val type: MessageType = MessageType.TEXT,
     val readBy: List<String> = emptyList(),
-    val isPinned: Boolean = false
+    val isPinned: Boolean = false,
+    val isEdited: Boolean = false
 )

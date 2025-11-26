@@ -63,6 +63,13 @@ class ShowEventViewModelTest {
     override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> = events.toList()
 
     override fun getNewEventId(): String = "fake-id-${events.size + 1}"
+
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+      if (userIds.isEmpty()) return emptyList()
+      return events
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
+    }
   }
 
   private fun createTestEvent(

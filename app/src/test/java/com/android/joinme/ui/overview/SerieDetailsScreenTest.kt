@@ -107,6 +107,13 @@ class FakeSerieDetailsEventsRepository : EventsRepository {
   override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> = events.values.toList()
 
   override fun getNewEventId(): String = "new-event-id"
+
+  override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+    if (userIds.isEmpty()) return emptyList()
+    return events.values
+        .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+        .sortedBy { it.date.toDate().time }
+  }
 }
 
 @RunWith(RobolectricTestRunner::class)

@@ -38,6 +38,8 @@ import com.android.joinme.ui.theme.customColors
 /** Test tags for GroupDetailScreen components. */
 object GroupDetailScreenTestTags {
   const val BUTTON_ACTIVITIES = "buttonActivities"
+
+  fun memberItemTag(userId: String) = "memberItem:$userId"
 }
 
 /**
@@ -59,7 +61,7 @@ fun GroupDetailScreen(
     onBackClick: () -> Unit = {},
     onActivityGroupClick: () -> Unit = {},
     onMemberClick: (String) -> Unit = {},
-    onNavigateToChat: (String, String) -> Unit = { _, _ -> }
+    onNavigateToChat: (String, String, Int) -> Unit = { _, _, _ -> }
 ) {
   LaunchedEffect(groupId) { viewModel.loadGroupDetails(groupId) }
 
@@ -129,7 +131,7 @@ private fun GroupContent(
     membersCount: Int,
     onGroupEventsClick: () -> Unit,
     onMemberClick: (String) -> Unit,
-    onNavigateToChat: (String, String) -> Unit
+    onNavigateToChat: (String, String, Int) -> Unit
 ) {
   Column(modifier = Modifier.fillMaxSize().background(groupCategory.getColor())) {
     Column(modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.large)) {
@@ -182,7 +184,8 @@ private fun GroupContent(
                   MemberItem(
                       profile = member,
                       categoryColor = groupCategory,
-                      onClick = { onMemberClick(member.uid) })
+                      onClick = { onMemberClick(member.uid) },
+                      testTag = GroupDetailScreenTestTags.memberItemTag(member.uid))
                 }
               }
         }
@@ -197,7 +200,7 @@ private fun GroupContent(
           verticalAlignment = Alignment.CenterVertically) {
             // Chat FAB positioned to the left
             FloatingActionButton(
-                onClick = { onNavigateToChat(groupId, groupName) },
+                onClick = { onNavigateToChat(groupId, groupName, membersCount) },
                 containerColor = groupCategory.getColor(),
                 contentColor = groupCategory.getOnColor(),
                 shape = RoundedCornerShape(Dimens.GroupDetail.eventsButtonCornerRadius),
@@ -243,11 +246,17 @@ private fun GroupContent(
 }
 
 @Composable
-private fun MemberItem(profile: Profile, categoryColor: EventType, onClick: () -> Unit = {}) {
+private fun MemberItem(
+    profile: Profile,
+    categoryColor: EventType,
+    onClick: () -> Unit = {},
+    testTag: String = ""
+) {
   Row(
       modifier =
           Modifier.fillMaxWidth()
               .clickable { onClick() }
+              .testTag(testTag)
               .padding(vertical = Dimens.Padding.extraSmall),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.Start) {

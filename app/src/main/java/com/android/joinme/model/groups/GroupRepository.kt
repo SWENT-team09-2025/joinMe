@@ -65,4 +65,12 @@ interface GroupRepository {
    * @throws Exception if the Group item is not found or user is already a member.
    */
   suspend fun joinGroup(groupId: String, userId: String)
+
+  /**
+   * Retrieves all groups that are common to all specified users (where all users are members).
+   *
+   * @param userIds The list of user IDs to find common groups for.
+   * @return A list of Group items where all specified users are members.
+   */
+  suspend fun getCommonGroups(userIds: List<String>): List<Group>
 }
