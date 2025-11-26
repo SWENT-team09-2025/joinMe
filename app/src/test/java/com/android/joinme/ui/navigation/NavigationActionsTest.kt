@@ -814,4 +814,92 @@ class NavigationActionsTest {
     assert(activityGroupScreen.name == "Activity Group")
     assert(!activityGroupScreen.isTopLevelDestination)
   }
+
+  // ========== PublicProfile Navigation Tests ==========
+
+  @Test
+  fun `navigateTo PublicProfile with userId navigates to correct route`() {
+    val userId = "test-user-123"
+    every { navController.currentDestination?.route } returns Screen.Profile.route
+
+    actions.navigateTo(Screen.PublicProfile(userId))
+
+    verify {
+      navController.navigate(
+          eq("public_profile/$userId"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            // PublicProfile is not a top-level destination, so shouldn't have launchSingleTop
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `PublicProfile route companion object matches pattern`() {
+    assertEquals("public_profile/{userId}", Screen.PublicProfile.Companion.route)
+  }
+
+  @Test
+  fun `PublicProfile instance route contains actual userId`() {
+    val userId = "user-456"
+    val screen = Screen.PublicProfile(userId)
+    assertEquals("public_profile/$userId", screen.route)
+  }
+
+  @Test
+  fun `PublicProfile screen has correct name`() {
+    val screen = Screen.PublicProfile("test-id")
+    assertEquals("Public Profile", screen.name)
+    assertFalse(screen.isTopLevelDestination)
+  }
+
+  @Test
+  fun `navigateTo PublicProfile from Overview screen works correctly`() {
+    val userId = "user-from-overview-789"
+    every { navController.currentDestination?.route } returns Screen.Overview.route
+
+    actions.navigateTo(Screen.PublicProfile(userId))
+
+    verify {
+      navController.navigate(
+          eq("public_profile/$userId"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `navigateTo PublicProfile multiple times with different userIds`() {
+    every { navController.currentDestination?.route } returns Screen.Profile.route
+
+    val userId1 = "user-1"
+    val userId2 = "user-2"
+
+    actions.navigateTo(Screen.PublicProfile(userId1))
+    actions.navigateTo(Screen.PublicProfile(userId2))
+
+    verify {
+      navController.navigate(eq("public_profile/$userId1"), any<NavOptionsBuilder.() -> Unit>())
+    }
+    verify {
+      navController.navigate(eq("public_profile/$userId2"), any<NavOptionsBuilder.() -> Unit>())
+    }
+  }
+
+  @Test
+  fun `navigateTo PublicProfile with special characters in userId`() {
+    val userId = "user-123-abc-xyz"
+    every { navController.currentDestination?.route } returns Screen.Search.route
+
+    actions.navigateTo(Screen.PublicProfile(userId))
+
+    verify {
+      navController.navigate(eq("public_profile/$userId"), any<NavOptionsBuilder.() -> Unit>())
+    }
+  }
 }

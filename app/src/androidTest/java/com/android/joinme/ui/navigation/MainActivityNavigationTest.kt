@@ -9,6 +9,9 @@ import com.android.joinme.model.event.*
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepositoryLocal
 import com.android.joinme.model.groups.GroupRepositoryProvider
+import com.android.joinme.model.profile.Profile
+import com.android.joinme.model.profile.ProfileRepositoryLocal
+import com.android.joinme.model.profile.ProfileRepositoryProvider
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepositoryLocal
 import com.android.joinme.model.serie.SeriesRepositoryProvider
@@ -21,6 +24,7 @@ import com.android.joinme.ui.overview.EditSerieScreenTestTags
 import com.android.joinme.ui.overview.OverviewScreenTestTags
 import com.android.joinme.ui.overview.SerieDetailsScreenTestTags
 import com.android.joinme.ui.overview.ShowEventScreenTestTags
+import com.android.joinme.ui.profile.PublicProfileScreenTestTags
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import java.util.*
@@ -91,9 +95,11 @@ class MainActivityNavigationTest {
     val repoEvents = EventsRepositoryProvider.getRepository(isOnline = false)
     val repoSerie = SeriesRepositoryProvider.repository
     val repoGroups = GroupRepositoryProvider.repository
+    val repoProfiles = ProfileRepositoryProvider.repository
     if (repoEvents is EventsRepositoryLocal &&
         repoSerie is SeriesRepositoryLocal &&
-        repoGroups is GroupRepositoryLocal) {
+        repoGroups is GroupRepositoryLocal &&
+        repoProfiles is ProfileRepositoryLocal) {
 
       runBlocking {
         // Clear all data completely using clear() methods
@@ -142,7 +148,20 @@ class MainActivityNavigationTest {
                 id = "test-group-activity-1", title = "Group Activity", ownerId = "test-user-id")
         repoEvents.addEvent(groupActivity)
 
-        // Add test group with the event linked to it
+        // Add test profile for group member
+        val testMemberProfile =
+            Profile(
+                uid = "test-member-123",
+                username = "Test Member",
+                bio = "Test member bio",
+                interests = listOf("Sports", "Music"),
+                photoUrl = null,
+                followersCount = 0,
+                followingCount = 0,
+                eventsJoinedCount = 0)
+        repoProfiles.createOrUpdateProfile(testMemberProfile)
+
+        // Add test group with the event linked to it and test member
         val testGroup =
             Group(
                 id = "test-group-1",
@@ -150,7 +169,7 @@ class MainActivityNavigationTest {
                 description = "Test group",
                 category = EventType.SPORTS,
                 ownerId = "test-user-id",
-                memberIds = listOf("test-user-id"),
+                memberIds = listOf("test-user-id", "test-member-123"),
                 eventIds = listOf("test-group-activity-1"))
         repoGroups.addGroup(testGroup)
       }
@@ -724,6 +743,7 @@ class MainActivityNavigationTest {
             Screen.Search.route,
             Screen.Map.route,
             Screen.Profile.route,
+            Screen.PublicProfile.Companion.route,
             Screen.CreateEvent.route,
             Screen.CreateSerie.route,
             Screen.EditEvent.Companion.route,
@@ -1481,5 +1501,98 @@ class MainActivityNavigationTest {
 
     // Step 5: Verify ActivityGroupScreen rendered with event
     composeTestRule.onNodeWithTag("eventItemtest-group-activity-1").assertExists()
+  }
+
+  // ========== PublicProfile Navigation Tests ==========
+
+  @Test
+  fun publicProfileRouteIsConfiguredCorrectly() {
+    composeTestRule.waitForIdle()
+
+    // Verify PublicProfile route configuration
+    assert(Screen.PublicProfile.Companion.route == "public_profile/{userId}")
+    assert(!Screen.PublicProfile("test-user-id").isTopLevelDestination)
+  }
+
+  @Test
+  fun canNavigateToPublicProfileFromGroupDetail() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Step 1: Navigate to Profile tab
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Step 2: Click Groups button
+    composeTestRule.onNodeWithContentDescription("Group").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Step 3: Click on test group in GroupListScreen
+    composeTestRule.onNodeWithTag(cardTag("test-group-1")).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Wait for members to load
+    Thread.sleep(1000)
+    composeTestRule.waitForIdle()
+
+    // Step 4: Click on a member to navigate to PublicProfileScreen
+    composeTestRule
+        .onNodeWithTag(GroupDetailScreenTestTags.memberItemTag("test-member-123"))
+        .performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Step 5: Verify we're on PublicProfileScreen
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.SCREEN).assertExists()
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.USERNAME).assertExists()
+  }
+
+  @Test
+  fun publicProfileScreen_goBackButtonNavigatesToGroupDetail() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Navigate to PublicProfile via GroupDetail
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithContentDescription("Group").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(cardTag("test-group-1")).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Wait for members to load
+    Thread.sleep(1000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(GroupDetailScreenTestTags.memberItemTag("test-member-123"))
+        .performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Click back button
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.BACK_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're back on GroupDetail screen
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_ACTIVITIES).assertExists()
   }
 }
