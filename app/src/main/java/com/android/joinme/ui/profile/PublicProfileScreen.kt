@@ -43,7 +43,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
 import com.android.joinme.model.event.Event
@@ -237,7 +236,7 @@ private fun ProfileContent(
               ProfilePhotoImage(
                   photoUrl = profile.photoUrl,
                   contentDescription = stringResource(R.string.profile_photo),
-                  size = 100.dp,
+                  size = Dimens.PublicProfile.photoSize,
                   modifier = Modifier.testTag(PublicProfileScreenTestTags.PROFILE_PHOTO))
             }
 
@@ -265,7 +264,7 @@ private fun ProfileContent(
                   modifier =
                       Modifier.height(Dimens.Button.minHeight)
                           .testTag(PublicProfileScreenTestTags.FOLLOW_BUTTON)
-                          .width(120.dp),
+                          .width(Dimens.PublicProfile.buttonWidth),
                   colors =
                       ButtonDefaults.buttonColors(
                           containerColor = MaterialTheme.colorScheme.primary),
@@ -301,7 +300,7 @@ private fun ProfileContent(
                   onClick = { /* TODO: Implement message functionality */},
                   modifier =
                       Modifier.height(Dimens.Button.minHeight)
-                          .width(120.dp)
+                          .width(Dimens.PublicProfile.buttonWidth)
                           .testTag(PublicProfileScreenTestTags.MESSAGE_BUTTON),
                   colors =
                       ButtonDefaults.buttonColors(
