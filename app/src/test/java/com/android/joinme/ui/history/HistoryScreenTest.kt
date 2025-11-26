@@ -814,6 +814,19 @@ class HistoryScreenTest {
     }
 
     override fun getNewEventId(): String = (events.size + 1).toString()
+
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+      if (delayMillis > 0) {
+        kotlinx.coroutines.delay(delayMillis)
+      }
+      if (shouldThrowError) {
+        throw Exception("Failed to fetch events")
+      }
+      if (userIds.isEmpty()) return emptyList()
+      return events
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
+    }
   }
 
   /** Fake series repository for testing */

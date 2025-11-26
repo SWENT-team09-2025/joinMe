@@ -182,4 +182,108 @@ class EventsRepositoryLocalTest {
       Assert.assertEquals("0", repo.getNewEventId())
     }
   }
+
+  // ---------------- GET COMMON EVENTS TESTS ----------------
+
+  @Test
+  fun getCommonEvents_returnsEmptyListWhenNoUserIds() {
+    runBlocking {
+      repo.addEvent(sampleEvent)
+      val result = repo.getCommonEvents(emptyList())
+      Assert.assertTrue(result.isEmpty())
+    }
+  }
+
+  @Test
+  fun getCommonEvents_returnsEventsWithSingleUser() {
+    runBlocking {
+      val e1 = sampleEvent.copy(eventId = "1", participants = listOf("user1", "user2"))
+      val e2 = sampleEvent.copy(eventId = "2", participants = listOf("user2"))
+      val e3 = sampleEvent.copy(eventId = "3", participants = listOf("user1", "user3"))
+      repo.clear()
+      repo.addEvent(e1)
+      repo.addEvent(e2)
+      repo.addEvent(e3)
+
+      val result = repo.getCommonEvents(listOf("user2"))
+      Assert.assertEquals(2, result.size)
+      Assert.assertTrue(result.any { it.eventId == "1" })
+      Assert.assertTrue(result.any { it.eventId == "2" })
+    }
+  }
+
+  @Test
+  fun getCommonEvents_returnsEventsWithMultipleUsers() {
+    runBlocking {
+      val e1 = sampleEvent.copy(eventId = "1", participants = listOf("user1", "user2", "user3"))
+      val e2 = sampleEvent.copy(eventId = "2", participants = listOf("user1", "user2"))
+      val e3 = sampleEvent.copy(eventId = "3", participants = listOf("user1", "user3"))
+      repo.addEvent(e1)
+      repo.addEvent(e2)
+      repo.addEvent(e3)
+
+      val result = repo.getCommonEvents(listOf("user1", "user2"))
+
+      Assert.assertEquals(2, result.size)
+      Assert.assertTrue(result.any { it.eventId == "1" })
+      Assert.assertTrue(result.any { it.eventId == "2" })
+    }
+  }
+
+  @Test
+  fun getCommonEvents_returnsEmptyListWhenNoCommonEvents() {
+    runBlocking {
+      val e1 = sampleEvent.copy(eventId = "1", participants = listOf("user1", "user3"))
+      val e2 = sampleEvent.copy(eventId = "2", participants = listOf("user1", "user3"))
+      repo.addEvent(e1)
+      repo.addEvent(e2)
+
+      val result = repo.getCommonEvents(listOf("user3", "user2"))
+
+      Assert.assertTrue(result.isEmpty())
+    }
+  }
+
+  @Test
+  fun getCommonEvents_sortsByDateAscending() {
+    runBlocking {
+      val now = System.currentTimeMillis() / 1000
+      val e1 =
+          sampleEvent.copy(
+              eventId = "1", participants = listOf("user1"), date = Timestamp(now + 3600, 0))
+      val e2 =
+          sampleEvent.copy(
+              eventId = "2", participants = listOf("user1"), date = Timestamp(now + 1800, 0))
+      val e3 =
+          sampleEvent.copy(
+              eventId = "3", participants = listOf("user1"), date = Timestamp(now + 7200, 0))
+      repo.addEvent(e1)
+      repo.addEvent(e2)
+      repo.addEvent(e3)
+
+      val result = repo.getCommonEvents(listOf("user1"))
+
+      Assert.assertEquals(3, result.size)
+      Assert.assertEquals("2", result[0].eventId) // earliest
+      Assert.assertEquals("1", result[1].eventId)
+      Assert.assertEquals("3", result[2].eventId) // latest
+    }
+  }
+
+  @Test
+  fun getCommonEvents_requiresAllUsersToBeParticipants() {
+    runBlocking {
+      val e1 = sampleEvent.copy(eventId = "1", participants = listOf("user1", "user2", "user3"))
+      val e2 = sampleEvent.copy(eventId = "2", participants = listOf("user1", "user2"))
+      val e3 = sampleEvent.copy(eventId = "3", participants = listOf("user3"))
+      repo.addEvent(e1)
+      repo.addEvent(e2)
+      repo.addEvent(e3)
+
+      val result = repo.getCommonEvents(listOf("user1", "user2", "user3"))
+
+      Assert.assertEquals(1, result.size)
+      Assert.assertEquals("1", result[0].eventId)
+    }
+  }
 }

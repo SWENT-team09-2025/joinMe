@@ -66,6 +66,13 @@ class CreateEventForSerieViewModelTest {
     override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> = added.toList()
 
     override fun getNewEventId(): String = "fake-event-id-${idCounter++}"
+
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+      if (userIds.isEmpty()) return emptyList()
+      return added
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
+    }
   }
 
   private class FakeSeriesRepository : SeriesRepository {
@@ -136,6 +143,11 @@ class CreateEventForSerieViewModelTest {
     override suspend fun leaveGroup(groupId: String, userId: String) {}
 
     override suspend fun joinGroup(groupId: String, userId: String) {}
+
+    override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
+      if (userIds.isEmpty()) return emptyList()
+      return groups.filter { group -> userIds.all { userId -> group.memberIds.contains(userId) } }
+    }
   }
 
   private lateinit var eventRepo: FakeEventsRepository
@@ -589,6 +601,8 @@ class CreateEventForSerieViewModelTest {
           override suspend fun deleteEvent(eventId: String) {}
 
           override suspend fun getEventsByIds(eventIds: List<String>): List<Event> = emptyList()
+
+          override suspend fun getCommonEvents(userIds: List<String>): List<Event> = emptyList()
 
           override suspend fun getEvent(eventId: String): Event {
             throw NoSuchElementException()

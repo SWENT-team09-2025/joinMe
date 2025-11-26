@@ -94,6 +94,11 @@ class CreateSerieViewModelTest {
     override suspend fun leaveGroup(groupId: String, userId: String) {}
 
     override suspend fun joinGroup(groupId: String, userId: String) {}
+
+    override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
+      if (userIds.isEmpty()) return emptyList()
+      return groups.filter { group -> userIds.all { userId -> group.memberIds.contains(userId) } }
+    }
   }
 
   private lateinit var repo: FakeSeriesRepository
@@ -895,6 +900,10 @@ class CreateSerieViewModelTest {
           override suspend fun leaveGroup(groupId: String, userId: String) {}
 
           override suspend fun joinGroup(groupId: String, userId: String) {}
+
+          override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
+            return emptyList()
+          }
         }
 
     val errorVm = CreateSerieViewModel(repo, errorGroupRepo)

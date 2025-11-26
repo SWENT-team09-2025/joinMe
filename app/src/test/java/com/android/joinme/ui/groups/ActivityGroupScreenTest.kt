@@ -191,7 +191,7 @@ class ActivityGroupScreenTest {
   @Test
   fun activityGroupScreen_eventCardClick_triggersCallback() {
     val event = createTestEvent("event1", "Clickable Event", EventType.SPORTS)
-    var selectedEvent: Event? = null
+    var selectedEventId: String? = null
 
     runBlocking {
       eventRepo.addEvent(event)
@@ -202,21 +202,23 @@ class ActivityGroupScreenTest {
 
     composeTestRule.setContent {
       ActivityGroupScreen(
-          groupId = "1", activityGroupViewModel = viewModel, onSelectEvent = { selectedEvent = it })
+          groupId = "1",
+          activityGroupViewModel = viewModel,
+          onSelectedEvent = { selectedEventId = it })
     }
 
     waitForContent()
 
     composeTestRule.onNodeWithText("Clickable Event").performClick()
 
-    assertTrue(selectedEvent != null)
-    assertTrue(selectedEvent?.eventId == "event1")
+    assertTrue(selectedEventId != null)
+    assertTrue(selectedEventId == "event1")
   }
 
   @Test
   fun activityGroupScreen_serieCardClick_triggersCallback() {
     val serie = createTestSerie("serie1", "Clickable Serie")
-    var selectedSerie: Serie? = null
+    var selectedSerieId: String? = null
 
     runBlocking {
       serieRepo.addSerie(serie)
@@ -229,15 +231,15 @@ class ActivityGroupScreenTest {
       ActivityGroupScreen(
           groupId = "1",
           activityGroupViewModel = viewModel,
-          onSelectedSerie = { selectedSerie = it })
+          onSelectedSerie = { selectedSerieId = it })
     }
 
     waitForContent()
 
     composeTestRule.onNodeWithText("Clickable Serie").performClick()
 
-    assertTrue(selectedSerie != null)
-    assertTrue(selectedSerie?.serieId == "serie1")
+    assertTrue(selectedSerieId != null)
+    assertTrue(selectedSerieId == "serie1")
   }
 
   @Test
@@ -334,6 +336,13 @@ class ActivityGroupScreenTest {
     }
 
     override fun getNewGroupId(): String = (groups.size + 1).toString()
+
+    override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
+      if (userIds.isEmpty()) return emptyList()
+      return groups.values.filter { group ->
+        userIds.all { userId -> group.memberIds.contains(userId) }
+      }
+    }
   }
 
   /** Fake events repository for testing */
@@ -368,6 +377,13 @@ class ActivityGroupScreenTest {
 
     override fun getNewEventId(): String {
       return (events.size + 1).toString()
+    }
+
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+      if (userIds.isEmpty()) return emptyList()
+      return events.values
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
     }
   }
 

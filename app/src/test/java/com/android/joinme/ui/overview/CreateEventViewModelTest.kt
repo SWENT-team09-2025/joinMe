@@ -76,6 +76,13 @@ class CreateEventViewModelTest {
     override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> = added.toList()
 
     override fun getNewEventId(): String = "fake-id-1"
+
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+      if (userIds.isEmpty()) return emptyList()
+      return added
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
+    }
   }
 
   // ---- Simple fake group repo that records groups and edits ----
@@ -120,6 +127,13 @@ class CreateEventViewModelTest {
 
     override suspend fun joinGroup(groupId: String, userId: String) {
       /* no-op */
+    }
+
+    override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
+      if (userIds.isEmpty()) return emptyList()
+      return groups.values.filter { group ->
+        userIds.all { userId -> group.memberIds.contains(userId) }
+      }
     }
   }
 
