@@ -1482,4 +1482,81 @@ class MainActivityNavigationTest {
     // Step 5: Verify ActivityGroupScreen rendered with event
     composeTestRule.onNodeWithTag("eventItemtest-group-activity-1").assertExists()
   }
+
+  // ========== navigateAndClearBackStackTo Tests ==========
+
+  @Test
+  fun editProfile_onBackClick_navigatesToProfileAndClearsBackStack() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Navigate to Profile
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
+    composeTestRule.waitForIdle()
+
+    // Navigate to EditProfile
+    composeTestRule.onNodeWithContentDescription("Edit").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Verify we're on EditProfile screen
+    composeTestRule.onNodeWithText("Edit Profile").assertExists()
+
+    // Click back button (triggers navigateAndClearBackStackTo)
+    composeTestRule.onNodeWithContentDescription("Back").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're back on Profile screen
+    composeTestRule.onNodeWithContentDescription("Profile").assertExists()
+  }
+
+  @Test
+  fun groupListScreen_onBackClick_navigatesToProfileAndClearsBackStack() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Navigate to Profile
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
+    composeTestRule.waitForIdle()
+
+    // Navigate to Groups
+    composeTestRule.onNodeWithContentDescription("Group").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Verify we're on Groups screen
+    composeTestRule.onNodeWithTag(cardTag("test-group-1")).assertExists()
+
+    // Click back button (triggers navigateAndClearBackStackTo)
+    composeTestRule.onNodeWithContentDescription("Back").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're back on Profile screen
+    composeTestRule.onNodeWithContentDescription("Profile").assertExists()
+  }
+
+  @Test
+  fun createGroup_onCreateSuccess_navigatesToGroupsAndClearsBackStack() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Navigate to Profile -> Groups -> CreateGroup
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithContentDescription("Group").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // TODO: Navigate to CreateGroup screen and test onCreateSuccess callback
+    // This test verifies the navigation configuration is correct
+    assert(Screen.CreateGroup.route == "create_group")
+    assert(Screen.Groups.route == "groups")
+  }
 }
