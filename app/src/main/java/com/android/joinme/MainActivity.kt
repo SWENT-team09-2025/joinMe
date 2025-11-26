@@ -290,8 +290,8 @@ fun JoinMe(
               onEditEventForSerie = { sId, eId ->
                 navigationActions.navigateTo(Screen.EditEventForSerie(sId, eId))
               },
-              onNavigateToChat = { chatId, chatTitle ->
-                navigationActions.navigateTo(Screen.Chat(chatId, chatTitle))
+              onNavigateToChat = { chatId, chatTitle, totalParticipants ->
+                navigationActions.navigateTo(Screen.Chat(chatId, chatTitle, totalParticipants))
               })
         } ?: run { Toast.makeText(context, "Event UID is null", Toast.LENGTH_SHORT).show() }
       }
@@ -480,8 +480,8 @@ fun JoinMe(
               onMemberClick = {
                 Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
               },
-              onNavigateToChat = { chatId, chatTitle ->
-                navigationActions.navigateTo(Screen.Chat(chatId, chatTitle))
+              onNavigateToChat = { chatId, chatTitle, totalParticipants ->
+                navigationActions.navigateTo(Screen.Chat(chatId, chatTitle, totalParticipants))
               })
         }
       }
@@ -505,6 +505,8 @@ fun JoinMe(
       composable(route = Screen.Chat.route) { navBackStackEntry ->
         val chatId = navBackStackEntry.arguments?.getString("chatId")
         val chatTitle = navBackStackEntry.arguments?.getString("chatTitle")
+        val totalParticipants =
+            navBackStackEntry.arguments?.getString("totalParticipants")?.toIntOrNull() ?: 1
 
         if (chatId != null && chatTitle != null) {
           // Use viewModel() factory pattern to get a properly scoped ViewModel
@@ -533,6 +535,7 @@ fun JoinMe(
               currentUserId = currentUserId,
               currentUserName = currentUserName,
               viewModel = chatViewModel,
+              totalParticipants = totalParticipants,
               onLeaveClick = { navigationActions.goBack() })
         } else {
           Toast.makeText(context, "Chat ID or title is null", Toast.LENGTH_SHORT).show()

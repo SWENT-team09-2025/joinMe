@@ -85,7 +85,7 @@ fun ShowEventScreen(
     onGoBack: () -> Unit = {},
     onEditEvent: (String) -> Unit = {},
     onEditEventForSerie: (String, String) -> Unit = { _, _ -> },
-    onNavigateToChat: (String, String) -> Unit = { _, _ -> }
+    onNavigateToChat: (String, String, Int) -> Unit = { _, _, _ -> }
 ) {
   LaunchedEffect(eventId, serieId) { showEventViewModel.loadEvent(eventId, serieId) }
 
@@ -165,7 +165,12 @@ fun ShowEventScreen(
               }
 
           FloatingActionButton(
-              onClick = { onNavigateToChat(eventId, eventUIState.title.ifBlank { "Event Chat" }) },
+              onClick = {
+                onNavigateToChat(
+                    eventId,
+                    eventUIState.title.ifBlank { "Event Chat" },
+                    eventUIState.participants.size)
+              },
               modifier =
                   Modifier.testTag(ShowEventScreenTestTags.CHAT_FAB)
                       .padding(bottom = bottomPadding, end = Dimens.Padding.medium),
