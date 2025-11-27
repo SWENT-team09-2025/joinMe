@@ -183,6 +183,7 @@ class EventsRepositoryFirestore(
           }
 
       val partOfASerie = document.getBoolean("partOfASerie") ?: false
+      val groupId = document.getString("groupId")
 
       Event(
           eventId = eventId,
@@ -196,7 +197,8 @@ class EventsRepositoryFirestore(
           maxParticipants = maxParticipants,
           visibility = EventVisibility.valueOf(visibilityString),
           ownerId = ownerId,
-          partOfASerie = partOfASerie)
+          partOfASerie = partOfASerie,
+          groupId = groupId)
     } catch (e: Exception) {
       null
     }
