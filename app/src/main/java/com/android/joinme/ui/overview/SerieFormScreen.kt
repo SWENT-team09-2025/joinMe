@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.viewinterop.AndroidView
+import com.android.joinme.model.groups.Group
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
@@ -139,7 +140,7 @@ fun SerieFormScreen(
     formState: SerieFormState,
     testTags: SerieFormTestTags,
     selectedGroupId: String? = null,
-    availableGroups: List<com.android.joinme.model.groups.Group> = emptyList(),
+    availableGroups: List<Group> = emptyList(),
     groupTestTag: String = "",
     onGroupChange: ((String?) -> Unit)? = null,
     onTitleChange: (String) -> Unit,
@@ -178,7 +179,7 @@ fun SerieFormScreen(
               Spacer(modifier = Modifier.height(Dimens.Padding.small))
 
               // Group dropdown (only show if onGroupChange is provided)
-              if (onGroupChange != null && availableGroups.isNotEmpty()) {
+              if (onGroupChange != null) {
                 var expandedGroup by remember { mutableStateOf(false) }
                 val selectedGroupName =
                     if (selectedGroupId == null) "None (Standalone)"
@@ -217,24 +218,26 @@ fun SerieFormScreen(
                                 },
                                 colors = MaterialTheme.customColors.dropdownMenu)
 
-                            HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                            // Group options (only show divider and groups if groups exist)
+                            if (availableGroups.isNotEmpty()) {
+                              HorizontalDivider(thickness = Dimens.BorderWidth.thin)
 
-                            // Group options
-                            availableGroups.forEachIndexed { index, group ->
-                              DropdownMenuItem(
-                                  text = {
-                                    Text(
-                                        text = group.name,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        style = MaterialTheme.typography.headlineSmall)
-                                  },
-                                  onClick = {
-                                    onGroupChange(group.id)
-                                    expandedGroup = false
-                                  },
-                                  colors = MaterialTheme.customColors.dropdownMenu)
-                              if (index < availableGroups.lastIndex) {
-                                HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                              availableGroups.forEachIndexed { index, group ->
+                                DropdownMenuItem(
+                                    text = {
+                                      Text(
+                                          text = group.name,
+                                          color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                          style = MaterialTheme.typography.headlineSmall)
+                                    },
+                                    onClick = {
+                                      onGroupChange(group.id)
+                                      expandedGroup = false
+                                    },
+                                    colors = MaterialTheme.customColors.dropdownMenu)
+                                if (index < availableGroups.lastIndex) {
+                                  HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                                }
                               }
                             }
                           }

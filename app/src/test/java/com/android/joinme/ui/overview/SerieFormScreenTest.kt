@@ -700,6 +700,42 @@ class SerieFormScreenTest {
   }
 
   @Test
+  fun serieFormScreen_groupDropdownShownWithEmptyGroupsList() {
+    val formState = createValidFormState()
+    val testTags = createDefaultTestTags()
+
+    composeTestRule.setContent {
+      SerieFormScreen(
+          title = "Test Form",
+          formState = formState,
+          testTags = testTags,
+          selectedGroupId = null,
+          availableGroups = emptyList(),
+          groupTestTag = "groupDropdown",
+          onGroupChange = {},
+          onTitleChange = {},
+          onDescriptionChange = {},
+          onMaxParticipantsChange = {},
+          onDateChange = {},
+          onTimeChange = {},
+          onVisibilityChange = {},
+          onSave = { true },
+          onGoBack = {})
+    }
+
+    // Dropdown should be displayed even with no groups
+    composeTestRule.onNodeWithTag("groupDropdown").assertIsDisplayed()
+    composeTestRule.onNodeWithText("None (Standalone)").assertIsDisplayed()
+
+    // Expand dropdown
+    composeTestRule.onNodeWithTag("groupDropdown").performClick()
+    composeTestRule.waitForIdle()
+
+    // Should only show "None (Standalone)" option (2 instances: field + menu)
+    composeTestRule.onAllNodesWithText("None (Standalone)").assertCountEquals(2)
+  }
+
+  @Test
   fun serieFormScreen_groupDropdownWithMultipleGroups_showsAndExpandsCorrectly() {
     val formState = createValidFormState()
     val testTags = createDefaultTestTags()
@@ -752,7 +788,7 @@ class SerieFormScreenTest {
   }
 
   @Test
-  fun serieFormScreen_groupDropdownWithSelectedGroup_showsNameAndHandlesUnknown() {
+  fun serieFormScreen_groupDropdownShowsSelectedGroupName() {
     val formState = createValidFormState()
     val testTags = createDefaultTestTags()
     val groups =

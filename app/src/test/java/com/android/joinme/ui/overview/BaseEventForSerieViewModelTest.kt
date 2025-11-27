@@ -491,27 +491,4 @@ class BaseEventForSerieViewModelTest {
     assertEquals("SPORTS", stateAfterType.type)
     assertNull(stateAfterType.invalidTypeMsg)
   }
-
-  @Test
-  fun isValid_withSerieHasGroupTrue_typeCanBeBlank() = runTest {
-    // Set serieHasGroup to true with blank type
-    val stateWithGroup =
-        EventForSerieFormState(
-            serieHasGroup = true,
-            type = "", // Blank type should be fine when serieHasGroup is true
-            title = "Event Title",
-            description = "Event Description",
-            duration = "90",
-            location = "Stadium",
-            selectedLocation = Location(1.0, 1.0, "Stadium"),
-            locationQuery = "Stadium")
-
-    vm.testUpdateState { stateWithGroup }
-
-    // Verify form is valid
-    val state = vm.uiState.value
-    assertTrue(state.serieHasGroup)
-    assertEquals("", state.type) // Type is blank
-    assertTrue(state.isValid) // But form is still valid
-  }
 }

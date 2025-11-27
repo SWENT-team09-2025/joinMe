@@ -687,7 +687,7 @@ class EventForSerieFormScreenTest {
 
   /** --- CONDITIONAL TYPE FIELD RENDERING TESTS --- */
   @Test
-  fun typeField_withSerieHasGroupTrue_showsPlainTextBoldAndCentered() {
+  fun typeField_withSerieHasGroup_showsReadOnlyTextFromGroup() {
     val formState =
         EventForSerieFormState(
             serieHasGroup = true, // Serie has a group
@@ -724,12 +724,15 @@ class EventForSerieFormScreenTest {
           onGoBack = {})
     }
 
-    // Should show label and plain text (bold and centered), not a dropdown
+    // Shows label indicating it's from group
     composeTestRule.onNodeWithText("Event Type (from Group)").assertIsDisplayed()
+    // Shows the type value (bold and centered)
     composeTestRule.onNodeWithText("SPORTS").assertIsDisplayed()
-
-    // Verify it's not a clickable dropdown - the test tag should still exist
+    // Verify test tag exists
     composeTestRule.onNodeWithTag(testTags.inputEventType).assertExists()
+    // Is not a dropdown - other event types should not be present
+    composeTestRule.onNodeWithText("ACTIVITY").assertDoesNotExist()
+    composeTestRule.onNodeWithText("SOCIAL").assertDoesNotExist()
   }
 
   @Test
@@ -773,94 +776,5 @@ class EventForSerieFormScreenTest {
     // Should show dropdown field, not plain text with "from Group" label
     composeTestRule.onNodeWithTag(testTags.inputEventType).assertExists()
     composeTestRule.onNodeWithText("Event Type (from Group)").assertDoesNotExist()
-  }
-
-  @Test
-  fun typeField_withSerieHasGroupTrue_displaysCorrectType() {
-    val formState =
-        EventForSerieFormState(
-            serieHasGroup = true,
-            type = "ACTIVITY", // Group has ACTIVITY type
-            title = "",
-            description = "",
-            duration = "",
-            location = "",
-            selectedLocation = null,
-            locationQuery = "",
-            locationSuggestions = emptyList(),
-            isLoading = false,
-            errorMsg = null,
-            invalidTypeMsg = null,
-            invalidTitleMsg = null,
-            invalidDescriptionMsg = null,
-            invalidDurationMsg = null,
-            invalidLocationMsg = null)
-
-    composeTestRule.setContent {
-      EventForSerieFormScreen(
-          title = "Test Form",
-          formState = formState,
-          isFormValid = formState.isValid,
-          testTags = testTags,
-          onTypeChange = {},
-          onTitleChange = {},
-          onDescriptionChange = {},
-          onDurationChange = {},
-          onLocationQueryChange = {},
-          onLocationSelected = {},
-          onSearchLocations = {},
-          onSave = { true },
-          onGoBack = {})
-    }
-
-    // Should show the type from the group
-    composeTestRule.onNodeWithText("Event Type (from Group)").assertIsDisplayed()
-    composeTestRule.onNodeWithText("ACTIVITY").assertIsDisplayed()
-  }
-
-  @Test
-  fun typeField_withSerieHasGroupTrue_isNotInteractive() {
-    val formState =
-        EventForSerieFormState(
-            serieHasGroup = true,
-            type = "SOCIAL",
-            title = "",
-            description = "",
-            duration = "",
-            location = "",
-            selectedLocation = null,
-            locationQuery = "",
-            locationSuggestions = emptyList(),
-            isLoading = false,
-            errorMsg = null,
-            invalidTypeMsg = null,
-            invalidTitleMsg = null,
-            invalidDescriptionMsg = null,
-            invalidDurationMsg = null,
-            invalidLocationMsg = null)
-
-    composeTestRule.setContent {
-      EventForSerieFormScreen(
-          title = "Test Form",
-          formState = formState,
-          isFormValid = formState.isValid,
-          testTags = testTags,
-          onTypeChange = {},
-          onTitleChange = {},
-          onDescriptionChange = {},
-          onDurationChange = {},
-          onLocationQueryChange = {},
-          onLocationSelected = {},
-          onSearchLocations = {},
-          onSave = { true },
-          onGoBack = {})
-    }
-
-    // The type field should be plain text, not clickable
-    // Verify the text exists
-    composeTestRule.onNodeWithText("SOCIAL").assertIsDisplayed()
-
-    // Note: We can't easily test that it's NOT clickable in Compose tests
-    // But we verify it's rendered as Text, not a clickable field
   }
 }
