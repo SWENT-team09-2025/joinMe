@@ -784,4 +784,151 @@ class EditSerieScreenTest {
     // Verify callback was triggered
     assert(backPressed)
   }
+
+  /** --- GROUP SERIE TESTS --- */
+  private fun createTestGroupSerie(): Serie {
+    val calendar = Calendar.getInstance()
+    calendar.set(2025, Calendar.DECEMBER, 25, 14, 30, 0)
+
+    return Serie(
+        serieId = "test-group-serie-1",
+        title = "Weekly Group Football",
+        description = "Weekly football series for group",
+        date = Timestamp(calendar.time),
+        participants = listOf("user1", "user2", "user3"),
+        maxParticipants = 300,
+        visibility = Visibility.PRIVATE,
+        eventIds = emptyList(),
+        ownerId = "owner123",
+        groupId = "group-123")
+  }
+
+  @Test
+  fun groupAndStandaloneSeries_loadCorrectGroupIdAndIsGroupSerieState() {
+    val repo = SeriesRepositoryLocal()
+    val groupSerie = createTestGroupSerie()
+    val standaloneSerie = createTestSerie()
+    runBlocking {
+      repo.addSerie(groupSerie)
+      repo.addSerie(standaloneSerie)
+    }
+
+    // Test group serie
+    val groupViewModel = EditSerieViewModel(repo)
+    runBlocking { groupViewModel.loadSerie(groupSerie.serieId) }
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    assert(groupViewModel.uiState.value.groupId == "group-123")
+    assert(groupViewModel.uiState.value.isGroupSerie)
+
+    // Test standalone serie
+    val standaloneViewModel = EditSerieViewModel(repo)
+    runBlocking { standaloneViewModel.loadSerie(standaloneSerie.serieId) }
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    assert(standaloneViewModel.uiState.value.groupId == null)
+    assert(!standaloneViewModel.uiState.value.isGroupSerie)
+  }
+
+  @Test
+  fun groupSerie_hidesMaxParticipantsAndVisibilityFields() {
+    val repo = SeriesRepositoryLocal()
+    val groupSerie = createTestGroupSerie()
+    runBlocking { repo.addSerie(groupSerie) }
+    val viewModel = EditSerieViewModel(repo)
+
+    composeTestRule.setContent {
+      EditSerieScreen(serieId = groupSerie.serieId, editSerieViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify maxParticipants and visibility fields are not displayed
+    composeTestRule
+        .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_MAX_PARTICIPANTS)
+        .assertDoesNotExist()
+    composeTestRule
+        .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_VISIBILITY)
+        .assertDoesNotExist()
+
+    // Verify editable fields are shown
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE).assertExists()
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_DESCRIPTION).assertExists()
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_DATE).assertExists()
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TIME).assertExists()
+  }
+
+  @Test
+  fun groupSerie_validationAndEditingBehavior() {
+    val repo = SeriesRepositoryLocal()
+    val groupSerie = createTestGroupSerie()
+    runBlocking { repo.addSerie(groupSerie) }
+    val viewModel = EditSerieViewModel(repo)
+
+    runBlocking { viewModel.loadSerie(groupSerie.serieId) }
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify initial state is valid and is a group serie
+    assert(viewModel.uiState.value.isGroupSerie)
+    assert(viewModel.uiState.value.isValid)
+
+    // Edit fields and verify groupId is preserved
+    viewModel.setTitle("Updated Group Serie Title")
+    viewModel.setDescription("Updated group serie description")
+
+    assert(viewModel.uiState.value.groupId == "group-123")
+    assert(viewModel.uiState.value.isGroupSerie)
+    assert(viewModel.uiState.value.isValid)
+  }
+
+  @Test
+  fun groupSerie_canEditFieldsAndSaveButtonRemainsEnabled() {
+    val repo = SeriesRepositoryLocal()
+    val groupSerie = createTestGroupSerie()
+    runBlocking { repo.addSerie(groupSerie) }
+    val viewModel = EditSerieViewModel(repo)
+
+    composeTestRule.setContent {
+      EditSerieScreen(serieId = groupSerie.serieId, editSerieViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Edit title and description
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE).performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE)
+        .performTextInput("Updated Group Serie Title")
+
+    composeTestRule
+        .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_DESCRIPTION)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_DESCRIPTION)
+        .performTextInput("Updated group description")
+
+    composeTestRule.waitForIdle()
+
+    // Save button should remain enabled
+    composeTestRule.waitUntil(timeoutMillis = 5_000) {
+      composeTestRule
+          .onAllNodesWithTag(EditSerieScreenTestTags.SERIE_SAVE)
+          .fetchSemanticsNodes()
+          .firstOrNull()
+          ?.config
+          ?.getOrNull(SemanticsProperties.Disabled) == null
+    }
+
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.SERIE_SAVE).assertIsEnabled()
+  }
 }
