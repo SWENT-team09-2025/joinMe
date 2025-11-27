@@ -1,10 +1,12 @@
 package com.android.joinme.ui.overview
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
+import com.android.joinme.model.groups.streaks.StreakService
 import com.android.joinme.model.profile.ProfileRepository
 import com.android.joinme.model.profile.ProfileRepositoryProvider
 import com.android.joinme.model.serie.Serie
@@ -12,6 +14,7 @@ import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.model.serie.getFormattedDuration
 import com.android.joinme.model.serie.isExpired
+import com.android.joinme.model.serie.isUpcoming
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,7 +79,7 @@ data class SerieDetailsUIState(
         try {
           val dateFormat = SimpleDateFormat("dd/MM/yyyy 'at' HH:mm", Locale.getDefault())
           dateFormat.format(timestamp.toDate())
-        } catch (e: Exception) {
+        } catch (_: Exception) {
           ""
         }
       } ?: ""
@@ -114,7 +117,7 @@ data class SerieDetailsUIState(
  *
  * @property seriesRepository Repository for accessing serie data
  * @property eventsRepository Repository for accessing event data
- * @property auth Firebase authentication instance for user identification
+ * @property profileRepository Repository for accessing user profile data
  */
 class SerieDetailsViewModel(
     private val seriesRepository: SeriesRepository = SeriesRepositoryProvider.repository,
@@ -169,6 +172,8 @@ class SerieDetailsViewModel(
   /**
    * Adds the current user to the serie's participants list.
    *
+   * For group series, also updates the user's streak via StreakService.
+   *
    * @param currentUserId The ID of the user trying to join.
    * @return True if the user successfully joined the serie, false otherwise
    */
@@ -211,6 +216,16 @@ class SerieDetailsViewModel(
 
         // Update in repository
         seriesRepository.editSerie(serie.serieId, updatedSerie)
+
+        // Update streak for group series
+        if (serie.groupId != null) {
+          try {
+            StreakService.onActivityJoined(serie.groupId, currentUserId, serie.date)
+          } catch (e: Exception) {
+            Log.e("SerieDetailsViewModel", "Error updating streak for user $currentUserId", e)
+            // Non-critical: don't fail join operation if streak update fails
+          }
+        }
 
         // Update local state
         _uiState.value = _uiState.value.copy(serie = updatedSerie, errorMsg = null)
@@ -292,11 +307,28 @@ class SerieDetailsViewModel(
   /**
    * Deletes the serie from the repository.
    *
+   * For upcoming group series, also reverts streaks for all participants via StreakService.
+   *
    * @param serieId The unique identifier of the serie to delete
    */
   suspend fun deleteSerie(serieId: String) {
     try {
+      val serie = seriesRepository.getSerie(serieId)
+
+      // Check if this is an upcoming group serie (for streak reversion)
+      val isUpcomingGroupSerie = serie.groupId != null && serie.isUpcoming()
+
       seriesRepository.deleteSerie(serieId)
+
+      // Revert streaks for upcoming group series
+      if (isUpcomingGroupSerie) {
+        try {
+          StreakService.onActivityDeleted(serie.groupId, serie.participants, serie.date)
+        } catch (e: Exception) {
+          Log.e("SerieDetailsViewModel", "Error reverting streaks for deleted serie", e)
+          // Non-critical: serie is already deleted, just log the error
+        }
+      }
     } catch (e: Exception) {
       setErrorMsg("Failed to delete serie: ${e.message}")
     }
