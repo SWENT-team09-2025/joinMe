@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.groups.GroupRepositoryProvider
+import com.android.joinme.model.groups.streaks.StreakService
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
@@ -164,6 +165,7 @@ class CreateSerieViewModel(
    * 5. Creates a Serie object with the current user as owner
    * 6. Saves the serie to the repository
    * 7. Stores the serie ID in state to prevent duplicate creation
+   * 8. Updates streaks for all group members if this is a group serie
    *
    * The loading state is set to true at the start and false upon completion. If any error occurs
    * during the process (validation failure, authentication check failure, date parsing error, or
@@ -256,6 +258,18 @@ class CreateSerieViewModel(
         throw e
       }
 
+      // Update streaks for all participants if this is a group serie
+      if (state.selectedGroupId != null && selectedGroup != null) {
+        for (memberId in selectedGroup.memberIds) {
+          try {
+            StreakService.onActivityJoined(state.selectedGroupId, memberId, parsedDate)
+          } catch (e: Exception) {
+            Log.e("CreateSerieViewModel", "Error updating streak for user $memberId", e)
+            // Non-critical: don't fail serie creation if streak update fails
+          }
+        }
+      }
+
       clearErrorMsg()
       setLoadingState(false)
       // Store the created serie ID to prevent duplicates
@@ -273,7 +287,7 @@ class CreateSerieViewModel(
    *
    * This should be called when the user navigates back from CreateSerieScreen after creating a
    * serie but before completing the event creation. If the serie was associated with a group, it
-   * also removes the serie ID from the group's serie list.
+   * also removes the serie ID from the group's serie list and reverts streaks for all participants.
    */
   suspend fun deleteCreatedSerieIfExists() {
     val serieId = _uiState.value.createdSerieId
@@ -291,12 +305,20 @@ class CreateSerieViewModel(
               val group = groupRepository.getGroup(groupId)
               val updatedGroup = group.copy(serieIds = group.serieIds - serieId)
               groupRepository.editGroup(group.id, updatedGroup)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
               // Error removing serie from group, ignore
+            }
+
+            // Revert streaks for all participants
+            try {
+              StreakService.onActivityDeleted(groupId, serie.participants, serie.date)
+            } catch (e: Exception) {
+              Log.e("CreateSerieViewModel", "Error reverting streaks for deleted serie", e)
+              // Non-critical: serie is already deleted, just log the error
             }
           }
         }
-      } catch (e: Exception) {
+      } catch (_: Exception) {
         // Serie doesn't exist or error occurred, ignore
       }
     }
