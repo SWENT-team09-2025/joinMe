@@ -684,4 +684,97 @@ class EventForSerieFormScreenTest {
 
     composeTestRule.onNodeWithText("Must be a positive number").assertIsDisplayed()
   }
+
+  /** --- CONDITIONAL TYPE FIELD RENDERING TESTS --- */
+  @Test
+  fun typeField_withSerieHasGroup_showsReadOnlyTextFromGroup() {
+    val formState =
+        EventForSerieFormState(
+            serieHasGroup = true, // Serie has a group
+            type = "SPORTS", // Type is set from group
+            title = "",
+            description = "",
+            duration = "",
+            location = "",
+            selectedLocation = null,
+            locationQuery = "",
+            locationSuggestions = emptyList(),
+            isLoading = false,
+            errorMsg = null,
+            invalidTypeMsg = null,
+            invalidTitleMsg = null,
+            invalidDescriptionMsg = null,
+            invalidDurationMsg = null,
+            invalidLocationMsg = null)
+
+    composeTestRule.setContent {
+      EventForSerieFormScreen(
+          title = "Test Form",
+          formState = formState,
+          isFormValid = formState.isValid,
+          testTags = testTags,
+          onTypeChange = {},
+          onTitleChange = {},
+          onDescriptionChange = {},
+          onDurationChange = {},
+          onLocationQueryChange = {},
+          onLocationSelected = {},
+          onSearchLocations = {},
+          onSave = { true },
+          onGoBack = {})
+    }
+
+    // Shows label indicating it's from group
+    composeTestRule.onNodeWithText("Event Type (from Group)").assertIsDisplayed()
+    // Shows the type value (bold and centered)
+    composeTestRule.onNodeWithText("SPORTS").assertIsDisplayed()
+    // Verify test tag exists
+    composeTestRule.onNodeWithTag(testTags.inputEventType).assertExists()
+    // Is not a dropdown - other event types should not be present
+    composeTestRule.onNodeWithText("ACTIVITY").assertDoesNotExist()
+    composeTestRule.onNodeWithText("SOCIAL").assertDoesNotExist()
+  }
+
+  @Test
+  fun typeField_withSerieHasGroupFalse_showsDropdown() {
+    val formState =
+        EventForSerieFormState(
+            serieHasGroup = false, // Standalone serie
+            type = "", // Type not set
+            title = "",
+            description = "",
+            duration = "",
+            location = "",
+            selectedLocation = null,
+            locationQuery = "",
+            locationSuggestions = emptyList(),
+            isLoading = false,
+            errorMsg = null,
+            invalidTypeMsg = null,
+            invalidTitleMsg = null,
+            invalidDescriptionMsg = null,
+            invalidDurationMsg = null,
+            invalidLocationMsg = null)
+
+    composeTestRule.setContent {
+      EventForSerieFormScreen(
+          title = "Test Form",
+          formState = formState,
+          isFormValid = formState.isValid,
+          testTags = testTags,
+          onTypeChange = {},
+          onTitleChange = {},
+          onDescriptionChange = {},
+          onDurationChange = {},
+          onLocationQueryChange = {},
+          onLocationSelected = {},
+          onSearchLocations = {},
+          onSave = { true },
+          onGoBack = {})
+    }
+
+    // Should show dropdown field, not plain text with "from Group" label
+    composeTestRule.onNodeWithTag(testTags.inputEventType).assertExists()
+    composeTestRule.onNodeWithText("Event Type (from Group)").assertDoesNotExist()
+  }
 }
