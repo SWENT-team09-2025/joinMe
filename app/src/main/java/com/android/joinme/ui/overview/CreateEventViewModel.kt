@@ -11,6 +11,7 @@ import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.groups.GroupRepositoryProvider
+import com.android.joinme.model.groups.streaks.StreakService
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.map.LocationRepository
 import com.android.joinme.model.map.NominatimLocationRepository
@@ -172,7 +173,8 @@ class CreateEventViewModel(
             participants = selectedGroup?.memberIds ?: emptyList(),
             maxParticipants = state.maxParticipants.toInt(),
             visibility = EventVisibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
-            ownerId = ownerId)
+            ownerId = ownerId,
+            groupId = state.selectedGroupId)
 
     // Fetch owner profile first to validate it exists
     val ownerProfile =
@@ -223,6 +225,18 @@ class CreateEventViewModel(
       }
       setErrorMsg("Failed to update your profile. Cannot create event: ${e.message}")
       return false
+    }
+
+    // Update streaks for all participants if this is a group event
+    if (state.selectedGroupId != null && selectedGroup != null) {
+      for (memberId in selectedGroup.memberIds) {
+        try {
+          StreakService.onActivityJoined(state.selectedGroupId, memberId, parsedDate)
+        } catch (e: Exception) {
+          Log.e("CreateEventViewModel", "Error updating streak for user $memberId", e)
+          // Non-critical: don't fail event creation if streak update fails
+        }
+      }
     }
 
     clearErrorMsg()
