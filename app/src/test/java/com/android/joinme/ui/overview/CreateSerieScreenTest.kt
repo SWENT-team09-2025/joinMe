@@ -980,11 +980,12 @@ class CreateSerieScreenTest {
     }
 
     // Note: loadUserGroups() is called in LaunchedEffect when screen is displayed
-    // Since we don't have actual groups in test, the dropdown won't be rendered
+    // The dropdown is now shown even with no groups (only standalone option available)
     composeTestRule.waitForIdle()
 
-    // Group field should NOT exist when there are no groups
-    composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_GROUP).assertDoesNotExist()
+    // Group field should exist even when there are no groups (shows standalone option)
+    composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_GROUP).assertIsDisplayed()
+    composeTestRule.onNodeWithText("None (Standalone)").assertIsDisplayed()
   }
 
   @Test
@@ -1032,10 +1033,9 @@ class CreateSerieScreenTest {
 
     composeTestRule.waitForIdle()
 
-    // Group dropdown should not be rendered when there are no groups
-    // The field is conditionally rendered: if (onGroupChange != null &&
-    // availableGroups.isNotEmpty())
-    composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_GROUP).assertDoesNotExist()
+    // Group dropdown is now shown even with no groups (displays standalone option)
+    composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_GROUP).assertIsDisplayed()
+    composeTestRule.onNodeWithText("None (Standalone)").assertIsDisplayed()
   }
 
   @Test
