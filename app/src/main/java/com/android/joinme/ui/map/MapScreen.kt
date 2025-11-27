@@ -31,8 +31,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
 import androidx.core.graphics.createBitmap
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
 import com.android.joinme.model.event.getColor
@@ -172,7 +175,12 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
     if (!locationPermissionsState.allPermissionsGranted) {
       locationPermissionsState.launchMultiplePermissionRequest()
     }
-    viewModel.fetchLocalizableEvents()
+  }
+  val lifecycleOwner = LocalLifecycleOwner.current
+  LaunchedEffect(lifecycleOwner) {
+    lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+      viewModel.fetchLocalizableEvents()
+    }
   }
 
   // --- Reinitialize location service when permissions are granted ---
