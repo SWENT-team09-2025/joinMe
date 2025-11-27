@@ -50,6 +50,10 @@ class SerieDetailsViewModelTest {
     override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> =
         series.values.toList()
 
+    override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> {
+      return series.filter { seriesIds.contains(it.key) }.values.toList()
+    }
+
     override fun getNewSerieId(): String = "new-serie-id"
   }
 
@@ -79,6 +83,13 @@ class SerieDetailsViewModelTest {
         events.values.toList()
 
     override fun getNewEventId(): String = "new-event-id"
+
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+      if (userIds.isEmpty()) return emptyList()
+      return events.values
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
+    }
   }
 
   private lateinit var seriesRepository: FakeSeriesRepository

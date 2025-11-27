@@ -63,6 +63,12 @@ class ViewProfileScreenTest {
       return stored?.takeIf { it.uid == uid }
     }
 
+    override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? {
+      if (uids.isEmpty()) return emptyList()
+      val result = uids.mapNotNull { stored?.takeIf { p -> p.uid == it } }
+      return if (result.size == uids.size) result else null
+    }
+
     override suspend fun createOrUpdateProfile(profile: Profile) {
       stored = profile
     }
@@ -203,7 +209,6 @@ class ViewProfileScreenTest {
   fun viewProfileScreen_topBar_allNavigationButtonsWork() = runTest {
     val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
-    var back = false
     var group = false
     var edit = false
     var logoutClicked = false
@@ -212,14 +217,11 @@ class ViewProfileScreenTest {
       ViewProfileScreen(
           uid = testUid,
           profileViewModel = viewModel,
-          onBackClick = { back = true },
           onGroupClick = { group = true },
           onEditClick = { edit = true },
           onSignOutComplete = { logoutClicked = true })
     }
 
-    composeTestRule.onNodeWithContentDescription("Back").performClick()
-    assert(back)
     composeTestRule.onNodeWithContentDescription("Group").performClick()
     assert(group)
     composeTestRule.onNodeWithContentDescription("Edit").performClick()

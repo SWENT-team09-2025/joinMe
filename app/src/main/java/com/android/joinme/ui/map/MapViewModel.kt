@@ -86,7 +86,7 @@ class MapViewModel(
    * Fetches all upcoming events with a location from the repository and updates the UI state. This
    * includes owned events, joined events, and public events.
    */
-  private fun fetchLocalizableEvents() {
+  fun fetchLocalizableEvents() {
     viewModelScope.launch {
       try {
         _uiState.value = _uiState.value.copy(isLoading = true, errorMsg = null)
@@ -183,6 +183,5 @@ class MapViewModel(
   /** Called when the ViewModel is cleared. Stops location updates to prevent memory leaks. */
   override fun onCleared() {
     super.onCleared()
-    locationService?.stopLocationUpdates()
   }
 }

@@ -31,6 +31,7 @@ enum class ProfileScreen {
  *
  * @param currentScreen The current profile screen being displayed, determining which buttons to
  *   show.
+ * @param showBackButton Whether to show the back button. Defaults to true.
  * @param onBackClick Callback invoked when the back navigation button is pressed.
  * @param onProfileClick Callback invoked when the profile icon is pressed (currently not shown).
  * @param onGroupClick Callback invoked when the group icon button is pressed.
@@ -40,6 +41,7 @@ enum class ProfileScreen {
 @Composable
 fun ProfileTopBar(
     currentScreen: ProfileScreen,
+    showBackButton: Boolean = true,
     onBackClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
     onGroupClick: () -> Unit = {},
@@ -51,12 +53,17 @@ fun ProfileTopBar(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically) {
-          IconButton(onClick = onBackClick) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
-                modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.primary)
+          if (showBackButton) {
+            IconButton(onClick = onBackClick) {
+              Icon(
+                  imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                  contentDescription = "Back",
+                  modifier = Modifier.size(24.dp),
+                  tint = MaterialTheme.colorScheme.primary)
+            }
+          } else {
+            // Empty spacer to maintain layout balance
+            Spacer(modifier = Modifier.size(48.dp))
           }
           Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             // Profile Icon

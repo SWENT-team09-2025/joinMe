@@ -73,7 +73,6 @@ object SearchScreenTestTags {
  * menu. Users can search for events and series and apply various filters to narrow down results.
  *
  * @param searchViewModel ViewModel managing search state and filter logic
- * @param searchQuery Initial search query (currently unused, reserved for future use)
  * @param navigationActions Navigation actions for handling tab navigation
  * @param onSelectEvent Callback invoked when an event is selected from the list
  * @param onSelectSerie Callback invoked when a serie is selected from the list, receives serieId
@@ -82,7 +81,6 @@ object SearchScreenTestTags {
 @Composable
 fun SearchScreen(
     searchViewModel: SearchViewModel = viewModel(),
-    searchQuery: String = "",
     navigationActions: NavigationActions? = null,
     onSelectEvent: (Event) -> Unit = {},
     onSelectSerie: (String) -> Unit = {}

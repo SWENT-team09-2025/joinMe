@@ -28,6 +28,7 @@ private const val MILLIS_PER_MINUTE = 60_000L
  * @property lastEventEndTime The end time of the last event in the series. Used for optimization to
  *   check if series is expired without loading all events. This is managed internally by the
  *   repository and should not be set manually.
+ * @property groupId Optional ID of the group this series belongs to. Null for standalone series.
  */
 data class Serie
 internal constructor(
@@ -41,6 +42,7 @@ internal constructor(
     val eventIds: List<String>,
     val ownerId: String,
     val lastEventEndTime: Timestamp? = null,
+    val groupId: String? = null,
 ) {
   companion object {
     /**
@@ -55,6 +57,7 @@ internal constructor(
      * @param visibility Visibility setting for events in this series (public or private)
      * @param eventIds List of event IDs belonging to this series
      * @param ownerId User ID of the series creator/owner
+     * @param groupId Optional ID of the group this series belongs to. Null for standalone series.
      * @return A new Serie instance with lastEventEndTime initialized to the serie's start date
      */
     @JvmStatic
@@ -68,6 +71,7 @@ internal constructor(
         visibility: Visibility,
         eventIds: List<String>,
         ownerId: String,
+        groupId: String? = null,
     ): Serie {
       return Serie(
           serieId = serieId,
@@ -79,7 +83,8 @@ internal constructor(
           visibility = visibility,
           eventIds = eventIds,
           ownerId = ownerId,
-          lastEventEndTime = date)
+          lastEventEndTime = date,
+          groupId = groupId)
     }
   }
 }

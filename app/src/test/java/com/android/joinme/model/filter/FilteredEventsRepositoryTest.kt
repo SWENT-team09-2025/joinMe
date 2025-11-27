@@ -22,6 +22,8 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
+// Implemented with the help of Claude AI
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class FilteredEventsRepositoryTest {
 
@@ -154,26 +156,10 @@ class FilteredEventsRepositoryTest {
   }
 
   @Test
-  fun `setEventsForTesting updates filtered events`() = runTest {
-    repository.setEventsForTesting(listOf(sampleSocialEvent, sampleActivityEvent))
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    assertEquals(2, repository.filteredEvents.value.size)
-  }
-
-  @Test
-  fun `setSeriesForTesting updates series flow`() = runTest {
-    repository.setSeriesForTesting(listOf(sampleSerie))
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    assertEquals(1, repository.filteredSeries.value.size)
-    assertEquals("serie1", repository.filteredSeries.value[0].serieId)
-  }
-
-  @Test
   fun `filter changes automatically trigger re-filtering`() = runTest {
-    repository.setEventsForTesting(
-        listOf(sampleSocialEvent, sampleActivityEvent, sampleSportsEvent))
+    fakeEventRepository.eventsToReturn =
+        listOf(sampleSocialEvent, sampleActivityEvent, sampleSportsEvent)
+    repository.refresh()
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Initially all events should be visible (no filters)
@@ -190,8 +176,9 @@ class FilteredEventsRepositoryTest {
 
   @Test
   fun `multiple filter changes apply correctly`() = runTest {
-    repository.setEventsForTesting(
-        listOf(sampleSocialEvent, sampleActivityEvent, sampleSportsEvent))
+    fakeEventRepository.eventsToReturn =
+        listOf(sampleSocialEvent, sampleActivityEvent, sampleSportsEvent)
+    repository.refresh()
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Select Social and Activity
@@ -209,8 +196,9 @@ class FilteredEventsRepositoryTest {
 
   @Test
   fun `no filters selected shows all events`() = runTest {
-    repository.setEventsForTesting(
-        listOf(sampleSocialEvent, sampleActivityEvent, sampleSportsEvent))
+    fakeEventRepository.eventsToReturn =
+        listOf(sampleSocialEvent, sampleActivityEvent, sampleSportsEvent)
+    repository.refresh()
     testDispatcher.scheduler.advanceUntilIdle()
 
     // No filters selected - all events should be visible
@@ -264,7 +252,8 @@ class FilteredEventsRepositoryTest {
 
   @Test
   fun `filter repository properly filters events by sports`() = runTest {
-    repository.setEventsForTesting(listOf(sampleSportsEvent))
+    fakeEventRepository.eventsToReturn = listOf(sampleSportsEvent)
+    repository.refresh()
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Initially all events visible
@@ -280,7 +269,8 @@ class FilteredEventsRepositoryTest {
 
   @Test
   fun `empty events list after filtering`() = runTest {
-    repository.setEventsForTesting(listOf(sampleSocialEvent))
+    fakeEventRepository.eventsToReturn = listOf(sampleSocialEvent)
+    repository.refresh()
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Filter for Activity only
@@ -314,6 +304,14 @@ class FilteredEventsRepositoryTest {
     override suspend fun deleteEvent(eventId: String) {}
 
     override suspend fun getEventsByIds(eventIds: List<String>): List<Event> = emptyList()
+
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+      if (shouldThrowError) throw Exception("Test error")
+      if (userIds.isEmpty()) return emptyList()
+      return eventsToReturn
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
+    }
   }
 
   private class FakeSeriesRepository : SeriesRepository {
@@ -326,6 +324,8 @@ class FilteredEventsRepositoryTest {
       if (shouldThrowError) throw Exception("Test error")
       return seriesToReturn
     }
+
+    override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> = emptyList()
 
     override suspend fun getSerie(serieId: String): Serie {
       throw Exception("Not implemented")

@@ -29,8 +29,10 @@ import androidx.navigation.navigation
 import com.android.joinme.model.chat.ChatRepositoryProvider
 import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.notification.FCMTokenManager
+import com.android.joinme.model.profile.ProfileRepositoryProvider
 import com.android.joinme.ui.chat.ChatScreen
 import com.android.joinme.ui.chat.ChatViewModel
+import com.android.joinme.ui.groups.ActivityGroupScreen
 import com.android.joinme.ui.groups.CreateGroupScreen
 import com.android.joinme.ui.groups.EditGroupScreen
 import com.android.joinme.ui.groups.GroupDetailScreen
@@ -52,6 +54,7 @@ import com.android.joinme.ui.overview.SearchScreen
 import com.android.joinme.ui.overview.SerieDetailsScreen
 import com.android.joinme.ui.overview.ShowEventScreen
 import com.android.joinme.ui.profile.EditProfileScreen
+import com.android.joinme.ui.profile.PublicProfileScreen
 import com.android.joinme.ui.profile.ViewProfileScreen
 import com.android.joinme.ui.signIn.SignInScreen
 import com.android.joinme.ui.theme.JoinMeTheme
@@ -64,6 +67,14 @@ object HttpClientProvider {
   var client: OkHttpClient = OkHttpClient()
 }
 
+/** Exception message for when a serie ID is null. */
+const val SERIES_ID_NULL = "Serie ID is null"
+
+/** Key for the series ID in the bundle. */
+const val SERIES_ID = "serieId"
+
+/** Key for the event ID in the bundle. */
+const val EVENT_ID = "eventId"
 /**
  * MainActivity is the single activity for the JoinMe application.
  *
@@ -174,14 +185,21 @@ fun JoinMe(
           try {
             val groupRepository = GroupRepositoryProvider.repository
             groupRepository.joinGroup(initialGroupId, currentUser!!.uid)
-            Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT).show()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+              Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT).show()
+            }
             navigationActions.navigateTo(Screen.GroupDetail(initialGroupId))
           } catch (e: Exception) {
-            Toast.makeText(context, "Failed to join group: ${e.message}", Toast.LENGTH_LONG).show()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+              Toast.makeText(context, "Failed to join group: ${e.message}", Toast.LENGTH_LONG)
+                  .show()
+            }
           }
         }
       } else {
-        Toast.makeText(context, "Please sign in to join the group", Toast.LENGTH_SHORT).show()
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+          Toast.makeText(context, "Please sign in to join the group", Toast.LENGTH_SHORT).show()
+        }
       }
     }
   }
@@ -220,7 +238,6 @@ fun JoinMe(
             onSelectedSerie = { navigationActions.navigateTo(Screen.SerieDetails(it.serieId)) },
             onGoToHistory = { navigationActions.navigateTo(Screen.History) },
             navigationActions = navigationActions,
-            credentialManager = credentialManager,
             enableNotificationPermissionRequest = enableNotificationPermissionRequest)
       }
       composable(Screen.CreateEvent.route) {
@@ -236,17 +253,17 @@ fun JoinMe(
             onGoBack = { navigationActions.goBack() })
       }
       composable(Screen.CreateEventForSerie.route) { navBackStackEntry ->
-        val serieId = navBackStackEntry.arguments?.getString("serieId")
+        val serieId = navBackStackEntry.arguments?.getString(SERIES_ID)
 
         serieId?.let {
           CreateEventForSerieScreen(
               serieId = serieId,
               onDone = { navigationActions.navigateTo(Screen.Overview) },
               onGoBack = { navigationActions.goBack() })
-        } ?: run { Toast.makeText(context, "Serie ID is null", Toast.LENGTH_SHORT).show() }
+        } ?: run { Toast.makeText(context, SERIES_ID_NULL, Toast.LENGTH_SHORT).show() }
       }
       composable(Screen.EditEvent.route) { navBackStackEntry ->
-        val eventId = navBackStackEntry.arguments?.getString("eventId")
+        val eventId = navBackStackEntry.arguments?.getString(EVENT_ID)
 
         eventId?.let {
           EditEventScreen(
@@ -262,8 +279,8 @@ fun JoinMe(
             onGoBack = { navigationActions.goBack() })
       }
       composable(Screen.ShowEventScreen.route) { navBackStackEntry ->
-        val eventId = navBackStackEntry.arguments?.getString("eventId")
-        val serieId = navBackStackEntry.arguments?.getString("serieId")
+        val eventId = navBackStackEntry.arguments?.getString(EVENT_ID)
+        val serieId = navBackStackEntry.arguments?.getString(SERIES_ID)
 
         eventId?.let {
           ShowEventScreen(
@@ -274,13 +291,13 @@ fun JoinMe(
               onEditEventForSerie = { sId, eId ->
                 navigationActions.navigateTo(Screen.EditEventForSerie(sId, eId))
               },
-              onNavigateToChat = { chatId, chatTitle ->
-                navigationActions.navigateTo(Screen.Chat(chatId, chatTitle))
+              onNavigateToChat = { chatId, chatTitle, totalParticipants ->
+                navigationActions.navigateTo(Screen.Chat(chatId, chatTitle, totalParticipants))
               })
         } ?: run { Toast.makeText(context, "Event UID is null", Toast.LENGTH_SHORT).show() }
       }
       composable(Screen.SerieDetails.route) { navBackStackEntry ->
-        val serieId = navBackStackEntry.arguments?.getString("serieId")
+        val serieId = navBackStackEntry.arguments?.getString(SERIES_ID)
 
         serieId?.let {
           SerieDetailsScreen(
@@ -294,32 +311,32 @@ fun JoinMe(
               },
               onEditSerieClick = { id -> navigationActions.navigateTo(Screen.EditSerie(id)) },
               onQuitSerieSuccess = { navigationActions.goBack() })
-        } ?: run { Toast.makeText(context, "Serie ID is null", Toast.LENGTH_SHORT).show() }
+        } ?: run { Toast.makeText(context, SERIES_ID_NULL, Toast.LENGTH_SHORT).show() }
       }
       composable(Screen.EditSerie.route) { navBackStackEntry ->
-        val serieId = navBackStackEntry.arguments?.getString("serieId")
+        val serieId = navBackStackEntry.arguments?.getString(SERIES_ID)
 
         serieId?.let {
           EditSerieScreen(
               serieId = serieId,
               onGoBack = { navigationActions.goBack() },
               onDone = { navigationActions.navigateTo(Screen.Overview) })
-        } ?: run { Toast.makeText(context, "Serie ID is null", Toast.LENGTH_SHORT).show() }
+        } ?: run { Toast.makeText(context, SERIES_ID_NULL, Toast.LENGTH_SHORT).show() }
       }
       composable(Screen.CreateEventForSerie.route) { navBackStackEntry ->
-        val serieId = navBackStackEntry.arguments?.getString("serieId")
+        val serieId = navBackStackEntry.arguments?.getString(SERIES_ID)
 
         serieId?.let {
           CreateEventForSerieScreen(
               serieId = serieId,
               onDone = { navigationActions.navigateTo(Screen.Overview) },
               onGoBack = { navigationActions.goBack() })
-        } ?: run { Toast.makeText(context, "Serie ID is null", Toast.LENGTH_SHORT).show() }
+        } ?: run { Toast.makeText(context, SERIES_ID_NULL, Toast.LENGTH_SHORT).show() }
       }
 
       composable(Screen.EditEventForSerie.route) { navBackStackEntry ->
-        val serieId = navBackStackEntry.arguments?.getString("serieId")
-        val eventId = navBackStackEntry.arguments?.getString("eventId")
+        val serieId = navBackStackEntry.arguments?.getString(SERIES_ID)
+        val eventId = navBackStackEntry.arguments?.getString(EVENT_ID)
 
         if (serieId != null && eventId != null) {
           EditEventForSerieScreen(
@@ -374,7 +391,6 @@ fun JoinMe(
         ViewProfileScreen(
             uid = currentUser?.uid ?: "",
             onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
-            onBackClick = { navigationActions.goBack() },
             onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
             onSignOutComplete = {
@@ -383,11 +399,28 @@ fun JoinMe(
               navigationActions.navigateTo(Screen.Auth)
             })
       }
+      composable(Screen.PublicProfile.route) { navBackStackEntry ->
+        val userId = navBackStackEntry.arguments?.getString("userId")
 
+        userId?.let {
+          PublicProfileScreen(
+              userId = userId,
+              onBackClick = { navigationActions.goBack() },
+              onEventClick = { event ->
+                navigationActions.navigateTo(Screen.ShowEventScreen(event.eventId))
+              },
+              onGroupClick = { group ->
+                navigationActions.navigateTo(Screen.GroupDetail(group.id))
+              })
+        } ?: run { Toast.makeText(context, "UserId is null", Toast.LENGTH_SHORT).show() }
+      }
       composable(Screen.EditProfile.route) {
         EditProfileScreen(
             uid = currentUser?.uid ?: "",
-            onBackClick = { navigationActions.goBack() },
+            onBackClick = {
+              navigationActions.navigateAndClearBackStackTo(
+                  screen = Screen.Profile, popUpToRoute = Screen.Profile.route, inclusive = false)
+            },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
             onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
             onSaveSuccess = { navigationActions.navigateTo(Screen.Profile) })
@@ -412,10 +445,12 @@ fun JoinMe(
               // Navigate to group details
               navigationActions.navigateTo(Screen.GroupDetail(group.id))
             },
-            onBackClick = { navigationActions.goBack() },
+            onBackClick = {
+              navigationActions.navigateAndClearBackStackTo(
+                  screen = Screen.Profile, popUpToRoute = Screen.Profile.route, inclusive = false)
+            },
             onProfileClick = { navigationActions.navigateTo(Screen.Profile) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
-            onViewGroupDetails = { navigationActions.navigateTo(Screen.GroupDetail(it.id)) },
             onLeaveGroup = { group ->
               groupListViewModel.leaveGroup(
                   groupId = group.id,
@@ -423,19 +458,6 @@ fun JoinMe(
                     Toast.makeText(context, "Left group successfully", Toast.LENGTH_SHORT).show()
                   },
                   onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
-            },
-            onShareGroup = { group ->
-              val deepLink = "joinme://group/${group.id}"
-              val shareIntent =
-                  Intent().apply {
-                    action = Intent.ACTION_SEND
-                    putExtra(Intent.EXTRA_SUBJECT, "Join my group on JoinMe!")
-                    putExtra(
-                        Intent.EXTRA_TEXT,
-                        "Join '${group.name}' on JoinMe!\n\nCategory: ${group.category}\n${if (group.description.isNotBlank()) "Description: ${group.description}\n\n" else "\n"}Click the link to join: $deepLink")
-                    type = "text/plain"
-                  }
-              context.startActivity(Intent.createChooser(shareIntent, "Share Group via"))
             },
             onEditGroup = { group -> navigationActions.navigateTo(Screen.EditGroup(group.id)) },
             onDeleteGroup = { group ->
@@ -451,7 +473,11 @@ fun JoinMe(
       composable(route = Screen.CreateGroup.route) {
         CreateGroupScreen(
             onBackClick = { navigationActions.goBack() },
-            onCreateSuccess = { navigationActions.navigateTo(Screen.Groups) })
+            onCreateSuccess = {
+              // Navigate to Groups and clear CreateGroup from back stack
+              navigationActions.navigateAndClearBackStackTo(
+                  screen = Screen.Groups, popUpToRoute = Screen.Profile.route, inclusive = false)
+            })
       }
 
       composable(route = Screen.EditGroup.route) { navBackStackEntry ->
@@ -472,21 +498,39 @@ fun JoinMe(
           GroupDetailScreen(
               groupId = groupId,
               onBackClick = { navigationActions.goBack() },
-              onGroupEventsClick = {
-                Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+              onActivityGroupClick = {
+                navigationActions.navigateTo(Screen.ActivityGroup(groupId))
               },
-              onMemberClick = {
-                Toast.makeText(context, "Not yet implemented ", Toast.LENGTH_SHORT).show()
+              onMemberClick = { userId ->
+                navigationActions.navigateTo(Screen.PublicProfile(userId))
               },
-              onNavigateToChat = { chatId, chatTitle ->
-                navigationActions.navigateTo(Screen.Chat(chatId, chatTitle))
+              onNavigateToChat = { chatId, chatTitle, totalParticipants ->
+                navigationActions.navigateTo(Screen.Chat(chatId, chatTitle, totalParticipants))
               })
         }
+      }
+
+      composable(route = Screen.ActivityGroup.route) { navBackStackEntry ->
+        val groupId = navBackStackEntry.arguments?.getString("groupId")
+
+        groupId?.let {
+          ActivityGroupScreen(
+              groupId = groupId,
+              onNavigateBack = { navigationActions.goBack() },
+              onSelectedEvent = { eventId ->
+                navigationActions.navigateTo(Screen.ShowEventScreen(eventId))
+              },
+              onSelectedSerie = { serieId ->
+                navigationActions.navigateTo(Screen.SerieDetails(serieId))
+              })
+        } ?: run { Toast.makeText(context, "Group ID is null", Toast.LENGTH_SHORT).show() }
       }
 
       composable(route = Screen.Chat.route) { navBackStackEntry ->
         val chatId = navBackStackEntry.arguments?.getString("chatId")
         val chatTitle = navBackStackEntry.arguments?.getString("chatTitle")
+        val totalParticipants =
+            navBackStackEntry.arguments?.getString("totalParticipants")?.toIntOrNull() ?: 1
 
         if (chatId != null && chatTitle != null) {
           // Use viewModel() factory pattern to get a properly scoped ViewModel
@@ -499,7 +543,10 @@ fun JoinMe(
                             modelClass: Class<T>
                         ): T {
                           @Suppress("UNCHECKED_CAST")
-                          return ChatViewModel(ChatRepositoryProvider.repository) as T
+                          return ChatViewModel(
+                              ChatRepositoryProvider.repository,
+                              ProfileRepositoryProvider.repository)
+                              as T
                         }
                       })
 
@@ -512,7 +559,8 @@ fun JoinMe(
               currentUserId = currentUserId,
               currentUserName = currentUserName,
               viewModel = chatViewModel,
-              onBackClick = { navigationActions.goBack() })
+              totalParticipants = totalParticipants,
+              onLeaveClick = { navigationActions.goBack() })
         } else {
           Toast.makeText(context, "Chat ID or title is null", Toast.LENGTH_SHORT).show()
         }

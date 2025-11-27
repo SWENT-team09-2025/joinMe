@@ -2,10 +2,9 @@ package com.android.joinme.ui.overview
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.android.joinme.model.event.EventsRepositoryLocal
+import com.android.joinme.model.event.isUpcoming
 import com.android.joinme.model.filter.FilterRepository
 import com.android.joinme.model.filter.FilteredEventsRepository
-import com.android.joinme.model.serie.SeriesRepositoryLocal
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -18,16 +17,26 @@ class SearchScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
   private lateinit var filteredEventsRepository: FilteredEventsRepository
+  private lateinit var fakeEventRepository: FakeEventRepository
+  private lateinit var fakeSeriesRepository: FakeSeriesRepository
+
+  // Future timestamp for test events (1 day in the future)
+  private val futureTimestamp =
+      com.google.firebase.Timestamp(System.currentTimeMillis() / 1000 + 86400, 0)
 
   @Before
   fun setup() {
     // Reset FilterRepository before each test to ensure clean state
     FilterRepository.reset()
-    // Create FilteredEventsRepository with local repositories for testing
+
+    fakeEventRepository = FakeEventRepository()
+    fakeSeriesRepository = FakeSeriesRepository()
+
+    // Create FilteredEventsRepository with fake repositories for testing
     filteredEventsRepository =
         FilteredEventsRepository(
-            EventsRepositoryLocal(),
-            SeriesRepositoryLocal(),
+            fakeEventRepository,
+            fakeSeriesRepository,
             FilterRepository,
             kotlinx.coroutines.Dispatchers.Unconfined)
     FilteredEventsRepository.resetInstance(filteredEventsRepository)
@@ -304,7 +313,8 @@ class SearchScreenTest {
     setupScreen(viewModel)
 
     // Ensure events are empty
-    filteredEventsRepository.setEventsForTesting(emptyList())
+    fakeEventRepository.eventsToReturn = emptyList()
+    filteredEventsRepository.refresh()
 
     composeTestRule.waitForIdle()
 
@@ -449,7 +459,7 @@ class SearchScreenTest {
             title = "Basketball Game",
             description = "Fun basketball game",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 60,
             participants = listOf("user1"),
             maxParticipants = 10,
@@ -457,7 +467,8 @@ class SearchScreenTest {
             ownerId = "owner1")
 
     // Set events after screen is setup
-    filteredEventsRepository.setEventsForTesting(listOf(sampleEvent))
+    fakeEventRepository.eventsToReturn = listOf(sampleEvent)
+    filteredEventsRepository.refresh()
 
     composeTestRule.waitForIdle()
 
@@ -483,7 +494,7 @@ class SearchScreenTest {
             title = "Basketball Game",
             description = "Fun basketball game",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 60,
             participants = listOf("user1"),
             maxParticipants = 10,
@@ -491,7 +502,8 @@ class SearchScreenTest {
             ownerId = "owner1")
 
     // Set events after screen is setup
-    filteredEventsRepository.setEventsForTesting(listOf(sampleEvent))
+    fakeEventRepository.eventsToReturn = listOf(sampleEvent)
+    filteredEventsRepository.refresh()
 
     composeTestRule.waitForIdle()
 
@@ -513,7 +525,7 @@ class SearchScreenTest {
             title = "Basketball Game",
             description = "Fun basketball game",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 60,
             participants = listOf("user1"),
             maxParticipants = 10,
@@ -521,7 +533,8 @@ class SearchScreenTest {
             ownerId = "owner1")
 
     // Set events
-    filteredEventsRepository.setEventsForTesting(listOf(sampleEvent))
+    fakeEventRepository.eventsToReturn = listOf(sampleEvent)
+    filteredEventsRepository.refresh()
 
     composeTestRule.waitForIdle()
 
@@ -541,7 +554,7 @@ class SearchScreenTest {
             title = "Test Event",
             description = "Test description",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 60,
             participants = listOf("user1"),
             maxParticipants = 10,
@@ -549,7 +562,8 @@ class SearchScreenTest {
             ownerId = "owner1")
 
     // Set events
-    filteredEventsRepository.setEventsForTesting(listOf(sampleEvent))
+    fakeEventRepository.eventsToReturn = listOf(sampleEvent)
+    filteredEventsRepository.refresh()
 
     composeTestRule.waitForIdle()
 
@@ -571,7 +585,7 @@ class SearchScreenTest {
             title = "Event 1",
             description = "Description 1",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 60,
             participants = listOf("user1"),
             maxParticipants = 10,
@@ -585,7 +599,7 @@ class SearchScreenTest {
             title = "Event 2",
             description = "Description 2",
             location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = com.google.firebase.Timestamp.now(),
+            date = futureTimestamp,
             duration = 90,
             participants = listOf("user2"),
             maxParticipants = 15,
@@ -593,7 +607,8 @@ class SearchScreenTest {
             ownerId = "owner2")
 
     // Set events
-    filteredEventsRepository.setEventsForTesting(listOf(event1, event2))
+    fakeEventRepository.eventsToReturn = listOf(event1, event2)
+    filteredEventsRepository.refresh()
 
     composeTestRule.waitForIdle()
 
@@ -628,5 +643,69 @@ class SearchScreenTest {
 
     // Dropdown should still be visible
     composeTestRule.onNodeWithText("Select all").assertIsDisplayed()
+  }
+
+  // Fake implementations for testing
+  private class FakeEventRepository : com.android.joinme.model.event.EventsRepository {
+    var eventsToReturn: List<com.android.joinme.model.event.Event> = emptyList()
+
+    override fun getNewEventId(): String = "fake-id"
+
+    override suspend fun getAllEvents(
+        eventFilter: com.android.joinme.model.event.EventFilter
+    ): List<com.android.joinme.model.event.Event> = eventsToReturn.filter { it.isUpcoming() }
+
+    override suspend fun getEvent(eventId: String): com.android.joinme.model.event.Event {
+      throw Exception("Not implemented in fake repo")
+    }
+
+    override suspend fun addEvent(event: com.android.joinme.model.event.Event) {}
+
+    override suspend fun editEvent(
+        eventId: String,
+        newValue: com.android.joinme.model.event.Event
+    ) {}
+
+    override suspend fun deleteEvent(eventId: String) {}
+
+    override suspend fun getEventsByIds(
+        eventIds: List<String>
+    ): List<com.android.joinme.model.event.Event> = emptyList()
+
+    override suspend fun getCommonEvents(
+        userIds: List<String>
+    ): List<com.android.joinme.model.event.Event> {
+      if (userIds.isEmpty()) return emptyList()
+      return eventsToReturn
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
+    }
+  }
+
+  private class FakeSeriesRepository : com.android.joinme.model.serie.SeriesRepository {
+    var seriesToReturn: List<com.android.joinme.model.serie.Serie> = emptyList()
+
+    override fun getNewSerieId(): String = "fake-serie-id"
+
+    override suspend fun getAllSeries(
+        serieFilter: com.android.joinme.model.serie.SerieFilter
+    ): List<com.android.joinme.model.serie.Serie> = seriesToReturn
+
+    override suspend fun getSeriesByIds(
+        seriesIds: List<String>
+    ): List<com.android.joinme.model.serie.Serie> = emptyList()
+
+    override suspend fun getSerie(serieId: String): com.android.joinme.model.serie.Serie {
+      throw Exception("Not implemented in fake repo")
+    }
+
+    override suspend fun addSerie(serie: com.android.joinme.model.serie.Serie) {}
+
+    override suspend fun editSerie(
+        serieId: String,
+        newValue: com.android.joinme.model.serie.Serie
+    ) {}
+
+    override suspend fun deleteSerie(serieId: String) {}
   }
 }

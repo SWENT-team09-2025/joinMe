@@ -492,4 +492,76 @@ class SerieTest {
     assertTrue(serieWithNoParticipants.participants.isEmpty())
     assertEquals(0, serieWithNoParticipants.participants.size)
   }
+
+  @Test
+  fun `groupId property works correctly for all cases`() {
+    // Default to null
+    assertEquals(null, sampleSerie.groupId)
+
+    // Can be set via copy
+    val copiedGroupSerie = sampleSerie.copy(groupId = "group123")
+    assertEquals("group123", copiedGroupSerie.groupId)
+
+    // Standalone serie with null groupId
+    val standaloneSerie =
+        Serie(
+            serieId = "serie456",
+            title = "Standalone Serie",
+            description = "Individual serie",
+            date = sampleTimestamp,
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner456",
+            groupId = null)
+
+    // Serie with explicit groupId
+    val groupSerie =
+        Serie(
+            serieId = "serie789",
+            title = "Group Serie",
+            description = "Team serie",
+            date = sampleTimestamp,
+            participants = listOf("user1", "user2", "user3"),
+            maxParticipants = 20,
+            visibility = Visibility.PRIVATE,
+            eventIds = listOf("event1", "event2"),
+            ownerId = "owner789",
+            groupId = "group456")
+
+    // Test invoke operator with groupId
+    val testDate = Timestamp(Date())
+    val invokedGroupSerie =
+        Serie.invoke(
+            serieId = "test999",
+            title = "Test Group Serie",
+            description = "Test Description",
+            date = testDate,
+            participants = listOf("user1", "user2"),
+            maxParticipants = 15,
+            visibility = Visibility.PRIVATE,
+            eventIds = listOf("event1", "event2"),
+            ownerId = "owner999",
+            groupId = "group999")
+
+    // Test invoke operator without groupId (defaults to null)
+    val invokedStandaloneSerie =
+        Serie.invoke(
+            serieId = "test888",
+            title = "Test Standalone Serie",
+            description = "Test Description",
+            date = testDate,
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner888")
+
+    // Assertions
+    assertEquals(null, standaloneSerie.groupId)
+    assertEquals("group456", groupSerie.groupId)
+    assertEquals("group999", invokedGroupSerie.groupId)
+    assertEquals(null, invokedStandaloneSerie.groupId)
+  }
 }

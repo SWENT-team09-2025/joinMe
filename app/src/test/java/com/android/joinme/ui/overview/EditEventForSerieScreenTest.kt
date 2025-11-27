@@ -67,6 +67,13 @@ class EditEventForSerieScreenTest {
             return it.values.toList()
           }
     }
+
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+      if (userIds.isEmpty()) return emptyList()
+      return events.values
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
+    }
   }
 
   private class FakeSeriesRepository : SeriesRepository {
@@ -82,6 +89,14 @@ class EditEventForSerieScreenTest {
 
     override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> =
         series.values.toList()
+
+    override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> {
+      return series
+          .filter { seriesIds.contains(it.key) }
+          .let {
+            return it.values.toList()
+          }
+    }
 
     override suspend fun addSerie(serie: Serie) {
       series[serie.serieId] = serie

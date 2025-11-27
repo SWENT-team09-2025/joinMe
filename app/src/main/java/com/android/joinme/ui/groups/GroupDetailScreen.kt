@@ -13,7 +13,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Message
-import androidx.compose.material.icons.filled.Message
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,13 +35,20 @@ import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColorsForEventType
 import com.android.joinme.ui.theme.customColors
 
+/** Test tags for GroupDetailScreen components. */
+object GroupDetailScreenTestTags {
+  const val BUTTON_ACTIVITIES = "buttonActivities"
+
+  fun memberItemTag(userId: String) = "memberItem:$userId"
+}
+
 /**
  * Main screen for displaying group details including members and events.
  *
  * @param groupId The unique identifier of the group to display.
  * @param viewModel The ViewModel managing the screen state and data.
  * @param onBackClick Callback when the back button is clicked.
- * @param onGroupEventsClick Callback when the "Group Events" button is clicked.
+ * @param onActivityGroupClick Callback when the "Group Activities" button is clicked.
  * @param onMemberClick Callback when a member profile is clicked, receives the member's UID.
  * @param onNavigateToChat Callback invoked when the user wants to navigate to the group chat,
  *   receives chatId and chatTitle.
@@ -53,9 +59,9 @@ fun GroupDetailScreen(
     groupId: String,
     viewModel: GroupDetailViewModel = viewModel(factory = GroupDetailViewModelFactory()),
     onBackClick: () -> Unit = {},
-    onGroupEventsClick: () -> Unit = {},
+    onActivityGroupClick: () -> Unit = {},
     onMemberClick: (String) -> Unit = {},
-    onNavigateToChat: (String, String) -> Unit = { _, _ -> }
+    onNavigateToChat: (String, String, Int) -> Unit = { _, _, _ -> }
 ) {
   LaunchedEffect(groupId) { viewModel.loadGroupDetails(groupId) }
 
@@ -105,7 +111,7 @@ fun GroupDetailScreen(
                   groupDescription = uiState.group!!.description,
                   members = uiState.members,
                   membersCount = uiState.group!!.membersCount,
-                  onGroupEventsClick = onGroupEventsClick,
+                  onGroupEventsClick = onActivityGroupClick,
                   onMemberClick = onMemberClick,
                   onNavigateToChat = onNavigateToChat)
             }
@@ -125,7 +131,7 @@ private fun GroupContent(
     membersCount: Int,
     onGroupEventsClick: () -> Unit,
     onMemberClick: (String) -> Unit,
-    onNavigateToChat: (String, String) -> Unit
+    onNavigateToChat: (String, String, Int) -> Unit
 ) {
   Column(modifier = Modifier.fillMaxSize().background(groupCategory.getColor())) {
     Column(modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.large)) {
@@ -178,7 +184,8 @@ private fun GroupContent(
                   MemberItem(
                       profile = member,
                       categoryColor = groupCategory,
-                      onClick = { onMemberClick(member.uid) })
+                      onClick = { onMemberClick(member.uid) },
+                      testTag = GroupDetailScreenTestTags.memberItemTag(member.uid))
                 }
               }
         }
@@ -186,14 +193,14 @@ private fun GroupContent(
     Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.Padding.large)) {
-      // Row to hold chat FAB and Group Events button
+      // Row to hold chat FAB and Group Activities button
       Row(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small),
           verticalAlignment = Alignment.CenterVertically) {
             // Chat FAB positioned to the left
             FloatingActionButton(
-                onClick = { onNavigateToChat(groupId, groupName) },
+                onClick = { onNavigateToChat(groupId, groupName, membersCount) },
                 containerColor = groupCategory.getColor(),
                 contentColor = groupCategory.getOnColor(),
                 shape = RoundedCornerShape(Dimens.GroupDetail.eventsButtonCornerRadius),
@@ -204,21 +211,25 @@ private fun GroupContent(
                   )
                 }
 
-            // Group Events button - now using weight to fill remaining space
+            // Group Activities button - now using weight to fill remaining space
             Button(
                 onClick = onGroupEventsClick,
-                modifier = Modifier.weight(1f).height(Dimens.Button.standardHeight),
                 colors = MaterialTheme.customColors.buttonColorsForEventType(groupCategory),
                 border =
                     BorderStroke(
                         width = Dimens.BorderWidth.medium, color = groupCategory.getOnColor()),
-                shape = RoundedCornerShape(Dimens.GroupDetail.eventsButtonCornerRadius)) {
-                  Text(
-                      text = "Group Events",
-                      style = MaterialTheme.typography.headlineSmall,
-                      color = groupCategory.getOnColor(),
-                      fontWeight = FontWeight.Medium)
-                }
+                shape = RoundedCornerShape(Dimens.GroupDetail.eventsButtonCornerRadius),
+                modifier =
+                    Modifier.weight(1f)
+                        .height(Dimens.Button.standardHeight)
+                        .testTag(GroupDetailScreenTestTags.BUTTON_ACTIVITIES),
+            ) {
+              Text(
+                  text = "Group Activities",
+                  style = MaterialTheme.typography.headlineSmall,
+                  color = groupCategory.getOnColor(),
+                  fontWeight = FontWeight.Medium)
+            }
           }
 
       Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
@@ -235,11 +246,17 @@ private fun GroupContent(
 }
 
 @Composable
-private fun MemberItem(profile: Profile, categoryColor: EventType, onClick: () -> Unit = {}) {
+private fun MemberItem(
+    profile: Profile,
+    categoryColor: EventType,
+    onClick: () -> Unit = {},
+    testTag: String = ""
+) {
   Row(
       modifier =
           Modifier.fillMaxWidth()
               .clickable { onClick() }
+              .testTag(testTag)
               .padding(vertical = Dimens.Padding.extraSmall),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.Start) {
