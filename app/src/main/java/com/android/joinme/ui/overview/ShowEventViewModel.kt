@@ -1,5 +1,6 @@
 package com.android.joinme.ui.overview
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.EventsRepository
@@ -7,6 +8,7 @@ import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.event.displayString
 import com.android.joinme.model.event.isActive
 import com.android.joinme.model.event.isUpcoming
+import com.android.joinme.model.groups.streaks.StreakService
 import com.android.joinme.model.profile.ProfileRepository
 import com.android.joinme.model.profile.ProfileRepositoryProvider
 import java.text.SimpleDateFormat
@@ -142,6 +144,8 @@ class ShowEventViewModel(
    * - When joining: increment eventsJoinedCount by 1
    * - When quitting: decrement eventsJoinedCount by 1
    *
+   * For group events, also updates the user's streak via StreakService.
+   *
    * @param eventId The ID of the event.
    * @param userId The ID of the current user.
    */
@@ -195,6 +199,16 @@ class ShowEventViewModel(
         return
       }
 
+      // Update streak for group events (only when joining)
+      if (isJoining && event.groupId != null) {
+        try {
+          StreakService.onActivityJoined(event.groupId, userId, event.date)
+        } catch (e: Exception) {
+          Log.e("ShowEventViewModel", "Error updating streak for user $userId", e)
+          // Non-critical: don't fail participation update if streak update fails
+        }
+      }
+
       // Reload the event to update UI
       loadEvent(eventId)
       clearErrorMsg()
@@ -206,7 +220,8 @@ class ShowEventViewModel(
   /**
    * Deletes an Event document by its ID.
    *
-   * This method also decrements eventsJoinedCount for all participants of the deleted event.
+   * This method also decrements eventsJoinedCount for all participants of the deleted event. For
+   * upcoming group events, also reverts streaks for all participants via StreakService.
    *
    * @param eventId The ID of the Event document to be deleted.
    */
@@ -214,6 +229,9 @@ class ShowEventViewModel(
     try {
       // Get the event before deleting to access participants list
       val event = repository.getEvent(eventId)
+
+      // Check if this is an upcoming group event (for streak reversion)
+      val isUpcomingGroupEvent = event.groupId != null && event.isUpcoming()
 
       // Fetch all participant profiles first to validate they all exist
       if (event.participants.isNotEmpty()) {
@@ -248,6 +266,16 @@ class ShowEventViewModel(
           }
           setErrorMsg("Failed to delete Event: ${e.message}")
           return
+        }
+
+        // Revert streaks for upcoming group events
+        if (isUpcomingGroupEvent) {
+          try {
+            StreakService.onActivityDeleted(event.groupId, event.participants, event.date)
+          } catch (e: Exception) {
+            Log.e("ShowEventViewModel", "Error reverting streaks for deleted event", e)
+            // Non-critical: event is already deleted, just log the error
+          }
         }
       } else {
         // No participants, just delete the event
