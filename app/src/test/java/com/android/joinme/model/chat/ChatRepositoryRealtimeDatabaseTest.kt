@@ -2,6 +2,8 @@ package com.android.joinme.model.chat
 
 // Implemented with help of Claude AI
 
+import android.content.Context
+import android.net.Uri
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -10,6 +12,9 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.GenericTypeIndicator
 import com.google.firebase.database.Query
 import com.google.firebase.database.ValueEventListener
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageReference
+import com.google.firebase.storage.UploadTask
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -34,10 +39,12 @@ class ChatRepositoryRealtimeDatabaseTest {
 
   private lateinit var repository: ChatRepositoryRealtimeDatabase
   private lateinit var mockDatabase: FirebaseDatabase
+  private lateinit var mockStorage: FirebaseStorage
   private lateinit var mockConversationsRef: DatabaseReference
   private lateinit var mockConversationRef: DatabaseReference
   private lateinit var mockMessagesRef: DatabaseReference
   private lateinit var mockMessageRef: DatabaseReference
+  private lateinit var mockStorageRef: StorageReference
 
   private val testConversationId = "test-conversation-123"
   private val testMessageId = "test-message-456"
@@ -46,10 +53,12 @@ class ChatRepositoryRealtimeDatabaseTest {
   fun setup() {
     // Mock Firebase Realtime Database components
     mockDatabase = mockk(relaxed = true)
+    mockStorage = mockk(relaxed = true)
     mockConversationsRef = mockk(relaxed = true)
     mockConversationRef = mockk(relaxed = true)
     mockMessagesRef = mockk(relaxed = true)
     mockMessageRef = mockk(relaxed = true)
+    mockStorageRef = mockk(relaxed = true)
 
     // Setup reference chain
     every { mockDatabase.getReference("conversations") } returns mockConversationsRef
@@ -58,7 +67,11 @@ class ChatRepositoryRealtimeDatabaseTest {
     every { mockMessagesRef.child(any()) } returns mockMessageRef
     every { mockMessagesRef.orderByChild("timestamp") } returns mockk<Query>(relaxed = true)
 
-    repository = ChatRepositoryRealtimeDatabase(mockDatabase)
+    // Setup storage reference chain
+    every { mockStorage.reference } returns mockStorageRef
+    every { mockStorageRef.child(any()) } returns mockStorageRef
+
+    repository = ChatRepositoryRealtimeDatabase(mockDatabase, mockStorage)
   }
 
   @After
@@ -365,5 +378,105 @@ class ChatRepositoryRealtimeDatabaseTest {
 
     // Then - should not call setValue since user is already in the list
     verify(exactly = 0) { mockReadByRef.setValue(any()) }
+  }
+
+  // ============================================================================
+  // uploadChatImage Tests
+  // ============================================================================
+
+  @Test
+  fun uploadChatImage_successfullyUploadsImageWithCorrectPathAndReturnsUrl() = runTest {
+    // Given
+    val mockContext = mockk<Context>(relaxed = true)
+    val mockImageUri = mockk<Uri>(relaxed = true)
+    val testDownloadUrl = "https://storage.googleapis.com/test-image.jpg"
+
+    // Mock ImageProcessor instance
+    mockkConstructor(com.android.joinme.model.utils.ImageProcessor::class)
+    every {
+      anyConstructed<com.android.joinme.model.utils.ImageProcessor>().processImage(mockImageUri)
+    } returns byteArrayOf(1, 2, 3, 4)
+
+    // Mock storage references to track path
+    val mockConversationsStorageRef = mockk<StorageReference>(relaxed = true)
+    val mockConversationIdRef = mockk<StorageReference>(relaxed = true)
+    val mockImagesRef = mockk<StorageReference>(relaxed = true)
+    val mockImageFileRef = mockk<StorageReference>(relaxed = true)
+
+    every { mockStorage.reference } returns mockStorageRef
+    every { mockStorageRef.child("conversations") } returns mockConversationsStorageRef
+    every { mockConversationsStorageRef.child(testConversationId) } returns mockConversationIdRef
+    every { mockConversationIdRef.child("images") } returns mockImagesRef
+    every { mockImagesRef.child("$testMessageId.jpg") } returns mockImageFileRef
+
+    // Mock upload - putBytes returns UploadTask which is a Task
+    val mockTaskSnapshot = mockk<UploadTask.TaskSnapshot>(relaxed = true)
+    // Create a successful UploadTask using mockk with isComplete and result
+    val mockUploadTask = mockk<UploadTask>(relaxed = true)
+    every { mockUploadTask.isComplete } returns true
+    every { mockUploadTask.isSuccessful } returns true
+    every { mockUploadTask.isCanceled } returns false
+    every { mockUploadTask.result } returns mockTaskSnapshot
+    every { mockUploadTask.exception } returns null
+    every { mockImageFileRef.putBytes(any<ByteArray>()) } returns mockUploadTask
+
+    // Mock download URL
+    val mockUri = mockk<Uri>(relaxed = true)
+    every { mockUri.toString() } returns testDownloadUrl
+    val mockDownloadUrlTask = Tasks.forResult(mockUri)
+    every { mockImageFileRef.downloadUrl } returns mockDownloadUrlTask
+
+    // When
+    val result =
+        repository.uploadChatImage(mockContext, testConversationId, testMessageId, mockImageUri)
+
+    // Then - verify successful upload and correct return value
+    assertEquals(testDownloadUrl, result)
+
+    // Verify image processing
+    verify {
+      anyConstructed<com.android.joinme.model.utils.ImageProcessor>().processImage(mockImageUri)
+    }
+    verify { mockImageFileRef.putBytes(byteArrayOf(1, 2, 3, 4)) }
+
+    // Verify correct storage path: conversations/{conversationId}/images/{messageId}.jpg
+    verify { mockStorageRef.child("conversations") }
+    verify { mockConversationsStorageRef.child(testConversationId) }
+    verify { mockConversationIdRef.child("images") }
+    verify { mockImagesRef.child("$testMessageId.jpg") }
+
+    // Verify download URL was retrieved
+    verify { mockImageFileRef.downloadUrl }
+
+    unmockkConstructor(com.android.joinme.model.utils.ImageProcessor::class)
+  }
+
+  @Test(expected = Exception::class)
+  fun uploadChatImage_throwsExceptionOnUploadFailure() = runTest {
+    // Given
+    val mockContext = mockk<Context>(relaxed = true)
+    val mockImageUri = mockk<Uri>(relaxed = true)
+
+    // Mock ImageProcessor
+    mockkConstructor(com.android.joinme.model.utils.ImageProcessor::class)
+    every {
+      anyConstructed<com.android.joinme.model.utils.ImageProcessor>().processImage(mockImageUri)
+    } returns byteArrayOf(1, 2, 3, 4)
+
+    // Mock storage upload failure
+    val uploadException = Exception("Upload failed")
+    val mockUploadTask = mockk<UploadTask>(relaxed = true)
+    every { mockUploadTask.isComplete } returns true
+    every { mockUploadTask.isSuccessful } returns false
+    every { mockUploadTask.isCanceled } returns false
+    every { mockUploadTask.exception } returns uploadException
+    every { mockStorageRef.putBytes(any<ByteArray>()) } returns mockUploadTask
+
+    // When - should throw exception
+    try {
+      repository.uploadChatImage(mockContext, testConversationId, testMessageId, mockImageUri)
+    } finally {
+      unmockkConstructor(com.android.joinme.model.utils.ImageProcessor::class)
+    }
   }
 }

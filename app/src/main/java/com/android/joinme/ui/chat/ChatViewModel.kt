@@ -2,6 +2,8 @@ package com.android.joinme.ui.chat
 
 // Implemented with help of Claude AI, essentially rewritten for clarity, structure and
 // documentation
+import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 /**
  * Represents the UI state for the Chat screen.
@@ -24,13 +27,17 @@ import kotlinx.coroutines.launch
  * @property errorMsg An error message to be shown when operations fail.
  * @property currentUserId The ID of the current user viewing the chat.
  * @property senderProfiles A map of sender IDs to their complete Profile objects.
+ * @property isUploadingImage Indicates whether an image is currently being uploaded.
+ * @property imageUploadError An error message specific to image upload failures.
  */
 data class ChatUIState(
     val messages: List<Message> = emptyList(),
     val isLoading: Boolean = true,
     val errorMsg: String? = null,
     val currentUserId: String = "",
-    val senderProfiles: Map<String, Profile> = emptyMap()
+    val senderProfiles: Map<String, Profile> = emptyMap(),
+    val isUploadingImage: Boolean = false,
+    val imageUploadError: String? = null
 )
 
 /**
@@ -55,6 +62,7 @@ class ChatViewModel(
 
   companion object {
     private const val TAG = "ChatViewModel"
+    private const val IMAGE_UPLOAD_TIMEOUT_MS = 30000L // 30 seconds
   }
 
   /**
@@ -273,6 +281,79 @@ class ChatViewModel(
     return _uiState.value.messages.count { message ->
       _uiState.value.currentUserId !in message.readBy &&
           message.senderId != _uiState.value.currentUserId
+    }
+  }
+
+  /** Clears the image upload error message in the UI state. */
+  fun clearImageUploadError() {
+    _uiState.value = _uiState.value.copy(imageUploadError = null)
+  }
+
+  /**
+   * Uploads an image and sends it as a message in the chat.
+   *
+   * This method handles the entire flow:
+   * 1. Uploads the image to Firebase Storage
+   * 2. Creates a message with type IMAGE and the download URL
+   * 3. Adds the message to the chat
+   *
+   * @param context Android context for accessing content resolver.
+   * @param imageUri The URI of the image to upload (from camera or gallery).
+   * @param senderName The name of the user sending the image.
+   * @param onSuccess Callback invoked when the image is successfully uploaded and sent.
+   * @param onError Callback invoked if the upload fails, with an error message.
+   */
+  fun uploadAndSendImage(
+      context: Context,
+      imageUri: Uri,
+      senderName: String,
+      onSuccess: () -> Unit = {},
+      onError: (String) -> Unit = {}
+  ) {
+    viewModelScope.launch {
+      try {
+        _uiState.value = _uiState.value.copy(isUploadingImage = true, imageUploadError = null)
+        Log.d(TAG, "Starting image upload for conversation: $currentConversationId")
+
+        // Generate message ID first
+        val messageId = chatRepository.getNewMessageId()
+
+        // Upload image with timeout
+        val downloadUrl =
+            withTimeout(IMAGE_UPLOAD_TIMEOUT_MS) {
+              chatRepository.uploadChatImage(context, currentConversationId, messageId, imageUri)
+            }
+
+        Log.d(TAG, "Image uploaded successfully, creating message")
+
+        // Create and send the image message
+        val message =
+            Message(
+                id = messageId,
+                conversationId = currentConversationId,
+                senderId = _uiState.value.currentUserId,
+                senderName = senderName,
+                content = downloadUrl,
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.IMAGE)
+
+        chatRepository.addMessage(message)
+        Log.d(TAG, "Image message sent successfully")
+
+        onSuccess()
+      } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+        val errorMsg = "Image upload timeout. Please check your connection and try again."
+        Log.e(TAG, errorMsg, e)
+        _uiState.value = _uiState.value.copy(imageUploadError = errorMsg)
+        onError(errorMsg)
+      } catch (e: Exception) {
+        val errorMsg = "Failed to upload image: ${e.message}"
+        Log.e(TAG, errorMsg, e)
+        _uiState.value = _uiState.value.copy(imageUploadError = errorMsg)
+        onError(errorMsg)
+      } finally {
+        _uiState.value = _uiState.value.copy(isUploadingImage = false)
+      }
     }
   }
 }

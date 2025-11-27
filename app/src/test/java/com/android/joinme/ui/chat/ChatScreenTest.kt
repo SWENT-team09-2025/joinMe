@@ -739,5 +739,14 @@ class ChatScreenTest {
     ) {
       // No-op for testing
     }
+
+    override suspend fun uploadChatImage(
+        context: android.content.Context,
+        conversationId: String,
+        messageId: String,
+        imageUri: android.net.Uri
+    ): String {
+      return "mock://chat-image/$conversationId/$messageId.jpg"
+    }
   }
 }

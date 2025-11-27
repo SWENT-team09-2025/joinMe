@@ -2,6 +2,8 @@ package com.android.joinme.model.chat
 
 // Implemented with help of Claude AI
 
+import android.content.Context
+import android.net.Uri
 import kotlinx.coroutines.flow.Flow
 
 interface ChatRepository {
@@ -61,4 +63,24 @@ interface ChatRepository {
    * @throws Exception if the Message item is not found.
    */
   suspend fun markMessageAsRead(conversationId: String, messageId: String, userId: String)
+
+  /**
+   * Uploads an image to Firebase Storage for use in a chat message.
+   *
+   * The image is processed (compressed, oriented, resized) before upload to optimize storage and
+   * bandwidth. The resulting download URL should be stored in the Message content field.
+   *
+   * @param context Android context for accessing the content resolver.
+   * @param conversationId The unique identifier of the conversation.
+   * @param messageId The unique identifier for the message that will contain this image.
+   * @param imageUri The URI of the image to upload (from camera or gallery).
+   * @return The Firebase Storage download URL for the uploaded image.
+   * @throws Exception if the upload fails.
+   */
+  suspend fun uploadChatImage(
+      context: Context,
+      conversationId: String,
+      messageId: String,
+      imageUri: Uri
+  ): String
 }

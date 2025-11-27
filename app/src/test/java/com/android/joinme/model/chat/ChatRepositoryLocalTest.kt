@@ -328,4 +328,42 @@ class ChatRepositoryLocalTest {
     Assert.assertEquals(MessageType.TEXT, message.type)
     Assert.assertEquals(false, message.isPinned)
   }
+
+  // ---------------- UPLOAD CHAT IMAGE ----------------
+
+  @Test
+  fun uploadChatImage_returnsMockUrl() = runTest {
+    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
+    val mockImageUri = io.mockk.mockk<android.net.Uri>(relaxed = true)
+    val conversationId = "conversation123"
+    val messageId = "message456"
+
+    val result = repo.uploadChatImage(mockContext, conversationId, messageId, mockImageUri)
+
+    Assert.assertNotNull(result)
+    Assert.assertTrue(result.startsWith("mock://chat-image/"))
+    Assert.assertTrue(result.contains(conversationId))
+    Assert.assertTrue(result.contains(messageId))
+    Assert.assertTrue(result.endsWith(".jpg"))
+  }
+
+  @Test
+  fun uploadChatImage_generatesUniqueUrlsForDifferentMessages() = runTest {
+    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
+    val mockImageUri = io.mockk.mockk<android.net.Uri>(relaxed = true)
+
+    val url1 = repo.uploadChatImage(mockContext, "conv1", "msg1", mockImageUri)
+    val url2 = repo.uploadChatImage(mockContext, "conv1", "msg2", mockImageUri)
+    val url3 = repo.uploadChatImage(mockContext, "conv2", "msg1", mockImageUri)
+
+    // All URLs should be different
+    Assert.assertNotEquals(url1, url2)
+    Assert.assertNotEquals(url1, url3)
+    Assert.assertNotEquals(url2, url3)
+
+    // Verify correct conversation and message IDs in URLs
+    Assert.assertTrue(url1.contains("conv1") && url1.contains("msg1"))
+    Assert.assertTrue(url2.contains("conv1") && url2.contains("msg2"))
+    Assert.assertTrue(url3.contains("conv2") && url3.contains("msg1"))
+  }
 }
