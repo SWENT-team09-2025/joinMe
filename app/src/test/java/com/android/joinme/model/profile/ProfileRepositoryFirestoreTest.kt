@@ -49,8 +49,16 @@ class ProfileRepositoryFirestoreTest {
     mockCollection = mockk(relaxed = true)
     mockDocument = mockk(relaxed = true)
 
+    // Set up follows collection mocks early
+    mockFollowsCollection = mockk(relaxed = true)
+    mockFollowDocument = mockk(relaxed = true)
+    mockQuery = mockk(relaxed = true)
+    mockBatch = mockk(relaxed = true)
+
     every { mockFirestore.collection(PROFILES_COLLECTION_PATH) } returns mockCollection
     every { mockCollection.document(any()) } returns mockDocument
+    every { mockFirestore.collection(FOLLOWS_COLLECTION_PATH) } returns mockFollowsCollection
+    every { mockFirestore.batch() } returns mockBatch
 
     repository = ProfileRepositoryFirestore(db = mockFirestore, storage = mockStorage)
 
@@ -443,5 +451,465 @@ class ProfileRepositoryFirestoreTest {
     verify { mockStorageRef.delete() }
     // Verify Firestore update was attempted
     verify { mockDocument.set(any(), any<SetOptions>()) }
+  }
+
+  // ==================== FOLLOWER TESTS ====================
+
+  private lateinit var mockFollowsCollection: CollectionReference
+  private lateinit var mockFollowDocument: DocumentReference
+  private lateinit var mockQuery: Query
+  private lateinit var mockBatch: WriteBatch
+
+  private fun setupFollowerMocks() {
+    every { mockFollowsCollection.document() } returns mockFollowDocument
+    every { mockFollowDocument.id } returns "follow-doc-id"
+    every { mockBatch.set(any(), any<Map<String, Any?>>()) } returns mockBatch
+    every { mockBatch.update(any(), any<String>(), any()) } returns mockBatch
+    every { mockBatch.delete(any()) } returns mockBatch
+  }
+
+  @Test
+  fun `followUser successfully creates follow relationship`() = runTest {
+    // Given
+    setupFollowerMocks()
+    val followerId = "user1"
+    val followedId = "user2"
+
+    // Mock isFollowing to return false (not already following)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    every { mockQuerySnapshot.isEmpty } returns true
+    every { mockFollowsCollection.whereEqualTo("followerId", followerId) } returns mockQuery
+    every { mockQuery.whereEqualTo("followedId", followedId) } returns mockQuery
+    every { mockQuery.limit(1) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+
+    // Mock follower and followed profile documents
+    val mockFollowerDoc = mockk<DocumentReference>(relaxed = true)
+    val mockFollowedDoc = mockk<DocumentReference>(relaxed = true)
+    every { mockCollection.document(followerId) } returns mockFollowerDoc
+    every { mockCollection.document(followedId) } returns mockFollowedDoc
+
+    // Mock batch commit
+    every { mockBatch.commit() } returns Tasks.forResult(null)
+
+    // When
+    repository.followUser(followerId, followedId)
+
+    // Then
+    verify { mockBatch.set(mockFollowDocument, any<Map<String, Any?>>()) }
+    verify { mockBatch.update(mockFollowerDoc, "followingCount", any()) }
+    verify { mockBatch.update(mockFollowedDoc, "followersCount", any()) }
+    verify { mockBatch.commit() }
+  }
+
+  @Test
+  fun `followUser throws exception when trying to follow yourself`() = runTest {
+    // Given
+    setupFollowerMocks()
+    val userId = "user1"
+
+    // When & Then
+    try {
+      repository.followUser(userId, userId)
+      fail("Expected Exception to be thrown")
+    } catch (e: Exception) {
+      assertEquals("Cannot follow yourself", e.message)
+    }
+  }
+
+  @Test
+  fun `followUser throws exception when already following`() = runTest {
+    // Given
+    setupFollowerMocks()
+    val followerId = "user1"
+    val followedId = "user2"
+
+    // Mock isFollowing to return true (already following)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    every { mockQuerySnapshot.isEmpty } returns false
+    every { mockFollowsCollection.whereEqualTo("followerId", followerId) } returns mockQuery
+    every { mockQuery.whereEqualTo("followedId", followedId) } returns mockQuery
+    every { mockQuery.limit(1) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+
+    // When & Then
+    try {
+      repository.followUser(followerId, followedId)
+      fail("Expected Exception to be thrown")
+    } catch (e: Exception) {
+      assertEquals("Already following this user", e.message)
+    }
+  }
+
+  @Test
+  fun `unfollowUser successfully removes follow relationship`() = runTest {
+    // Given
+    setupFollowerMocks()
+    val followerId = "user1"
+    val followedId = "user2"
+
+    // Mock finding the follow relationship
+    val mockFollowDoc = mockk<DocumentSnapshot>(relaxed = true)
+    val mockDocRef = mockk<DocumentReference>(relaxed = true)
+    every { mockFollowDoc.reference } returns mockDocRef
+
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    every { mockQuerySnapshot.isEmpty } returns false
+    every { mockQuerySnapshot.documents } returns listOf(mockFollowDoc)
+
+    every { mockFollowsCollection.whereEqualTo("followerId", followerId) } returns mockQuery
+    every { mockQuery.whereEqualTo("followedId", followedId) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+
+    // Mock follower and followed profile documents
+    val mockFollowerDoc = mockk<DocumentReference>(relaxed = true)
+    val mockFollowedDoc = mockk<DocumentReference>(relaxed = true)
+    every { mockCollection.document(followerId) } returns mockFollowerDoc
+    every { mockCollection.document(followedId) } returns mockFollowedDoc
+
+    // Mock batch commit
+    every { mockBatch.commit() } returns Tasks.forResult(null)
+
+    // When
+    repository.unfollowUser(followerId, followedId)
+
+    // Then
+    verify { mockBatch.delete(mockDocRef) }
+    verify { mockBatch.update(mockFollowerDoc, "followingCount", any()) }
+    verify { mockBatch.update(mockFollowedDoc, "followersCount", any()) }
+    verify { mockBatch.commit() }
+  }
+
+  @Test
+  fun `unfollowUser throws exception when not following`() = runTest {
+    // Given
+    setupFollowerMocks()
+    val followerId = "user1"
+    val followedId = "user2"
+
+    // Mock not finding the follow relationship
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    every { mockQuerySnapshot.isEmpty } returns true
+
+    every { mockFollowsCollection.whereEqualTo("followerId", followerId) } returns mockQuery
+    every { mockQuery.whereEqualTo("followedId", followedId) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+
+    // When & Then
+    try {
+      repository.unfollowUser(followerId, followedId)
+      fail("Expected Exception to be thrown")
+    } catch (e: Exception) {
+      assertEquals("Not currently following this user", e.message)
+    }
+  }
+
+  @Test
+  fun `isFollowing returns true when follow relationship exists`() = runTest {
+    // Given
+    setupFollowerMocks()
+    val followerId = "user1"
+    val followedId = "user2"
+
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    every { mockQuerySnapshot.isEmpty } returns false
+
+    every { mockFollowsCollection.whereEqualTo("followerId", followerId) } returns mockQuery
+    every { mockQuery.whereEqualTo("followedId", followedId) } returns mockQuery
+    every { mockQuery.limit(1) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+
+    // When
+    val result = repository.isFollowing(followerId, followedId)
+
+    // Then
+    assertTrue(result)
+  }
+
+  @Test
+  fun `isFollowing returns false when follow relationship does not exist`() = runTest {
+    // Given
+    setupFollowerMocks()
+    val followerId = "user1"
+    val followedId = "user2"
+
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    every { mockQuerySnapshot.isEmpty } returns true
+
+    every { mockFollowsCollection.whereEqualTo("followerId", followerId) } returns mockQuery
+    every { mockQuery.whereEqualTo("followedId", followedId) } returns mockQuery
+    every { mockQuery.limit(1) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+
+    // When
+    val result = repository.isFollowing(followerId, followedId)
+
+    // Then
+    assertFalse(result)
+  }
+
+  @Test
+  fun `getFollowing returns list of followed profiles`() = runTest {
+    // Given
+    setupFollowerMocks()
+    val userId = "user1"
+    val followedId1 = "user2"
+    val followedId2 = "user3"
+
+    // Mock follow documents
+    val mockFollowDoc1 = mockk<QueryDocumentSnapshot>(relaxed = true)
+    val mockFollowDoc2 = mockk<QueryDocumentSnapshot>(relaxed = true)
+    every { mockFollowDoc1.getString("followedId") } returns followedId1
+    every { mockFollowDoc2.getString("followedId") } returns followedId2
+
+    val mockFollowsSnapshot = mockk<QuerySnapshot>(relaxed = true)
+    every { mockFollowsSnapshot.documents } returns listOf(mockFollowDoc1, mockFollowDoc2)
+
+    val mockOrderedQuery = mockk<Query>(relaxed = true)
+    val mockLimitQuery = mockk<Query>(relaxed = true)
+
+    every { mockFollowsCollection.whereEqualTo("followerId", userId) } returns mockQuery
+    every { mockQuery.orderBy(any<FieldPath>(), any()) } returns mockOrderedQuery
+    every { mockOrderedQuery.limit(50L) } returns mockLimitQuery
+    every { mockLimitQuery.get() } returns Tasks.forResult(mockFollowsSnapshot)
+
+    // Mock profile documents
+    val mockProfile1 = mockk<QueryDocumentSnapshot>(relaxed = true)
+    val mockProfile2 = mockk<QueryDocumentSnapshot>(relaxed = true)
+    every { mockProfile1.exists() } returns true
+    every { mockProfile1.id } returns followedId1
+    every { mockProfile1.getString("username") } returns "User2"
+    every { mockProfile1.getString("email") } returns "user2@example.com"
+    every { mockProfile2.exists() } returns true
+    every { mockProfile2.id } returns followedId2
+    every { mockProfile2.getString("username") } returns "User3"
+    every { mockProfile2.getString("email") } returns "user3@example.com"
+
+    val mockProfilesQuery = mockk<Query>(relaxed = true)
+    val mockProfilesSnapshot = mockk<QuerySnapshot>(relaxed = true)
+    // Mock documents instead of mapNotNull
+    every { mockProfilesSnapshot.documents } returns listOf(mockProfile1, mockProfile2)
+    // Mock iterator for mapNotNull to work
+    every { mockProfilesSnapshot.iterator() } returns
+        mutableListOf(mockProfile1, mockProfile2).iterator()
+
+    every { mockCollection.whereIn(any<FieldPath>(), listOf(followedId1, followedId2)) } returns
+        mockProfilesQuery
+    every { mockProfilesQuery.get() } returns Tasks.forResult(mockProfilesSnapshot)
+
+    // When
+    val result = repository.getFollowing(userId, 50)
+
+    // Then
+    assertEquals(2, result.size)
+    verify { mockFollowsCollection.whereEqualTo("followerId", userId) }
+  }
+
+  @Test
+  fun `getFollowing and getFollowers return empty list when no relationships exist`() = runTest {
+    // Given
+    setupFollowerMocks()
+    val userId = "user1"
+
+    val mockFollowsSnapshot = mockk<QuerySnapshot>(relaxed = true)
+    every { mockFollowsSnapshot.documents } returns emptyList()
+
+    val mockOrderedQuery = mockk<Query>(relaxed = true)
+    val mockLimitQuery = mockk<Query>(relaxed = true)
+
+    // Setup for both getFollowing and getFollowers queries
+    every { mockFollowsCollection.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.orderBy(any<FieldPath>(), any()) } returns mockOrderedQuery
+    every { mockOrderedQuery.limit(50L) } returns mockLimitQuery
+    every { mockLimitQuery.get() } returns Tasks.forResult(mockFollowsSnapshot)
+
+    // When
+    val followingResult = repository.getFollowing(userId, 50)
+    val followersResult = repository.getFollowers(userId, 50)
+
+    // Then
+    assertTrue(followingResult.isEmpty())
+    assertTrue(followersResult.isEmpty())
+  }
+
+  @Test
+  fun `getFollowers returns list of follower profiles`() = runTest {
+    // Given
+    setupFollowerMocks()
+    val userId = "user1"
+    val followerId1 = "user2"
+    val followerId2 = "user3"
+
+    // Mock follow documents
+    val mockFollowDoc1 = mockk<QueryDocumentSnapshot>(relaxed = true)
+    val mockFollowDoc2 = mockk<QueryDocumentSnapshot>(relaxed = true)
+    every { mockFollowDoc1.getString("followerId") } returns followerId1
+    every { mockFollowDoc2.getString("followerId") } returns followerId2
+
+    val mockFollowsSnapshot = mockk<QuerySnapshot>(relaxed = true)
+    every { mockFollowsSnapshot.documents } returns listOf(mockFollowDoc1, mockFollowDoc2)
+
+    val mockOrderedQuery = mockk<Query>(relaxed = true)
+    val mockLimitQuery = mockk<Query>(relaxed = true)
+
+    every { mockFollowsCollection.whereEqualTo("followedId", userId) } returns mockQuery
+    every { mockQuery.orderBy(any<FieldPath>(), any()) } returns mockOrderedQuery
+    every { mockOrderedQuery.limit(50L) } returns mockLimitQuery
+    every { mockLimitQuery.get() } returns Tasks.forResult(mockFollowsSnapshot)
+
+    // Mock profile documents
+    val mockProfile1 = mockk<QueryDocumentSnapshot>(relaxed = true)
+    val mockProfile2 = mockk<QueryDocumentSnapshot>(relaxed = true)
+    every { mockProfile1.exists() } returns true
+    every { mockProfile1.id } returns followerId1
+    every { mockProfile1.getString("username") } returns "User2"
+    every { mockProfile1.getString("email") } returns "user2@example.com"
+    every { mockProfile2.exists() } returns true
+    every { mockProfile2.id } returns followerId2
+    every { mockProfile2.getString("username") } returns "User3"
+    every { mockProfile2.getString("email") } returns "user3@example.com"
+
+    val mockProfilesQuery = mockk<Query>(relaxed = true)
+    val mockProfilesSnapshot = mockk<QuerySnapshot>(relaxed = true)
+    // Mock documents instead of mapNotNull
+    every { mockProfilesSnapshot.documents } returns listOf(mockProfile1, mockProfile2)
+    // Mock iterator for mapNotNull to work
+    every { mockProfilesSnapshot.iterator() } returns
+        mutableListOf(mockProfile1, mockProfile2).iterator()
+
+    every { mockCollection.whereIn(any<FieldPath>(), listOf(followerId1, followerId2)) } returns
+        mockProfilesQuery
+    every { mockProfilesQuery.get() } returns Tasks.forResult(mockProfilesSnapshot)
+
+    // When
+    val result = repository.getFollowers(userId, 50)
+
+    // Then
+    assertEquals(2, result.size)
+    verify { mockFollowsCollection.whereEqualTo("followedId", userId) }
+  }
+
+  @Test
+  fun `getMutualFollowing returns profiles followed by both users`() = runTest {
+    // Given
+    setupFollowerMocks()
+    val user1Id = "user1"
+    val user2Id = "user2"
+    val mutualId1 = "user3"
+    val mutualId2 = "user4"
+    val user1OnlyId = "user5"
+    val user2OnlyId = "user6"
+
+    // Mock user1's following
+    val mockUser1FollowDoc1 = mockk<QueryDocumentSnapshot>(relaxed = true)
+    val mockUser1FollowDoc2 = mockk<QueryDocumentSnapshot>(relaxed = true)
+    val mockUser1FollowDoc3 = mockk<QueryDocumentSnapshot>(relaxed = true)
+    every { mockUser1FollowDoc1.getString("followedId") } returns mutualId1
+    every { mockUser1FollowDoc2.getString("followedId") } returns mutualId2
+    every { mockUser1FollowDoc3.getString("followedId") } returns user1OnlyId
+
+    val mockUser1FollowsSnapshot = mockk<QuerySnapshot>(relaxed = true)
+    // Mock documents and iterator for mapNotNull
+    every { mockUser1FollowsSnapshot.documents } returns
+        listOf(mockUser1FollowDoc1, mockUser1FollowDoc2, mockUser1FollowDoc3)
+    every { mockUser1FollowsSnapshot.iterator() } returns
+        mutableListOf(mockUser1FollowDoc1, mockUser1FollowDoc2, mockUser1FollowDoc3).iterator()
+
+    // Mock user2's following
+    val mockUser2FollowDoc1 = mockk<QueryDocumentSnapshot>(relaxed = true)
+    val mockUser2FollowDoc2 = mockk<QueryDocumentSnapshot>(relaxed = true)
+    val mockUser2FollowDoc3 = mockk<QueryDocumentSnapshot>(relaxed = true)
+    every { mockUser2FollowDoc1.getString("followedId") } returns mutualId1
+    every { mockUser2FollowDoc2.getString("followedId") } returns mutualId2
+    every { mockUser2FollowDoc3.getString("followedId") } returns user2OnlyId
+
+    val mockUser2FollowsSnapshot = mockk<QuerySnapshot>(relaxed = true)
+    // Mock documents and iterator for mapNotNull
+    every { mockUser2FollowsSnapshot.documents } returns
+        listOf(mockUser2FollowDoc1, mockUser2FollowDoc2, mockUser2FollowDoc3)
+    every { mockUser2FollowsSnapshot.iterator() } returns
+        mutableListOf(mockUser2FollowDoc1, mockUser2FollowDoc2, mockUser2FollowDoc3).iterator()
+
+    val mockQuery1 = mockk<Query>(relaxed = true)
+    val mockQuery2 = mockk<Query>(relaxed = true)
+
+    every { mockFollowsCollection.whereEqualTo("followerId", user1Id) } returns mockQuery1
+    every { mockQuery1.get() } returns Tasks.forResult(mockUser1FollowsSnapshot)
+
+    every { mockFollowsCollection.whereEqualTo("followerId", user2Id) } returns mockQuery2
+    every { mockQuery2.get() } returns Tasks.forResult(mockUser2FollowsSnapshot)
+
+    // Mock profile documents for mutual follows
+    val mockProfile1 = mockk<QueryDocumentSnapshot>(relaxed = true)
+    val mockProfile2 = mockk<QueryDocumentSnapshot>(relaxed = true)
+    every { mockProfile1.exists() } returns true
+    every { mockProfile1.id } returns mutualId1
+    every { mockProfile1.getString("username") } returns "User3"
+    every { mockProfile1.getString("email") } returns "user3@example.com"
+    every { mockProfile2.exists() } returns true
+    every { mockProfile2.id } returns mutualId2
+    every { mockProfile2.getString("username") } returns "User4"
+    every { mockProfile2.getString("email") } returns "user4@example.com"
+
+    val mockProfilesQuery = mockk<Query>(relaxed = true)
+    val mockProfilesSnapshot = mockk<QuerySnapshot>(relaxed = true)
+    // Mock documents instead of mapNotNull
+    every { mockProfilesSnapshot.documents } returns listOf(mockProfile1, mockProfile2)
+    // Mock iterator for mapNotNull to work
+    every { mockProfilesSnapshot.iterator() } returns
+        mutableListOf(mockProfile1, mockProfile2).iterator()
+
+    every { mockCollection.whereIn(any<FieldPath>(), listOf(mutualId1, mutualId2)) } returns
+        mockProfilesQuery
+    every { mockProfilesQuery.get() } returns Tasks.forResult(mockProfilesSnapshot)
+
+    // When
+    val result = repository.getMutualFollowing(user1Id, user2Id)
+
+    // Then
+    assertEquals(2, result.size)
+    verify { mockFollowsCollection.whereEqualTo("followerId", user1Id) }
+    verify { mockFollowsCollection.whereEqualTo("followerId", user2Id) }
+  }
+
+  @Test
+  fun `getMutualFollowing returns empty list when no mutual follows`() = runTest {
+    // Given
+    setupFollowerMocks()
+    val user1Id = "user1"
+    val user2Id = "user2"
+
+    // Mock user1's following
+    val mockUser1FollowDoc = mockk<QueryDocumentSnapshot>(relaxed = true)
+    every { mockUser1FollowDoc.getString("followedId") } returns "user3"
+    val mockUser1FollowsSnapshot = mockk<QuerySnapshot>(relaxed = true)
+    // Mock documents and iterator for mapNotNull
+    every { mockUser1FollowsSnapshot.documents } returns listOf(mockUser1FollowDoc)
+    every { mockUser1FollowsSnapshot.iterator() } returns
+        mutableListOf(mockUser1FollowDoc).iterator()
+
+    // Mock user2's following
+    val mockUser2FollowDoc = mockk<QueryDocumentSnapshot>(relaxed = true)
+    every { mockUser2FollowDoc.getString("followedId") } returns "user4"
+    val mockUser2FollowsSnapshot = mockk<QuerySnapshot>(relaxed = true)
+    // Mock documents and iterator for mapNotNull
+    every { mockUser2FollowsSnapshot.documents } returns listOf(mockUser2FollowDoc)
+    every { mockUser2FollowsSnapshot.iterator() } returns
+        mutableListOf(mockUser2FollowDoc).iterator()
+
+    val mockQuery1 = mockk<Query>(relaxed = true)
+    val mockQuery2 = mockk<Query>(relaxed = true)
+
+    every { mockFollowsCollection.whereEqualTo("followerId", user1Id) } returns mockQuery1
+    every { mockQuery1.get() } returns Tasks.forResult(mockUser1FollowsSnapshot)
+
+    every { mockFollowsCollection.whereEqualTo("followerId", user2Id) } returns mockQuery2
+    every { mockQuery2.get() } returns Tasks.forResult(mockUser2FollowsSnapshot)
+
+    // When
+    val result = repository.getMutualFollowing(user1Id, user2Id)
+
+    // Then
+    assertTrue(result.isEmpty())
   }
 }

@@ -65,6 +65,20 @@ class ViewProfileScreenTest {
       val results = uids.mapNotNull { uid -> stored?.takeIf { it.uid == uid } }
       return if (results.size == uids.size) results else null
     }
+
+    // Stub implementations for follow methods - not used in ViewProfile androidTests
+    override suspend fun followUser(followerId: String, followedId: String) {}
+
+    override suspend fun unfollowUser(followerId: String, followedId: String) {}
+
+    override suspend fun isFollowing(followerId: String, followedId: String): Boolean = false
+
+    override suspend fun getFollowing(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getFollowers(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getMutualFollowing(userId1: String, userId2: String): List<Profile> =
+        emptyList()
   }
 
   // Helper function to scroll and assert

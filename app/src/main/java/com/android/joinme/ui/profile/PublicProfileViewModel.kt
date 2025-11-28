@@ -60,6 +60,12 @@ class PublicProfileViewModel(
   private val _error = MutableStateFlow<String?>(null)
   val error: StateFlow<String?> = _error.asStateFlow()
 
+  private val _isFollowing = MutableStateFlow(false)
+  val isFollowing: StateFlow<Boolean> = _isFollowing.asStateFlow()
+
+  private val _isFollowLoading = MutableStateFlow(false)
+  val isFollowLoading: StateFlow<Boolean> = _isFollowLoading.asStateFlow()
+
   /**
    * Loads the public profile for a specific user along with common events and groups.
    *
@@ -76,36 +82,14 @@ class PublicProfileViewModel(
       _isLoading.value = true
       clearError()
 
-      // Validate userId is not empty
-      if (userId.isBlank()) {
-        _isLoading.value = false
-        _error.value = "Invalid user ID"
-        return@launch
-      }
-
-      // Validate currentUserId
-      if (currentUserId.isNullOrBlank()) {
-        _error.value = "Not authenticated. Please sign in."
+      val validationError = validateUserIds(userId, currentUserId)
+      if (validationError != null) {
+        _error.value = validationError
         _isLoading.value = false
         return@launch
       }
 
-      // Don't allow viewing your own profile with this screen
-      if (currentUserId == userId) {
-        _error.value = "Cannot view your own profile here"
-        _isLoading.value = false
-        return@launch
-      }
-
-      // Fetch profile
-      val fetchedProfile =
-          try {
-            profileRepository.getProfile(userId)
-          } catch (e: Exception) {
-            Log.e(TAG, "Error fetching profile", e)
-            null
-          }
-
+      val fetchedProfile = fetchProfile(userId)
       if (fetchedProfile == null) {
         _error.value = "Profile not found"
         _isLoading.value = false
@@ -113,31 +97,118 @@ class PublicProfileViewModel(
       }
 
       _profile.value = fetchedProfile
-
-      // Fetch common events
-      try {
-        val events = eventsRepository.getCommonEvents(listOf(currentUserId, userId))
-        _commonEvents.value = events
-      } catch (e: Exception) {
-        Log.e(TAG, "Error loading common events", e)
-        _commonEvents.value = emptyList()
-      }
-
-      // Fetch common groups
-      try {
-        val groups = groupRepository.getCommonGroups(listOf(currentUserId, userId))
-        _commonGroups.value = groups
-      } catch (e: Exception) {
-        Log.e(TAG, "Error loading common groups", e)
-        _commonGroups.value = emptyList()
-      }
+      loadFollowStatus(currentUserId!!, userId)
+      loadCommonEvents(currentUserId, userId)
+      loadCommonGroups(currentUserId, userId)
 
       _isLoading.value = false
+    }
+  }
+
+  /**
+   * Validates user IDs before loading profile.
+   *
+   * @return Error message if validation fails, null otherwise
+   */
+  private fun validateUserIds(userId: String, currentUserId: String?): String? {
+    return when {
+      userId.isBlank() -> "Invalid user ID"
+      currentUserId.isNullOrBlank() -> "Not authenticated. Please sign in."
+      currentUserId == userId -> "Cannot view your own profile here"
+      else -> null
+    }
+  }
+
+  /**
+   * Fetches the profile for the given user ID.
+   *
+   * @return The fetched profile, or null if an error occurred
+   */
+  private suspend fun fetchProfile(userId: String): Profile? {
+    return try {
+      profileRepository.getProfile(userId)
+    } catch (e: Exception) {
+      Log.e(TAG, "Error fetching profile", e)
+      null
+    }
+  }
+
+  /** Loads the follow status between current user and profile user. */
+  private suspend fun loadFollowStatus(currentUserId: String, profileUserId: String) {
+    try {
+      _isFollowing.value = profileRepository.isFollowing(currentUserId, profileUserId)
+    } catch (e: Exception) {
+      Log.e(TAG, "Error checking follow status", e)
+      _isFollowing.value = false
+    }
+  }
+
+  /** Loads common events between current user and profile user. */
+  private suspend fun loadCommonEvents(currentUserId: String, profileUserId: String) {
+    try {
+      val events = eventsRepository.getCommonEvents(listOf(currentUserId, profileUserId))
+      _commonEvents.value = events
+    } catch (e: Exception) {
+      Log.e(TAG, "Error loading common events", e)
+      _commonEvents.value = emptyList()
+    }
+  }
+
+  /** Loads common groups between current user and profile user. */
+  private suspend fun loadCommonGroups(currentUserId: String, profileUserId: String) {
+    try {
+      val groups = groupRepository.getCommonGroups(listOf(currentUserId, profileUserId))
+      _commonGroups.value = groups
+    } catch (e: Exception) {
+      Log.e(TAG, "Error loading common groups", e)
+      _commonGroups.value = emptyList()
     }
   }
 
   /** Clears the current error state. */
   fun clearError() {
     _error.value = null
+  }
+
+  /**
+   * Toggles the follow status for the current profile.
+   *
+   * If currently following, unfollows the user. If not following, follows the user. Updates local
+   * state immediately for responsive UI.
+   *
+   * @param currentUserId The current user's ID (the one performing the action)
+   * @param profileUserId The profile user's ID (the one being followed/unfollowed)
+   */
+  fun toggleFollow(currentUserId: String, profileUserId: String) {
+    viewModelScope.launch {
+      _isFollowLoading.value = true
+
+      try {
+        if (_isFollowing.value) {
+          // Unfollow
+          profileRepository.unfollowUser(currentUserId, profileUserId)
+          _isFollowing.value = false
+
+          // Update local follower count
+          _profile.value?.let { profile ->
+            _profile.value = profile.copy(followersCount = profile.followersCount - 1)
+          }
+        } else {
+          // Follow
+          profileRepository.followUser(currentUserId, profileUserId)
+          _isFollowing.value = true
+
+          // Update local follower count
+          _profile.value?.let { profile ->
+            _profile.value = profile.copy(followersCount = profile.followersCount + 1)
+          }
+        }
+      } catch (e: Exception) {
+        Log.e(TAG, "Error toggling follow", e)
+        _error.value = "Failed to update follow status: ${e.message}"
+      } finally {
+        _isFollowLoading.value = false
+      }
+    }
   }
 }
