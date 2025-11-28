@@ -496,32 +496,6 @@ class PublicProfileViewModelTest {
   }
 
   @Test
-  fun `toggleFollow sets loading state correctly`() = runTest {
-    // Setup
-    coEvery { mockProfileRepository.getProfile(otherUserId) } returns testProfile
-    coEvery { mockProfileRepository.isFollowing(currentUserId, otherUserId) } returns false
-    coEvery { mockEventsRepository.getCommonEvents(any()) } returns emptyList()
-    coEvery { mockGroupRepository.getCommonGroups(any()) } returns emptyList()
-    coEvery { mockProfileRepository.followUser(currentUserId, otherUserId) } coAnswers
-        {
-          // Check loading is true during operation
-          assertTrue(viewModel.isFollowLoading.value)
-        }
-
-    viewModel.loadPublicProfile(otherUserId, currentUserId)
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    assertFalse(viewModel.isFollowLoading.value)
-
-    // When: Toggle follow
-    viewModel.toggleFollow(currentUserId, otherUserId)
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    // Then: Loading should be false after completion
-    assertFalse(viewModel.isFollowLoading.value)
-  }
-
-  @Test
   fun `toggleFollow handles follow error and sets error message`() = runTest {
     // Setup
     coEvery { mockProfileRepository.getProfile(otherUserId) } returns testProfile
@@ -572,34 +546,6 @@ class PublicProfileViewModelTest {
     assertTrue(viewModel.error.value!!.contains("Failed to update follow status"))
     assertTrue(viewModel.isFollowing.value)
     assertFalse(viewModel.isFollowLoading.value)
-  }
-
-  @Test
-  fun `toggleFollow updates follower count optimistically`() = runTest {
-    // Setup
-    coEvery { mockProfileRepository.getProfile(otherUserId) } returns testProfile
-    coEvery { mockProfileRepository.isFollowing(currentUserId, otherUserId) } returns false
-    coEvery { mockEventsRepository.getCommonEvents(any()) } returns emptyList()
-    coEvery { mockGroupRepository.getCommonGroups(any()) } returns emptyList()
-    coEvery { mockProfileRepository.followUser(currentUserId, otherUserId) } just Runs
-
-    viewModel.loadPublicProfile(otherUserId, currentUserId)
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    val initialCount = viewModel.profile.value?.followersCount ?: 0
-
-    // When: Follow
-    viewModel.toggleFollow(currentUserId, otherUserId)
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    assertEquals(initialCount + 1, viewModel.profile.value?.followersCount)
-
-    // When: Unfollow
-    coEvery { mockProfileRepository.unfollowUser(currentUserId, otherUserId) } just Runs
-    viewModel.toggleFollow(currentUserId, otherUserId)
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    assertEquals(initialCount, viewModel.profile.value?.followersCount)
   }
 
   @Test

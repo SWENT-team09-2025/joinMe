@@ -1,5 +1,6 @@
 package com.android.joinme.ui.profile
 /* This file was implemented with the help of Claude AI */
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,9 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -46,7 +45,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
 import com.android.joinme.model.event.Event
@@ -57,6 +55,8 @@ import com.android.joinme.ui.components.GroupCard
 import com.android.joinme.ui.theme.Dimens
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+
+private const val maxBioLines = 3
 
 /**
  * Contains test tags for UI elements in the PublicProfileScreen.
@@ -119,7 +119,6 @@ fun PublicProfileScreen(
     onEventClick: (Event) -> Unit = {},
     onGroupClick: (Group) -> Unit = {}
 ) {
-
   val profile by viewModel.profile.collectAsState()
   val commonEvents by viewModel.commonEvents.collectAsState()
   val commonGroups by viewModel.commonGroups.collectAsState()
@@ -196,7 +195,10 @@ fun PublicProfileScreen(
                       profile = profile!!,
                       isFollowing = isFollowing,
                       isFollowLoading = isFollowLoading,
-                      onFollowClick = { currentUserId?.let { viewModel.toggleFollow(it, userId) } },
+                      onFollowClick = {
+                        currentUserId?.let { viewModel.toggleFollow(it, userId) }
+                            ?: Log.e("PublicProfileScreen", "Cannot follow: currentUserId is null")
+                      },
                       commonEvents = commonEvents,
                       commonGroups = commonGroups,
                       onEventClick = onEventClick,
@@ -218,12 +220,8 @@ private fun ProfileContent(
     onEventClick: (Event) -> Unit,
     onGroupClick: (Group) -> Unit
 ) {
-  val context = LocalContext.current
   Column(
-      modifier =
-          Modifier.fillMaxSize()
-              .verticalScroll(rememberScrollState())
-              .padding(Dimens.Padding.medium),
+      modifier = Modifier.fillMaxSize().padding(Dimens.Padding.medium),
       verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium)) {
         ProfileHeader(profile = profile)
         BioSection(
@@ -231,10 +229,13 @@ private fun ProfileContent(
             isFollowing = isFollowing,
             isFollowLoading = isFollowLoading,
             onFollowClick = onFollowClick)
-        InterestsSection(profile = profile, context = context)
+        InterestsSection(profile = profile)
         EventStreaksSection()
-        CommonEventsSection(commonEvents = commonEvents, onEventClick = onEventClick)
-        CommonGroupsSection(commonGroups = commonGroups, onGroupClick = onGroupClick)
+        CommonEventsAndGroupsSection(
+            commonEvents = commonEvents,
+            commonGroups = commonGroups,
+            onEventClick = onEventClick,
+            onGroupClick = onGroupClick)
       }
 }
 
@@ -276,6 +277,7 @@ private fun BioSection(
     isFollowLoading: Boolean,
     onFollowClick: () -> Unit
 ) {
+
   Row(
       modifier = Modifier.fillMaxWidth(),
       horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium),
@@ -291,7 +293,7 @@ private fun BioSection(
                   if (profile.bio?.isNotBlank() == true) profile.bio
                   else stringResource(R.string.no_bio_available),
               style = MaterialTheme.typography.bodyMedium,
-              maxLines = 3)
+              maxLines = maxBioLines)
         }
         FollowButton(
             isFollowing = isFollowing, isFollowLoading = isFollowLoading, onClick = onFollowClick)
@@ -315,8 +317,8 @@ private fun FollowButton(isFollowing: Boolean, isFollowLoading: Boolean, onClick
       shape = RoundedCornerShape(Dimens.CornerRadius.circle)) {
         if (isFollowLoading) {
           CircularProgressIndicator(
-              modifier = Modifier.size(20.dp),
-              strokeWidth = 2.dp,
+              modifier = Modifier.size(Dimens.LoadingIndicator.small),
+              strokeWidth = Dimens.BorderWidth.thin,
               color =
                   if (isFollowing) MaterialTheme.colorScheme.onSurfaceVariant
                   else MaterialTheme.colorScheme.onPrimary)
@@ -331,7 +333,7 @@ private fun FollowButton(isFollowing: Boolean, isFollowLoading: Boolean, onClick
 }
 
 @Composable
-private fun InterestsSection(profile: Profile, context: android.content.Context) {
+private fun InterestsSection(profile: Profile) {
   Row(
       modifier = Modifier.fillMaxWidth(),
       horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium),
@@ -349,12 +351,13 @@ private fun InterestsSection(profile: Profile, context: android.content.Context)
                       else stringResource(R.string.no_interests_available),
                   style = MaterialTheme.typography.bodyMedium)
             }
-        MessageButton(context = context)
+        MessageButton()
       }
 }
 
 @Composable
-private fun MessageButton(context: android.content.Context) {
+private fun MessageButton() {
+  val context = LocalContext.current
   Button(
       onClick = {
         Toast.makeText(context, "Message functionality coming soon!", Toast.LENGTH_SHORT).show()
@@ -390,76 +393,82 @@ private fun EventStreaksSection() {
 }
 
 @Composable
-private fun CommonEventsSection(commonEvents: List<Event>, onEventClick: (Event) -> Unit) {
-  Text(
-      text = stringResource(R.string.common_events),
-      modifier =
-          Modifier.fillMaxWidth()
-              .padding(top = Dimens.Spacing.medium)
-              .testTag(PublicProfileScreenTestTags.COMMON_EVENTS_TITLE),
-      style = MaterialTheme.typography.titleMedium,
-      fontWeight = FontWeight.Bold)
-
-  if (commonEvents.isEmpty()) {
-    EmptyCard(
-        message = stringResource(R.string.no_common_events),
-        testTag = PublicProfileScreenTestTags.EMPTY_EVENTS_MESSAGE)
-  } else {
-    LazyColumn(
+private fun CommonEventsAndGroupsSection(
+    commonEvents: List<Event>,
+    commonGroups: List<Group>,
+    onEventClick: (Event) -> Unit,
+    onGroupClick: (Group) -> Unit
+) {
+  Column(modifier = Modifier.fillMaxWidth()) {
+    // Common Events Section
+    Text(
+        text = stringResource(R.string.common_events),
         modifier =
             Modifier.fillMaxWidth()
-                .height(300.dp)
-                .border(
-                    width = Dimens.BorderWidth.thin,
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(Dimens.CornerRadius.medium))
-                .padding(Dimens.Padding.small)
-                .testTag(PublicProfileScreenTestTags.COMMON_EVENTS_LIST),
-        verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
-          items(commonEvents) { event ->
-            EventCard(
-                event = event,
-                onClick = { onEventClick(event) },
-                testTag = PublicProfileScreenTestTags.eventCardTag(event.eventId))
+                .padding(top = Dimens.Spacing.medium)
+                .testTag(PublicProfileScreenTestTags.COMMON_EVENTS_TITLE),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold)
+
+    if (commonEvents.isEmpty()) {
+      EmptyCard(
+          message = stringResource(R.string.no_common_events),
+          testTag = PublicProfileScreenTestTags.EMPTY_EVENTS_MESSAGE)
+    } else {
+      LazyColumn(
+          modifier =
+              Modifier.fillMaxWidth()
+                  .weight(1f)
+                  .border(
+                      width = Dimens.BorderWidth.thin,
+                      color = MaterialTheme.colorScheme.primary,
+                      shape = RoundedCornerShape(Dimens.CornerRadius.medium))
+                  .padding(Dimens.Padding.small)
+                  .testTag(PublicProfileScreenTestTags.COMMON_EVENTS_LIST),
+          verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
+            items(commonEvents) { event ->
+              EventCard(
+                  event = event,
+                  onClick = { onEventClick(event) },
+                  testTag = PublicProfileScreenTestTags.eventCardTag(event.eventId))
+            }
           }
-        }
-  }
-}
+    }
 
-@Composable
-private fun CommonGroupsSection(commonGroups: List<Group>, onGroupClick: (Group) -> Unit) {
-  Text(
-      text = stringResource(R.string.common_groups),
-      modifier =
-          Modifier.fillMaxWidth()
-              .padding(top = Dimens.Spacing.medium)
-              .testTag(PublicProfileScreenTestTags.COMMON_GROUPS_TITLE),
-      style = MaterialTheme.typography.titleMedium,
-      fontWeight = FontWeight.Bold)
-
-  if (commonGroups.isEmpty()) {
-    EmptyCard(
-        message = stringResource(R.string.no_common_groups),
-        testTag = PublicProfileScreenTestTags.EMPTY_GROUPS_MESSAGE)
-  } else {
-    LazyColumn(
+    // Common Groups Section
+    Text(
+        text = stringResource(R.string.common_groups),
         modifier =
             Modifier.fillMaxWidth()
-                .height(300.dp)
-                .border(
-                    width = Dimens.BorderWidth.thin,
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(Dimens.CornerRadius.medium))
-                .padding(Dimens.Padding.small)
-                .testTag(PublicProfileScreenTestTags.COMMON_GROUPS_LIST),
-        verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
-          items(commonGroups) { group ->
-            GroupCard(
-                group = group,
-                onClick = { onGroupClick(group) },
-                testTag = PublicProfileScreenTestTags.groupCardTag(group.id))
+                .padding(top = Dimens.Spacing.medium)
+                .testTag(PublicProfileScreenTestTags.COMMON_GROUPS_TITLE),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold)
+
+    if (commonGroups.isEmpty()) {
+      EmptyCard(
+          message = stringResource(R.string.no_common_groups),
+          testTag = PublicProfileScreenTestTags.EMPTY_GROUPS_MESSAGE)
+    } else {
+      LazyColumn(
+          modifier =
+              Modifier.fillMaxWidth()
+                  .weight(1f)
+                  .border(
+                      width = Dimens.BorderWidth.thin,
+                      color = MaterialTheme.colorScheme.primary,
+                      shape = RoundedCornerShape(Dimens.CornerRadius.medium))
+                  .padding(Dimens.Padding.small)
+                  .testTag(PublicProfileScreenTestTags.COMMON_GROUPS_LIST),
+          verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
+            items(commonGroups) { group ->
+              GroupCard(
+                  group = group,
+                  onClick = { onGroupClick(group) },
+                  testTag = PublicProfileScreenTestTags.groupCardTag(group.id))
+            }
           }
-        }
+    }
   }
 }
 

@@ -30,6 +30,11 @@ private const val F_EVENTS_JOINED_COUNT = "eventsJoinedCount"
 private const val F_FOLLOWERS_COUNT = "followersCount"
 private const val F_FOLLOWING_COUNT = "followingCount"
 
+// Follow relationship fields
+private const val F_FOLLOW_ID = "id"
+private const val F_FOLLOWER_ID = "followerId"
+private const val F_FOLLOWED_ID = "followedId"
+
 /**
  * Firestore implementation of [ProfileRepository] that manages user profile data in Firebase
  * Firestore and profile photos in Firebase Storage.
@@ -265,9 +270,9 @@ class ProfileRepositoryFirestore(
     val followDoc = followsCollection.document()
     val follow =
         mapOf(
-            "id" to followDoc.id,
-            "followerId" to followerId,
-            "followedId" to followedId,
+            F_FOLLOW_ID to followDoc.id,
+            F_FOLLOWER_ID to followerId,
+            F_FOLLOWED_ID to followedId,
         )
     batch.set(followDoc, follow)
 
@@ -287,8 +292,8 @@ class ProfileRepositoryFirestore(
     // Find the follow relationship
     val snapshot =
         followsCollection
-            .whereEqualTo("followerId", followerId)
-            .whereEqualTo("followedId", followedId)
+            .whereEqualTo(F_FOLLOWER_ID, followerId)
+            .whereEqualTo(F_FOLLOWED_ID, followedId)
             .get()
             .await()
 
@@ -318,8 +323,8 @@ class ProfileRepositoryFirestore(
   override suspend fun isFollowing(followerId: String, followedId: String): Boolean {
     val snapshot =
         followsCollection
-            .whereEqualTo("followerId", followerId)
-            .whereEqualTo("followedId", followedId)
+            .whereEqualTo(F_FOLLOWER_ID, followerId)
+            .whereEqualTo(F_FOLLOWED_ID, followedId)
             .limit(1)
             .get()
             .await()
@@ -331,14 +336,14 @@ class ProfileRepositoryFirestore(
     // Get all follow relationships where this user is the follower
     val followsSnapshot =
         followsCollection
-            .whereEqualTo("followerId", userId)
+            .whereEqualTo(F_FOLLOWER_ID, userId)
             .orderBy(
                 FieldPath.documentId(), com.google.firebase.firestore.Query.Direction.DESCENDING)
             .limit(limit.toLong())
             .get()
             .await()
 
-    val followedIds = followsSnapshot.documents.mapNotNull { it.getString("followedId") }
+    val followedIds = followsSnapshot.documents.mapNotNull { it.getString(F_FOLLOWED_ID) }
 
     if (followedIds.isEmpty()) return emptyList()
 
@@ -354,14 +359,14 @@ class ProfileRepositoryFirestore(
     // Get all follow relationships where this user is being followed
     val followsSnapshot =
         followsCollection
-            .whereEqualTo("followedId", userId)
+            .whereEqualTo(F_FOLLOWED_ID, userId)
             .orderBy(
                 FieldPath.documentId(), com.google.firebase.firestore.Query.Direction.DESCENDING)
             .limit(limit.toLong())
             .get()
             .await()
 
-    val followerIds = followsSnapshot.documents.mapNotNull { it.getString("followerId") }
+    val followerIds = followsSnapshot.documents.mapNotNull { it.getString(F_FOLLOWER_ID) }
 
     if (followerIds.isEmpty()) return emptyList()
 
@@ -377,19 +382,19 @@ class ProfileRepositoryFirestore(
     // Get users that userId1 follows
     val user1Follows =
         followsCollection
-            .whereEqualTo("followerId", userId1)
+            .whereEqualTo(F_FOLLOWER_ID, userId1)
             .get()
             .await()
-            .mapNotNull { it.getString("followedId") }
+            .mapNotNull { it.getString(F_FOLLOWED_ID) }
             .toSet()
 
     // Get users that userId2 follows
     val user2Follows =
         followsCollection
-            .whereEqualTo("followerId", userId2)
+            .whereEqualTo(F_FOLLOWER_ID, userId2)
             .get()
             .await()
-            .mapNotNull { it.getString("followedId") }
+            .mapNotNull { it.getString(F_FOLLOWED_ID) }
             .toSet()
 
     // Find intersection

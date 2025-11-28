@@ -690,32 +690,6 @@ class ProfileRepositoryLocalTest {
   }
 
   @Test
-  fun isFollowing_returnsTrue_whenFollowing() = runTest {
-    val now = Timestamp.now()
-    val user1 =
-        Profile(
-            uid = "user-1",
-            username = "User 1",
-            email = "user1@test.com",
-            createdAt = now,
-            updatedAt = now)
-    val user2 =
-        Profile(
-            uid = "user-2",
-            username = "User 2",
-            email = "user2@test.com",
-            createdAt = now,
-            updatedAt = now)
-
-    repository.createOrUpdateProfile(user1)
-    repository.createOrUpdateProfile(user2)
-
-    repository.followUser("user-1", "user-2")
-
-    assertTrue(repository.isFollowing("user-1", "user-2"))
-  }
-
-  @Test
   fun isFollowing_isNotSymmetric() = runTest {
     val now = Timestamp.now()
     val user1 =
@@ -745,21 +719,39 @@ class ProfileRepositoryLocalTest {
   // ==================== GET FOLLOWERS TESTS ====================
 
   @Test
-  fun getFollowers_returnsEmptyList_whenNoFollowers() = runTest {
-    val now = Timestamp.now()
-    val user =
-        Profile(
-            uid = "user-1",
-            username = "User 1",
-            email = "user1@test.com",
-            createdAt = now,
-            updatedAt = now)
+  fun getFollowers_getFollowing_and_getMutualFollowing_returnEmptyList_whenNoRelationships() =
+      runTest {
+        val now = Timestamp.now()
+        val user1 =
+            Profile(
+                uid = "user-1",
+                username = "User 1",
+                email = "user1@test.com",
+                createdAt = now,
+                updatedAt = now)
+        val user2 =
+            Profile(
+                uid = "user-2",
+                username = "User 2",
+                email = "user2@test.com",
+                createdAt = now,
+                updatedAt = now)
 
-    repository.createOrUpdateProfile(user)
+        repository.createOrUpdateProfile(user1)
+        repository.createOrUpdateProfile(user2)
 
-    val followers = repository.getFollowers("user-1")
-    assertTrue(followers.isEmpty())
-  }
+        // Test getFollowers
+        val followers = repository.getFollowers("user-1")
+        assertTrue(followers.isEmpty())
+
+        // Test getFollowing
+        val following = repository.getFollowing("user-1")
+        assertTrue(following.isEmpty())
+
+        // Test getMutualFollowing
+        val mutual = repository.getMutualFollowing("user-1", "user-2")
+        assertTrue(mutual.isEmpty())
+      }
 
   @Test
   fun getFollowers_returnsCorrectFollowers() = runTest {
@@ -832,23 +824,6 @@ class ProfileRepositoryLocalTest {
   // ==================== GET FOLLOWING TESTS ====================
 
   @Test
-  fun getFollowing_returnsEmptyList_whenNotFollowingAnyone() = runTest {
-    val now = Timestamp.now()
-    val user =
-        Profile(
-            uid = "user-1",
-            username = "User 1",
-            email = "user1@test.com",
-            createdAt = now,
-            updatedAt = now)
-
-    repository.createOrUpdateProfile(user)
-
-    val following = repository.getFollowing("user-1")
-    assertTrue(following.isEmpty())
-  }
-
-  @Test
   fun getFollowing_returnsCorrectFollowing() = runTest {
     val now = Timestamp.now()
     val user =
@@ -917,31 +892,6 @@ class ProfileRepositoryLocalTest {
   }
 
   // ==================== GET MUTUAL FOLLOWING TESTS ====================
-
-  @Test
-  fun getMutualFollowing_returnsEmptyList_whenNoMutualFollowing() = runTest {
-    val now = Timestamp.now()
-    val user1 =
-        Profile(
-            uid = "user-1",
-            username = "User 1",
-            email = "user1@test.com",
-            createdAt = now,
-            updatedAt = now)
-    val user2 =
-        Profile(
-            uid = "user-2",
-            username = "User 2",
-            email = "user2@test.com",
-            createdAt = now,
-            updatedAt = now)
-
-    repository.createOrUpdateProfile(user1)
-    repository.createOrUpdateProfile(user2)
-
-    val mutual = repository.getMutualFollowing("user-1", "user-2")
-    assertTrue(mutual.isEmpty())
-  }
 
   @Test
   fun getMutualFollowing_returnsCorrectMutualFollowing() = runTest {

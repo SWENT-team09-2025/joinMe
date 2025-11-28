@@ -706,7 +706,7 @@ class ProfileRepositoryFirestoreTest {
   }
 
   @Test
-  fun `getFollowing returns empty list when user follows no one`() = runTest {
+  fun `getFollowing and getFollowers return empty list when no relationships exist`() = runTest {
     // Given
     setupFollowerMocks()
     val userId = "user1"
@@ -717,16 +717,19 @@ class ProfileRepositoryFirestoreTest {
     val mockOrderedQuery = mockk<Query>(relaxed = true)
     val mockLimitQuery = mockk<Query>(relaxed = true)
 
-    every { mockFollowsCollection.whereEqualTo("followerId", userId) } returns mockQuery
+    // Setup for both getFollowing and getFollowers queries
+    every { mockFollowsCollection.whereEqualTo(any<String>(), any()) } returns mockQuery
     every { mockQuery.orderBy(any<FieldPath>(), any()) } returns mockOrderedQuery
     every { mockOrderedQuery.limit(50L) } returns mockLimitQuery
     every { mockLimitQuery.get() } returns Tasks.forResult(mockFollowsSnapshot)
 
     // When
-    val result = repository.getFollowing(userId, 50)
+    val followingResult = repository.getFollowing(userId, 50)
+    val followersResult = repository.getFollowers(userId, 50)
 
     // Then
-    assertTrue(result.isEmpty())
+    assertTrue(followingResult.isEmpty())
+    assertTrue(followersResult.isEmpty())
   }
 
   @Test
@@ -784,30 +787,6 @@ class ProfileRepositoryFirestoreTest {
     // Then
     assertEquals(2, result.size)
     verify { mockFollowsCollection.whereEqualTo("followedId", userId) }
-  }
-
-  @Test
-  fun `getFollowers returns empty list when user has no followers`() = runTest {
-    // Given
-    setupFollowerMocks()
-    val userId = "user1"
-
-    val mockFollowsSnapshot = mockk<QuerySnapshot>(relaxed = true)
-    every { mockFollowsSnapshot.documents } returns emptyList()
-
-    val mockOrderedQuery = mockk<Query>(relaxed = true)
-    val mockLimitQuery = mockk<Query>(relaxed = true)
-
-    every { mockFollowsCollection.whereEqualTo("followedId", userId) } returns mockQuery
-    every { mockQuery.orderBy(any<FieldPath>(), any()) } returns mockOrderedQuery
-    every { mockOrderedQuery.limit(50L) } returns mockLimitQuery
-    every { mockLimitQuery.get() } returns Tasks.forResult(mockFollowsSnapshot)
-
-    // When
-    val result = repository.getFollowers(userId, 50)
-
-    // Then
-    assertTrue(result.isEmpty())
   }
 
   @Test
