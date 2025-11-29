@@ -75,7 +75,11 @@ interface ChatRepository {
    * @param messageId The unique identifier for the message that will contain this image.
    * @param imageUri The URI of the image to upload (from camera or gallery).
    * @return The Firebase Storage download URL for the uploaded image.
-   * @throws Exception if the upload fails.
+   * @throws Exception wrapping the underlying error, which may include:
+   *     - IOException for network failures or file access issues
+   *     - SecurityException for permission denials
+   *     - Storage quota exceeded errors
+   *     - Image processing failures (invalid format, corrupted file, etc.)
    */
   suspend fun uploadChatImage(
       context: Context,

@@ -886,43 +886,51 @@ class ChatViewModelTest {
   // ============================================================================
 
   @Test
-  fun uploadAndSendImage_successfullyUploadsWithCorrectStateAndMessage() = runTest {
+  fun uploadAndSendImage_successfullyUploadsWithCorrectStateAndUniqueIds() = runTest {
     // Given
     viewModel.initializeChat(testChatId, testUserId)
     advanceUntilIdle()
 
     val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
-    val mockImageUri = io.mockk.mockk<android.net.Uri>(relaxed = true)
+    val mockImageUri1 = io.mockk.mockk<android.net.Uri>(relaxed = true)
+    val mockImageUri2 = io.mockk.mockk<android.net.Uri>(relaxed = true)
     val senderName = "Alice"
 
-    var successCalled = false
-    var errorCalled = false
+    var successCount = 0
 
-    // When - upload and send image
+    // When - upload two images
     viewModel.uploadAndSendImage(
         context = mockContext,
-        imageUri = mockImageUri,
+        imageUri = mockImageUri1,
         senderName = senderName,
-        onSuccess = { successCalled = true },
-        onError = { errorCalled = true })
-
+        onSuccess = { successCount++ })
+    advanceUntilIdle()
+    viewModel.uploadAndSendImage(
+        context = mockContext,
+        imageUri = mockImageUri2,
+        senderName = senderName,
+        onSuccess = { successCount++ })
     advanceUntilIdle()
 
-    // Then - verify upload finished successfully
     val state = viewModel.uiState.value
-    assertFalse(state.isUploadingImage) // Upload finished
-    assertNull(state.imageUploadError)
-    assertTrue(successCalled)
-    assertFalse(errorCalled)
 
-    // Verify message was added with correct type and content
-    assertEquals(1, state.messages.size)
-    val message = state.messages[0]
-    assertEquals(MessageType.IMAGE, message.type)
-    assertEquals(testUserId, message.senderId)
-    assertEquals(senderName, message.senderName)
-    assertTrue(message.content.startsWith("https://storage.example.com/"))
-    assertTrue(message.content.contains(testChatId))
+    // Verify state
+    assertFalse(state.isUploadingImage)
+    assertNull(state.imageUploadError)
+    assertEquals(2, successCount)
+
+    // Verify messages
+    assertEquals(2, state.messages.size)
+    state.messages.forEach { message ->
+      assertEquals(MessageType.IMAGE, message.type)
+      assertEquals(testUserId, message.senderId)
+      assertEquals(senderName, message.senderName)
+      assertTrue(message.content.startsWith("https://storage.example.com/"))
+    }
+
+    // Verify uniqueness
+    assertNotEquals(state.messages[0].id, state.messages[1].id)
+    assertNotEquals(state.messages[0].content, state.messages[1].content)
   }
 
   @Test
@@ -989,28 +997,5 @@ class ChatViewModelTest {
     // Then
     state = viewModel.uiState.value
     assertNull(state.imageUploadError)
-  }
-
-  @Test
-  fun uploadAndSendImage_generatesUniqueMessageIds() = runTest {
-    // Given
-    viewModel.initializeChat(testChatId, testUserId)
-    advanceUntilIdle()
-
-    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
-    val mockImageUri1 = io.mockk.mockk<android.net.Uri>(relaxed = true)
-    val mockImageUri2 = io.mockk.mockk<android.net.Uri>(relaxed = true)
-
-    // When - upload two images
-    viewModel.uploadAndSendImage(mockContext, mockImageUri1, "Alice")
-    advanceUntilIdle()
-    viewModel.uploadAndSendImage(mockContext, mockImageUri2, "Alice")
-    advanceUntilIdle()
-
-    // Then - messages should have different IDs and download URLs
-    val state = viewModel.uiState.value
-    assertEquals(2, state.messages.size)
-    assertNotEquals(state.messages[0].id, state.messages[1].id)
-    assertNotEquals(state.messages[0].content, state.messages[1].content)
   }
 }

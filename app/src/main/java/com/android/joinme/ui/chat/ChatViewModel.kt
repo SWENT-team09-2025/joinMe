@@ -12,6 +12,7 @@ import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -297,6 +298,10 @@ class ChatViewModel(
    * 2. Creates a message with type IMAGE and the download URL
    * 3. Adds the message to the chat
    *
+   * Error handling: Errors are communicated via the onError callback. The UI state's
+   * imageUploadError field is updated as well for observability, but the primary error notification
+   * mechanism is the onError callback.
+   *
    * @param context Android context for accessing content resolver.
    * @param imageUri The URI of the image to upload (from camera or gallery).
    * @param senderName The name of the user sending the image.
@@ -313,9 +318,11 @@ class ChatViewModel(
     viewModelScope.launch {
       try {
         _uiState.value = _uiState.value.copy(isUploadingImage = true, imageUploadError = null)
-        Log.d(TAG, "Starting image upload for conversation: $currentConversationId")
 
-        // Generate message ID first
+        // Generate message ID first (before upload).
+        // Note: If upload fails, this ID won't be used, which is acceptable.
+        // Firebase push keys are infinite and cheap, but gaps in sequences may occur during
+        // debugging.
         val messageId = chatRepository.getNewMessageId()
 
         // Upload image with timeout
@@ -323,8 +330,6 @@ class ChatViewModel(
             withTimeout(IMAGE_UPLOAD_TIMEOUT_MS) {
               chatRepository.uploadChatImage(context, currentConversationId, messageId, imageUri)
             }
-
-        Log.d(TAG, "Image uploaded successfully, creating message")
 
         // Create and send the image message
         val message =
@@ -338,10 +343,9 @@ class ChatViewModel(
                 type = MessageType.IMAGE)
 
         chatRepository.addMessage(message)
-        Log.d(TAG, "Image message sent successfully")
 
         onSuccess()
-      } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+      } catch (e: TimeoutCancellationException) {
         val errorMsg = "Image upload timeout. Please check your connection and try again."
         Log.e(TAG, errorMsg, e)
         _uiState.value = _uiState.value.copy(imageUploadError = errorMsg)

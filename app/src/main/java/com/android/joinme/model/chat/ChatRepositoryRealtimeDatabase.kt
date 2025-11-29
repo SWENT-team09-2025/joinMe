@@ -44,13 +44,15 @@ import kotlinx.coroutines.tasks.await
  */
 class ChatRepositoryRealtimeDatabase(
     database: FirebaseDatabase,
-    private val storage: FirebaseStorage = FirebaseStorage.getInstance()
+    private val storage: FirebaseStorage,
+    private val imageProcessor: (Context) -> ImageProcessor = { ImageProcessor(it) }
 ) : ChatRepository {
 
   companion object {
     private const val TAG = "ChatRepositoryRTDB"
     private const val CONVERSATIONS_PATH = "conversations"
     private const val MESSAGES_PATH = "messages"
+    private const val IMAGES_PATH = "images"
 
     // Message field names
     private const val FIELD_SENDER_ID = "senderId"
@@ -155,26 +157,21 @@ class ChatRepositoryRealtimeDatabase(
       imageUri: Uri
   ): String {
     try {
-      Log.d(TAG, "Uploading chat image: conversationId=$conversationId, messageId=$messageId")
-
       // Process the image (compress, orient, resize)
-      val imageProcessor = ImageProcessor(context)
-      val processedImageBytes = imageProcessor.processImage(imageUri)
+      val processedImageBytes = imageProcessor(context).processImage(imageUri)
 
       // Upload to Firebase Storage: conversations/{conversationId}/images/{messageId}.jpg
       val storageRef =
           storage.reference
               .child(CONVERSATIONS_PATH)
               .child(conversationId)
-              .child("images")
+              .child(IMAGES_PATH)
               .child("$messageId.jpg")
 
-      val uploadTask = storageRef.putBytes(processedImageBytes).await()
-      Log.d(TAG, "Image uploaded successfully, getting download URL")
+      storageRef.putBytes(processedImageBytes).await()
 
       // Get the download URL
       val downloadUrl = storageRef.downloadUrl.await().toString()
-      Log.d(TAG, "Chat image uploaded successfully: $downloadUrl")
 
       return downloadUrl
     } catch (e: Exception) {
