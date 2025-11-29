@@ -175,6 +175,7 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
       val eventIds = document.get("eventIds") as? List<String> ?: emptyList()
       val ownerId = document.getString("ownerId") ?: return null
       val lastEventEndTime = document.getTimestamp("lastEventEndTime") ?: date
+      val groupId = document.getString("groupId")
 
       Serie(
           serieId = serieId,
@@ -186,7 +187,8 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
           visibility = Visibility.valueOf(visibilityString),
           eventIds = eventIds,
           ownerId = ownerId,
-          lastEventEndTime = lastEventEndTime)
+          lastEventEndTime = lastEventEndTime,
+          groupId = groupId)
     } catch (e: Exception) {
       null
     }

@@ -128,28 +128,40 @@ class CreateSerieViewModel(
     }
   }
 
-  /** Updates the selected group for the serie. Pass null for standalone series. */
+  /**
+   * Updates the selected group for the serie. Pass null for standalone series.
+   *
+   * Deletes any previously created serie since changing the group requires creating a new serie.
+   */
   fun setSelectedGroup(groupId: String?) {
-    val selectedGroup = groupId?.let { id -> _uiState.value.availableGroups.find { it.id == id } }
+    // Delete any existing serie before changing the group
+    viewModelScope.launch {
+      deleteCreatedSerieIfExists()
 
-    if (selectedGroup != null) {
-      // For group series, auto-set maxParticipants and visibility
-      _uiState.value =
-          _uiState.value.copy(
-              selectedGroupId = groupId,
-              maxParticipants = DEFAULT_GROUP_SERIE_MAX_PARTICIPANTS.toString(),
-              visibility = Visibility.PRIVATE.name,
-              invalidMaxParticipantsMsg = null,
-              invalidVisibilityMsg = null)
-    } else {
-      // For standalone series, clear the fields
-      _uiState.value =
-          _uiState.value.copy(
-              selectedGroupId = null,
-              maxParticipants = "",
-              visibility = "",
-              invalidMaxParticipantsMsg = null,
-              invalidVisibilityMsg = null)
+      // Update state after deletion to ensure createdSerieId is available during deletion
+      val selectedGroup = groupId?.let { id -> _uiState.value.availableGroups.find { it.id == id } }
+
+      if (selectedGroup != null) {
+        // For group series, auto-set maxParticipants and visibility
+        _uiState.value =
+            _uiState.value.copy(
+                selectedGroupId = groupId,
+                maxParticipants = DEFAULT_GROUP_SERIE_MAX_PARTICIPANTS.toString(),
+                visibility = Visibility.PRIVATE.name,
+                invalidMaxParticipantsMsg = null,
+                invalidVisibilityMsg = null,
+                createdSerieId = null) // Clear any existing serie
+      } else {
+        // For standalone series, clear the fields
+        _uiState.value =
+            _uiState.value.copy(
+                selectedGroupId = null,
+                maxParticipants = "",
+                visibility = "",
+                invalidMaxParticipantsMsg = null,
+                invalidVisibilityMsg = null,
+                createdSerieId = null) // Clear any existing serie
+      }
     }
   }
 

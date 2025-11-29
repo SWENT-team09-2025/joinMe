@@ -43,6 +43,9 @@ fun CreateEventForSerieScreen(
   val errorMsg = uiState.errorMsg
   val context = LocalContext.current
 
+  // Load serie information when screen is displayed
+  LaunchedEffect(serieId) { createEventForSerieViewModel.loadSerie(serieId) }
+
   LaunchedEffect(errorMsg) {
     if (errorMsg != null) {
       Toast.makeText(context, errorMsg, Toast.LENGTH_SHORT).show()

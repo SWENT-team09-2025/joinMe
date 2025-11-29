@@ -691,6 +691,20 @@ class ChatScreenTest {
     ): String = ""
 
     override suspend fun deleteProfilePhoto(uid: String) {}
+
+    // Stub implementations for follow methods
+    override suspend fun followUser(followerId: String, followedId: String) {}
+
+    override suspend fun unfollowUser(followerId: String, followedId: String) {}
+
+    override suspend fun isFollowing(followerId: String, followedId: String): Boolean = false
+
+    override suspend fun getFollowing(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getFollowers(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getMutualFollowing(userId1: String, userId2: String): List<Profile> =
+        emptyList()
   }
 
   private class FakeChatRepository : ChatRepository {

@@ -123,6 +123,20 @@ class PublicProfileScreenTest {
     override suspend fun deleteProfilePhoto(uid: String) {}
 
     override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? = null
+
+    // Stub implementations for follow methods - not used in PublicProfileScreen tests
+    override suspend fun followUser(followerId: String, followedId: String) {}
+
+    override suspend fun unfollowUser(followerId: String, followedId: String) {}
+
+    override suspend fun isFollowing(followerId: String, followedId: String): Boolean = false
+
+    override suspend fun getFollowing(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getFollowers(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getMutualFollowing(userId1: String, userId2: String): List<Profile> =
+        emptyList()
   }
 
   private class FakeEventsRepository(private val events: List<Event> = emptyList()) :

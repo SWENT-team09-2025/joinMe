@@ -15,11 +15,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.viewinterop.AndroidView
+import com.android.joinme.model.groups.Group
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
 import com.android.joinme.ui.theme.outlinedTextField
 import java.util.*
+
+/** Note: This file was co-written with AI (Claude). */
 
 /** Data class representing the test tags for serie form fields. */
 data class SerieFormTestTags(
@@ -115,6 +118,10 @@ fun createSerieFormState(uiState: EditSerieUIState): SerieFormState {
  * @param title The title to display in the top bar
  * @param formState The current state of the form
  * @param testTags Test tags for UI testing
+ * @param selectedGroupId The ID of the selected group (null for standalone series)
+ * @param availableGroups List of available groups to select from
+ * @param groupTestTag Test tag for the group dropdown
+ * @param onGroupChange Callback when group selection changes (null for no group)
  * @param onTitleChange Callback when title changes
  * @param onDescriptionChange Callback when description changes
  * @param onMaxParticipantsChange Callback when max participants changes
@@ -132,6 +139,10 @@ fun SerieFormScreen(
     title: String,
     formState: SerieFormState,
     testTags: SerieFormTestTags,
+    selectedGroupId: String? = null,
+    availableGroups: List<Group> = emptyList(),
+    groupTestTag: String = "",
+    onGroupChange: ((String?) -> Unit)? = null,
     onTitleChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onMaxParticipantsChange: (String) -> Unit,
@@ -166,6 +177,72 @@ fun SerieFormScreen(
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(Dimens.Padding.medium)) {
               Spacer(modifier = Modifier.height(Dimens.Padding.small))
+
+              // Group dropdown (only show if onGroupChange is provided)
+              if (onGroupChange != null) {
+                var expandedGroup by remember { mutableStateOf(false) }
+                val selectedGroupName =
+                    if (selectedGroupId == null) "None (Standalone)"
+                    else availableGroups.find { it.id == selectedGroupId }?.name ?: "Unknown Group"
+
+                ExposedDropdownMenuBox(
+                    expanded = expandedGroup,
+                    onExpandedChange = { expandedGroup = !expandedGroup }) {
+                      OutlinedTextField(
+                          value = selectedGroupName,
+                          onValueChange = {},
+                          readOnly = true,
+                          label = { Text("Group (Optional)") },
+                          trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedGroup)
+                          },
+                          modifier = Modifier.fillMaxWidth().menuAnchor().testTag(groupTestTag),
+                          colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors())
+
+                      ExposedDropdownMenu(
+                          expanded = expandedGroup,
+                          onDismissRequest = { expandedGroup = false },
+                          modifier =
+                              Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
+                            // "None" option for standalone series
+                            DropdownMenuItem(
+                                text = {
+                                  Text(
+                                      text = "None (Standalone)",
+                                      color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                      style = MaterialTheme.typography.headlineSmall)
+                                },
+                                onClick = {
+                                  onGroupChange(null)
+                                  expandedGroup = false
+                                },
+                                colors = MaterialTheme.customColors.dropdownMenu)
+
+                            // Group options (only show divider and groups if groups exist)
+                            if (availableGroups.isNotEmpty()) {
+                              HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+
+                              availableGroups.forEachIndexed { index, group ->
+                                DropdownMenuItem(
+                                    text = {
+                                      Text(
+                                          text = group.name,
+                                          color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                          style = MaterialTheme.typography.headlineSmall)
+                                    },
+                                    onClick = {
+                                      onGroupChange(group.id)
+                                      expandedGroup = false
+                                    },
+                                    colors = MaterialTheme.customColors.dropdownMenu)
+                                if (index < availableGroups.lastIndex) {
+                                  HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                                }
+                              }
+                            }
+                          }
+                    }
+              }
 
               // Title field
               OutlinedTextField(
@@ -204,71 +281,75 @@ fun SerieFormScreen(
                   },
                   maxLines = 4)
 
-              // Max Participants field with NumberPicker
-              var showMaxParticipantsPicker by remember { mutableStateOf(false) }
-              var tempParticipants by remember {
-                mutableIntStateOf(formState.maxParticipants.toIntOrNull() ?: 10)
-              }
+              // Max Participants field with NumberPicker (hidden when group is selected)
+              if (selectedGroupId == null) {
+                var showMaxParticipantsPicker by remember { mutableStateOf(false) }
+                var tempParticipants by remember {
+                  mutableIntStateOf(formState.maxParticipants.toIntOrNull() ?: 10)
+                }
 
-              Box(
-                  modifier =
-                      Modifier.width(Dimens.SerieForm.maxParticipantsField).clickable {
-                        showMaxParticipantsPicker = true
-                      }) {
-                    OutlinedTextField(
-                        value = formState.maxParticipants,
-                        onValueChange = {},
-                        readOnly = true,
-                        enabled = false,
-                        label = { Text("Max Participants") },
-                        placeholder = { Text("Select number") },
-                        modifier =
-                            Modifier.fillMaxWidth().testTag(testTags.inputSerieMaxParticipants),
-                        isError = formState.invalidMaxParticipantsMsg != null,
-                        supportingText = {
-                          if (formState.invalidMaxParticipantsMsg != null) {
-                            Text(
-                                text = formState.invalidMaxParticipantsMsg,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.testTag(testTags.errorMessage))
-                          }
-                        },
-                        colors = MaterialTheme.customColors.outlinedTextField(),
-                        singleLine = true)
-                  }
-
-              if (showMaxParticipantsPicker) {
-                AlertDialog(
-                    onDismissRequest = { showMaxParticipantsPicker = false },
-                    title = { Text("Select Max Participants") },
-                    text = {
-                      AndroidView(
-                          factory = { context ->
-                            NumberPicker(context).apply {
-                              minValue = 1
-                              maxValue = 100
-                              value = tempParticipants
-                              wrapSelectorWheel = true
-                              setOnValueChangedListener { _, _, newVal ->
-                                tempParticipants = newVal
-                              }
+                Box(
+                    modifier =
+                        Modifier.width(Dimens.SerieForm.maxParticipantsField).clickable {
+                          showMaxParticipantsPicker = true
+                        }) {
+                      OutlinedTextField(
+                          value = formState.maxParticipants,
+                          onValueChange = {},
+                          readOnly = true,
+                          enabled = false,
+                          label = { Text("Max Participants") },
+                          placeholder = { Text("Select number") },
+                          modifier =
+                              Modifier.fillMaxWidth().testTag(testTags.inputSerieMaxParticipants),
+                          isError = formState.invalidMaxParticipantsMsg != null,
+                          supportingText = {
+                            if (formState.invalidMaxParticipantsMsg != null) {
+                              Text(
+                                  text = formState.invalidMaxParticipantsMsg,
+                                  color = MaterialTheme.colorScheme.error,
+                                  modifier = Modifier.testTag(testTags.errorMessage))
                             }
                           },
-                          update = { picker -> picker.value = tempParticipants },
-                          modifier = Modifier.fillMaxWidth())
-                    },
-                    confirmButton = {
-                      TextButton(
-                          onClick = {
-                            onMaxParticipantsChange(tempParticipants.toString())
-                            showMaxParticipantsPicker = false
-                          }) {
-                            Text("OK")
-                          }
-                    },
-                    dismissButton = {
-                      TextButton(onClick = { showMaxParticipantsPicker = false }) { Text("Cancel") }
-                    })
+                          colors = MaterialTheme.customColors.outlinedTextField(),
+                          singleLine = true)
+                    }
+
+                if (showMaxParticipantsPicker) {
+                  AlertDialog(
+                      onDismissRequest = { showMaxParticipantsPicker = false },
+                      title = { Text("Select Max Participants") },
+                      text = {
+                        AndroidView(
+                            factory = { context ->
+                              NumberPicker(context).apply {
+                                minValue = 1
+                                maxValue = 100
+                                value = tempParticipants
+                                wrapSelectorWheel = true
+                                setOnValueChangedListener { _, _, newVal ->
+                                  tempParticipants = newVal
+                                }
+                              }
+                            },
+                            update = { picker -> picker.value = tempParticipants },
+                            modifier = Modifier.fillMaxWidth())
+                      },
+                      confirmButton = {
+                        TextButton(
+                            onClick = {
+                              onMaxParticipantsChange(tempParticipants.toString())
+                              showMaxParticipantsPicker = false
+                            }) {
+                              Text("OK")
+                            }
+                      },
+                      dismissButton = {
+                        TextButton(onClick = { showMaxParticipantsPicker = false }) {
+                          Text("Cancel")
+                        }
+                      })
+                }
               }
 
               // Date and Time row
@@ -358,59 +439,62 @@ fun SerieFormScreen(
                     }
                   }
 
-              // Serie Visibility field with dropdown
-              val visibilityOptions = listOf("PUBLIC", "PRIVATE")
-              var expandedVisibility by remember { mutableStateOf(false) }
+              // Serie Visibility field with dropdown (hidden when group is selected)
+              if (selectedGroupId == null) {
+                val visibilityOptions = listOf("PUBLIC", "PRIVATE")
+                var expandedVisibility by remember { mutableStateOf(false) }
 
-              ExposedDropdownMenuBox(
-                  expanded = expandedVisibility,
-                  onExpandedChange = { expandedVisibility = !expandedVisibility }) {
-                    OutlinedTextField(
-                        value = formState.visibility,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Visibility") },
-                        trailingIcon = {
-                          ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedVisibility)
-                        },
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .menuAnchor()
-                                .testTag(testTags.inputSerieVisibility),
-                        isError = formState.invalidVisibilityMsg != null,
-                        supportingText = {
-                          if (formState.invalidVisibilityMsg != null) {
-                            Text(
-                                text = formState.invalidVisibilityMsg,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.testTag(testTags.errorMessage))
-                          }
-                        },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors())
+                ExposedDropdownMenuBox(
+                    expanded = expandedVisibility,
+                    onExpandedChange = { expandedVisibility = !expandedVisibility }) {
+                      OutlinedTextField(
+                          value = formState.visibility,
+                          onValueChange = {},
+                          readOnly = true,
+                          label = { Text("Visibility") },
+                          trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedVisibility)
+                          },
+                          modifier =
+                              Modifier.fillMaxWidth()
+                                  .menuAnchor()
+                                  .testTag(testTags.inputSerieVisibility),
+                          isError = formState.invalidVisibilityMsg != null,
+                          supportingText = {
+                            if (formState.invalidVisibilityMsg != null) {
+                              Text(
+                                  text = formState.invalidVisibilityMsg,
+                                  color = MaterialTheme.colorScheme.error,
+                                  modifier = Modifier.testTag(testTags.errorMessage))
+                            }
+                          },
+                          colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors())
 
-                    ExposedDropdownMenu(
-                        expanded = expandedVisibility,
-                        onDismissRequest = { expandedVisibility = false },
-                        modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
-                          visibilityOptions.forEachIndexed { index, option ->
-                            DropdownMenuItem(
-                                text = {
-                                  Text(
-                                      text = option,
-                                      color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                      style = MaterialTheme.typography.headlineSmall)
-                                },
-                                onClick = {
-                                  onVisibilityChange(option)
-                                  expandedVisibility = false
-                                },
-                                colors = MaterialTheme.customColors.dropdownMenu)
-                            if (index < visibilityOptions.lastIndex) {
-                              HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                      ExposedDropdownMenu(
+                          expanded = expandedVisibility,
+                          onDismissRequest = { expandedVisibility = false },
+                          modifier =
+                              Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
+                            visibilityOptions.forEachIndexed { index, option ->
+                              DropdownMenuItem(
+                                  text = {
+                                    Text(
+                                        text = option,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        style = MaterialTheme.typography.headlineSmall)
+                                  },
+                                  onClick = {
+                                    onVisibilityChange(option)
+                                    expandedVisibility = false
+                                  },
+                                  colors = MaterialTheme.customColors.dropdownMenu)
+                              if (index < visibilityOptions.lastIndex) {
+                                HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                              }
                             }
                           }
-                        }
-                  }
+                    }
+              }
 
               Spacer(modifier = Modifier.height(Dimens.Padding.medium))
 

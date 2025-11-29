@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** Note: This file was refactored using IA (Claude) */
+/** Note: This file was co-written with AI (Claude) */
 
 /** Milliseconds per second conversion factor */
 private const val MILLIS_PER_SECOND = 1000L
@@ -60,6 +60,29 @@ class CreateEventForSerieViewModel(
 
   override fun updateState(transform: (EventForSerieFormUIState) -> EventForSerieFormUIState) {
     _uiState.value = transform(_uiState.value) as EventForSerieFormState
+  }
+
+  /**
+   * Loads the serie information and updates the UI state.
+   *
+   * If the serie has a group, sets serieHasGroup to true and loads the group's event type.
+   *
+   * @param serieId The ID of the serie to load
+   */
+  suspend fun loadSerie(serieId: String) {
+    try {
+      val serie = serieRepository.getSerie(serieId)
+      if (serie.groupId != null) {
+        val eventType = determineEventTypeFromGroup(serie)
+        _uiState.value =
+            _uiState.value.copy(serieHasGroup = true, type = eventType.name, invalidTypeMsg = null)
+      } else {
+        _uiState.value = _uiState.value.copy(serieHasGroup = false)
+      }
+    } catch (e: Exception) {
+      android.util.Log.e("CreateEventForSerieVM", "Failed to load serie", e)
+      setErrorMsg("Failed to load serie: ${e.message}")
+    }
   }
 
   /**

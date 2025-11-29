@@ -108,6 +108,8 @@ class EventsRepositoryFirestoreTest {
     every { mockSnapshot.getString("ownerId") } returns testUserId
     every { mockSnapshot.get("location") } returns
         mapOf("latitude" to 46.52, "longitude" to 6.63, "name" to "EPFL Café")
+    every { mockSnapshot.getBoolean("partOfASerie") } returns false
+    every { mockSnapshot.getString("groupId") } returns "group123"
 
     // When
     val result = repository.getEvent(testEventId)
@@ -118,6 +120,8 @@ class EventsRepositoryFirestoreTest {
     assertEquals("Coffee Meetup", result.title)
     assertEquals(EventType.SOCIAL, result.type)
     assertEquals(testUserId, result.ownerId)
+    assertEquals(false, result.partOfASerie)
+    assertEquals("group123", result.groupId)
   }
 
   @Test
@@ -388,6 +392,8 @@ class EventsRepositoryFirestoreTest {
     every { mockSnapshot.getLong("maxParticipants") } returns null // Should default to 0
     every { mockSnapshot.getString("ownerId") } returns testUserId
     every { mockSnapshot.get("location") } returns null
+    every { mockSnapshot.getBoolean("partOfASerie") } returns null // Should default to false
+    every { mockSnapshot.getString("groupId") } returns null // Should default to null
 
     // When
     val result = repository.getEvent(testEventId)
@@ -400,6 +406,8 @@ class EventsRepositoryFirestoreTest {
     assertEquals(0, result.duration) // Default value
     assertEquals(emptyList<String>(), result.participants) // Default value
     assertEquals(0, result.maxParticipants) // Default value
+    assertEquals(false, result.partOfASerie) // Default value
+    assertEquals(null, result.groupId) // Default value
   }
 
   @Test

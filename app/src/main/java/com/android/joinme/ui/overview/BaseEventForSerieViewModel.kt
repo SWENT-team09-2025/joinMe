@@ -21,6 +21,7 @@ interface EventForSerieFormUIState {
   val selectedLocation: Location?
   val isLoading: Boolean
   val errorMsg: String?
+  val serieHasGroup: Boolean
   val invalidTypeMsg: String?
   val invalidTitleMsg: String?
   val invalidDescriptionMsg: String?
@@ -43,6 +44,7 @@ interface EventForSerieFormUIState {
  * @property selectedLocation The selected Location object
  * @property isLoading Indicates whether the event is currently being saved
  * @property errorMsg Global error message for the form
+ * @property serieHasGroup Indicates whether the serie is associated with a group
  * @property invalidTypeMsg Validation message for the type field
  * @property invalidTitleMsg Validation message for the title field
  * @property invalidDescriptionMsg Validation message for the description field
@@ -60,6 +62,7 @@ data class EventForSerieFormState(
     override val selectedLocation: Location? = null,
     override val isLoading: Boolean = false,
     override val errorMsg: String? = null,
+    override val serieHasGroup: Boolean = false,
 
     // validation messages
     override val invalidTypeMsg: String? = null,
@@ -71,6 +74,8 @@ data class EventForSerieFormState(
   /**
    * Checks if all form fields are valid and filled.
    *
+   * When serie has a group, type is auto-filled and doesn't need manual input.
+   *
    * @return True if all validation messages are null and all fields are not blank
    */
   val isValid: Boolean
@@ -80,7 +85,7 @@ data class EventForSerieFormState(
             invalidDescriptionMsg == null &&
             invalidDurationMsg == null &&
             invalidLocationMsg == null &&
-            type.isNotBlank() &&
+            (serieHasGroup || type.isNotBlank()) &&
             title.isNotBlank() &&
             description.isNotBlank() &&
             duration.isNotBlank() &&
