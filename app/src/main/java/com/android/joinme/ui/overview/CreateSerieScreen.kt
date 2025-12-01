@@ -6,6 +6,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 
+/** Note: this file was co-written with AI (Claude). */
+
 /**
  * Test tags for UI testing of the Create Serie screen components.
  *
@@ -30,6 +32,9 @@ object CreateSerieScreenTestTags {
 
   /** Test tag for the visibility dropdown field (PUBLIC/PRIVATE) */
   const val INPUT_SERIE_VISIBILITY = "inputSerieVisibility"
+
+  /** Test tag for the group dropdown field */
+  const val INPUT_SERIE_GROUP = "inputSerieGroup"
 
   /** Test tag for the save/next button */
   const val BUTTON_SAVE_SERIE = "buttonSaveSerie"
@@ -60,6 +65,9 @@ fun CreateSerieScreen(
   val context = LocalContext.current
   val coroutineScope = rememberCoroutineScope()
 
+  // Load user groups when screen is displayed
+  LaunchedEffect(Unit) { createSerieViewModel.loadUserGroups() }
+
   LaunchedEffect(errorMsg) {
     if (errorMsg != null) {
       Toast.makeText(context, errorMsg, Toast.LENGTH_SHORT).show()
@@ -84,6 +92,10 @@ fun CreateSerieScreen(
       title = "Create Serie",
       formState = formState,
       testTags = testTags,
+      selectedGroupId = uiState.selectedGroupId,
+      availableGroups = uiState.availableGroups,
+      groupTestTag = CreateSerieScreenTestTags.INPUT_SERIE_GROUP,
+      onGroupChange = { createSerieViewModel.setSelectedGroup(it) },
       onTitleChange = { createSerieViewModel.setTitle(it) },
       onDescriptionChange = { createSerieViewModel.setDescription(it) },
       onMaxParticipantsChange = { createSerieViewModel.setMaxParticipants(it) },

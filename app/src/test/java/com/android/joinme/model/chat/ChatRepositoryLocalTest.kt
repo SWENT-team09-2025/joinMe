@@ -328,4 +328,27 @@ class ChatRepositoryLocalTest {
     Assert.assertEquals(MessageType.TEXT, message.type)
     Assert.assertEquals(false, message.isPinned)
   }
+
+  // ---------------- UPLOAD CHAT IMAGE ----------------
+
+  @Test
+  fun uploadChatImage_returnsMockUrlWithCorrectFormat() = runTest {
+    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
+    val mockImageUri = io.mockk.mockk<android.net.Uri>(relaxed = true)
+
+    val url1 = repo.uploadChatImage(mockContext, "conv1", "msg1", mockImageUri)
+    val url2 = repo.uploadChatImage(mockContext, "conv1", "msg2", mockImageUri)
+    val url3 = repo.uploadChatImage(mockContext, "conv2", "msg1", mockImageUri)
+
+    // Verify URL format
+    Assert.assertTrue(url1.startsWith("mock://chat-image/"))
+    Assert.assertTrue(url1.endsWith(".jpg"))
+
+    // Verify uniqueness and correct IDs embedded
+    Assert.assertNotEquals(url1, url2)
+    Assert.assertNotEquals(url1, url3)
+    Assert.assertTrue(url1.contains("conv1") && url1.contains("msg1"))
+    Assert.assertTrue(url2.contains("conv1") && url2.contains("msg2"))
+    Assert.assertTrue(url3.contains("conv2") && url3.contains("msg1"))
+  }
 }

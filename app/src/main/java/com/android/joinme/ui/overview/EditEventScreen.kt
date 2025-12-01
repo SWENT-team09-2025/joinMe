@@ -89,6 +89,8 @@ fun EditEventScreen(
       title = "Edit Event",
       formState = formState,
       testTags = testTags,
+      isGroupEvent =
+          eventUIState.isGroupEvent, // Hide type, maxParticipants, visibility for group events
       onTypeChange = { editEventViewModel.setType(it) },
       onTitleChange = { editEventViewModel.setTitle(it) },
       onDescriptionChange = { editEventViewModel.setDescription(it) },

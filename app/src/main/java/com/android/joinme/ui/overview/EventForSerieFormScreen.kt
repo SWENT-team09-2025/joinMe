@@ -8,8 +8,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import com.android.joinme.model.map.Location
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
@@ -117,13 +119,30 @@ fun EventForSerieFormScreen(
                     .padding(Dimens.Padding.medium)
                     .padding(paddingValues),
             verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
-              // Type dropdown
-              EventTypeField(
-                  value = formState.type,
-                  onValueChange = onTypeChange,
-                  isError = formState.invalidTypeMsg != null,
-                  errorMessage = formState.invalidTypeMsg,
-                  testTag = testTags.inputEventType)
+              // Type field - show text if serie has a group, dropdown otherwise
+              if (formState.serieHasGroup) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                      Text(
+                          text = "Event Type (from Group)",
+                          style = MaterialTheme.typography.labelMedium,
+                          color = MaterialTheme.colorScheme.onSurfaceVariant)
+                      Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
+                      Text(
+                          text = formState.type,
+                          style =
+                              MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                          modifier = Modifier.testTag(testTags.inputEventType))
+                    }
+              } else {
+                EventTypeField(
+                    value = formState.type,
+                    onValueChange = onTypeChange,
+                    isError = formState.invalidTypeMsg != null,
+                    errorMessage = formState.invalidTypeMsg,
+                    testTag = testTags.inputEventType)
+              }
 
               // Title
               EventTitleField(

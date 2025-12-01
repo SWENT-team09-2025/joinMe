@@ -18,6 +18,7 @@ import kotlinx.coroutines.withContext
 class ProfileRepositoryLocal : ProfileRepository {
 
   private val profiles = mutableMapOf<String, Profile>()
+  private val follows = mutableListOf<Follow>()
 
   init {
     // Add a default test user profile
@@ -112,4 +113,80 @@ class ProfileRepositoryLocal : ProfileRepository {
         }
         profiles[uid] = current.copy(photoUrl = null, updatedAt = Timestamp.now())
       }
+
+  override suspend fun followUser(followerId: String, followedId: String) {
+    if (followerId == followedId) {
+      throw Exception("Cannot follow yourself")
+    }
+
+    if (isFollowing(followerId, followedId)) {
+      throw Exception("Already following this user")
+    }
+
+    // Create follow relationship
+    follows.add(
+        Follow(id = "follow-${follows.size}", followerId = followerId, followedId = followedId))
+
+    // Update counts
+    updateFollowCounts(followerId, followedId, increment = true)
+  }
+
+  override suspend fun unfollowUser(followerId: String, followedId: String) {
+    val follow =
+        follows.find { it.followerId == followerId && it.followedId == followedId }
+            ?: throw Exception("Not currently following this user")
+
+    follows.remove(follow)
+
+    // Update counts
+    updateFollowCounts(followerId, followedId, increment = false)
+  }
+
+  private fun updateFollowCounts(followerId: String, followedId: String, increment: Boolean) {
+    val delta = if (increment) 1 else -1
+
+    profiles[followerId]?.let { follower ->
+      profiles[followerId] = follower.copy(followingCount = follower.followingCount + delta)
+    }
+
+    profiles[followedId]?.let { followed ->
+      profiles[followedId] = followed.copy(followersCount = followed.followersCount + delta)
+    }
+  }
+
+  override suspend fun isFollowing(followerId: String, followedId: String): Boolean {
+    return follows.any { it.followerId == followerId && it.followedId == followedId }
+  }
+
+  override suspend fun getFollowing(userId: String, limit: Int): List<Profile> {
+    val followedIds =
+        follows
+            .filter { it.followerId == userId }
+            .sortedByDescending { it.id }
+            .take(limit)
+            .map { it.followedId }
+
+    return profiles.values.filter { it.uid in followedIds }
+  }
+
+  override suspend fun getFollowers(userId: String, limit: Int): List<Profile> {
+    val followerIds =
+        follows
+            .filter { it.followedId == userId }
+            .sortedByDescending { it.id }
+            .take(limit)
+            .map { it.followerId }
+
+    return profiles.values.filter { it.uid in followerIds }
+  }
+
+  override suspend fun getMutualFollowing(userId1: String, userId2: String): List<Profile> {
+    val user1Follows = follows.filter { it.followerId == userId1 }.map { it.followedId }.toSet()
+
+    val user2Follows = follows.filter { it.followerId == userId2 }.map { it.followedId }.toSet()
+
+    val mutualIds = user1Follows.intersect(user2Follows)
+
+    return profiles.values.filter { it.uid in mutualIds }
+  }
 }

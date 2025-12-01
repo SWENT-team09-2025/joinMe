@@ -2,12 +2,16 @@ package com.android.joinme.model.chat
 
 // Implemented with help of Claude AI
 
+import android.content.Context
+import android.net.Uri
 import android.util.Log
+import com.android.joinme.model.utils.ImageProcessor
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -34,13 +38,21 @@ import kotlinx.coroutines.tasks.await
  *
  * This provides real-time synchronization where all clients receive updates instantly when messages
  * are added, edited, or deleted.
+ *
+ * Chat images are stored in Firebase Storage at:
+ * `conversations/{conversationId}/images/{messageId}.jpg`
  */
-class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : ChatRepository {
+class ChatRepositoryRealtimeDatabase(
+    database: FirebaseDatabase,
+    private val storage: FirebaseStorage,
+    private val imageProcessor: (Context) -> ImageProcessor = { ImageProcessor(it) }
+) : ChatRepository {
 
   companion object {
     private const val TAG = "ChatRepositoryRTDB"
     private const val CONVERSATIONS_PATH = "conversations"
     private const val MESSAGES_PATH = "messages"
+    private const val IMAGES_PATH = "images"
 
     // Message field names
     private const val FIELD_SENDER_ID = "senderId"
@@ -135,6 +147,36 @@ class ChatRepositoryRealtimeDatabase(private val database: FirebaseDatabase) : C
     if (!currentReadBy.contains(userId)) {
       val updatedReadBy = currentReadBy + userId
       messageRef.child(FIELD_READ_BY).setValue(updatedReadBy).await()
+    }
+  }
+
+  override suspend fun uploadChatImage(
+      context: Context,
+      conversationId: String,
+      messageId: String,
+      imageUri: Uri
+  ): String {
+    try {
+      // Process the image (compress, orient, resize)
+      val processedImageBytes = imageProcessor(context).processImage(imageUri)
+
+      // Upload to Firebase Storage: conversations/{conversationId}/images/{messageId}.jpg
+      val storageRef =
+          storage.reference
+              .child(CONVERSATIONS_PATH)
+              .child(conversationId)
+              .child(IMAGES_PATH)
+              .child("$messageId.jpg")
+
+      storageRef.putBytes(processedImageBytes).await()
+
+      // Get the download URL
+      val downloadUrl = storageRef.downloadUrl.await().toString()
+
+      return downloadUrl
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to upload chat image", e)
+      throw e
     }
   }
 

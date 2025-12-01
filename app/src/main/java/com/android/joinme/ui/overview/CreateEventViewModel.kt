@@ -174,7 +174,8 @@ class CreateEventViewModel(
             maxParticipants = state.maxParticipants.toInt(),
             visibility = EventVisibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
             ownerId = ownerId,
-            groupId = state.selectedGroupId)
+            partOfASerie = false,
+            groupId = state.selectedGroupId) // Set groupId to track group membership
 
     // Fetch owner profile first to validate it exists
     val ownerProfile =

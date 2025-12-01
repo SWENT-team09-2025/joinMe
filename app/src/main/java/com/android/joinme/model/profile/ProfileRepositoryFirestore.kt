@@ -6,6 +6,7 @@ import android.util.Log
 import com.android.joinme.model.utils.ImageProcessor
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -13,6 +14,7 @@ import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
 
 const val PROFILES_COLLECTION_PATH = "profiles"
+const val FOLLOWS_COLLECTION_PATH = "follows"
 
 private const val F_USERNAME = "username"
 private const val F_EMAIL = "email"
@@ -25,6 +27,13 @@ private const val F_CREATED_AT = "createdAt"
 private const val F_UPDATED_AT = "updatedAt"
 private const val F_FCM_TOKEN = "fcmToken"
 private const val F_EVENTS_JOINED_COUNT = "eventsJoinedCount"
+private const val F_FOLLOWERS_COUNT = "followersCount"
+private const val F_FOLLOWING_COUNT = "followingCount"
+
+// Follow relationship fields
+private const val F_FOLLOW_ID = "id"
+private const val F_FOLLOWER_ID = "followerId"
+private const val F_FOLLOWED_ID = "followedId"
 
 /**
  * Firestore implementation of [ProfileRepository] that manages user profile data in Firebase
@@ -39,10 +48,13 @@ private const val F_EVENTS_JOINED_COUNT = "eventsJoinedCount"
  * @param db The Firestore database instance.
  * @param storage The Firebase Storage instance for photo uploads.
  */
-class ProfileRepositoryFirestore(db: FirebaseFirestore, private val storage: FirebaseStorage) :
-    ProfileRepository {
+class ProfileRepositoryFirestore(
+    private val db: FirebaseFirestore,
+    private val storage: FirebaseStorage
+) : ProfileRepository {
 
   private val profilesCollection = db.collection(PROFILES_COLLECTION_PATH)
+  private val followsCollection = db.collection(FOLLOWS_COLLECTION_PATH)
 
   companion object {
     private const val TAG = "ProfileRepositoryFirestore"
@@ -217,6 +229,8 @@ class ProfileRepositoryFirestore(db: FirebaseFirestore, private val storage: Fir
 
       // Counters
       val eventsJoinedCount = document.getLong(F_EVENTS_JOINED_COUNT)?.toInt() ?: 0
+      val followersCount = document.getLong(F_FOLLOWERS_COUNT)?.toInt() ?: 0
+      val followingCount = document.getLong(F_FOLLOWING_COUNT)?.toInt() ?: 0
 
       return Profile(
           uid = document.id,
@@ -230,10 +244,169 @@ class ProfileRepositoryFirestore(db: FirebaseFirestore, private val storage: Fir
           createdAt = createdAt,
           updatedAt = updatedAt,
           fcmToken = fcmToken,
-          eventsJoinedCount = eventsJoinedCount)
+          eventsJoinedCount = eventsJoinedCount,
+          followersCount = followersCount,
+          followingCount = followingCount)
     } catch (e: Exception) {
       Log.e(TAG, "Error converting document to Profile", e)
       null
+    }
+  }
+
+  override suspend fun followUser(followerId: String, followedId: String) {
+    if (followerId == followedId) {
+      throw Exception("Cannot follow yourself")
+    }
+
+    // Check if already following
+    if (isFollowing(followerId, followedId)) {
+      throw Exception("Already following this user")
+    }
+
+    // Use a batch write for atomic operation
+    val batch = db.batch()
+
+    // 1. Create the follow relationship
+    val followDoc = followsCollection.document()
+    val follow =
+        mapOf(
+            F_FOLLOW_ID to followDoc.id,
+            F_FOLLOWER_ID to followerId,
+            F_FOLLOWED_ID to followedId,
+        )
+    batch.set(followDoc, follow)
+
+    // 2. Increment follower's following count
+    val followerRef = profilesCollection.document(followerId)
+    batch.update(followerRef, F_FOLLOWING_COUNT, FieldValue.increment(1))
+
+    // 3. Increment followed user's followers count
+    val followedRef = profilesCollection.document(followedId)
+    batch.update(followedRef, F_FOLLOWERS_COUNT, FieldValue.increment(1))
+
+    // Commit all changes atomically
+    batch.commit().await()
+  }
+
+  override suspend fun unfollowUser(followerId: String, followedId: String) {
+    // Find the follow relationship
+    val snapshot =
+        followsCollection
+            .whereEqualTo(F_FOLLOWER_ID, followerId)
+            .whereEqualTo(F_FOLLOWED_ID, followedId)
+            .get()
+            .await()
+
+    if (snapshot.isEmpty) {
+      throw Exception("Not currently following this user")
+    }
+
+    // Use a batch write for atomic operation
+    val batch = db.batch()
+
+    // 1. Delete the follow relationship
+    val followDoc = snapshot.documents.first()
+    batch.delete(followDoc.reference)
+
+    // 2. Decrement follower's following count
+    val followerRef = profilesCollection.document(followerId)
+    batch.update(followerRef, F_FOLLOWING_COUNT, FieldValue.increment(-1))
+
+    // 3. Decrement followed user's followers count
+    val followedRef = profilesCollection.document(followedId)
+    batch.update(followedRef, F_FOLLOWERS_COUNT, FieldValue.increment(-1))
+
+    // Commit all changes atomically
+    batch.commit().await()
+  }
+
+  override suspend fun isFollowing(followerId: String, followedId: String): Boolean {
+    val snapshot =
+        followsCollection
+            .whereEqualTo(F_FOLLOWER_ID, followerId)
+            .whereEqualTo(F_FOLLOWED_ID, followedId)
+            .limit(1)
+            .get()
+            .await()
+
+    return !snapshot.isEmpty
+  }
+
+  override suspend fun getFollowing(userId: String, limit: Int): List<Profile> {
+    // Get all follow relationships where this user is the follower
+    val followsSnapshot =
+        followsCollection
+            .whereEqualTo(F_FOLLOWER_ID, userId)
+            .orderBy(
+                FieldPath.documentId(), com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(limit.toLong())
+            .get()
+            .await()
+
+    val followedIds = followsSnapshot.documents.mapNotNull { it.getString(F_FOLLOWED_ID) }
+
+    if (followedIds.isEmpty()) return emptyList()
+
+    // Fetch profiles in batches (Firestore 'in' query limit is 10)
+    return followedIds.chunked(10).flatMap { chunk ->
+      profilesCollection.whereIn(FieldPath.documentId(), chunk).get().await().mapNotNull {
+        documentToProfile(it)
+      }
+    }
+  }
+
+  override suspend fun getFollowers(userId: String, limit: Int): List<Profile> {
+    // Get all follow relationships where this user is being followed
+    val followsSnapshot =
+        followsCollection
+            .whereEqualTo(F_FOLLOWED_ID, userId)
+            .orderBy(
+                FieldPath.documentId(), com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(limit.toLong())
+            .get()
+            .await()
+
+    val followerIds = followsSnapshot.documents.mapNotNull { it.getString(F_FOLLOWER_ID) }
+
+    if (followerIds.isEmpty()) return emptyList()
+
+    // Fetch profiles in batches (Firestore 'in' query limit is 10)
+    return followerIds.chunked(10).flatMap { chunk ->
+      profilesCollection.whereIn(FieldPath.documentId(), chunk).get().await().mapNotNull {
+        documentToProfile(it)
+      }
+    }
+  }
+
+  override suspend fun getMutualFollowing(userId1: String, userId2: String): List<Profile> {
+    // Get users that userId1 follows
+    val user1Follows =
+        followsCollection
+            .whereEqualTo(F_FOLLOWER_ID, userId1)
+            .get()
+            .await()
+            .mapNotNull { it.getString(F_FOLLOWED_ID) }
+            .toSet()
+
+    // Get users that userId2 follows
+    val user2Follows =
+        followsCollection
+            .whereEqualTo(F_FOLLOWER_ID, userId2)
+            .get()
+            .await()
+            .mapNotNull { it.getString(F_FOLLOWED_ID) }
+            .toSet()
+
+    // Find intersection
+    val mutualIds = user1Follows.intersect(user2Follows).toList()
+
+    if (mutualIds.isEmpty()) return emptyList()
+
+    // Fetch profiles in batches
+    return mutualIds.chunked(10).flatMap { chunk ->
+      profilesCollection.whereIn(FieldPath.documentId(), chunk).get().await().mapNotNull {
+        documentToProfile(it)
+      }
     }
   }
 }

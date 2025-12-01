@@ -621,6 +621,11 @@ class CreateEventViewModelTest {
     Assert.assertTrue(result)
     Assert.assertEquals(1, repo.added.size)
 
+    // Verify event has null groupId for standalone events
+    val createdEvent = repo.added[0]
+    Assert.assertNull(createdEvent.groupId)
+    Assert.assertFalse(createdEvent.partOfASerie)
+
     // Verify profile was updated with incremented count
     verify(profileRepository)
         .createOrUpdateProfile(
@@ -702,6 +707,9 @@ class CreateEventViewModelTest {
     val createdEvent = repo.added[0]
     Assert.assertEquals(3, createdEvent.participants.size)
     Assert.assertTrue(createdEvent.participants.containsAll(listOf("user1", "user2", "user3")))
+
+    // Verify event has groupId set
+    Assert.assertEquals("group-1", createdEvent.groupId)
 
     // Verify group was updated with event ID
     val updatedGroup = groupRepo.getGroup("group-1")

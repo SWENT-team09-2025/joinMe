@@ -2,6 +2,8 @@ package com.android.joinme.model.chat
 
 // Implemented with help of Claude AI
 
+import android.content.Context
+import android.net.Uri
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -87,5 +89,15 @@ class ChatRepositoryLocal : ChatRepository {
         throw Exception(MESSAGE_NOT_FOUND)
       }
     }
+  }
+
+  override suspend fun uploadChatImage(
+      context: Context,
+      conversationId: String,
+      messageId: String,
+      imageUri: Uri
+  ): String {
+    // For local/testing implementation, return a mock URL
+    return "mock://chat-image/$conversationId/$messageId.jpg"
   }
 }
