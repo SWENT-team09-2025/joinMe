@@ -10,6 +10,7 @@ import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.model.utils.Visibility
+import com.google.firebase.Timestamp
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -169,170 +170,253 @@ class CreateSerieViewModel(
   /**
    * Creates a new serie and adds it to the repository.
    *
-   * This function performs the following steps:
-   * 1. Returns the existing serie ID if already created (prevents duplicates)
-   * 2. Validates that all form fields are valid
-   * 3. Checks that the user is authenticated (must be signed in)
-   * 4. Parses the date and time into a single Timestamp
-   * 5. Creates a Serie object with the current user as owner
-   * 6. Saves the serie to the repository
-   * 7. Stores the serie ID in state to prevent duplicate creation
-   * 8. Updates streaks for all group members if this is a group serie
+   * Orchestrates the creation process: validation, auth check, date parsing, group fetching, saving
+   * to repository, linking to group, and updating streaks.
    *
-   * The loading state is set to true at the start and false upon completion. If any error occurs
-   * during the process (validation failure, authentication check failure, date parsing error, or
-   * repository error), an appropriate error message is set and the function returns null.
-   *
-   * @return The serie ID if the serie was created successfully, null if validation failed, user is
-   *   not authenticated, date parsing failed, or repository save failed
+   * @return The serie ID if the serie was created successfully, null otherwise.
    */
   suspend fun createSerie(): String? {
-    val state = _uiState.value
-
-    // If serie was already created, return the existing ID
-    state.createdSerieId?.let {
+    // 1. Check existing
+    _uiState.value.createdSerieId?.let {
       return it
     }
 
-    if (!state.isValid) {
+    // 2. Validate Form
+    if (!_uiState.value.isValid) {
       setErrorMsg("At least one field is not valid")
       return null
     }
 
-    // Check if user is authenticated
-    val currentUserId = getCurrentUserId()
-    if (currentUserId == null) {
-      setErrorMsg("You must be signed in to create a serie")
-      return null
-    }
+    // 3. Auth Check
+    val userId = authenticateUserOrError() ?: return null
 
     setLoadingState(true)
 
-    val parsedDate = parseDateTime(state.date, state.time)
-    if (parsedDate == null) {
-      setErrorMsg("Invalid date format (must be dd/MM/yyyy HH:mm)")
-      setLoadingState(false)
-      return null
+    // 4. Parse Date
+    val parsedDate = parseDateOrError() ?: return stopLoadingAndReturn()
+
+    // 5. Fetch Group (if selected)
+    val groupResult = fetchGroupSafe()
+    if (groupResult.isFailure) return stopLoadingAndReturn()
+    val group = groupResult.getOrNull()
+
+    // 6. Build Object
+    val serie = buildSerie(userId, parsedDate, group)
+
+    // 7. Persist (Repo + Group Link)
+    if (!tryPersistSerie(serie, group)) {
+      return stopLoadingAndReturn()
     }
 
-    // Get group if selected
-    val selectedGroup =
-        state.selectedGroupId?.let { groupId ->
-          try {
-            groupRepository.getGroup(groupId)
-          } catch (e: Exception) {
-            setErrorMsg("Failed to get group: ${e.message}")
-            setLoadingState(false)
-            return null
-          }
-        }
-
-    val serieId = repository.getNewSerieId()
-    val serie =
-        Serie(
-            serieId = serieId,
-            title = state.title,
-            description = state.description,
-            date = parsedDate,
-            participants = selectedGroup?.memberIds ?: listOf(currentUserId),
-            maxParticipants = state.maxParticipants.toInt(),
-            visibility = Visibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
-            eventIds = emptyList(),
-            ownerId = currentUserId,
-            groupId = state.selectedGroupId)
-
-    return try {
-      // If a group is selected, add the serie ID to the group's serie list first
-      selectedGroup?.let { group ->
-        try {
-          val updatedGroup = group.copy(serieIds = group.serieIds + serieId)
-          groupRepository.editGroup(group.id, updatedGroup)
-        } catch (e: Exception) {
-          setErrorMsg("Failed to add serie to group: ${e.message}")
-          setLoadingState(false)
-          return null
-        }
-      }
-
-      // Only add the serie to the repository after successfully adding to the group
-      try {
-        repository.addSerie(serie)
-      } catch (e: Exception) {
-        // Roll back the group update if adding the serie fails
-        selectedGroup?.let { group ->
-          try {
-            val revertedGroup = group.copy(serieIds = group.serieIds - serieId)
-            groupRepository.editGroup(group.id, revertedGroup)
-          } catch (rollbackException: Exception) {
-            Log.e("CreateSerieViewModel", "Error rolling back group update", rollbackException)
-          }
-        }
-        throw e
-      }
-
-      // Update streaks for all participants if this is a group serie
-      if (state.selectedGroupId != null && selectedGroup != null) {
-        for (memberId in selectedGroup.memberIds) {
-          try {
-            StreakService.onActivityJoined(state.selectedGroupId, memberId, parsedDate)
-          } catch (e: Exception) {
-            Log.e("CreateSerieViewModel", "Error updating streak for user $memberId", e)
-            // Non-critical: don't fail serie creation if streak update fails
-          }
-        }
-      }
-
-      clearErrorMsg()
-      setLoadingState(false)
-      // Store the created serie ID to prevent duplicates
-      _uiState.value = _uiState.value.copy(createdSerieId = serieId)
-      serieId
-    } catch (e: Exception) {
-      setErrorMsg("Failed to create serie: ${e.message}")
-      setLoadingState(false)
-      null
+    // 8. Update Streaks (Non-critical)
+    if (group != null) {
+      updateStreaksSafe(group, parsedDate)
     }
+
+    onCreationSuccess(serie.serieId)
+    return serie.serieId
   }
 
   /**
    * Deletes the created serie if the user goes back without completing the flow.
    *
-   * This should be called when the user navigates back from CreateSerieScreen after creating a
-   * serie but before completing the event creation. If the serie was associated with a group, it
-   * also removes the serie ID from the group's serie list and reverts streaks for all participants.
+   * This is a cleanup operation that handles:
+   * 1. Removing the serie from the repository.
+   * 2. Removing the serie ID from the group (if applicable).
+   * 3. Reverting streaks (if applicable).
    */
   suspend fun deleteCreatedSerieIfExists() {
-    val serieId = _uiState.value.createdSerieId
+    val serieId = _uiState.value.createdSerieId ?: return
     val groupId = _uiState.value.selectedGroupId
-    if (serieId != null) {
-      try {
-        val serie = repository.getSerie(serieId)
-        // Only delete if the serie has no events
-        if (serie.eventIds.isEmpty()) {
-          repository.deleteSerie(serieId)
 
-          // Remove the serie from the group's serie list if it was associated with a group
-          if (groupId != null) {
-            try {
-              val group = groupRepository.getGroup(groupId)
-              val updatedGroup = group.copy(serieIds = group.serieIds - serieId)
-              groupRepository.editGroup(group.id, updatedGroup)
-            } catch (_: Exception) {
-              // Error removing serie from group, ignore
-            }
+    try {
+      val serie = repository.getSerie(serieId)
+      // Only delete if the serie has no events
+      if (serie.eventIds.isNotEmpty()) return
 
-            // Revert streaks for all participants
-            try {
-              StreakService.onActivityDeleted(groupId, serie.participants, serie.date)
-            } catch (e: Exception) {
-              Log.e("CreateSerieViewModel", "Error reverting streaks for deleted serie", e)
-              // Non-critical: serie is already deleted, just log the error
-            }
-          }
-        }
-      } catch (_: Exception) {
-        // Serie doesn't exist or error occurred, ignore
+      repository.deleteSerie(serieId)
+
+      if (groupId != null) {
+        cleanupGroupAssociations(groupId, serieId, serie.participants, serie.date)
       }
+    } catch (_: Exception) {
+      // Serie doesn't exist or error occurred, ignore
+    }
+  }
+
+  // region CreateSerie Helpers
+
+  /**
+   * Verifies that the user is currently signed in.
+   *
+   * Side effect: Sets the error message if the user is not authenticated.
+   *
+   * @return The current user's ID, or null if not authenticated.
+   */
+  private fun authenticateUserOrError(): String? {
+    val currentUserId = getCurrentUserId()
+    if (currentUserId == null) {
+      setErrorMsg("You must be signed in to create a serie")
+    }
+    return currentUserId
+  }
+
+  /**
+   * Parses the date and time strings from the UI state.
+   *
+   * Side effect: Sets the error message if parsing fails.
+   *
+   * @return A [Timestamp] object if successful, or null if the format is invalid.
+   */
+  private fun parseDateOrError(): Timestamp? {
+    val state = _uiState.value
+    val date = parseDateTime(state.date, state.time)
+    if (date == null) {
+      setErrorMsg("Invalid date format (must be dd/MM/yyyy HH:mm)")
+    }
+    return date
+  }
+
+  /**
+   * Helper to reset the loading state to false and return null. Used when a step in [createSerie]
+   * fails.
+   */
+  private fun stopLoadingAndReturn(): String? {
+    setLoadingState(false)
+    return null
+  }
+
+  /**
+   * Safely attempts to fetch the selected group.
+   *
+   * @return A [Result] containing the [Group] if found (or null if no group was selected), or a
+   *   Failure if a repository error occurred (error message is automatically set).
+   */
+  private suspend fun fetchGroupSafe(): Result<Group?> {
+    val groupId = _uiState.value.selectedGroupId ?: return Result.success(null)
+    return try {
+      Result.success(groupRepository.getGroup(groupId))
+    } catch (e: Exception) {
+      setErrorMsg("Failed to get group: ${e.message}")
+      Result.failure(e)
+    }
+  }
+
+  /** Constructs the [Serie] object based on the current form state and context. */
+  private fun buildSerie(userId: String, date: Timestamp, group: Group?): Serie {
+    val state = _uiState.value
+    val serieId = repository.getNewSerieId()
+    return Serie(
+        serieId = serieId,
+        title = state.title,
+        description = state.description,
+        date = date,
+        participants = group?.memberIds ?: listOf(userId),
+        maxParticipants = state.maxParticipants.toInt(),
+        visibility = Visibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
+        eventIds = emptyList(),
+        ownerId = userId,
+        groupId = state.selectedGroupId)
+  }
+
+  /**
+   * Persists the serie to the repository. If the serie is part of a group, it handles the
+   * distributed transaction:
+   * 1. Add serie ID to Group.
+   * 2. Save Serie to DB.
+   * 3. Rollback Group update if saving Serie fails.
+   *
+   * @return True if persistence was successful, False otherwise.
+   */
+  private suspend fun tryPersistSerie(serie: Serie, group: Group?): Boolean {
+    return try {
+      // 1. Add to Group first
+      if (group != null) {
+        try {
+          val updatedGroup = group.copy(serieIds = group.serieIds + serie.serieId)
+          groupRepository.editGroup(group.id, updatedGroup)
+        } catch (e: Exception) {
+          setErrorMsg("Failed to add serie to group: ${e.message}")
+          return false
+        }
+      }
+
+      // 2. Add to Repository
+      try {
+        repository.addSerie(serie)
+      } catch (e: Exception) {
+        // Rollback group if needed
+        if (group != null) {
+          rollbackGroupUpdate(group, serie.serieId)
+        }
+        throw e // Re-throw to be caught by outer catch for generic error msg
+      }
+      true
+    } catch (e: Exception) {
+      setErrorMsg("Failed to create serie: ${e.message}")
+      false
+    }
+  }
+
+  /**
+   * Reverts the modification made to the group (removing the serie ID) if the main serie
+   * persistence failed.
+   */
+  private suspend fun rollbackGroupUpdate(group: Group, serieId: String) {
+    try {
+      val revertedGroup = group.copy(serieIds = group.serieIds - serieId)
+      groupRepository.editGroup(group.id, revertedGroup)
+    } catch (rollbackException: Exception) {
+      Log.e("CreateSerieViewModel", "Error rolling back group update", rollbackException)
+    }
+  }
+
+  /** Updates streaks for all group members. Failures here are logged but do not block creation. */
+  private suspend fun updateStreaksSafe(group: Group, date: Timestamp) {
+    for (memberId in group.memberIds) {
+      try {
+        StreakService.onActivityJoined(group.id, memberId, date)
+      } catch (e: Exception) {
+        Log.e("CreateSerieViewModel", "Error updating streak for user $memberId", e)
+        // Non-critical
+      }
+    }
+  }
+
+  /**
+   * Finalizes the creation process by clearing errors, stopping loading, and updating the state
+   * with the new ID.
+   */
+  private fun onCreationSuccess(serieId: String) {
+    clearErrorMsg()
+    setLoadingState(false)
+    _uiState.value = _uiState.value.copy(createdSerieId = serieId)
+  }
+
+  // region DeleteSerie Helpers
+
+  /** Cleans up external associations (Group link, Streaks) when a created serie is deleted. */
+  private suspend fun cleanupGroupAssociations(
+      groupId: String,
+      serieId: String,
+      participants: List<String>,
+      date: Timestamp
+  ) {
+    // 1. Remove from group list
+    try {
+      val group = groupRepository.getGroup(groupId)
+      val updatedGroup = group.copy(serieIds = group.serieIds - serieId)
+      groupRepository.editGroup(group.id, updatedGroup)
+    } catch (_: Exception) {
+      // Error removing serie from group, ignore
+    }
+
+    // 2. Revert streaks
+    try {
+      StreakService.onActivityDeleted(groupId, participants, date)
+    } catch (e: Exception) {
+      Log.e("CreateSerieViewModel", "Error reverting streaks for deleted serie", e)
+      // Non-critical
     }
   }
 }
