@@ -110,15 +110,10 @@ class SerieDetailsViewModelTest {
       ownerId: String = "owner123",
       participants: List<String> = listOf("user1", "user2", "owner123"),
       maxParticipants: Int = 10,
-      eventIds: List<String> = listOf("event1", "event2"),
-      groupId: String? = null,
-      daysFromNow: Int = 7
+      eventIds: List<String> = listOf("event1", "event2")
   ): Serie {
     val calendar = Calendar.getInstance()
-    calendar.add(Calendar.DAY_OF_YEAR, daysFromNow)
-    calendar.set(Calendar.HOUR_OF_DAY, 18)
-    calendar.set(Calendar.MINUTE, 30)
-    calendar.set(Calendar.SECOND, 0)
+    calendar.set(2025, Calendar.JANUARY, 15, 18, 30, 0)
 
     return Serie(
         serieId = serieId,
@@ -129,8 +124,7 @@ class SerieDetailsViewModelTest {
         maxParticipants = maxParticipants,
         visibility = Visibility.PUBLIC,
         eventIds = eventIds,
-        ownerId = ownerId,
-        groupId = groupId)
+        ownerId = ownerId)
   }
 
   private fun createTestEvent(
@@ -170,6 +164,18 @@ class SerieDetailsViewModelTest {
     Dispatchers.resetMain()
   }
 
+  /** --- getTitle() test function --- */
+  @Test
+  fun getTitleReturnCorrectly() {
+    val serie = createTestSerie(title = "Hello World !")
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    assertEquals("Hello World !", state.getTitle())
+
+    val state2 = SerieDetailsUIState(serie = null, isLoading = false)
+    assertEquals("", state2.getTitle())
+  }
+
   /** --- INITIAL STATE TESTS --- */
   @Test
   fun viewModel_initialState_hasCorrectDefaults() {
@@ -180,9 +186,323 @@ class SerieDetailsViewModelTest {
     assertNull(state.errorMsg)
   }
 
+  /** --- SERIE DETAILS UI STATE COMPUTED PROPERTIES TESTS --- */
+  @Test
+  fun uiState_isOwner_returnsTrueWhenUserIsOwner() {
+    val serie = createTestSerie(ownerId = "user123")
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    assertTrue(state.isOwner("user123"))
+  }
+
+  @Test
+  fun uiState_isOwner_returnsFalseWhenUserIsNotOwner() {
+    val serie = createTestSerie(ownerId = "owner123")
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    assertFalse(state.isOwner("user456"))
+  }
+
+  @Test
+  fun uiState_isOwner_returnsFalseWhenCurrentUserIdIsNull() {
+    val serie = createTestSerie(ownerId = "owner123")
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    assertFalse(state.isOwner(null))
+  }
+
+  @Test
+  fun uiState_isOwner_returnsFalseWhenSerieIsNull() {
+    val state = SerieDetailsUIState(serie = null, isLoading = false)
+
+    assertFalse(state.isOwner("user123"))
+  }
+
+  @Test
+  fun uiState_isParticipant_returnsTrueWhenUserIsParticipant() {
+    val serie = createTestSerie(participants = listOf("user1", "user2", "user3"))
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    assertTrue(state.isParticipant("user2"))
+  }
+
+  @Test
+  fun uiState_isParticipant_returnsFalseWhenUserIsNotParticipant() {
+    val serie = createTestSerie(participants = listOf("user1", "user2"))
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    assertFalse(state.isParticipant("user3"))
+  }
+
+  @Test
+  fun uiState_isParticipant_returnsFalseWhenSerieIsNull() {
+    val state = SerieDetailsUIState(serie = null, isLoading = false)
+
+    assertFalse(state.isParticipant("user1"))
+  }
+
+  @Test
+  fun uiState_isParticipant_returnsFalseWhenCurrentUserIdIsNull() {
+    val serie = createTestSerie(participants = listOf("user1", "user2"))
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    assertFalse(state.isParticipant(null))
+  }
+
+  @Test
+  fun uiState_canJoin_returnsTrueWhenUserCanJoin() {
+    val serie =
+        createTestSerie(
+            ownerId = "owner123", participants = listOf("user1", "user2"), maxParticipants = 10)
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    assertTrue(state.canJoin("user3"))
+  }
+
+  @Test
+  fun uiState_canJoin_returnsFalseWhenUserIsOwner() {
+    val serie =
+        createTestSerie(ownerId = "owner123", participants = listOf("user1"), maxParticipants = 10)
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    assertFalse(state.canJoin("owner123"))
+  }
+
+  @Test
+  fun uiState_canJoin_returnsFalseWhenUserIsAlreadyParticipant() {
+    val serie =
+        createTestSerie(
+            ownerId = "owner123", participants = listOf("user1", "user2"), maxParticipants = 10)
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    assertFalse(state.canJoin("user1"))
+  }
+
+  @Test
+  fun uiState_canJoin_returnsFalseWhenSerieIsFull() {
+    val serie =
+        createTestSerie(
+            ownerId = "owner123", participants = listOf("user1", "user2"), maxParticipants = 2)
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    assertFalse(state.canJoin("user3"))
+  }
+
+  @Test
+  fun uiState_canJoin_returnsFalseWhenSerieIsNull() {
+    val state = SerieDetailsUIState(serie = null, isLoading = false)
+
+    assertFalse(state.canJoin("user1"))
+  }
+
+  @Test
+  fun uiState_formattedDateTime_returnsFormattedDate() {
+    val calendar = Calendar.getInstance()
+    calendar.set(2025, Calendar.JANUARY, 15, 18, 30, 0)
+    val serie = createTestSerie(serieId = "test-serie-1")
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    val formatted = state.formattedDateTime
+    assertTrue(formatted.contains("15/01/2025"))
+    assertTrue(formatted.contains("18:30"))
+  }
+
+  @Test
+  fun uiState_formattedDateTime_returnsEmptyWhenSerieIsNull() {
+    val state = SerieDetailsUIState(serie = null, isLoading = false)
+
+    assertEquals("", state.formattedDateTime)
+  }
+
+  @Test
+  fun uiState_formattedDuration_calculatesTotalDuration() {
+    val calendar = Calendar.getInstance()
+    val startDate = calendar.time
+    calendar.add(Calendar.MINUTE, 210) // 3.5 hours = 210 minutes
+    val endDate = calendar.time
+
+    val serie =
+        Serie(
+            serieId = "test-serie-1",
+            title = "Test Serie",
+            description = "Test",
+            date = Timestamp(startDate),
+            participants = listOf("user1", "user2"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1", "event2"),
+            ownerId = "owner123",
+            lastEventEndTime = Timestamp(endDate))
+
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    val formatted = state.formattedDuration
+    // Total: 210 minutes = 3h 30min
+    assertTrue(formatted.contains("3h") && formatted.contains("30min"))
+  }
+
+  @Test
+  fun uiState_formattedDuration_returnsZeroWhenSerieIsNull() {
+    val state = SerieDetailsUIState(serie = null, isLoading = false)
+
+    assertEquals("0min", state.formattedDuration)
+  }
+
+  @Test
+  fun uiState_formattedDuration_returnsZeroWhenLastEventEndTimeEqualsDate() {
+    val serie = createTestSerie()
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    assertEquals("0min", state.formattedDuration)
+  }
+
+  @Test
+  fun uiState_participantsCount_returnsCorrectFormat() {
+    val serie =
+        createTestSerie(participants = listOf("user1", "user2", "user3"), maxParticipants = 10)
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    assertEquals("3/10", state.participantsCount)
+  }
+
+  @Test
+  fun uiState_participantsCount_returnsZeroWhenSerieIsNull() {
+    val state = SerieDetailsUIState(serie = null, isLoading = false)
+
+    assertEquals("0/0", state.participantsCount)
+  }
+
+  @Test
+  fun uiState_visibilityDisplay_returnsPublic() {
+    val serie = createTestSerie()
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    assertEquals("PUBLIC", state.visibilityDisplay)
+  }
+
+  @Test
+  fun uiState_visibilityDisplay_returnsPrivate() {
+    val calendar = Calendar.getInstance()
+    calendar.set(2025, Calendar.JANUARY, 15, 18, 30, 0)
+
+    val serie =
+        Serie(
+            serieId = "test-serie-1",
+            title = "Private Serie",
+            description = "Private test",
+            date = Timestamp(calendar.time),
+            participants = listOf("user1", "user2"),
+            maxParticipants = 10,
+            visibility = Visibility.PRIVATE,
+            eventIds = listOf("event1", "event2"),
+            ownerId = "owner123")
+
+    val state = SerieDetailsUIState(serie = serie, isLoading = false)
+
+    assertEquals("PRIVATE", state.visibilityDisplay)
+  }
+
+  @Test
+  fun uiState_visibilityDisplay_returnsPublicWhenSerieIsNull() {
+    val state = SerieDetailsUIState(serie = null, isLoading = false)
+
+    assertEquals("PUBLIC", state.visibilityDisplay)
+  }
+
+  @Test
+  fun uiState_isPastSerie_returnsTrueWhenSerieIsExpired() {
+    // Create a serie with lastEventEndTime in the past
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -2) // 2 hours ago
+    val pastEndTime = Timestamp(calendar.time)
+
+    calendar.add(Calendar.HOUR, -24) // 26 hours ago (start time)
+    val startTime = Timestamp(calendar.time)
+
+    val expiredSerie =
+        Serie(
+            serieId = "expired-serie",
+            title = "Past Serie",
+            description = "This serie has ended",
+            date = startTime,
+            participants = listOf("user1", "user2"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner123",
+            lastEventEndTime = pastEndTime)
+
+    val state = SerieDetailsUIState(serie = expiredSerie, isLoading = false)
+
+    assertTrue(state.isPastSerie)
+  }
+
+  @Test
+  fun uiState_isPastSerie_returnsFalseWhenSerieIsActive() {
+    // Create a serie with lastEventEndTime in the future
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 2) // 2 hours from now
+    val futureEndTime = Timestamp(calendar.time)
+
+    calendar.add(Calendar.HOUR, -3) // 1 hour ago (start time)
+    val startTime = Timestamp(calendar.time)
+
+    val activeSerie =
+        Serie(
+            serieId = "active-serie",
+            title = "Active Serie",
+            description = "This serie is ongoing",
+            date = startTime,
+            participants = listOf("user1", "user2"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner123",
+            lastEventEndTime = futureEndTime)
+
+    val state = SerieDetailsUIState(serie = activeSerie, isLoading = false)
+
+    assertFalse(state.isPastSerie)
+  }
+
+  @Test
+  fun uiState_isPastSerie_returnsFalseWhenSerieIsUpcoming() {
+    // Create a serie with both start and end time in the future
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, 5) // 5 hours from now
+    val futureEndTime = Timestamp(calendar.time)
+
+    calendar.add(Calendar.HOUR, -2) // 3 hours from now (start time)
+    val futureStartTime = Timestamp(calendar.time)
+
+    val upcomingSerie =
+        Serie(
+            serieId = "upcoming-serie",
+            title = "Upcoming Serie",
+            description = "This serie hasn't started",
+            date = futureStartTime,
+            participants = listOf("user1", "user2"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "owner123",
+            lastEventEndTime = futureEndTime)
+
+    val state = SerieDetailsUIState(serie = upcomingSerie, isLoading = false)
+
+    assertFalse(state.isPastSerie)
+  }
+
+  @Test
+  fun uiState_isPastSerie_returnsFalseWhenSerieIsNull() {
+    val state = SerieDetailsUIState(serie = null, isLoading = false)
+
+    assertFalse(state.isPastSerie)
+  }
+
   /** --- LOAD SERIE DETAILS TESTS --- */
   @Test
-  fun loadSerieDetails_validSerieId_updatesState() = runTest {
+  fun loadSerieDetails_validSerieId_updatesUIState() = runTest {
     val serie = createTestSerie()
     val event1 = createTestEvent(eventId = "event1", duration = 90)
     val event2 = createTestEvent(eventId = "event2", duration = 60)
@@ -203,71 +523,131 @@ class SerieDetailsViewModelTest {
   }
 
   @Test
-  fun loadSerieDetails_invalidSerieId_setsError() = runTest {
+  fun loadSerieDetails_invalidSerieId_setsErrorMessage() = runTest {
     viewModel.loadSerieDetails("non-existent-id")
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
     assertNull(state.serie)
+    assertTrue(state.events.isEmpty())
     assertFalse(state.isLoading)
     assertNotNull(state.errorMsg)
     assertTrue(state.errorMsg!!.contains("Failed to load serie"))
   }
 
-  /** --- UI STATE COMPUTED PROPERTIES TESTS --- */
   @Test
-  fun uiState_isOwner_returnsTrueWhenUserIsOwner() {
-    val serie = createTestSerie(ownerId = "user123")
-    val state = SerieDetailsUIState(serie = serie, isLoading = false)
-    assertTrue(state.isOwner("user123"))
+  fun loadSerieDetails_repositoryError_setsErrorMessage() = runTest {
+    val errorRepository =
+        object : FakeSeriesRepository() {
+          override suspend fun getSerie(serieId: String): Serie {
+            throw Exception("Database error")
+          }
+        }
+
+    val errorViewModel = SerieDetailsViewModel(errorRepository, eventsRepository, profileRepository)
+
+    errorViewModel.loadSerieDetails("test-serie-1")
+    advanceUntilIdle()
+
+    val state = errorViewModel.uiState.first()
+    assertNull(state.serie)
+    assertFalse(state.isLoading)
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Failed to load serie"))
+    assertTrue(state.errorMsg!!.contains("Database error"))
   }
 
   @Test
-  fun uiState_isOwner_returnsFalseWhenUserIsNotOwner() {
-    val serie = createTestSerie(ownerId = "owner123")
-    val state = SerieDetailsUIState(serie = serie, isLoading = false)
-    assertFalse(state.isOwner("user456"))
+  fun loadSerieDetails_setsLoadingStateDuringLoad() = runTest {
+    val serie = createTestSerie()
+    seriesRepository.addSerie(serie)
+
+    // Initial loading state should be true
+    var state = viewModel.uiState.value
+    assertTrue(state.isLoading)
+
+    viewModel.loadSerieDetails(serie.serieId)
+
+    // After loading completes, should be false
+    advanceUntilIdle()
+
+    state = viewModel.uiState.first()
+    assertFalse(state.isLoading)
   }
 
   @Test
-  fun uiState_isParticipant_returnsTrueWhenUserIsParticipant() {
-    val serie = createTestSerie(participants = listOf("user1", "user2", "user3"))
-    val state = SerieDetailsUIState(serie = serie, isLoading = false)
-    assertTrue(state.isParticipant("user2"))
+  fun loadSerieDetails_filtersEventsCorrectly() = runTest {
+    val serie = createTestSerie(eventIds = listOf("event1", "event2"))
+    val event1 = createTestEvent(eventId = "event1")
+    val event2 = createTestEvent(eventId = "event2")
+    val event3 = createTestEvent(eventId = "event3") // Not in serie
+
+    seriesRepository.addSerie(serie)
+    eventsRepository.addEvent(event1)
+    eventsRepository.addEvent(event2)
+    eventsRepository.addEvent(event3)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals(2, state.events.size)
+    assertTrue(state.events.any { it.eventId == "event1" })
+    assertTrue(state.events.any { it.eventId == "event2" })
+    assertFalse(state.events.any { it.eventId == "event3" })
   }
 
   @Test
-  fun uiState_isParticipant_returnsFalseWhenUserIsNotParticipant() {
-    val serie = createTestSerie(participants = listOf("user1", "user2"))
-    val state = SerieDetailsUIState(serie = serie, isLoading = false)
-    assertFalse(state.isParticipant("user3"))
+  fun loadSerieDetails_withNoEvents_returnsEmptyEventList() = runTest {
+    val serie = createTestSerie(eventIds = emptyList())
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertNotNull(state.serie)
+    assertTrue(state.events.isEmpty())
+    assertNull(state.errorMsg)
   }
 
   @Test
-  fun uiState_canJoin_returnsTrueWhenUserCanJoin() {
-    val serie =
-        createTestSerie(
-            ownerId = "owner123", participants = listOf("user1", "user2"), maxParticipants = 10)
-    val state = SerieDetailsUIState(serie = serie, isLoading = false)
-    assertTrue(state.canJoin(testUserId))
-  }
+  fun loadSerieDetails_eventsRepositoryError_setsErrorMessage() = runTest {
+    val serie = createTestSerie()
+    seriesRepository.addSerie(serie)
 
-  @Test
-  fun uiState_canJoin_returnsFalseWhenSerieFull() {
-    val serie =
-        createTestSerie(
-            ownerId = "owner123", participants = listOf("user1", "user2"), maxParticipants = 2)
-    val state = SerieDetailsUIState(serie = serie, isLoading = false)
-    assertFalse(state.canJoin(testUserId))
+    val errorEventsRepository =
+        object : FakeEventsRepository() {
+          override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
+            throw Exception("Events fetch error")
+          }
+        }
+
+    val errorViewModel =
+        SerieDetailsViewModel(seriesRepository, errorEventsRepository, profileRepository)
+
+    errorViewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val state = errorViewModel.uiState.first()
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Failed to load serie"))
   }
 
   /** --- JOIN SERIE TESTS --- */
   @Test
-  fun joinSerie_successfulJoin_returnsTrue() = runTest {
+  fun joinSerie_validUser_joinsSuccessfully() = runTest {
     val serie =
         createTestSerie(
-            participants = listOf("user1"), maxParticipants = 10, eventIds = emptyList())
+            participants = listOf("user1", "owner123"),
+            maxParticipants = 10,
+            eventIds = listOf("event1", "event2"))
+    val event1 = createTestEvent(eventId = "event1", duration = 90)
+    val event2 = createTestEvent(eventId = "event2", duration = 60)
+
     seriesRepository.addSerie(serie)
+    eventsRepository.addEvent(event1)
+    eventsRepository.addEvent(event2)
 
     viewModel.loadSerieDetails(serie.serieId)
     advanceUntilIdle()
@@ -278,12 +658,26 @@ class SerieDetailsViewModelTest {
     assertTrue(result)
 
     val state = viewModel.uiState.first()
+    assertNotNull(state.serie)
     assertTrue(state.serie!!.participants.contains(testUserId))
+    assertEquals(3, state.serie!!.participants.size)
     assertNull(state.errorMsg)
+
+    // Verify serie repository was updated
+    val updatedSerie = seriesRepository.getSerie(serie.serieId)
+    assertTrue(updatedSerie.participants.contains(testUserId))
+
+    // Verify events repository was updated - user should be added to all events
+    val updatedEvent1 = eventsRepository.getEvent("event1")
+    assertTrue(updatedEvent1.participants.contains(testUserId))
+    val updatedEvent2 = eventsRepository.getEvent("event2")
+    assertTrue(updatedEvent2.participants.contains(testUserId))
   }
 
   @Test
   fun joinSerie_serieNotLoaded_returnsFalse() = runTest {
+    // Don't load any serie
+
     val result = viewModel.joinSerie(testUserId)
     advanceUntilIdle()
 
@@ -296,7 +690,8 @@ class SerieDetailsViewModelTest {
 
   @Test
   fun joinSerie_userIsOwner_returnsFalse() = runTest {
-    val serie = createTestSerie(ownerId = testUserId, participants = listOf("user1"))
+    val serie =
+        createTestSerie(ownerId = testUserId, participants = listOf("user1"), maxParticipants = 10)
     seriesRepository.addSerie(serie)
 
     viewModel.loadSerieDetails(serie.serieId)
@@ -310,6 +705,11 @@ class SerieDetailsViewModelTest {
     val state = viewModel.uiState.first()
     assertNotNull(state.errorMsg)
     assertTrue(state.errorMsg!!.contains("owner of this serie"))
+
+    // Verify repository was NOT updated (user1 still only participant)
+    val unchangedSerie = seriesRepository.getSerie(serie.serieId)
+    assertEquals(1, unchangedSerie.participants.size)
+    assertTrue(unchangedSerie.participants.contains("user1"))
   }
 
   @Test
@@ -346,68 +746,133 @@ class SerieDetailsViewModelTest {
     val state = viewModel.uiState.first()
     assertNotNull(state.errorMsg)
     assertTrue(state.errorMsg!!.contains("Serie is full"))
+
+    // Verify repository was NOT updated
+    val unchangedSerie = seriesRepository.getSerie(serie.serieId)
+    assertFalse(unchangedSerie.participants.contains(testUserId))
   }
 
-  /** --- JOIN SERIE STREAK TESTS --- */
   @Test
-  fun joinSerie_groupSerie_callsStreakServiceOnActivityJoined() = runTest {
-    mockkObject(StreakService)
-    coEvery { StreakService.onActivityJoined(any(), any(), any()) } returns Unit
+  fun joinSerie_repositoryError_returnsFalse() = runTest {
+    val serie = createTestSerie(participants = listOf("user1"), maxParticipants = 10)
 
-    val serie =
-        createTestSerie(
-            participants = listOf("user1"),
-            maxParticipants = 10,
-            eventIds = emptyList(),
-            groupId = "group123")
+    val errorRepository =
+        object : FakeSeriesRepository() {
+          override suspend fun getSerie(serieId: String): Serie = serie
+
+          override suspend fun editSerie(serieId: String, newValue: Serie) {
+            throw Exception("Repository update failed")
+          }
+        }
+
+    val errorViewModel = SerieDetailsViewModel(errorRepository, eventsRepository, profileRepository)
+
+    errorViewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val result = errorViewModel.joinSerie(testUserId)
+    advanceUntilIdle()
+
+    assertFalse(result)
+
+    val state = errorViewModel.uiState.first()
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Failed to join serie"))
+    assertTrue(state.errorMsg!!.contains("Repository update failed"))
+  }
+
+  @Test
+  fun joinSerie_whenCanJoinIsFalse_returnsFalse() = runTest {
+    // Create a situation where canJoin is false (serie is full)
+    val serie = createTestSerie(participants = listOf("user1", "user2"), maxParticipants = 2)
     seriesRepository.addSerie(serie)
 
     viewModel.loadSerieDetails(serie.serieId)
     advanceUntilIdle()
 
-    viewModel.joinSerie(testUserId)
+    val state = viewModel.uiState.first()
+    assertFalse(state.canJoin(testUserId))
+
+    val result = viewModel.joinSerie(testUserId)
     advanceUntilIdle()
 
-    coVerify { StreakService.onActivityJoined("group123", testUserId, serie.date) }
-
-    unmockkObject(StreakService)
+    assertFalse(result)
   }
 
   @Test
-  fun joinSerie_nonGroupSerie_doesNotCallStreakService() = runTest {
-    mockkObject(StreakService)
-
-    val serie =
-        createTestSerie(
-            participants = listOf("user1"),
-            maxParticipants = 10,
-            eventIds = emptyList(),
-            groupId = null)
+  fun joinSerie_participantCountUpdatesCorrectly() = runTest {
+    val serie = createTestSerie(participants = listOf("user1"), maxParticipants = 10)
     seriesRepository.addSerie(serie)
 
     viewModel.loadSerieDetails(serie.serieId)
     advanceUntilIdle()
 
+    var state = viewModel.uiState.first()
+    assertEquals("1/10", state.participantsCount) // Only user1 is in participants
+
     viewModel.joinSerie(testUserId)
     advanceUntilIdle()
 
-    coVerify(exactly = 0) { StreakService.onActivityJoined(any(), any(), any()) }
-
-    unmockkObject(StreakService)
+    state = viewModel.uiState.first()
+    assertEquals("2/10", state.participantsCount) // user1 + test-user-id
   }
 
   @Test
-  fun joinSerie_streakServiceThrows_doesNotFailJoin() = runTest {
-    mockkObject(StreakService)
-    coEvery { StreakService.onActivityJoined(any(), any(), any()) } throws
-        RuntimeException("Streak error")
-
+  fun joinSerie_addsUserToAllEventsInSerie() = runTest {
+    // Create a serie with 3 events
     val serie =
         createTestSerie(
             participants = listOf("user1"),
             maxParticipants = 10,
-            eventIds = emptyList(),
-            groupId = "group123")
+            eventIds = listOf("event1", "event2", "event3"))
+    val event1 =
+        createTestEvent(eventId = "event1", duration = 90)
+            .copy(participants = listOf("user1", "user2"))
+    val event2 =
+        createTestEvent(eventId = "event2", duration = 60).copy(participants = listOf("user1"))
+    val event3 =
+        createTestEvent(eventId = "event3", duration = 120)
+            .copy(participants = listOf("user2", "user3"))
+
+    seriesRepository.addSerie(serie)
+    eventsRepository.addEvent(event1)
+    eventsRepository.addEvent(event2)
+    eventsRepository.addEvent(event3)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    // Verify testUserId is not in any event initially
+    assertFalse(event1.participants.contains(testUserId))
+    assertFalse(event2.participants.contains(testUserId))
+    assertFalse(event3.participants.contains(testUserId))
+
+    // Join the serie
+    val result = viewModel.joinSerie(testUserId)
+    advanceUntilIdle()
+
+    assertTrue(result)
+
+    // Verify testUserId was added to ALL events
+    val updatedEvent1 = eventsRepository.getEvent("event1")
+    assertTrue(updatedEvent1.participants.contains(testUserId))
+    assertEquals(3, updatedEvent1.participants.size) // user1, user2, test-user-id
+
+    val updatedEvent2 = eventsRepository.getEvent("event2")
+    assertTrue(updatedEvent2.participants.contains(testUserId))
+    assertEquals(2, updatedEvent2.participants.size) // user1, test-user-id
+
+    val updatedEvent3 = eventsRepository.getEvent("event3")
+    assertTrue(updatedEvent3.participants.contains(testUserId))
+    assertEquals(3, updatedEvent3.participants.size) // user2, user3, test-user-id
+  }
+
+  @Test
+  fun joinSerie_withNoEvents_stillJoinsSerieSuccessfully() = runTest {
+    // Serie with no events
+    val serie =
+        createTestSerie(
+            participants = listOf("user1"), maxParticipants = 10, eventIds = emptyList())
     seriesRepository.addSerie(serie)
 
     viewModel.loadSerieDetails(serie.serieId)
@@ -416,12 +881,11 @@ class SerieDetailsViewModelTest {
     val result = viewModel.joinSerie(testUserId)
     advanceUntilIdle()
 
-    // Join should still succeed despite streak error
     assertTrue(result)
+
     val state = viewModel.uiState.first()
     assertTrue(state.serie!!.participants.contains(testUserId))
-
-    unmockkObject(StreakService)
+    assertNull(state.errorMsg)
   }
 
   /** --- QUIT SERIE TESTS --- */
@@ -429,8 +893,212 @@ class SerieDetailsViewModelTest {
   fun quitSerie_regularParticipant_quitsSuccessfully() = runTest {
     val serie =
         createTestSerie(
-            ownerId = "owner123",
             participants = listOf(testUserId, "user1", "owner123"),
+            eventIds = listOf("event1", "event2"))
+    val event1 =
+        createTestEvent(eventId = "event1", duration = 90)
+            .copy(participants = listOf(testUserId, "user1"))
+    val event2 =
+        createTestEvent(eventId = "event2", duration = 60)
+            .copy(participants = listOf(testUserId, "user2"))
+
+    seriesRepository.addSerie(serie)
+    eventsRepository.addEvent(event1)
+    eventsRepository.addEvent(event2)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val result = viewModel.quitSerie(testUserId)
+    advanceUntilIdle()
+
+    assertTrue(result)
+
+    val state = viewModel.uiState.first()
+    assertNotNull(state.serie)
+    assertFalse(state.serie!!.participants.contains(testUserId))
+    assertTrue(state.serie!!.participants.contains("user1"))
+    assertTrue(state.serie!!.participants.contains("owner123"))
+    assertEquals(2, state.serie!!.participants.size)
+    assertNull(state.errorMsg)
+
+    // Verify serie repository was updated
+    val updatedSerie = seriesRepository.getSerie(serie.serieId)
+    assertFalse(updatedSerie.participants.contains(testUserId))
+
+    // Verify events repository was updated - user should be removed from all events
+    val updatedEvent1 = eventsRepository.getEvent("event1")
+    assertFalse(updatedEvent1.participants.contains(testUserId))
+    assertTrue(updatedEvent1.participants.contains("user1")) // Other participants remain
+    val updatedEvent2 = eventsRepository.getEvent("event2")
+    assertFalse(updatedEvent2.participants.contains(testUserId))
+    assertTrue(updatedEvent2.participants.contains("user2")) // Other participants remain
+  }
+
+  @Test
+  fun quitSerie_serieNotLoaded_returnsFalse() = runTest {
+    // Don't load any serie
+
+    val result = viewModel.quitSerie(testUserId)
+    advanceUntilIdle()
+
+    assertFalse(result)
+
+    val state = viewModel.uiState.first()
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Serie not loaded"))
+  }
+
+  @Test
+  fun quitSerie_userIsOwner_returnsFalse() = runTest {
+    // Create serie where test-user-id is the owner
+    val serie = createTestSerie(ownerId = testUserId, participants = listOf(testUserId, "user1"))
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val result = viewModel.quitSerie(testUserId)
+    advanceUntilIdle()
+
+    assertFalse(result)
+
+    val state = viewModel.uiState.first()
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("You are the owner of this serie and cannot quit"))
+
+    // Verify repository was NOT updated
+    val unchangedSerie = seriesRepository.getSerie(serie.serieId)
+    assertTrue(unchangedSerie.participants.contains(testUserId))
+  }
+
+  @Test
+  fun quitSerie_userNotInParticipants_returnsFalse() = runTest {
+    val serie =
+        createTestSerie(participants = listOf("user1", "owner123")) // test-user-id not in list
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val result = viewModel.quitSerie(testUserId)
+    advanceUntilIdle()
+
+    assertFalse(result)
+
+    val state = viewModel.uiState.first()
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("not a participant"))
+  }
+
+  @Test
+  fun quitSerie_repositoryError_returnsFalse() = runTest {
+    val serie = createTestSerie(participants = listOf(testUserId, "user1", "owner123"))
+
+    val errorRepository =
+        object : FakeSeriesRepository() {
+          override suspend fun getSerie(serieId: String): Serie = serie
+
+          override suspend fun editSerie(serieId: String, newValue: Serie) {
+            throw Exception("Repository update failed")
+          }
+        }
+
+    val errorViewModel = SerieDetailsViewModel(errorRepository, eventsRepository, profileRepository)
+
+    errorViewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val result = errorViewModel.quitSerie(testUserId)
+    advanceUntilIdle()
+
+    assertFalse(result)
+
+    val state = errorViewModel.uiState.first()
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Failed to quit serie"))
+    assertTrue(state.errorMsg!!.contains("Repository update failed"))
+  }
+
+  @Test
+  fun quitSerie_lastParticipant_removesSuccessfully() = runTest {
+    // Serie with only one participant (not the owner)
+    val serie = createTestSerie(ownerId = "owner123", participants = listOf(testUserId))
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val result = viewModel.quitSerie(testUserId)
+    advanceUntilIdle()
+
+    assertTrue(result)
+
+    val state = viewModel.uiState.first()
+    assertNotNull(state.serie)
+    assertTrue(state.serie!!.participants.isEmpty())
+    assertNull(state.errorMsg)
+  }
+
+  @Test
+  fun quitSerie_removesUserFromAllEventsInSerie() = runTest {
+    // Create a serie with 3 events where testUserId is a participant
+    val serie =
+        createTestSerie(
+            participants = listOf(testUserId, "user1", "owner123"),
+            maxParticipants = 10,
+            eventIds = listOf("event1", "event2", "event3"))
+    val event1 =
+        createTestEvent(eventId = "event1", duration = 90)
+            .copy(participants = listOf(testUserId, "user1", "user2"))
+    val event2 =
+        createTestEvent(eventId = "event2", duration = 60)
+            .copy(participants = listOf(testUserId, "user1"))
+    val event3 =
+        createTestEvent(eventId = "event3", duration = 120)
+            .copy(participants = listOf(testUserId, "user2", "user3"))
+
+    seriesRepository.addSerie(serie)
+    eventsRepository.addEvent(event1)
+    eventsRepository.addEvent(event2)
+    eventsRepository.addEvent(event3)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    // Verify testUserId is in all events initially
+    assertTrue(event1.participants.contains(testUserId))
+    assertTrue(event2.participants.contains(testUserId))
+    assertTrue(event3.participants.contains(testUserId))
+
+    // Quit the serie
+    val result = viewModel.quitSerie(testUserId)
+    advanceUntilIdle()
+
+    assertTrue(result)
+
+    // Verify testUserId was removed from ALL events
+    val updatedEvent1 = eventsRepository.getEvent("event1")
+    assertFalse(updatedEvent1.participants.contains(testUserId))
+    assertEquals(2, updatedEvent1.participants.size) // user1, user2
+
+    val updatedEvent2 = eventsRepository.getEvent("event2")
+    assertFalse(updatedEvent2.participants.contains(testUserId))
+    assertEquals(1, updatedEvent2.participants.size) // user1
+
+    val updatedEvent3 = eventsRepository.getEvent("event3")
+    assertFalse(updatedEvent3.participants.contains(testUserId))
+    assertEquals(2, updatedEvent3.participants.size) // user2, user3
+  }
+
+  @Test
+  fun quitSerie_withNoEvents_stillQuitsSerieSuccessfully() = runTest {
+    // Serie with no events
+    val serie =
+        createTestSerie(
+            ownerId = "owner123",
+            participants = listOf(testUserId, "user1"),
+            maxParticipants = 10,
             eventIds = emptyList())
     seriesRepository.addSerie(serie)
 
@@ -447,243 +1115,6 @@ class SerieDetailsViewModelTest {
     assertNull(state.errorMsg)
   }
 
-  @Test
-  fun quitSerie_serieNotLoaded_returnsFalse() = runTest {
-    val result = viewModel.quitSerie(testUserId)
-    advanceUntilIdle()
-
-    assertFalse(result)
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state.errorMsg)
-    assertTrue(state.errorMsg!!.contains("Serie not loaded"))
-  }
-
-  @Test
-  fun quitSerie_ownerCannotQuit_returnsFalse() = runTest {
-    val serie = createTestSerie(ownerId = testUserId, participants = listOf(testUserId, "user1"))
-    seriesRepository.addSerie(serie)
-
-    viewModel.loadSerieDetails(serie.serieId)
-    advanceUntilIdle()
-
-    val result = viewModel.quitSerie(testUserId)
-    advanceUntilIdle()
-
-    assertFalse(result)
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state.errorMsg)
-    assertTrue(state.errorMsg!!.contains("owner of this serie"))
-  }
-
-  @Test
-  fun quitSerie_notParticipant_returnsFalse() = runTest {
-    val serie = createTestSerie(ownerId = "owner123", participants = listOf("user1", "owner123"))
-    seriesRepository.addSerie(serie)
-
-    viewModel.loadSerieDetails(serie.serieId)
-    advanceUntilIdle()
-
-    val result = viewModel.quitSerie(testUserId)
-    advanceUntilIdle()
-
-    assertFalse(result)
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state.errorMsg)
-    assertTrue(state.errorMsg!!.contains("not a participant"))
-  }
-
-  /** --- QUIT SERIE STREAK TESTS --- */
-  @Test
-  fun quitSerie_groupSerie_callsStreakServiceOnActivityLeft() = runTest {
-    mockkObject(StreakService)
-    coEvery { StreakService.onActivityLeft(any(), any(), any()) } returns Unit
-
-    val serie =
-        createTestSerie(
-            ownerId = "owner123",
-            participants = listOf(testUserId, "user1", "owner123"),
-            eventIds = emptyList(),
-            groupId = "group123")
-    seriesRepository.addSerie(serie)
-
-    viewModel.loadSerieDetails(serie.serieId)
-    advanceUntilIdle()
-
-    viewModel.quitSerie(testUserId)
-    advanceUntilIdle()
-
-    coVerify { StreakService.onActivityLeft("group123", testUserId, serie.date) }
-
-    unmockkObject(StreakService)
-  }
-
-  @Test
-  fun quitSerie_nonGroupSerie_doesNotCallStreakService() = runTest {
-    mockkObject(StreakService)
-
-    val serie =
-        createTestSerie(
-            ownerId = "owner123",
-            participants = listOf(testUserId, "user1", "owner123"),
-            eventIds = emptyList(),
-            groupId = null)
-    seriesRepository.addSerie(serie)
-
-    viewModel.loadSerieDetails(serie.serieId)
-    advanceUntilIdle()
-
-    viewModel.quitSerie(testUserId)
-    advanceUntilIdle()
-
-    coVerify(exactly = 0) { StreakService.onActivityLeft(any(), any(), any()) }
-
-    unmockkObject(StreakService)
-  }
-
-  @Test
-  fun quitSerie_streakServiceThrows_doesNotFailQuit() = runTest {
-    mockkObject(StreakService)
-    coEvery { StreakService.onActivityLeft(any(), any(), any()) } throws
-        RuntimeException("Streak error")
-
-    val serie =
-        createTestSerie(
-            ownerId = "owner123",
-            participants = listOf(testUserId, "user1", "owner123"),
-            eventIds = emptyList(),
-            groupId = "group123")
-    seriesRepository.addSerie(serie)
-
-    viewModel.loadSerieDetails(serie.serieId)
-    advanceUntilIdle()
-
-    val result = viewModel.quitSerie(testUserId)
-    advanceUntilIdle()
-
-    // Quit should still succeed despite streak error
-    assertTrue(result)
-    val state = viewModel.uiState.first()
-    assertFalse(state.serie!!.participants.contains(testUserId))
-
-    unmockkObject(StreakService)
-  }
-
-  /** --- DELETE SERIE TESTS --- */
-  @Test
-  fun deleteSerie_validSerieId_deletesSerie() = runTest {
-    val serie = createTestSerie()
-    seriesRepository.addSerie(serie)
-
-    viewModel.deleteSerie(serie.serieId)
-    advanceUntilIdle()
-
-    try {
-      seriesRepository.getSerie(serie.serieId)
-      fail("Expected exception when getting deleted serie")
-    } catch (_: Exception) {
-      // Expected
-    }
-  }
-
-  @Test
-  fun deleteSerie_invalidSerieId_setsError() = runTest {
-    viewModel.deleteSerie("non-existent-id")
-    advanceUntilIdle()
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state.errorMsg)
-    assertTrue(state.errorMsg!!.contains("Failed to delete serie"))
-  }
-
-  /** --- DELETE SERIE STREAK TESTS --- */
-  @Test
-  fun deleteSerie_upcomingGroupSerie_callsStreakServiceOnActivityDeleted() = runTest {
-    mockkObject(StreakService)
-    coEvery { StreakService.onActivityDeleted(any(), any(), any()) } returns Unit
-
-    val serie =
-        createTestSerie(
-            participants = listOf("user1", "user2", "owner123"),
-            groupId = "group123",
-            daysFromNow = 7)
-    seriesRepository.addSerie(serie)
-
-    viewModel.deleteSerie(serie.serieId)
-    advanceUntilIdle()
-
-    coVerify {
-      StreakService.onActivityDeleted("group123", listOf("user1", "user2", "owner123"), serie.date)
-    }
-
-    unmockkObject(StreakService)
-  }
-
-  @Test
-  fun deleteSerie_pastGroupSerie_doesNotCallStreakService() = runTest {
-    mockkObject(StreakService)
-
-    val serie =
-        createTestSerie(
-            participants = listOf("user1", "user2", "owner123"),
-            groupId = "group123",
-            daysFromNow = -7)
-    seriesRepository.addSerie(serie)
-
-    viewModel.deleteSerie(serie.serieId)
-    advanceUntilIdle()
-
-    coVerify(exactly = 0) { StreakService.onActivityDeleted(any(), any(), any()) }
-
-    unmockkObject(StreakService)
-  }
-
-  @Test
-  fun deleteSerie_nonGroupSerie_doesNotCallStreakService() = runTest {
-    mockkObject(StreakService)
-
-    val serie =
-        createTestSerie(
-            participants = listOf("user1", "user2", "owner123"), groupId = null, daysFromNow = 7)
-    seriesRepository.addSerie(serie)
-
-    viewModel.deleteSerie(serie.serieId)
-    advanceUntilIdle()
-
-    coVerify(exactly = 0) { StreakService.onActivityDeleted(any(), any(), any()) }
-
-    unmockkObject(StreakService)
-  }
-
-  @Test
-  fun deleteSerie_streakServiceThrows_doesNotFailDeletion() = runTest {
-    mockkObject(StreakService)
-    coEvery { StreakService.onActivityDeleted(any(), any(), any()) } throws
-        RuntimeException("Streak error")
-
-    val serie =
-        createTestSerie(
-            participants = listOf("user1", "user2", "owner123"),
-            groupId = "group123",
-            daysFromNow = 7)
-    seriesRepository.addSerie(serie)
-
-    viewModel.deleteSerie(serie.serieId)
-    advanceUntilIdle()
-
-    // Serie should still be deleted despite streak error
-    try {
-      seriesRepository.getSerie(serie.serieId)
-      fail("Expected exception when getting deleted serie")
-    } catch (_: Exception) {
-      // Expected
-    }
-
-    unmockkObject(StreakService)
-  }
-
   /** --- ERROR MESSAGE HANDLING TESTS --- */
   @Test
   fun setErrorMsg_setsErrorMessageInState() {
@@ -695,14 +1126,165 @@ class SerieDetailsViewModelTest {
 
   @Test
   fun clearErrorMsg_removesErrorMessage() = runTest {
+    // First set an error
     viewModel.setErrorMsg("Test error")
     var state = viewModel.uiState.first()
     assertNotNull(state.errorMsg)
 
+    // Clear error
     viewModel.clearErrorMsg()
 
     state = viewModel.uiState.first()
     assertNull(state.errorMsg)
+  }
+
+  @Test
+  fun clearErrorMsg_afterLoadingError_removesError() = runTest {
+    viewModel.loadSerieDetails("non-existent-id")
+    advanceUntilIdle()
+
+    // Verify error is set
+    var state = viewModel.uiState.first()
+    assertNotNull(state.errorMsg)
+
+    // Clear error
+    viewModel.clearErrorMsg()
+
+    // Verify error is cleared
+    state = viewModel.uiState.first()
+    assertNull(state.errorMsg)
+  }
+
+  /** --- EDGE CASES AND INTEGRATION TESTS --- */
+  @Test
+  fun loadSerieDetails_multipleTimes_updatesStateCorrectly() = runTest {
+    val serie1 = createTestSerie(serieId = "serie1", title = "Serie 1")
+    val serie2 = createTestSerie(serieId = "serie2", title = "Serie 2")
+
+    seriesRepository.addSerie(serie1)
+    seriesRepository.addSerie(serie2)
+
+    // Load first serie
+    viewModel.loadSerieDetails(serie1.serieId)
+    advanceUntilIdle()
+
+    var state = viewModel.uiState.first()
+    assertEquals("Serie 1", state.serie?.title)
+
+    // Load second serie
+    viewModel.loadSerieDetails(serie2.serieId)
+    advanceUntilIdle()
+
+    state = viewModel.uiState.first()
+    assertEquals("Serie 2", state.serie?.title)
+  }
+
+  @Test
+  fun joinAndQuitSerie_workflow_worksCorrectly() = runTest {
+    val serie =
+        createTestSerie(
+            participants = listOf("user1", "owner123"),
+            maxParticipants = 10,
+            eventIds = listOf("event1", "event2"))
+    val event1 = createTestEvent(eventId = "event1", duration = 90)
+    val event2 = createTestEvent(eventId = "event2", duration = 60)
+
+    seriesRepository.addSerie(serie)
+    eventsRepository.addEvent(event1)
+    eventsRepository.addEvent(event2)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    var state = viewModel.uiState.first()
+    assertFalse(state.isParticipant(testUserId))
+    assertTrue(state.canJoin(testUserId))
+
+    // Join the serie
+    val joinResult = viewModel.joinSerie(testUserId)
+    advanceUntilIdle()
+
+    assertTrue(joinResult)
+    state = viewModel.uiState.first()
+    assertTrue(state.isParticipant(testUserId))
+    assertFalse(state.canJoin(testUserId))
+
+    // Verify user was added to all events
+    var updatedEvent1 = eventsRepository.getEvent("event1")
+    assertTrue(updatedEvent1.participants.contains(testUserId))
+    var updatedEvent2 = eventsRepository.getEvent("event2")
+    assertTrue(updatedEvent2.participants.contains(testUserId))
+
+    // Quit the serie
+    val quitResult = viewModel.quitSerie(testUserId)
+    advanceUntilIdle()
+
+    assertTrue(quitResult)
+    state = viewModel.uiState.first()
+    assertFalse(state.isParticipant(testUserId))
+    assertTrue(state.canJoin(testUserId))
+
+    // Verify user was removed from all events
+    updatedEvent1 = eventsRepository.getEvent("event1")
+    assertFalse(updatedEvent1.participants.contains(testUserId))
+    updatedEvent2 = eventsRepository.getEvent("event2")
+    assertFalse(updatedEvent2.participants.contains(testUserId))
+  }
+
+  @Test
+  fun viewModel_withLargeParticipantList_handlesCorrectly() = runTest {
+    val largeParticipantList = (1..100).map { "user$it" }.toMutableList()
+
+    val serie = createTestSerie(participants = largeParticipantList, maxParticipants = 150)
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("100/150", state.participantsCount)
+    assertTrue(state.canJoin(testUserId))
+
+    // Join serie
+    val joinResult = viewModel.joinSerie(testUserId)
+    advanceUntilIdle()
+
+    assertTrue(joinResult)
+
+    val updatedState = viewModel.uiState.first()
+    assertEquals("101/150", updatedState.participantsCount)
+  }
+
+  @Test
+  fun viewModel_withSpecialCharactersInTitle_handlesCorrectly() = runTest {
+    val serie = createTestSerie(title = "Test ✓ Serie \"with\" special <chars>")
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("Test ✓ Serie \"with\" special <chars>", state.serie?.title)
+  }
+
+  @Test
+  fun joinSerie_exactlyAtMaxCapacity_preventsFurtherJoins() = runTest {
+    // Create serie with 2 participants, max 3
+    val serie = createTestSerie(participants = listOf("user1", "user2"), maxParticipants = 3)
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    // test-user-id joins (should succeed - now 3/3)
+    val joinResult = viewModel.joinSerie(testUserId)
+    advanceUntilIdle()
+
+    assertTrue(joinResult)
+
+    val state = viewModel.uiState.first()
+    assertEquals("3/3", state.participantsCount)
+    assertFalse(state.canJoin(testUserId)) // Serie is now full
   }
 
   /** --- GET OWNER DISPLAY NAME TESTS --- */
@@ -740,5 +1322,237 @@ class SerieDetailsViewModelTest {
     val displayName = viewModel.getOwnerDisplayName("error-owner")
 
     assertEquals("UNKNOWN", displayName)
+  }
+
+  /** --- JOIN SERIE STREAK TESTS --- */
+  @Test
+  fun joinSerie_groupSerie_callsStreakServiceOnActivityJoined() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityJoined(any(), any(), any()) } returns Unit
+
+    val serie =
+        createTestSerie(
+                participants = listOf("user1"), maxParticipants = 10, eventIds = emptyList())
+            .copy(groupId = "group123")
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    viewModel.joinSerie(testUserId)
+    advanceUntilIdle()
+
+    coVerify { StreakService.onActivityJoined("group123", testUserId, serie.date) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun joinSerie_nonGroupSerie_doesNotCallStreakService() = runTest {
+    mockkObject(StreakService)
+
+    val serie =
+        createTestSerie(
+            participants = listOf("user1"), maxParticipants = 10, eventIds = emptyList())
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    viewModel.joinSerie(testUserId)
+    advanceUntilIdle()
+
+    coVerify(exactly = 0) { StreakService.onActivityJoined(any(), any(), any()) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun joinSerie_streakServiceThrows_doesNotBlockJoin() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityJoined(any(), any(), any()) } throws
+        RuntimeException("Streak error")
+
+    val serie =
+        createTestSerie(
+                participants = listOf("user1"), maxParticipants = 10, eventIds = emptyList())
+            .copy(groupId = "group123")
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val result = viewModel.joinSerie(testUserId)
+    advanceUntilIdle()
+
+    // Join should still succeed despite streak error
+    assertTrue(result)
+    val state = viewModel.uiState.first()
+    assertTrue(state.serie!!.participants.contains(testUserId))
+
+    unmockkObject(StreakService)
+  }
+
+  /** --- QUIT SERIE STREAK TESTS --- */
+  @Test
+  fun quitSerie_groupSerie_callsStreakServiceOnActivityLeft() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityLeft(any(), any(), any()) } returns Unit
+
+    val serie =
+        createTestSerie(
+                ownerId = "owner123",
+                participants = listOf(testUserId, "user1", "owner123"),
+                eventIds = emptyList())
+            .copy(groupId = "group123")
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    viewModel.quitSerie(testUserId)
+    advanceUntilIdle()
+
+    coVerify { StreakService.onActivityLeft("group123", testUserId, serie.date) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun quitSerie_nonGroupSerie_doesNotCallStreakService() = runTest {
+    mockkObject(StreakService)
+
+    val serie =
+        createTestSerie(
+            ownerId = "owner123",
+            participants = listOf(testUserId, "user1", "owner123"),
+            eventIds = emptyList())
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    viewModel.quitSerie(testUserId)
+    advanceUntilIdle()
+
+    coVerify(exactly = 0) { StreakService.onActivityLeft(any(), any(), any()) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun quitSerie_streakServiceThrows_doesNotBlockQuit() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityLeft(any(), any(), any()) } throws
+        RuntimeException("Streak error")
+
+    val serie =
+        createTestSerie(
+                ownerId = "owner123",
+                participants = listOf(testUserId, "user1", "owner123"),
+                eventIds = emptyList())
+            .copy(groupId = "group123")
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val result = viewModel.quitSerie(testUserId)
+    advanceUntilIdle()
+
+    // Quit should still succeed despite streak error
+    assertTrue(result)
+    val state = viewModel.uiState.first()
+    assertFalse(state.serie!!.participants.contains(testUserId))
+
+    unmockkObject(StreakService)
+  }
+
+  /** --- DELETE SERIE STREAK TESTS --- */
+  @Test
+  fun deleteSerie_upcomingGroupSerie_callsStreakServiceOnActivityDeleted() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityDeleted(any(), any(), any()) } returns Unit
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_YEAR, 7)
+    val serie =
+        createTestSerie(participants = listOf("user1", "user2", "owner123"))
+            .copy(groupId = "group123", date = Timestamp(calendar.time))
+    seriesRepository.addSerie(serie)
+
+    viewModel.deleteSerie(serie.serieId)
+    advanceUntilIdle()
+
+    coVerify {
+      StreakService.onActivityDeleted("group123", listOf("user1", "user2", "owner123"), serie.date)
+    }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun deleteSerie_pastGroupSerie_doesNotCallStreakService() = runTest {
+    mockkObject(StreakService)
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_YEAR, -7)
+    val serie =
+        createTestSerie(participants = listOf("user1", "user2", "owner123"))
+            .copy(groupId = "group123", date = Timestamp(calendar.time))
+    seriesRepository.addSerie(serie)
+
+    viewModel.deleteSerie(serie.serieId)
+    advanceUntilIdle()
+
+    coVerify(exactly = 0) { StreakService.onActivityDeleted(any(), any(), any()) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun deleteSerie_nonGroupSerie_doesNotCallStreakService() = runTest {
+    mockkObject(StreakService)
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_YEAR, 7)
+    val serie =
+        createTestSerie(participants = listOf("user1", "user2", "owner123"))
+            .copy(date = Timestamp(calendar.time))
+    seriesRepository.addSerie(serie)
+
+    viewModel.deleteSerie(serie.serieId)
+    advanceUntilIdle()
+
+    coVerify(exactly = 0) { StreakService.onActivityDeleted(any(), any(), any()) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun deleteSerie_streakServiceThrows_doesNotBlockDeletion() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityDeleted(any(), any(), any()) } throws
+        RuntimeException("Streak error")
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_YEAR, 7)
+    val serie =
+        createTestSerie(participants = listOf("user1", "user2", "owner123"))
+            .copy(groupId = "group123", date = Timestamp(calendar.time))
+    seriesRepository.addSerie(serie)
+
+    viewModel.deleteSerie(serie.serieId)
+    advanceUntilIdle()
+
+    // Serie should still be deleted despite streak error
+    try {
+      seriesRepository.getSerie(serie.serieId)
+      fail("Expected exception when getting deleted serie")
+    } catch (_: Exception) {
+      // Expected
+    }
+
+    unmockkObject(StreakService)
   }
 }
