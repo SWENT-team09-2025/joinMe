@@ -277,7 +277,10 @@ class ShowEventViewModel(
       // Rollback profile update
       try {
         profileRepository.createOrUpdateProfile(originalProfile)
-      } catch (_: Exception) {}
+      } catch (rollbackEx: Exception) {
+        Log.e(
+            "ShowEventViewModel", "Rollback failed for profile ${originalProfile.uid}", rollbackEx)
+      }
       setErrorMsg("Failed to update participation: ${e.message}")
       false
     }
@@ -362,7 +365,10 @@ class ShowEventViewModel(
     profiles.forEach { profile ->
       try {
         profileRepository.createOrUpdateProfile(profile)
-      } catch (_: Exception) {}
+      } catch (e: Exception) {
+        // Best-effort restoration: log failures for observability
+        Log.e("ShowEventViewModel", "Failed to restore profile ${profile.uid}", e)
+      }
     }
   }
 
