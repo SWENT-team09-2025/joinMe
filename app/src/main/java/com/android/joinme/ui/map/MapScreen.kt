@@ -132,6 +132,123 @@ internal fun createMarkerForColor(color: Color): BitmapDescriptor {
 }
 
 /**
+ * Handles camera positioning effects when user location changes.
+ *
+ * @param currentLat Current latitude
+ * @param currentLng Current longitude
+ * @param isFollowingUser Whether the map should follow user location
+ * @param cameraPositionState Camera position state to animate
+ * @param onProgrammaticMoveStart Callback when programmatic move starts
+ * @param onProgrammaticMoveEnd Callback when programmatic move ends
+ */
+@Composable
+private fun MapCameraEffects(
+    currentLat: Double?,
+    currentLng: Double?,
+    isFollowingUser: Boolean,
+    cameraPositionState: com.google.maps.android.compose.CameraPositionState,
+    onProgrammaticMoveStart: () -> Unit,
+    onProgrammaticMoveEnd: () -> Unit
+) {
+  LaunchedEffect(currentLat, currentLng, isFollowingUser) {
+    if (currentLat != null && currentLng != null && isFollowingUser) {
+      try {
+        onProgrammaticMoveStart()
+        cameraPositionState.animate(
+            update = CameraUpdateFactory.newLatLngZoom(LatLng(currentLat, currentLng), 15f),
+            durationMs = 1000)
+      } catch (e: Exception) {
+        // Animation was interrupted or failed
+      } finally {
+        onProgrammaticMoveEnd()
+      }
+    }
+  }
+}
+
+/**
+ * Detects user interaction with the map to disable auto-following.
+ *
+ * @param cameraPositionState Camera position state to observe
+ * @param isProgrammaticMove Whether the current move is programmatic
+ * @param isFollowingUser Whether auto-follow is enabled
+ * @param isMapInitialized Whether the map has finished initializing
+ * @param onDisableFollowing Callback to disable following
+ */
+@Composable
+private fun MapUserInteractionDetector(
+    cameraPositionState: com.google.maps.android.compose.CameraPositionState,
+    isProgrammaticMove: Boolean,
+    isFollowingUser: Boolean,
+    isMapInitialized: Boolean,
+    onDisableFollowing: () -> Unit
+) {
+  LaunchedEffect(cameraPositionState) {
+    snapshotFlow { cameraPositionState.isMoving }
+        .collect { isMoving ->
+          val shouldDisableFollowing =
+              isMoving && !isProgrammaticMove && isFollowingUser && isMapInitialized
+          if (shouldDisableFollowing) {
+            onDisableFollowing()
+          }
+        }
+  }
+}
+
+/**
+ * Renders event and series markers on the map.
+ *
+ * @param events List of events to display as markers
+ * @param series Map of locations to series to display as markers
+ * @param seriePinColor Color for series markers
+ * @param onMarkerClick Callback when a marker is clicked
+ * @param onEventNavigate Callback to navigate to an event
+ * @param onSerieNavigate Callback to navigate to a series
+ */
+@Composable
+private fun MapMarkers(
+    events: List<com.android.joinme.model.event.Event>,
+    series: Map<com.android.joinme.model.map.Location, com.android.joinme.model.serie.Serie>,
+    seriePinColor: Color,
+    onMarkerClick: () -> Unit,
+    onEventNavigate: (String) -> Unit,
+    onSerieNavigate: (String) -> Unit
+) {
+  events.forEach { event ->
+    event.location?.let { location ->
+      val position = LatLng(location.latitude, location.longitude)
+      val markerIcon = createMarkerForColor(event.type.getColor())
+
+      Marker(
+          state = MarkerState(position = position),
+          icon = markerIcon,
+          tag = getTestTagForMarker(event.eventId),
+          title = event.title,
+          snippet = SNIPPET_MESSAGE,
+          onInfoWindowClick = {
+            onMarkerClick()
+            onEventNavigate(event.eventId)
+          })
+    }
+  }
+
+  series.forEach { (location, serie) ->
+    val position = LatLng(location.latitude, location.longitude)
+    val markerIcon = createMarkerForColor(seriePinColor)
+    Marker(
+        state = MarkerState(position = position),
+        icon = markerIcon,
+        tag = getTestTagForMarker(serie.serieId),
+        title = serie.title,
+        snippet = SNIPPET_MESSAGE,
+        onInfoWindowClick = {
+          onMarkerClick()
+          onSerieNavigate(serie.serieId)
+        })
+  }
+}
+
+/**
  * Displays the main map screen of the application.
  *
  * This composable handles:
@@ -208,30 +325,21 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
   LaunchedEffect(cameraPositionState) { isMapInitialized = true }
 
   // --- Center the map when the user location changes (only if following is enabled) ---
-  LaunchedEffect(currentLat, currentLng, isFollowingUser) {
-    if (currentLat != null && currentLng != null && isFollowingUser) {
-      try {
-        isProgrammaticMove = true
-        cameraPositionState.animate(
-            update = CameraUpdateFactory.newLatLngZoom(LatLng(currentLat, currentLng), 15f),
-            durationMs = 1000)
-      } catch (e: Exception) {
-        // Animation was interrupted or failed
-      } finally {
-        isProgrammaticMove = false
-      }
-    }
-  }
+  MapCameraEffects(
+      currentLat = currentLat,
+      currentLng = currentLng,
+      isFollowingUser = isFollowingUser,
+      cameraPositionState = cameraPositionState,
+      onProgrammaticMoveStart = { isProgrammaticMove = true },
+      onProgrammaticMoveEnd = { isProgrammaticMove = false })
 
   // --- Detect user interaction with the map to disable following ---
-  LaunchedEffect(cameraPositionState) {
-    snapshotFlow { cameraPositionState.isMoving }
-        .collect { isMoving ->
-          if (isMoving && !isProgrammaticMove && isFollowingUser && isMapInitialized) {
-            viewModel.disableFollowingUser()
-          }
-        }
-  }
+  MapUserInteractionDetector(
+      cameraPositionState = cameraPositionState,
+      isProgrammaticMove = isProgrammaticMove,
+      isFollowingUser = isFollowingUser,
+      isMapInitialized = isMapInitialized,
+      onDisableFollowing = { viewModel.disableFollowingUser() })
 
   // --- Map properties configuration ---
   val mapStyle =
@@ -265,37 +373,17 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
                   properties = mapProperties,
                   uiSettings =
                       MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = false)) {
-                    uiState.events.forEach { event ->
-                      event.location?.let { location ->
-                        val position = LatLng(location.latitude, location.longitude)
-                        val markerIcon = createMarkerForColor(event.type.getColor())
-
-                        Marker(
-                            state = MarkerState(position = position),
-                            icon = markerIcon,
-                            tag = getTestTagForMarker(event.eventId),
-                            title = event.title,
-                            snippet = SNIPPET_MESSAGE,
-                            onInfoWindowClick = {
-                              viewModel.onMarkerClick()
-                              navigationActions?.navigateTo(Screen.ShowEventScreen(event.eventId))
-                            })
-                      }
-                    }
-                    uiState.series.forEach { (location, serie) ->
-                      val position = LatLng(location.latitude, location.longitude)
-                      val markerIcon = createMarkerForColor(MaterialTheme.customColors.seriePinMark)
-                      Marker(
-                          state = MarkerState(position = position),
-                          icon = markerIcon,
-                          tag = getTestTagForMarker(serie.serieId),
-                          title = serie.title,
-                          snippet = SNIPPET_MESSAGE,
-                          onInfoWindowClick = {
-                            viewModel.onMarkerClick()
-                            navigationActions?.navigateTo(Screen.SerieDetails(serie.serieId))
-                          })
-                    }
+                    MapMarkers(
+                        events = uiState.events,
+                        series = uiState.series,
+                        seriePinColor = MaterialTheme.customColors.seriePinMark,
+                        onMarkerClick = { viewModel.onMarkerClick() },
+                        onEventNavigate = { eventId ->
+                          navigationActions?.navigateTo(Screen.ShowEventScreen(eventId))
+                        },
+                        onSerieNavigate = { serieId ->
+                          navigationActions?.navigateTo(Screen.SerieDetails(serieId))
+                        })
                   }
 
               IconButton(
