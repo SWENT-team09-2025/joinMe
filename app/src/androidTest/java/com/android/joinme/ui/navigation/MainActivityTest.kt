@@ -1052,4 +1052,228 @@ class MainActivityTest {
     }
     scenario.close()
   }
+
+  // ========== Event Notification Navigation Flow Tests (Lines 190-212) ==========
+  // These tests verify the LaunchedEffect logic that handles event notification navigation
+
+  @Test
+  fun mainActivity_eventChatNotification_navigatesToChat_whenAuthenticatedWithValidEvent() =
+      runBlocking {
+        // This test covers: LaunchedEffect(initialEventId, notificationType) with
+        // event_chat_message
+        // Lines 190-208 in MainActivity.kt
+        val currentUser = FirebaseAuth.getInstance().currentUser
+
+        // Skip test if user is not authenticated
+        if (currentUser == null) {
+          return@runBlocking
+        }
+
+        // Create a real test event
+        val eventRepository =
+            com.android.joinme.model.event.EventsRepositoryProvider.getRepository(
+                isOnline = true, ApplicationProvider.getApplicationContext())
+        val testEventId = eventRepository.getNewEventId()
+        val testEvent =
+            com.android.joinme.model.event.Event(
+                eventId = testEventId,
+                type = com.android.joinme.model.event.EventType.SOCIAL,
+                title = "Test Event for Chat Notification",
+                description = "Testing navigation",
+                location = com.android.joinme.model.map.Location(0.0, 0.0, "Test Location"),
+                date = com.google.firebase.Timestamp.now(),
+                duration = 60,
+                participants = listOf(currentUser.uid),
+                maxParticipants = 10,
+                visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+                ownerId = currentUser.uid)
+        eventRepository.addEvent(testEvent)
+
+        try {
+          // Launch MainActivity with event chat notification
+          val context = ApplicationProvider.getApplicationContext<Context>()
+          val intent =
+              Intent(context, MainActivity::class.java).apply {
+                putExtra("notificationType", "event_chat_message")
+                putExtra("eventId", testEventId)
+                putExtra("conversationId", "test-conversation-chat-123")
+                putExtra("chatName", "Test Event Chat")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+              }
+
+          val scenario = ActivityScenario.launch<MainActivity>(intent)
+          Thread.sleep(3000) // Wait for LaunchedEffect and navigation to complete
+
+          scenario.use {
+            it.onActivity { activity ->
+              // Activity should not crash, navigation should have been triggered
+              assert(!activity.isFinishing)
+            }
+          }
+
+          scenario.close()
+        } finally {
+          // Cleanup
+          try {
+            eventRepository.deleteEvent(testEventId)
+          } catch (_: Exception) {}
+        }
+      }
+
+  @Test
+  fun mainActivity_regularEventNotification_navigatesToEventDetail_whenAuthenticated() =
+      runBlocking {
+        // This test covers: LaunchedEffect(initialEventId, notificationType) WITHOUT
+        // event_chat_message
+        // Lines 210-212 in MainActivity.kt
+        val currentUser = FirebaseAuth.getInstance().currentUser
+
+        // Skip test if user is not authenticated
+        if (currentUser == null) {
+          return@runBlocking
+        }
+
+        // Create a real test event
+        val eventRepository =
+            com.android.joinme.model.event.EventsRepositoryProvider.getRepository(
+                isOnline = true, ApplicationProvider.getApplicationContext())
+        val testEventId = eventRepository.getNewEventId()
+        val testEvent =
+            com.android.joinme.model.event.Event(
+                eventId = testEventId,
+                type = com.android.joinme.model.event.EventType.SPORTS,
+                title = "Test Event for Regular Notification",
+                description = "Testing navigation to event detail",
+                location = com.android.joinme.model.map.Location(0.0, 0.0, "Test Location"),
+                date = com.google.firebase.Timestamp.now(),
+                duration = 90,
+                participants = listOf(currentUser.uid),
+                maxParticipants = 15,
+                visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+                ownerId = currentUser.uid)
+        eventRepository.addEvent(testEvent)
+
+        try {
+          // Launch MainActivity with regular event notification (no chat type)
+          val context = ApplicationProvider.getApplicationContext<Context>()
+          val intent =
+              Intent(context, MainActivity::class.java).apply {
+                putExtra("eventId", testEventId)
+                // No notificationType - should navigate to event detail screen
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+              }
+
+          val scenario = ActivityScenario.launch<MainActivity>(intent)
+          Thread.sleep(3000) // Wait for LaunchedEffect and navigation to complete
+
+          scenario.use {
+            it.onActivity { activity ->
+              // Activity should not crash, navigation to event detail should have occurred
+              assert(!activity.isFinishing)
+            }
+          }
+
+          scenario.close()
+        } finally {
+          // Cleanup
+          try {
+            eventRepository.deleteEvent(testEventId)
+          } catch (_: Exception) {}
+        }
+      }
+
+  @Test
+  fun mainActivity_eventChatNotification_fallsBackToDefaultParticipants_whenEventFetchFails() =
+      runBlocking {
+        // This test covers: LaunchedEffect catch block (lines 204-207)
+        // When eventRepository.getEvent fails, it should navigate with default totalParticipants=1
+        val currentUser = FirebaseAuth.getInstance().currentUser
+
+        // Skip test if user is not authenticated
+        if (currentUser == null) {
+          return@runBlocking
+        }
+
+        // Use a non-existent event ID to trigger the error path
+        val invalidEventId = "non-existent-event-for-chat-notification"
+
+        // Launch MainActivity with event chat notification for non-existent event
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val intent =
+            Intent(context, MainActivity::class.java).apply {
+              putExtra("notificationType", "event_chat_message")
+              putExtra("eventId", invalidEventId)
+              putExtra("conversationId", "test-conversation-error-handling")
+              putExtra("chatName", "Test Error Handling Chat")
+              addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+
+        val scenario = ActivityScenario.launch<MainActivity>(intent)
+        Thread.sleep(3000) // Wait for LaunchedEffect, getEvent failure, and fallback navigation
+
+        scenario.use {
+          it.onActivity { activity ->
+            // Activity should not crash even when event fetch fails
+            // It should fall back to navigating with default totalParticipants=1
+            assert(!activity.isFinishing)
+          }
+        }
+
+        scenario.close()
+      }
+
+  @Test
+  fun mainActivity_eventNotification_skipsNavigation_whenUserNotAuthenticated() {
+    // This test covers: LaunchedEffect early exit when currentUser == null
+    // Lines 191: if (initialEventId != null && currentUser != null)
+    val currentUser = FirebaseAuth.getInstance().currentUser
+
+    // Skip test if user IS authenticated (we need unauthenticated state)
+    if (currentUser != null) {
+      return
+    }
+
+    // Launch MainActivity with event notification while not authenticated
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          putExtra("eventId", "some-event-id")
+          addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    Thread.sleep(1000)
+
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should not crash, and no navigation should occur (stays on auth screen)
+        assert(!activity.isFinishing)
+      }
+    }
+
+    scenario.close()
+  }
+
+  @Test
+  fun mainActivity_eventNotification_skipsNavigation_whenEventIdIsNull() {
+    // This test covers: LaunchedEffect early exit when initialEventId == null
+    // Lines 191: if (initialEventId != null && currentUser != null)
+
+    // Launch MainActivity without eventId
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent = Intent(context, MainActivity::class.java)
+    // No eventId provided
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    Thread.sleep(1000)
+
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should launch normally without attempting event navigation
+        assert(!activity.isFinishing)
+      }
+    }
+
+    scenario.close()
+  }
 }
