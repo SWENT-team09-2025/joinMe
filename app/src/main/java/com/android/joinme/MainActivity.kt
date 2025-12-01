@@ -16,7 +16,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -59,7 +58,6 @@ import com.android.joinme.ui.profile.ViewProfileScreen
 import com.android.joinme.ui.signIn.SignInScreen
 import com.android.joinme.ui.theme.JoinMeTheme
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
 /** Provides a singleton OkHttpClient instance for network operations. */
@@ -75,6 +73,42 @@ const val SERIES_ID = "serieId"
 
 /** Key for the event ID in the bundle. */
 const val EVENT_ID = "eventId"
+
+/**
+ * Handles the logic for joining a group from an invitation link.
+ *
+ * @param groupId The ID of the group to join
+ * @param userId The current user's ID, or null if not authenticated
+ * @param context The context for showing toasts
+ * @param navigationActions Actions for navigation after successful join
+ */
+private suspend fun handleGroupJoin(
+    groupId: String,
+    userId: String?,
+    context: Context,
+    navigationActions: NavigationActions
+) {
+  if (userId == null) {
+    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+      Toast.makeText(context, "Please sign in to join the group", Toast.LENGTH_SHORT).show()
+    }
+    return
+  }
+
+  try {
+    val groupRepository = GroupRepositoryProvider.repository
+    groupRepository.joinGroup(groupId, userId)
+    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+      Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT).show()
+    }
+    navigationActions.navigateTo(Screen.GroupDetail(groupId))
+  } catch (e: Exception) {
+    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+      Toast.makeText(context, "Failed to join group: ${e.message}", Toast.LENGTH_LONG).show()
+    }
+  }
+}
+
 /**
  * MainActivity is the single activity for the JoinMe application.
  *
@@ -150,8 +184,6 @@ fun JoinMe(
 ) {
   val navController = rememberNavController()
   val navigationActions = NavigationActions(navController)
-  val coroutineScope = rememberCoroutineScope()
-
   var currentUser by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
 
   // Listen for auth state changes
@@ -171,36 +203,16 @@ fun JoinMe(
   }
 
   // Navigate to event if opened from notification
-  LaunchedEffect(initialEventId) {
+  LaunchedEffect(initialEventId, currentUser) {
     if (initialEventId != null && currentUser != null) {
       navigationActions.navigateTo(Screen.ShowEventScreen(initialEventId))
     }
   }
 
   // Join group if opened from invitation link
-  LaunchedEffect(initialGroupId) {
-    if (initialGroupId != null) {
-      if (currentUser != null) {
-        coroutineScope.launch {
-          try {
-            val groupRepository = GroupRepositoryProvider.repository
-            groupRepository.joinGroup(initialGroupId, currentUser!!.uid)
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-              Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT).show()
-            }
-            navigationActions.navigateTo(Screen.GroupDetail(initialGroupId))
-          } catch (e: Exception) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-              Toast.makeText(context, "Failed to join group: ${e.message}", Toast.LENGTH_LONG)
-                  .show()
-            }
-          }
-        }
-      } else {
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-          Toast.makeText(context, "Please sign in to join the group", Toast.LENGTH_SHORT).show()
-        }
-      }
+  LaunchedEffect(initialGroupId, currentUser) {
+    initialGroupId?.let { groupId ->
+      handleGroupJoin(groupId, currentUser?.uid, context, navigationActions)
     }
   }
 
