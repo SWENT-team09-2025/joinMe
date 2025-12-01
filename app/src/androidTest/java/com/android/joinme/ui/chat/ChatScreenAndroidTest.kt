@@ -260,7 +260,7 @@ class ChatScreenAndroidTest {
     composeTestRule.waitForIdle()
 
     // Verify attachment menu items are displayed
-    composeTestRule.onNodeWithText("Gallery").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Photo").assertIsDisplayed()
     composeTestRule.onNodeWithText("Location").assertIsDisplayed()
     composeTestRule.onNodeWithText("Poll").assertIsDisplayed()
   }

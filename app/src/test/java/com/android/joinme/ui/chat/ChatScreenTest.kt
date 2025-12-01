@@ -325,8 +325,8 @@ class ChatScreenTest {
     composeTestRule.waitForIdle()
 
     // Verify all options are displayed with their labels
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_GALLERY).assertIsDisplayed()
-    composeTestRule.onNodeWithText("Gallery").assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_PHOTO).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Photo").assertIsDisplayed()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_LOCATION).assertIsDisplayed()
     composeTestRule.onNodeWithText("Location").assertIsDisplayed()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_POLL).assertIsDisplayed()
