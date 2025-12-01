@@ -2,9 +2,12 @@ package com.android.joinme.ui.chat
 
 // Implemented with help of Claude AI
 
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
+import java.io.File
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,6 +38,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.BrokenImage
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
@@ -116,7 +120,10 @@ object ChatScreenTestTags {
   const val MIC_BUTTON = "micButton"
   const val ATTACHMENT_BUTTON = "attachmentButton"
   const val ATTACHMENT_MENU = "attachmentMenu"
-  const val ATTACHMENT_GALLERY = "attachmentGallery"
+  const val ATTACHMENT_PHOTO = "attachmentPhoto"
+  const val PHOTO_SOURCE_DIALOG = "photoSourceDialog"
+  const val PHOTO_SOURCE_GALLERY = "photoSourceGallery"
+  const val PHOTO_SOURCE_CAMERA = "photoSourceCamera"
   const val ATTACHMENT_LOCATION = "attachmentLocation"
   const val ATTACHMENT_POLL = "attachmentPoll"
   const val LOADING_INDICATOR = "chatLoadingIndicator"
@@ -942,7 +949,7 @@ private fun MessageInput(
  * Bottom sheet menu for attachment options.
  *
  * Displays three options in a horizontal row:
- * - Gallery: For sending images
+ * - Photo: For taking photos or selecting from gallery (opens dialog to choose)
  * - Location: For sharing location (not yet implemented)
  * - Poll: For creating polls (not yet implemented)
  *
@@ -963,7 +970,21 @@ private fun AttachmentMenu(
   val imageSentSuccess = stringResource(R.string.image_sent_success)
   val coroutineScope = rememberCoroutineScope()
 
-  // Image picker launcher (includes camera option in most system pickers)
+  // State to hold the camera image URI
+  var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
+
+  // State to show photo source selection dialog
+  var showPhotoSourceDialog by remember { mutableStateOf(false) }
+
+  // Helper function to create a temporary file URI for the camera
+  fun createImageUri(): Uri {
+    val timeStamp = System.currentTimeMillis()
+    val imageFile = File(context.cacheDir, "camera_image_${timeStamp}.jpg")
+    return FileProvider.getUriForFile(
+        context, "${context.packageName}.fileprovider", imageFile)
+  }
+
+  // Image picker launcher for gallery
   val imagePickerLauncher =
       rememberLauncherForActivityResult(
           contract = ActivityResultContracts.GetContent(),
@@ -990,6 +1011,49 @@ private fun AttachmentMenu(
             }
           })
 
+  // Camera launcher
+  val cameraLauncher =
+      rememberLauncherForActivityResult(
+          contract = ActivityResultContracts.TakePicture(),
+          onResult = { success ->
+            if (success && cameraImageUri != null) {
+              viewModel.uploadAndSendImage(
+                  context = context,
+                  imageUri = cameraImageUri!!,
+                  senderName = currentUserName,
+                  onSuccess = {
+                    coroutineScope.launch {
+                      Toast.makeText(context, imageSentSuccess, Toast.LENGTH_SHORT).show()
+                    }
+                  },
+                  onError = { error ->
+                    android.util.Log.e("ChatScreen", "Camera upload ERROR: $error")
+                    coroutineScope.launch {
+                      Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                    }
+                  })
+              onDismiss()
+            } else {
+              android.util.Log.w("ChatScreen", "Camera capture failed or was cancelled")
+            }
+          })
+
+  // Camera permission launcher
+  val cameraPermissionLauncher =
+      rememberLauncherForActivityResult(
+          contract = ActivityResultContracts.RequestPermission(),
+          onResult = { isGranted ->
+            if (isGranted) {
+              // Permission granted, launch camera
+              cameraImageUri = createImageUri()
+              cameraLauncher.launch(cameraImageUri)
+            } else {
+              // Permission denied
+              Toast.makeText(context, "Camera permission is required to take photos", Toast.LENGTH_LONG)
+                  .show()
+            }
+          })
+
   ModalBottomSheet(
       onDismissRequest = onDismiss,
       sheetState = sheetState,
@@ -999,12 +1063,12 @@ private fun AttachmentMenu(
           // Options row - horizontal layout matching Figma
           Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
 
-            // Gallery option (camera is included in the system picker)
+            // Photo option - opens dialog to choose between gallery and camera
             AttachmentOption(
                 icon = Icons.Default.Image,
-                label = stringResource(R.string.gallery),
-                onClick = { imagePickerLauncher.launch("image/*") },
-                modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_GALLERY))
+                label = stringResource(R.string.photo),
+                onClick = { showPhotoSourceDialog = true },
+                modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_PHOTO))
 
             // Location option
             // TODO (#362): Implement location sharing
@@ -1032,6 +1096,80 @@ private fun AttachmentMenu(
           Spacer(modifier = Modifier.height(Dimens.Padding.large))
         }
       }
+
+  // Photo source selection dialog
+  if (showPhotoSourceDialog) {
+    PhotoSourceDialog(
+        onDismiss = { showPhotoSourceDialog = false },
+        onGalleryClick = {
+          showPhotoSourceDialog = false
+          imagePickerLauncher.launch("image/*")
+        },
+        onCameraClick = {
+          showPhotoSourceDialog = false
+          cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+        })
+  }
+}
+
+/**
+ * Dialog for choosing photo source (Gallery or Camera).
+ *
+ * @param onDismiss Callback when dialog is dismissed
+ * @param onGalleryClick Callback when gallery option is selected
+ * @param onCameraClick Callback when camera option is selected
+ */
+@Composable
+private fun PhotoSourceDialog(
+    onDismiss: () -> Unit,
+    onGalleryClick: () -> Unit,
+    onCameraClick: () -> Unit
+) {
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      title = { Text(text = stringResource(R.string.choose_photo_source)) },
+      text = {
+        Column(modifier = Modifier.fillMaxWidth()) {
+          // Gallery option
+          TextButton(
+              onClick = onGalleryClick,
+              modifier =
+                  Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_GALLERY)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start) {
+                      Icon(
+                          imageVector = Icons.Default.Image,
+                          contentDescription = stringResource(R.string.gallery),
+                          modifier = Modifier.padding(end = Dimens.Padding.medium))
+                      Text(text = stringResource(R.string.gallery))
+                    }
+              }
+
+          // Camera option
+          TextButton(
+              onClick = onCameraClick,
+              modifier =
+                  Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_CAMERA)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start) {
+                      Icon(
+                          imageVector = Icons.Default.CameraAlt,
+                          contentDescription = stringResource(R.string.camera),
+                          modifier = Modifier.padding(end = Dimens.Padding.medium))
+                      Text(text = stringResource(R.string.camera))
+                    }
+              }
+        }
+      },
+      confirmButton = {},
+      dismissButton = {
+        TextButton(onClick = onDismiss) { Text(text = stringResource(R.string.cancel)) }
+      },
+      modifier = Modifier.testTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG))
 }
 
 /**
