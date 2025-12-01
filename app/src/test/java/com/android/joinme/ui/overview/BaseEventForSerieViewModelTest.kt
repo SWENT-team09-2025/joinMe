@@ -1,7 +1,12 @@
 package com.android.joinme.ui.overview
 
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.map.LocationRepository
+import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.serie.SerieFilter
+import com.android.joinme.model.serie.SeriesRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,8 +35,11 @@ class BaseEventForSerieViewModelTest {
 
   // ---- Test ViewModel ----
   // Uses EventForSerieFormState directly for testing
-  private class TestEventForSerieViewModel(locationRepository: LocationRepository) :
-      BaseEventForSerieViewModel(locationRepository) {
+  private class TestEventForSerieViewModel(
+      locationRepository: LocationRepository,
+      serieRepository: SeriesRepository,
+      groupRepository: GroupRepository
+  ) : BaseEventForSerieViewModel(locationRepository, serieRepository, groupRepository) {
 
     override val _uiState = MutableStateFlow(EventForSerieFormState())
     val uiState = _uiState
@@ -51,7 +59,7 @@ class BaseEventForSerieViewModelTest {
     }
   }
 
-  // ---- Fake Location Repository ----
+  // ---- Fake Repositories ----
   private class FakeLocationRepository : LocationRepository {
     var shouldThrowError = false
 
@@ -68,7 +76,45 @@ class BaseEventForSerieViewModelTest {
     }
   }
 
+  private class FakeSeriesRepository : SeriesRepository {
+    override suspend fun getSerie(serieId: String): Serie = throw NotImplementedError()
+
+    override suspend fun editSerie(serieId: String, serie: Serie) = throw NotImplementedError()
+
+    override suspend fun addSerie(serie: Serie) = throw NotImplementedError()
+
+    override suspend fun deleteSerie(serieId: String) = throw NotImplementedError()
+
+    override suspend fun getAllSeries(filter: SerieFilter): List<Serie> = emptyList()
+
+    override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> = emptyList()
+
+    override fun getNewSerieId(): String = "newSerieId"
+  }
+
+  private class FakeGroupRepository : GroupRepository {
+    override suspend fun getGroup(groupId: String): Group = throw NotImplementedError()
+
+    override suspend fun getAllGroups(): List<Group> = emptyList()
+
+    override suspend fun addGroup(group: Group) = throw NotImplementedError()
+
+    override suspend fun deleteGroup(groupId: String, userId: String) = throw NotImplementedError()
+
+    override suspend fun leaveGroup(groupId: String, userId: String) = throw NotImplementedError()
+
+    override suspend fun joinGroup(groupId: String, userId: String) = throw NotImplementedError()
+
+    override suspend fun editGroup(groupId: String, group: Group) = throw NotImplementedError()
+
+    override suspend fun getCommonGroups(userIds: List<String>): List<Group> = emptyList()
+
+    override fun getNewGroupId(): String = "newGroupId"
+  }
+
   private lateinit var locationRepo: FakeLocationRepository
+  private lateinit var serieRepo: FakeSeriesRepository
+  private lateinit var groupRepo: FakeGroupRepository
   private lateinit var vm: TestEventForSerieViewModel
   private val testDispatcher = StandardTestDispatcher()
 
@@ -76,7 +122,9 @@ class BaseEventForSerieViewModelTest {
   fun setUp() {
     Dispatchers.setMain(testDispatcher)
     locationRepo = FakeLocationRepository()
-    vm = TestEventForSerieViewModel(locationRepo)
+    serieRepo = FakeSeriesRepository()
+    groupRepo = FakeGroupRepository()
+    vm = TestEventForSerieViewModel(locationRepo, serieRepo, groupRepo)
   }
 
   @After

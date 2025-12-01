@@ -2,8 +2,11 @@ package com.android.joinme.ui.overview
 
 import androidx.lifecycle.ViewModel
 import com.android.joinme.model.event.EventType
+import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.map.LocationRepository
+import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.serie.SeriesRepository
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -98,8 +101,11 @@ data class EventForSerieFormState(
  * Contains all shared validation and business logic for creating/editing events within a serie.
  * Subclasses must implement the abstract properties to provide their specific UI state management.
  */
-abstract class BaseEventForSerieViewModel(protected val locationRepository: LocationRepository) :
-    ViewModel() {
+abstract class BaseEventForSerieViewModel(
+    protected val locationRepository: LocationRepository,
+    protected val serieRepository: SeriesRepository,
+    protected val groupRepository: GroupRepository
+) : ViewModel() {
 
   /** The mutable state flow for the UI state. Subclasses must provide their specific state type. */
   protected abstract val _uiState: MutableStateFlow<out EventForSerieFormUIState>
@@ -296,6 +302,87 @@ abstract class BaseEventForSerieViewModel(protected val locationRepository: Loca
           is EventForSerieFormState -> state.copy(locationSuggestions = emptyList())
           else -> state
         }
+      }
+    }
+  }
+
+  /**
+   * Loads the serie and checks if it has a group.
+   *
+   * If the serie has a group, sets serieHasGroup to true and loads the group's event type.
+   *
+   * @param serieId The ID of the serie to load
+   */
+  protected suspend fun loadSerieAndCheckGroup(serieId: String) {
+    try {
+      val serie = serieRepository.getSerie(serieId)
+      if (serie.groupId != null) {
+        val eventType = determineEventTypeFromGroup(serie)
+        updateState { state ->
+          when (state) {
+            is EventForSerieFormState ->
+                state.copy(serieHasGroup = true, type = eventType.name, invalidTypeMsg = null)
+            else -> state
+          }
+        }
+      } else {
+        updateState { state ->
+          when (state) {
+            is EventForSerieFormState -> state.copy(serieHasGroup = false)
+            else -> state
+          }
+        }
+      }
+    } catch (e: Exception) {
+      setErrorMsg("Failed to load serie: ${e.message}")
+    }
+  }
+
+  /**
+   * Determines the event type from the serie's group.
+   *
+   * Fetches the group and returns its category as the event type. Throws an exception if the group
+   * cannot be fetched.
+   *
+   * @param serie The serie with a groupId
+   * @return The EventType from the group's category
+   * @throws Exception if the group cannot be fetched
+   */
+  protected suspend fun determineEventTypeFromGroup(serie: Serie): EventType {
+    val groupId = serie.groupId ?: throw IllegalStateException("Serie has no groupId")
+    val group = groupRepository.getGroup(groupId)
+    return group.category
+  }
+
+  /**
+   * Populates the UI state with event data.
+   *
+   * This helper function extracts common event fields and updates the state, optionally preserving
+   * group-specific type information.
+   *
+   * @param event The event to populate from
+   * @param serieHasGroup Whether the serie has a group
+   * @param preservedType The type to preserve if serie has a group
+   */
+  protected fun populateEventData(
+      event: com.android.joinme.model.event.Event,
+      serieHasGroup: Boolean = false,
+      preservedType: String? = null
+  ) {
+    val eventType = if (serieHasGroup && preservedType != null) preservedType else event.type.name
+
+    updateState { state ->
+      when (state) {
+        is EventForSerieFormState ->
+            state.copy(
+                type = eventType,
+                title = event.title,
+                description = event.description,
+                location = event.location?.name ?: "",
+                locationQuery = event.location?.name ?: "",
+                selectedLocation = event.location,
+                duration = event.duration.toString())
+        else -> state
       }
     }
   }

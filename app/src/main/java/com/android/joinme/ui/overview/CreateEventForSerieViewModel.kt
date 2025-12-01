@@ -48,10 +48,10 @@ private const val MILLIS_PER_MINUTE = SECONDS_PER_MINUTE * MILLIS_PER_SECOND
 class CreateEventForSerieViewModel(
     private val eventRepository: EventsRepository =
         EventsRepositoryProvider.getRepository(isOnline = true),
-    private val serieRepository: SeriesRepository = SeriesRepositoryProvider.repository,
-    private val groupRepository: GroupRepository = GroupRepositoryProvider.repository,
+    serieRepository: SeriesRepository = SeriesRepositoryProvider.repository,
+    groupRepository: GroupRepository = GroupRepositoryProvider.repository,
     locationRepository: LocationRepository = NominatimLocationRepository(HttpClientProvider.client)
-) : BaseEventForSerieViewModel(locationRepository) {
+) : BaseEventForSerieViewModel(locationRepository, serieRepository, groupRepository) {
 
   override val _uiState = MutableStateFlow(EventForSerieFormState())
   val uiState: StateFlow<EventForSerieFormState> = _uiState.asStateFlow()
@@ -70,19 +70,7 @@ class CreateEventForSerieViewModel(
    * @param serieId The ID of the serie to load
    */
   suspend fun loadSerie(serieId: String) {
-    try {
-      val serie = serieRepository.getSerie(serieId)
-      if (serie.groupId != null) {
-        val eventType = determineEventTypeFromGroup(serie)
-        _uiState.value =
-            _uiState.value.copy(serieHasGroup = true, type = eventType.name, invalidTypeMsg = null)
-      } else {
-        _uiState.value = _uiState.value.copy(serieHasGroup = false)
-      }
-    } catch (e: Exception) {
-      android.util.Log.e("CreateEventForSerieVM", "Failed to load serie", e)
-      setErrorMsg("Failed to load serie: ${e.message}")
-    }
+    loadSerieAndCheckGroup(serieId)
   }
 
   /**
@@ -180,21 +168,6 @@ class CreateEventForSerieViewModel(
     }
   }
 
-  /**
-   * Determines the event type from the serie's group.
-   *
-   * Fetches the group and returns its category as the event type. Throws an exception if the group
-   * cannot be fetched.
-   *
-   * @param serie The serie with a groupId
-   * @return The EventType from the group's category
-   * @throws Exception if the group cannot be fetched
-   */
-  private suspend fun determineEventTypeFromGroup(serie: Serie): EventType {
-    val groupId = serie.groupId ?: throw IllegalStateException("Serie has no groupId")
-    val group = groupRepository.getGroup(groupId)
-    return group.category
-  }
 
   /**
    * Calculates the appropriate start date for a new event in the serie.

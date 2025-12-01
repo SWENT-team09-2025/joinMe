@@ -890,14 +890,19 @@ class EditSerieScreenTest {
   }
 
   @Test
-  fun groupSerie_canEditFieldsAndSaveButtonRemainsEnabled() {
+  fun groupSerie_canEditFieldsAndSaveSuccessfully() {
     val repo = SeriesRepositoryLocal()
     val groupSerie = createTestGroupSerie()
     runBlocking { repo.addSerie(groupSerie) }
     val viewModel = EditSerieViewModel(repo)
 
+    var saveCalled = false
+
     composeTestRule.setContent {
-      EditSerieScreen(serieId = groupSerie.serieId, editSerieViewModel = viewModel, onDone = {})
+      EditSerieScreen(
+          serieId = groupSerie.serieId,
+          editSerieViewModel = viewModel,
+          onDone = { saveCalled = true })
     }
 
     composeTestRule.waitForIdle()
@@ -919,7 +924,7 @@ class EditSerieScreenTest {
 
     composeTestRule.waitForIdle()
 
-    // Save button should remain enabled
+    // Save button should be enabled
     composeTestRule.waitUntil(timeoutMillis = 5_000) {
       composeTestRule
           .onAllNodesWithTag(EditSerieScreenTestTags.SERIE_SAVE)
@@ -929,6 +934,62 @@ class EditSerieScreenTest {
           ?.getOrNull(SemanticsProperties.Disabled) == null
     }
 
-    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.SERIE_SAVE).assertIsEnabled()
+    // Save changes
+    composeTestRule
+        .onNodeWithTag(EditSerieScreenTestTags.SERIE_SAVE)
+        .performScrollTo()
+        .performClick()
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify save was successful and groupId was preserved
+    assert(saveCalled)
+    runBlocking {
+      val updatedSerie = repo.getSerie(groupSerie.serieId)
+      assert(updatedSerie.title == "Updated Group Serie Title")
+      assert(updatedSerie.description == "Updated group description")
+      assert(updatedSerie.groupId == "group-123")
+      assert(updatedSerie.maxParticipants == 300) // Unchanged
+      assert(updatedSerie.visibility == Visibility.PRIVATE) // Unchanged
+    }
+  }
+
+  @Test
+  fun groupSerie_clearingTitleOrDescription_disablesSaveButton() {
+    val repo = SeriesRepositoryLocal()
+    val groupSerie = createTestGroupSerie()
+    runBlocking { repo.addSerie(groupSerie) }
+    val viewModel = EditSerieViewModel(repo)
+
+    composeTestRule.setContent {
+      EditSerieScreen(serieId = groupSerie.serieId, editSerieViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Clear title
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE).performTextClearance()
+
+    composeTestRule.waitForIdle()
+
+    // Save button should be disabled
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.SERIE_SAVE).assertIsNotEnabled()
+
+    // Restore title and clear description
+    composeTestRule
+        .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE)
+        .performTextInput("Valid Title")
+    composeTestRule
+        .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_DESCRIPTION)
+        .performTextClearance()
+
+    composeTestRule.waitForIdle()
+
+    // Save button should still be disabled
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.SERIE_SAVE).assertIsNotEnabled()
   }
 }

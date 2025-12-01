@@ -5,6 +5,8 @@ import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.map.LocationRepository
 import com.android.joinme.model.serie.Serie
@@ -144,9 +146,44 @@ class EditEventForSerieViewModelTest {
     override fun getNewSerieId(): String = "newSerieId"
   }
 
+  private class FakeGroupRepository : GroupRepository {
+    private val groups = mutableMapOf<String, Group>()
+
+    fun addTestGroup(group: Group) {
+      groups[group.id] = group
+    }
+
+    override suspend fun getGroup(groupId: String): Group {
+      return groups[groupId] ?: throw NoSuchElementException("Group not found")
+    }
+
+    override suspend fun getAllGroups(): List<Group> = groups.values.toList()
+
+    override suspend fun addGroup(group: Group) {
+      groups[group.id] = group
+    }
+
+    override suspend fun deleteGroup(groupId: String, userId: String) {
+      groups.remove(groupId)
+    }
+
+    override suspend fun leaveGroup(groupId: String, userId: String) {}
+
+    override suspend fun joinGroup(groupId: String, userId: String) {}
+
+    override suspend fun editGroup(groupId: String, group: Group) {
+      groups[groupId] = group
+    }
+
+    override suspend fun getCommonGroups(userIds: List<String>): List<Group> = emptyList()
+
+    override fun getNewGroupId(): String = "newGroupId"
+  }
+
   private lateinit var locationRepo: FakeLocationRepository
   private lateinit var eventRepo: FakeEventsRepository
   private lateinit var serieRepo: FakeSeriesRepository
+  private lateinit var groupRepo: FakeGroupRepository
   private lateinit var vm: EditEventForSerieViewModel
   private val testDispatcher = StandardTestDispatcher()
 
@@ -156,7 +193,8 @@ class EditEventForSerieViewModelTest {
     locationRepo = FakeLocationRepository()
     eventRepo = FakeEventsRepository()
     serieRepo = FakeSeriesRepository()
-    vm = EditEventForSerieViewModel(eventRepo, serieRepo, locationRepo)
+    groupRepo = FakeGroupRepository()
+    vm = EditEventForSerieViewModel(eventRepo, serieRepo, groupRepo, locationRepo)
   }
 
   @After
@@ -838,5 +876,201 @@ class EditEventForSerieViewModelTest {
 
     assertTrue(success)
     assertFalse(vm.uiState.value.isLoading) // Should be false after completion
+  }
+
+  // ---------- Group Serie Event Editing ----------
+
+  @Test
+  fun loadEvent_serieWithGroup_setsSerieHasGroupAndLoadsTypeFromGroup() = runTest {
+    // Setup: Create a group with SPORTS category
+    val sportsGroup =
+        Group(
+            id = "group-1",
+            name = "Football Group",
+            category = EventType.SPORTS,
+            description = "Sports group",
+            ownerId = "owner1",
+            memberIds = listOf("owner1", "user1"))
+    groupRepo.addTestGroup(sportsGroup)
+
+    // Create a serie with the group
+    val serie =
+        Serie(
+            serieId = "serie1",
+            title = "Serie",
+            description = "Description",
+            date = Timestamp.now(),
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "user1",
+            groupId = "group-1")
+    serieRepo.addTestSerie(serie)
+
+    // Create an event with ACTIVITY type (should be overridden by group's SPORTS)
+    val location = Location(latitude = 1.0, longitude = 1.0, name = "Stadium")
+    val event =
+        Event(
+            eventId = "event1",
+            type = EventType.ACTIVITY,
+            title = "Event Title",
+            description = "Description",
+            location = location,
+            date = Timestamp.now(),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "user1",
+            groupId = "group-1")
+    eventRepo.addTestEvent(event)
+
+    // Load event
+    vm.loadEvent("event1")
+    advanceUntilIdle()
+
+    // Verify serieHasGroup is true and type is loaded from group
+    assertTrue(vm.uiState.value.serieHasGroup)
+    assertEquals("SPORTS", vm.uiState.value.type)
+    assertEquals("Event Title", vm.uiState.value.title)
+    assertEquals("Description", vm.uiState.value.description)
+  }
+
+  @Test
+  fun loadEvent_serieWithoutGroup_setsSerieHasGroupFalseAndLoadsTypeFromEvent() = runTest {
+    // Create a serie without a group
+    val serie =
+        Serie(
+            serieId = "serie1",
+            title = "Serie",
+            description = "Description",
+            date = Timestamp.now(),
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "user1",
+            groupId = null)
+    serieRepo.addTestSerie(serie)
+
+    // Create an event with ACTIVITY type
+    val location = Location(latitude = 1.0, longitude = 1.0, name = "Park")
+    val event =
+        Event(
+            eventId = "event1",
+            type = EventType.ACTIVITY,
+            title = "Event Title",
+            description = "Description",
+            location = location,
+            date = Timestamp.now(),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "user1")
+    eventRepo.addTestEvent(event)
+
+    // Load event
+    vm.loadEvent("event1")
+    advanceUntilIdle()
+
+    // Verify serieHasGroup is false and type is loaded from event
+    assertFalse(vm.uiState.value.serieHasGroup)
+    assertEquals("ACTIVITY", vm.uiState.value.type)
+  }
+
+  @Test
+  fun editEventForSerie_serieWithGroup_preservesGroupType() = runTest {
+    // Setup: Create a group with SOCIAL category
+    val socialGroup =
+        Group(
+            id = "group-1",
+            name = "Social Group",
+            category = EventType.SOCIAL,
+            description = "Social group",
+            ownerId = "owner1",
+            memberIds = listOf("owner1", "user1"))
+    groupRepo.addTestGroup(socialGroup)
+
+    // Create a serie with the group
+    val serie =
+        Serie(
+            serieId = "serie1",
+            title = "Serie",
+            description = "Description",
+            date = Timestamp.now(),
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event1"),
+            ownerId = "user1",
+            groupId = "group-1")
+    serieRepo.addTestSerie(serie)
+
+    // Create an event
+    val location = Location(latitude = 1.0, longitude = 1.0, name = "Cafe")
+    val event =
+        Event(
+            eventId = "event1",
+            type = EventType.SOCIAL,
+            title = "Original Title",
+            description = "Original Description",
+            location = location,
+            date = Timestamp.now(),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "user1",
+            groupId = "group-1")
+    eventRepo.addTestEvent(event)
+
+    // Load event and edit title/description
+    vm.loadEvent("event1")
+    advanceUntilIdle()
+
+    vm.setTitle("Updated Title")
+    vm.setDescription("Updated Description")
+
+    val success = vm.editEventForSerie("serie1", "event1")
+    advanceUntilIdle()
+
+    assertTrue(success)
+
+    // Verify event was updated with new values but type remains SOCIAL from group
+    val updatedEvent = eventRepo.getEvent("event1")
+    assertEquals("Updated Title", updatedEvent.title)
+    assertEquals("Updated Description", updatedEvent.description)
+    assertEquals(EventType.SOCIAL, updatedEvent.type)
+  }
+
+  @Test
+  fun loadEvent_nonExistentSerie_loadsEventWithoutGroupInfo() = runTest {
+    // Create an event but no corresponding serie
+    val location = Location(latitude = 1.0, longitude = 1.0, name = "Stadium")
+    val event =
+        Event(
+            eventId = "event1",
+            type = EventType.SPORTS,
+            title = "Orphan Event",
+            description = "Event without serie",
+            location = location,
+            date = Timestamp.now(),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "user1")
+    eventRepo.addTestEvent(event)
+
+    // Load event
+    vm.loadEvent("event1")
+    advanceUntilIdle()
+
+    // Verify event data is loaded but serieHasGroup is false
+    assertFalse(vm.uiState.value.serieHasGroup)
+    assertEquals("SPORTS", vm.uiState.value.type)
+    assertEquals("Orphan Event", vm.uiState.value.title)
   }
 }
