@@ -34,6 +34,9 @@ import org.junit.Test
  * - Week boundary calculations
  * - onActivityJoined scenarios
  * - onActivityDeleted scenarios
+ * - onActivityLeft scenarios
+ * - onUserLeftGroup scenarios
+ * - onGroupDeleted scenarios
  */
 class StreakServiceTest {
 
@@ -332,6 +335,137 @@ class StreakServiceTest {
                 streak.lastActiveWeekStart == null
           })
     }
+  }
+
+  // ==================== onActivityLeft Tests ====================
+
+  @Test
+  fun `onActivityLeft with null groupId does nothing`() = runTest {
+    StreakService.onActivityLeft(null, testUserId, mondayWeek1)
+
+    coVerify(exactly = 0) { mockStreakRepository.getStreakForUser(any(), any()) }
+    coVerify(exactly = 0) { mockStreakRepository.updateStreak(any(), any(), any()) }
+  }
+
+  @Test
+  fun `onActivityLeft with no existing streak does nothing`() = runTest {
+    coEvery { mockStreakRepository.getStreakForUser(testGroupId, testUserId) } returns null
+
+    StreakService.onActivityLeft(testGroupId, testUserId, mondayWeek1)
+
+    coVerify(exactly = 0) { mockStreakRepository.updateStreak(any(), any(), any()) }
+  }
+
+  @Test
+  fun `onActivityLeft decrements activities when other activities exist in week`() = runTest {
+    val existingStreak =
+        GroupStreak(
+            groupId = testGroupId,
+            userId = testUserId,
+            currentStreakWeeks = 1,
+            currentStreakActivities = 3,
+            currentStreakStartDate = StreakService.getWeekStart(mondayWeek1),
+            lastActiveWeekStart = StreakService.getWeekStart(mondayWeek1),
+            bestStreakWeeks = 1,
+            bestStreakActivities = 3)
+    coEvery { mockStreakRepository.getStreakForUser(testGroupId, testUserId) } returns
+        existingStreak
+
+    // Setup: user has another event in the same week
+    val otherEvent = createTestEvent(testGroupId, testUserId, wednesdayWeek1)
+    coEvery { mockGroupRepository.getGroup(testGroupId) } returns
+        Group(id = testGroupId, eventIds = listOf("other-event"), serieIds = emptyList())
+    coEvery { mockEventsRepository.getEventsByIds(listOf("other-event")) } returns
+        listOf(otherEvent)
+
+    // User quits the Monday activity
+    StreakService.onActivityLeft(testGroupId, testUserId, mondayWeek1)
+
+    coVerify {
+      mockStreakRepository.updateStreak(
+          testGroupId,
+          testUserId,
+          match { streak ->
+            streak.currentStreakWeeks == 1 && // Weeks unchanged
+                streak.currentStreakActivities == 2 // Activities decremented
+          })
+    }
+  }
+
+  @Test
+  fun `onActivityLeft removes streak completely when last activity quit`() = runTest {
+    val existingStreak =
+        GroupStreak(
+            groupId = testGroupId,
+            userId = testUserId,
+            currentStreakWeeks = 1,
+            currentStreakActivities = 1,
+            currentStreakStartDate = StreakService.getWeekStart(mondayWeek1),
+            lastActiveWeekStart = StreakService.getWeekStart(mondayWeek1),
+            bestStreakWeeks = 1,
+            bestStreakActivities = 1)
+    coEvery { mockStreakRepository.getStreakForUser(testGroupId, testUserId) } returns
+        existingStreak
+
+    // No other activities exist
+    coEvery { mockGroupRepository.getGroup(testGroupId) } returns
+        Group(id = testGroupId, eventIds = emptyList(), serieIds = emptyList())
+
+    StreakService.onActivityLeft(testGroupId, testUserId, mondayWeek1)
+
+    coVerify {
+      mockStreakRepository.updateStreak(
+          testGroupId,
+          testUserId,
+          match { streak ->
+            streak.currentStreakWeeks == 0 &&
+                streak.currentStreakActivities == 0 &&
+                streak.currentStreakStartDate == null &&
+                streak.lastActiveWeekStart == null
+          })
+    }
+  }
+
+  // ==================== onUserLeftGroup Tests ====================
+
+  @Test
+  fun `onUserLeftGroup deletes streak for user`() = runTest {
+    StreakService.onUserLeftGroup(testGroupId, testUserId)
+
+    coVerify { mockStreakRepository.deleteStreakForUser(testGroupId, testUserId) }
+  }
+
+  @Test
+  fun `onUserLeftGroup handles multiple users leaving`() = runTest {
+    val userId1 = "user1"
+    val userId2 = "user2"
+
+    StreakService.onUserLeftGroup(testGroupId, userId1)
+    StreakService.onUserLeftGroup(testGroupId, userId2)
+
+    coVerify { mockStreakRepository.deleteStreakForUser(testGroupId, userId1) }
+    coVerify { mockStreakRepository.deleteStreakForUser(testGroupId, userId2) }
+  }
+
+  // ==================== onGroupDeleted Tests ====================
+
+  @Test
+  fun `onGroupDeleted deletes all streaks for group`() = runTest {
+    StreakService.onGroupDeleted(testGroupId)
+
+    coVerify { mockStreakRepository.deleteAllStreaksForGroup(testGroupId) }
+  }
+
+  @Test
+  fun `onGroupDeleted handles multiple groups being deleted`() = runTest {
+    val groupId1 = "group1"
+    val groupId2 = "group2"
+
+    StreakService.onGroupDeleted(groupId1)
+    StreakService.onGroupDeleted(groupId2)
+
+    coVerify { mockStreakRepository.deleteAllStreaksForGroup(groupId1) }
+    coVerify { mockStreakRepository.deleteAllStreaksForGroup(groupId2) }
   }
 
   // ==================== Helper Functions ====================
