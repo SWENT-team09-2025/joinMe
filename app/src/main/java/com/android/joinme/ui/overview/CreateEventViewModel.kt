@@ -280,8 +280,9 @@ class CreateEventViewModel(
       date: Timestamp
   ): Boolean {
     // A. Update Group (if applicable)
-    if (group != null) {
-      if (!updateGroupList(group, event.eventId)) return false
+    if (group != null && !updateGroupList(group, event.eventId)) {
+      // Return false to trigger rollback in the orchestrator
+      return false
     }
 
     // B. Update Profile (Increment count) - Critical step for consistency
