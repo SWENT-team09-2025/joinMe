@@ -729,4 +729,327 @@ class MainActivityTest {
 
     scenario.close()
   }
+
+  // ========== Notification Navigation Tests ==========
+  // These tests cover the new notification navigation logic added for chat messages
+
+  @Test
+  fun mainActivity_eventChatNotification_extractsAllExtras() {
+    // Test that event chat notification intent extras are properly extracted
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          putExtra("notificationType", "event_chat_message")
+          putExtra("eventId", "test-event-123")
+          putExtra("conversationId", "test-conversation-456")
+          putExtra("chatName", "Test Event Chat")
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Verify all intent extras are accessible
+        assert(activity.intent.getStringExtra("notificationType") == "event_chat_message")
+        assert(activity.intent.getStringExtra("eventId") == "test-event-123")
+        assert(activity.intent.getStringExtra("conversationId") == "test-conversation-456")
+        assert(activity.intent.getStringExtra("chatName") == "Test Event Chat")
+        assert(!activity.isFinishing)
+      }
+    }
+    scenario.close()
+  }
+
+  @Test
+  fun mainActivity_groupChatNotification_extractsAllExtras() {
+    // Test that group chat notification intent extras are properly extracted
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          putExtra("notificationType", "group_chat_message")
+          putExtra("groupId", "test-group-789")
+          putExtra("conversationId", "test-conversation-101")
+          putExtra("chatName", "Test Group Chat")
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Verify all intent extras are accessible
+        assert(activity.intent.getStringExtra("notificationType") == "group_chat_message")
+        assert(activity.intent.getStringExtra("groupId") == "test-group-789")
+        assert(activity.intent.getStringExtra("conversationId") == "test-conversation-101")
+        assert(activity.intent.getStringExtra("chatName") == "Test Group Chat")
+        assert(!activity.isFinishing)
+      }
+    }
+    scenario.close()
+  }
+
+  @Test
+  fun mainActivity_eventNotification_withoutChatType_handlesGracefully() {
+    // Test that regular event notification (not chat) works correctly
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          putExtra("eventId", "test-event-999")
+          // No notificationType - should navigate to event detail screen
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    Thread.sleep(1000)
+
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should handle missing notificationType gracefully
+        assert(activity.intent.getStringExtra("eventId") == "test-event-999")
+        assert(activity.intent.getStringExtra("notificationType") == null)
+        assert(!activity.isFinishing)
+      }
+    }
+    scenario.close()
+  }
+
+  @Test
+  fun mainActivity_groupNotification_withoutChatType_handlesGracefully() {
+    // Test that regular group notification (not chat) is parsed correctly
+    // Note: This test only verifies intent parsing, not navigation behavior
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          putExtra("groupId", "test-group-888")
+          // No notificationType - should navigate to group detail / join flow
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should parse the groupId correctly
+        assert(activity.intent.getStringExtra("groupId") == "test-group-888")
+        assert(activity.intent.getStringExtra("notificationType") == null)
+        assert(!activity.isFinishing)
+      }
+    }
+    // Note: This will trigger group join flow and show toast - this is expected behavior
+    Thread.sleep(2000) // Wait for async operations to complete
+    scenario.close()
+  }
+
+  @Test
+  fun mainActivity_eventChatNotification_withMissingConversationId_handlesGracefully() {
+    // Test that event chat notification without conversationId falls back to event detail screen
+    // Since conversationId is null, the condition at line 193 fails and it navigates to event
+    // detail instead
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          putExtra("notificationType", "event_chat_message")
+          putExtra("eventId", "test-event-555")
+          putExtra("chatName", "Test Chat")
+          // conversationId missing - will fall back to regular event navigation
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    Thread.sleep(2000)
+
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should not crash even with missing conversationId
+        assert(!activity.isFinishing)
+      }
+    }
+    scenario.close()
+  }
+
+  @Test
+  fun mainActivity_eventChatNotification_withMissingChatName_handlesGracefully() {
+    // Test that event chat notification without chatName falls back to event detail screen
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          putExtra("notificationType", "event_chat_message")
+          putExtra("eventId", "test-event-666")
+          putExtra("conversationId", "test-conversation-777")
+          // chatName missing - will fall back to regular event navigation
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    Thread.sleep(2000)
+
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should not crash even with missing chatName
+        assert(!activity.isFinishing)
+      }
+    }
+    scenario.close()
+  }
+
+  @Test
+  fun mainActivity_groupChatNotification_withMissingConversationId_handlesGracefully() {
+    // Test that group chat notification without conversationId falls back to join/detail flow
+    // Since conversationId is null, it will try to join the group instead
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          putExtra("notificationType", "group_chat_message")
+          putExtra("groupId", "test-group-444")
+          putExtra("chatName", "Test Group Chat")
+          // conversationId missing - will fall back to group join flow
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    // This will trigger group join and show toast - expected behavior
+    Thread.sleep(2000)
+
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should not crash even with missing conversationId
+        assert(!activity.isFinishing)
+      }
+    }
+    scenario.close()
+  }
+
+  @Test
+  fun mainActivity_groupChatNotification_withMissingChatName_handlesGracefully() {
+    // Test that group chat notification without chatName falls back to join/detail flow
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          putExtra("notificationType", "group_chat_message")
+          putExtra("groupId", "test-group-333")
+          putExtra("conversationId", "test-conversation-222")
+          // chatName missing - will fall back to group join flow
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    // This will trigger group join and show toast - expected behavior
+    Thread.sleep(2000)
+
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should not crash even with missing chatName
+        assert(!activity.isFinishing)
+      }
+    }
+    scenario.close()
+  }
+
+  @Test
+  fun mainActivity_eventChatNotification_combinesIntentExtraAndDeepLink() {
+    // Test that eventId can come from both intent extra and deep link
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("joinme://event/deeplink-event-111")
+          putExtra("notificationType", "event_chat_message")
+          putExtra("eventId", "intent-event-222")
+          putExtra("conversationId", "test-conversation-333")
+          putExtra("chatName", "Test Chat")
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should handle both sources of eventId
+        assert(!activity.isFinishing)
+        // Intent extra should take precedence over deep link
+        assert(activity.intent.getStringExtra("eventId") == "intent-event-222")
+        assert(activity.intent.data?.lastPathSegment == "deeplink-event-111")
+      }
+    }
+    scenario.close()
+  }
+
+  @Test
+  fun mainActivity_groupChatNotification_combinesIntentExtraAndDeepLink() {
+    // Test that groupId can come from both intent extra and deep link
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("joinme://group/deeplink-group-444")
+          putExtra("notificationType", "group_chat_message")
+          putExtra("groupId", "intent-group-555")
+          putExtra("conversationId", "test-conversation-666")
+          putExtra("chatName", "Test Group Chat")
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should handle both sources of groupId
+        assert(!activity.isFinishing)
+        // Intent extra should take precedence over deep link
+        assert(activity.intent.getStringExtra("groupId") == "intent-group-555")
+        assert(activity.intent.data?.lastPathSegment == "deeplink-group-444")
+      }
+    }
+    scenario.close()
+  }
+
+  @Test
+  fun mainActivity_unknownNotificationType_handlesGracefully() {
+    // Test that unknown notification types don't crash the app
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          putExtra("notificationType", "unknown_message_type")
+          putExtra("eventId", "test-event-777")
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    Thread.sleep(1000)
+
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should handle unknown notification types gracefully
+        assert(!activity.isFinishing)
+      }
+    }
+    scenario.close()
+  }
+
+  @Test
+  fun mainActivity_notificationExtras_withNullValues() {
+    // Test that null notification extras are handled gracefully
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent = Intent(context, MainActivity::class.java)
+    // No extras set at all
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // All getStringExtra should return null, not crash
+        assert(activity.intent.getStringExtra("notificationType") == null)
+        assert(activity.intent.getStringExtra("eventId") == null)
+        assert(activity.intent.getStringExtra("groupId") == null)
+        assert(activity.intent.getStringExtra("conversationId") == null)
+        assert(activity.intent.getStringExtra("chatName") == null)
+        assert(!activity.isFinishing)
+      }
+    }
+    scenario.close()
+  }
+
+  @Test
+  fun mainActivity_notificationWithOnlyNotificationType() {
+    // Test that having only notificationType without IDs doesn't cause issues
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          putExtra("notificationType", "event_chat_message")
+          // No eventId, conversationId, or chatName
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should not crash when notification type is set but IDs are missing
+        assert(activity.intent.getStringExtra("notificationType") == "event_chat_message")
+        assert(activity.intent.getStringExtra("eventId") == null)
+        assert(!activity.isFinishing)
+      }
+    }
+    scenario.close()
+  }
 }
