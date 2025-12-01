@@ -21,6 +21,7 @@ import java.util.TimeZone
  * This service should be called when:
  * - A user joins or creates an event/serie linked to a group
  * - An activity is deleted before it occurs (to revert streak changes)
+ * - A user leaves a group (to delete their streak)
  */
 object StreakService {
 
@@ -60,7 +61,7 @@ object StreakService {
 
     val updatedStreak =
         if (existingStreak == null) {
-          // First activity in this group — start a new streak
+          // First activity in this group, we start a new streak
           GroupStreak(
               groupId = groupId,
               userId = userId,
@@ -117,6 +118,18 @@ object StreakService {
     }
   }
 
+  /**
+   * Called when a user leaves a group.
+   *
+   * Deletes the user's streak data for that group.
+   *
+   * @param groupId The group the user is leaving.
+   * @param userId The user who is leaving the group.
+   */
+  suspend fun onUserLeftGroup(groupId: String, userId: String) {
+    streakRepository.deleteStreakForUser(groupId, userId)
+  }
+
   /** Computes the updated streak after a user joins an activity. */
   private fun computeUpdatedStreak(
       existingStreak: GroupStreak,
@@ -125,7 +138,7 @@ object StreakService {
     val lastActiveWeek = existingStreak.lastActiveWeekStart
 
     return when {
-      // Same week — just increment activities
+      // Same week, we just increment activities
       lastActiveWeek != null && isSameWeek(lastActiveWeek, currentWeekStart) -> {
         val newActivities = existingStreak.currentStreakActivities + 1
         existingStreak.copy(
@@ -133,7 +146,7 @@ object StreakService {
             bestStreakActivities = maxOf(existingStreak.bestStreakActivities, newActivities))
       }
 
-      // Consecutive week — increment both weeks and activities
+      // Consecutive week, we increment both weeks and activities
       lastActiveWeek != null && isConsecutiveWeek(lastActiveWeek, currentWeekStart) -> {
         val newWeeks = existingStreak.currentStreakWeeks + 1
         val newActivities = existingStreak.currentStreakActivities + 1
@@ -145,7 +158,7 @@ object StreakService {
             bestStreakActivities = maxOf(existingStreak.bestStreakActivities, newActivities))
       }
 
-      // Streak broken — reset and start fresh
+      // Streak broken, we reset and start fresh
       else -> {
         existingStreak.copy(
             currentStreakWeeks = 1,
@@ -169,10 +182,10 @@ object StreakService {
     val newActivities = maxOf(0, existingStreak.currentStreakActivities - 1)
 
     return if (hasOtherActivitiesInWeek) {
-      // Other activities exist in the same week — just decrement activities
+      // Other activities exist in the same week, we just decrement activities
       existingStreak.copy(currentStreakActivities = newActivities)
     } else {
-      // No other activities in this week — need to adjust weeks and timestamps
+      // No other activities in this week, we need to adjust weeks and timestamps
       val newWeeks = maxOf(0, existingStreak.currentStreakWeeks - 1)
 
       if (newWeeks == 0) {
