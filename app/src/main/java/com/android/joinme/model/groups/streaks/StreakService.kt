@@ -1,5 +1,7 @@
 package com.android.joinme.model.groups.streaks
 
+// Implemented with the help of AI tools, adapted and refactored to follow project pattern.
+
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
