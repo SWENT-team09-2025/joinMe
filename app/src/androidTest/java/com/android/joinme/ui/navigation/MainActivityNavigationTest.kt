@@ -9,6 +9,9 @@ import com.android.joinme.model.event.*
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepositoryLocal
 import com.android.joinme.model.groups.GroupRepositoryProvider
+import com.android.joinme.model.profile.Profile
+import com.android.joinme.model.profile.ProfileRepositoryLocal
+import com.android.joinme.model.profile.ProfileRepositoryProvider
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepositoryLocal
 import com.android.joinme.model.serie.SeriesRepositoryProvider
@@ -21,6 +24,8 @@ import com.android.joinme.ui.overview.EditSerieScreenTestTags
 import com.android.joinme.ui.overview.OverviewScreenTestTags
 import com.android.joinme.ui.overview.SerieDetailsScreenTestTags
 import com.android.joinme.ui.overview.ShowEventScreenTestTags
+import com.android.joinme.ui.profile.EditProfileTestTags
+import com.android.joinme.ui.profile.ViewProfileTestTags
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import java.util.*
@@ -91,9 +96,11 @@ class MainActivityNavigationTest {
     val repoEvents = EventsRepositoryProvider.getRepository(isOnline = false)
     val repoSerie = SeriesRepositoryProvider.repository
     val repoGroups = GroupRepositoryProvider.repository
+    val repoProfile = ProfileRepositoryProvider.repository
     if (repoEvents is EventsRepositoryLocal &&
         repoSerie is SeriesRepositoryLocal &&
-        repoGroups is GroupRepositoryLocal) {
+        repoGroups is GroupRepositoryLocal &&
+        repoProfile is ProfileRepositoryLocal) {
 
       runBlocking {
         // Clear all data completely using clear() methods
@@ -153,6 +160,21 @@ class MainActivityNavigationTest {
                 memberIds = listOf("test-user-id"),
                 eventIds = listOf("test-group-activity-1"))
         repoGroups.addGroup(testGroup)
+
+        // Add test profile for the current user
+        // Note: MainActivity uses "test-user-id" when IS_TEST_ENV is true
+        val testProfile =
+            Profile(
+                uid = "test-user-id",
+                username = "Test User",
+                email = "test@example.com",
+                dateOfBirth = "01/01/2000",
+                country = "Test Country",
+                interests = listOf("Sports", "Technology"),
+                bio = "Test user for navigation tests",
+                createdAt = Timestamp.now(),
+                updatedAt = Timestamp.now())
+        repoProfile.createOrUpdateProfile(testProfile)
       }
     }
 
@@ -1486,4 +1508,42 @@ class MainActivityNavigationTest {
     // Step 5: Verify ActivityGroupScreen rendered with event
     composeTestRule.onNodeWithTag("eventItemtest-group-activity-1").assertExists()
   }
+
+    @Test
+    fun editProfileScreen_composable_navigateProfile() {
+        composeTestRule.waitForIdle()
+        composeTestRule.mainClock.advanceTimeBy(2000)
+        composeTestRule.waitForIdle()
+
+        // Step 1: Navigate to Profile tab
+        composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.mainClock.advanceTimeBy(1000)
+        composeTestRule.waitForIdle()
+
+        // Step 2: Click Groups button (content description)
+        composeTestRule.onNodeWithContentDescription("Edit").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.mainClock.advanceTimeBy(1000)
+        composeTestRule.waitForIdle()
+
+        // Step 3: Modify profile name
+        composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performTextClearance()
+        composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performTextInput("Updated Test User")
+        composeTestRule.waitForIdle()
+        composeTestRule.mainClock.advanceTimeBy(1000)
+        composeTestRule.waitForIdle()
+
+        // Step 4: Click Save button
+        composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performScrollTo()
+        composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.mainClock.advanceTimeBy(1000)
+
+        // Step 5: Verify profile name is updated
+        composeTestRule.onNodeWithTag(ViewProfileTestTags.USERNAME_FIELD).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Updated Test User").assertExists()
+    }
 }
