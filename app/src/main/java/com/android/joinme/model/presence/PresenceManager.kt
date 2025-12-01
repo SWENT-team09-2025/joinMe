@@ -1,11 +1,14 @@
 package com.android.joinme.model.presence
 
+// Implemented with help of Claude AI
+
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
@@ -61,12 +64,11 @@ class PresenceManager(
     @Volatile private var instance: PresenceManager? = null
 
     /** Gets or creates the singleton instance of PresenceManager. */
-    fun getInstance(
-        presenceRepository: PresenceRepository = PresenceRepositoryProvider.repository
-    ): PresenceManager {
+    fun getInstance(): PresenceManager {
       return instance
           ?: synchronized(this) {
-            instance ?: PresenceManager(presenceRepository).also { instance = it }
+            instance
+                ?: PresenceManager(PresenceRepositoryProvider.repository).also { instance = it }
           }
     }
 
@@ -83,6 +85,7 @@ class PresenceManager(
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
   private var application: Application? = null
   private var startedActivityCount = 0
+  private var currentPresenceJob: Job? = null
 
   private val activityLifecycleCallbacks =
       object : Application.ActivityLifecycleCallbacks {
@@ -93,7 +96,6 @@ class PresenceManager(
           startedActivityCount++
 
           if (wasInBackground) {
-            Log.d(TAG, "App came to foreground")
             // Set user online in all their contexts
             scope.launch { setUserOnlineInAllContexts() }
           }
@@ -108,13 +110,9 @@ class PresenceManager(
 
           if (startedActivityCount == 0) {
             // App went to background - set user offline in all contexts
-            Log.d(TAG, "App went to background")
             scope.launch {
               try {
-                currentUserId?.let { userId ->
-                  presenceRepository.setUserOffline(userId)
-                  Log.d(TAG, "User $userId set as offline globally on background")
-                }
+                currentUserId?.let { userId -> presenceRepository.setUserOffline(userId) }
               } catch (e: Exception) {
                 Log.e(TAG, "Failed to set offline status on background", e)
               }
@@ -139,12 +137,7 @@ class PresenceManager(
 
     try {
       val contextIds = provider.getContextIdsForUser(userId)
-      if (contextIds.isNotEmpty()) {
-        presenceRepository.setUserOnline(userId, contextIds)
-        Log.d(TAG, "User $userId set as online in ${contextIds.size} contexts")
-      } else {
-        Log.d(TAG, "User $userId has no contexts to set online in")
-      }
+      if (contextIds.isNotEmpty()) presenceRepository.setUserOnline(userId, contextIds)
     } catch (e: Exception) {
       Log.e(TAG, "Failed to set user online in contexts", e)
     }
@@ -165,10 +158,17 @@ class PresenceManager(
       userId: String,
       contextIdProvider: ContextIdProvider
   ) {
-    if (isTracking && currentUserId == userId) {
-      Log.d(TAG, "Already tracking presence for user: $userId")
+    if (userId.isBlank()) {
+      Log.w(TAG, "startTracking called with blank userId")
       return
     }
+
+    if (isTracking && currentUserId == userId) {
+      return
+    }
+
+    // Cancel any pending presence job to avoid race conditions
+    currentPresenceJob?.cancel()
 
     this.application = application
     this.contextIdProvider = contextIdProvider
@@ -179,29 +179,7 @@ class PresenceManager(
     application.registerActivityLifecycleCallbacks(activityLifecycleCallbacks)
 
     // Set user online immediately since app is in foreground
-    scope.launch { setUserOnlineInAllContexts() }
-
-    Log.d(TAG, "Started presence tracking for user: $userId")
-  }
-
-  /**
-   * Starts tracking presence for the given user without Application instance.
-   *
-   * This is a simplified version that just stores the userId for later use. Without the Application
-   * instance, automatic background detection won't work.
-   *
-   * @param userId The unique identifier of the current user.
-   */
-  fun startTracking(userId: String) {
-    if (isTracking && currentUserId == userId) {
-      Log.d(TAG, "Already tracking presence for user: $userId")
-      return
-    }
-
-    currentUserId = userId
-    isTracking = true
-
-    Log.d(TAG, "Started presence tracking for user: $userId (simplified mode)")
+    currentPresenceJob = scope.launch { setUserOnlineInAllContexts() }
   }
 
   /**
@@ -212,27 +190,33 @@ class PresenceManager(
    */
   fun stopTracking() {
     if (!isTracking) {
-      Log.d(TAG, "Not currently tracking presence")
       return
     }
 
-    scope.launch {
-      try {
-        currentUserId?.let { userId ->
-          presenceRepository.setUserOffline(userId)
-          Log.d(TAG, "User $userId set as offline during stop tracking")
-        }
-      } catch (e: Exception) {
-        Log.e(TAG, "Failed to set offline status during stop", e)
-      }
-    }
+    // Cancel any pending presence job to avoid race conditions
+    currentPresenceJob?.cancel()
 
+    // Capture userId before clearing state
+    val userId = currentUserId
+
+    // Clear state first to prevent race conditions
     unregisterCallbacks()
     isTracking = false
     currentUserId = null
     contextIdProvider = null
     startedActivityCount = 0
-    Log.d(TAG, "Stopped presence tracking")
+    currentPresenceJob = null
+
+    // Set user offline after clearing state
+    userId?.let {
+      scope.launch {
+        try {
+          presenceRepository.setUserOffline(it)
+        } catch (e: Exception) {
+          Log.e(TAG, "Failed to set offline status during stop", e)
+        }
+      }
+    }
   }
 
   /** Unregisters the activity lifecycle callbacks. */

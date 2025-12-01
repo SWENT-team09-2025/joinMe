@@ -1,5 +1,7 @@
 package com.android.joinme.model.presence
 
+// Implemented with help of Claude AI
+
 import android.util.Log
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -18,6 +20,7 @@ import kotlinx.coroutines.tasks.await
  * This implementation uses Firebase Realtime Database's special presence features:
  * - `onDisconnect()` handlers to automatically update presence when users disconnect
  * - Server timestamps for accurate lastSeen tracking
+ * - Dual structure for optimized queries
  *
  * Database structure:
  * ```
@@ -27,7 +30,14 @@ import kotlinx.coroutines.tasks.await
  *       visitorId: "..."
  *       online: true/false
  *       lastSeen: <server timestamp>
+ *
+ * userContexts/
+ *   {userId}/
+ *     {contextId}: true
  * ```
+ *
+ * The `presence/` structure is used for observing online users in a context. The `userContexts/`
+ * structure is an index for quickly finding which contexts a user is in.
  */
 class PresenceRepositoryRealtimeDatabase(private val database: FirebaseDatabase) :
     PresenceRepository {
@@ -35,20 +45,26 @@ class PresenceRepositoryRealtimeDatabase(private val database: FirebaseDatabase)
   companion object {
     private const val TAG = "PresenceRepositoryRTDB"
     private const val PRESENCE_PATH = "presence"
+    private const val USER_CONTEXTS_PATH = "userContexts"
     private const val FIELD_USER_ID = "visitorId"
     private const val FIELD_ONLINE = "online"
     private const val FIELD_LAST_SEEN = "lastSeen"
   }
 
   private val presenceRef: DatabaseReference = database.getReference(PRESENCE_PATH)
-
-  // Track which contexts the current user is registered in for cleanup
-  private var currentUserContextIds: List<String> = emptyList()
+  private val userContextsRef: DatabaseReference = database.getReference(USER_CONTEXTS_PATH)
 
   override suspend fun setUserOnline(userId: String, contextIds: List<String>) {
-    currentUserContextIds = contextIds
+    if (userId.isBlank()) {
+      Log.w(TAG, "setUserOnline called with blank userId")
+      return
+    }
 
     for (contextId in contextIds) {
+      if (contextId.isBlank()) {
+        Log.w(TAG, "Skipping blank contextId")
+        continue
+      }
       try {
         val userPresenceRef = presenceRef.child(contextId).child(userId)
 
@@ -68,48 +84,54 @@ class PresenceRepositoryRealtimeDatabase(private val database: FirebaseDatabase)
                 FIELD_LAST_SEEN to ServerValue.TIMESTAMP)
 
         userPresenceRef.setValue(presenceData).await()
-        Log.d(TAG, "User $userId set as online in context $contextId")
+
+        // Update userContexts index for fast lookup during setUserOffline
+        userContextsRef.child(userId).child(contextId).setValue(true).await()
       } catch (e: Exception) {
         Log.e(TAG, "Failed to set user online in context $contextId", e)
       }
     }
-
-    Log.d(TAG, "User $userId set as online in ${contextIds.size} contexts")
   }
 
   override suspend fun setUserOffline(userId: String) {
+    if (userId.isBlank()) {
+      Log.w(TAG, "setUserOffline called with blank userId")
+      return
+    }
+
     try {
-      // Get all contexts where this user has presence data
-      val snapshot = presenceRef.get().await()
+      // Get only this user's contexts from the index (optimized - doesn't load all contexts)
+      val userContextsSnapshot = userContextsRef.child(userId).get().await()
 
-      for (contextSnapshot in snapshot.children) {
+      for (contextSnapshot in userContextsSnapshot.children) {
         val contextId = contextSnapshot.key ?: continue
-        if (contextSnapshot.hasChild(userId)) {
-          try {
-            val userPresenceRef = presenceRef.child(contextId).child(userId)
+        try {
+          val userPresenceRef = presenceRef.child(contextId).child(userId)
 
-            // Cancel any existing onDisconnect handlers
-            userPresenceRef.onDisconnect().cancel().await()
+          // Cancel any existing onDisconnect handlers
+          userPresenceRef.onDisconnect().cancel().await()
 
-            // Update presence to offline
-            val updates = mapOf(FIELD_ONLINE to false, FIELD_LAST_SEEN to ServerValue.TIMESTAMP)
-            userPresenceRef.updateChildren(updates).await()
-          } catch (e: Exception) {
-            Log.e(TAG, "Failed to set user offline in context $contextId", e)
-          }
+          // Update presence to offline
+          val updates = mapOf(FIELD_ONLINE to false, FIELD_LAST_SEEN to ServerValue.TIMESTAMP)
+          userPresenceRef.updateChildren(updates).await()
+        } catch (e: Exception) {
+          Log.e(TAG, "Failed to set user offline in context $contextId", e)
         }
       }
-
-      currentUserContextIds = emptyList()
-      Log.d(TAG, "User $userId set as offline globally")
     } catch (e: Exception) {
       Log.e(TAG, "Failed to set user offline globally: $userId", e)
-      throw e
     }
   }
 
   override fun observeOnlineUsersCount(contextId: String, currentUserId: String): Flow<Int> =
       callbackFlow {
+        if (contextId.isBlank() || currentUserId.isBlank()) {
+          Log.w(TAG, "observeOnlineUsersCount called with blank contextId or currentUserId")
+          trySend(0)
+          close()
+          return@callbackFlow
+        }
+
         val contextPresenceRef = presenceRef.child(contextId)
 
         val listener =
@@ -129,7 +151,6 @@ class PresenceRepositoryRealtimeDatabase(private val database: FirebaseDatabase)
                 }
 
                 trySend(count)
-                Log.d(TAG, "Online users count in context $contextId: $count")
               }
 
               override fun onCancelled(error: DatabaseError) {
@@ -145,6 +166,13 @@ class PresenceRepositoryRealtimeDatabase(private val database: FirebaseDatabase)
 
   override fun observeOnlineUserIds(contextId: String, currentUserId: String): Flow<List<String>> =
       callbackFlow {
+        if (contextId.isBlank() || currentUserId.isBlank()) {
+          Log.w(TAG, "observeOnlineUserIds called with blank contextId or currentUserId")
+          trySend(emptyList())
+          close()
+          return@callbackFlow
+        }
+
         val contextPresenceRef = presenceRef.child(contextId)
 
         val listener =
@@ -192,7 +220,6 @@ class PresenceRepositoryRealtimeDatabase(private val database: FirebaseDatabase)
 
           // If user is marked as online but hasn't been seen recently, mark them offline
           if (isOnline && currentTime - lastSeen > staleThresholdMs) {
-            Log.d(TAG, "Cleaning up stale presence for user: $userId in context: $contextId")
             presenceRef.child(contextId).child(userId).child(FIELD_ONLINE).setValue(false).await()
           }
         }
