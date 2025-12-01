@@ -6,8 +6,6 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.FileProvider
-import java.io.File
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -88,6 +86,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.core.content.FileProvider
 import com.android.joinme.R
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
@@ -98,6 +97,7 @@ import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
 import com.android.joinme.ui.theme.getUserColor
 import com.android.joinme.ui.theme.outlinedTextField
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -980,8 +980,7 @@ private fun AttachmentMenu(
   fun createImageUri(): Uri {
     val timeStamp = System.currentTimeMillis()
     val imageFile = File(context.cacheDir, "camera_image_${timeStamp}.jpg")
-    return FileProvider.getUriForFile(
-        context, "${context.packageName}.fileprovider", imageFile)
+    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", imageFile)
   }
 
   // Image picker launcher for gallery
@@ -1049,7 +1048,8 @@ private fun AttachmentMenu(
               cameraLauncher.launch(cameraImageUri)
             } else {
               // Permission denied
-              Toast.makeText(context, "Camera permission is required to take photos", Toast.LENGTH_LONG)
+              Toast.makeText(
+                      context, "Camera permission is required to take photos", Toast.LENGTH_LONG)
                   .show()
             }
           })
@@ -1133,8 +1133,7 @@ private fun PhotoSourceDialog(
           // Gallery option
           TextButton(
               onClick = onGalleryClick,
-              modifier =
-                  Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_GALLERY)) {
+              modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_GALLERY)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -1150,8 +1149,7 @@ private fun PhotoSourceDialog(
           // Camera option
           TextButton(
               onClick = onCameraClick,
-              modifier =
-                  Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_CAMERA)) {
+              modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_CAMERA)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
