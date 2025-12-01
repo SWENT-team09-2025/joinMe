@@ -55,6 +55,7 @@ data class EditEventUIState(
     override val visibility: String = "",
     val ownerId: String = "",
     val participants: List<String> = emptyList(),
+    val groupId: String? = null, // Track if event belongs to a group
     override val errorMsg: String? = null,
     override val locationQuery: String = "",
     override val locationSuggestions: List<Location> = emptyList(),
@@ -72,29 +73,50 @@ data class EditEventUIState(
     override val invalidTimeMsg: String? = null,
 ) : EventFormUIState {
   /**
+   * Indicates whether the event belongs to a group. Group events have restricted editing - only
+   * title, description, location, duration, date, and time can be edited.
+   */
+  val isGroupEvent: Boolean
+    get() = groupId != null
+
+  /**
    * Indicates whether all form fields are valid.
+   *
+   * For group events: type, maxParticipants, and visibility are auto-filled and not editable. For
+   * standalone events: all fields are required.
    *
    * @return true if all validation messages are null and all required fields are non-blank.
    */
   val isValid: Boolean
-    get() =
-        invalidTypeMsg == null &&
-            invalidTitleMsg == null &&
-            invalidDescriptionMsg == null &&
-            invalidLocationMsg == null &&
+    get() {
+      // Common validations for all events
+      val commonValid =
+          invalidTitleMsg == null &&
+              invalidDescriptionMsg == null &&
+              invalidLocationMsg == null &&
+              invalidDurationMsg == null &&
+              invalidDateMsg == null &&
+              title.isNotBlank() &&
+              description.isNotBlank() &&
+              selectedLocation != null &&
+              duration.isNotBlank() &&
+              date.isNotBlank() &&
+              time.isNotBlank()
+
+      // For group events, type/maxParticipants/visibility are not editable
+      return if (isGroupEvent) {
+        commonValid
+      } else {
+        // For standalone events, all fields are required
+        commonValid &&
+            invalidTypeMsg == null &&
             invalidMaxParticipantsMsg == null &&
-            invalidDurationMsg == null &&
-            invalidDateMsg == null &&
             invalidVisibilityMsg == null &&
             type.isNotBlank() &&
-            title.isNotBlank() &&
-            description.isNotBlank() &&
-            selectedLocation != null &&
             maxParticipants.isNotBlank() &&
-            duration.isNotBlank() &&
-            date.isNotBlank() &&
-            time.isNotBlank() &&
             visibility.isNotBlank()
+      }
+    }
 }
 
 /**
@@ -148,7 +170,8 @@ class EditEventViewModel(
                 time = timeFormat.format(event.date.toDate()),
                 visibility = event.visibility.name,
                 ownerId = event.ownerId,
-                participants = event.participants)
+                participants = event.participants,
+                groupId = event.groupId) // Set groupId to determine if event is editable
       } catch (e: Exception) {
         Log.e("EditEventViewModel", "Error loading Event by ID: $eventId", e)
         setErrorMsg("Failed to load Event: ${e.message}")
@@ -158,6 +181,9 @@ class EditEventViewModel(
 
   /**
    * Edits an Event document.
+   *
+   * For group events: only title, description, location, duration, date, and time can be modified.
+   * Type, maxParticipants, visibility, and groupId are preserved from the original event.
    *
    * @param eventId The ID of the event to edit.
    * @return Boolean indicating success.
@@ -195,7 +221,8 @@ class EditEventViewModel(
             participants = state.participants,
             maxParticipants = state.maxParticipants.toInt(),
             visibility = EventVisibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
-            ownerId = state.ownerId)
+            ownerId = state.ownerId,
+            groupId = state.groupId) // Preserve groupId
 
     return try {
       repository.editEvent(eventId, event)

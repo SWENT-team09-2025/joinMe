@@ -4,6 +4,7 @@ package com.android.joinme.model.chat
 
 import com.google.firebase.Firebase
 import com.google.firebase.database.database
+import com.google.firebase.storage.storage
 
 /**
  * Provides a singleton instance of the ChatRepository for dependency injection.
@@ -18,7 +19,7 @@ object ChatRepositoryProvider {
    * backend.
    */
   private val _repository: ChatRepository by lazy {
-    ChatRepositoryRealtimeDatabase(Firebase.database)
+    ChatRepositoryRealtimeDatabase(Firebase.database, Firebase.storage)
   }
 
   /**

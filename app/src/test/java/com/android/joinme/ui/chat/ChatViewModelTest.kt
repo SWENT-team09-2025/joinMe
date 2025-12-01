@@ -66,6 +66,20 @@ class ChatViewModelTest {
     override suspend fun deleteProfilePhoto(uid: String) {
       profiles[uid]?.let { profiles[uid] = it.copy(photoUrl = null) }
     }
+
+    // Stub implementations for follow methods
+    override suspend fun followUser(followerId: String, followedId: String) {}
+
+    override suspend fun unfollowUser(followerId: String, followedId: String) {}
+
+    override suspend fun isFollowing(followerId: String, followedId: String): Boolean = false
+
+    override suspend fun getFollowing(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getFollowers(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getMutualFollowing(userId1: String, userId2: String): List<Profile> =
+        emptyList()
   }
 
   private class FakeChatRepository : ChatRepository {
@@ -156,6 +170,18 @@ class ChatViewModelTest {
           return
         }
       }
+    }
+
+    override suspend fun uploadChatImage(
+        context: android.content.Context,
+        conversationId: String,
+        messageId: String,
+        imageUri: android.net.Uri
+    ): String {
+      if (shouldThrowError) {
+        throw Exception(errorMessage)
+      }
+      return "https://storage.example.com/$conversationId/$messageId.jpg"
     }
   }
 
@@ -867,5 +893,123 @@ class ChatViewModelTest {
     state = viewModel.uiState.value
     // Should not crash, profiles may be empty or unchanged
     assertNull(state.errorMsg) // Profile errors should not be shown to user
+  }
+
+  // ============================================================================
+  // uploadAndSendImage Tests
+  // ============================================================================
+
+  @Test
+  fun uploadAndSendImage_successfullyUploadsWithCorrectStateAndUniqueIds() = runTest {
+    // Given
+    viewModel.initializeChat(testChatId, testUserId)
+    advanceUntilIdle()
+
+    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
+    val mockImageUri1 = io.mockk.mockk<android.net.Uri>(relaxed = true)
+    val mockImageUri2 = io.mockk.mockk<android.net.Uri>(relaxed = true)
+    val senderName = "Alice"
+
+    var successCount = 0
+
+    // When - upload two images
+    viewModel.uploadAndSendImage(
+        context = mockContext,
+        imageUri = mockImageUri1,
+        senderName = senderName,
+        onSuccess = { successCount++ })
+    advanceUntilIdle()
+    viewModel.uploadAndSendImage(
+        context = mockContext,
+        imageUri = mockImageUri2,
+        senderName = senderName,
+        onSuccess = { successCount++ })
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+
+    // Verify state
+    assertFalse(state.isUploadingImage)
+    assertNull(state.imageUploadError)
+    assertEquals(2, successCount)
+
+    // Verify messages
+    assertEquals(2, state.messages.size)
+    state.messages.forEach { message ->
+      assertEquals(MessageType.IMAGE, message.type)
+      assertEquals(testUserId, message.senderId)
+      assertEquals(senderName, message.senderName)
+      assertTrue(message.content.startsWith("https://storage.example.com/"))
+    }
+
+    // Verify uniqueness
+    assertNotEquals(state.messages[0].id, state.messages[1].id)
+    assertNotEquals(state.messages[0].content, state.messages[1].content)
+  }
+
+  @Test
+  fun uploadAndSendImage_handlesUploadErrorCorrectly() = runTest {
+    // Given
+    viewModel.initializeChat(testChatId, testUserId)
+    advanceUntilIdle()
+
+    fakeRepo.shouldThrowError = true
+    fakeRepo.errorMessage = "Upload failed"
+
+    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
+    val mockImageUri = io.mockk.mockk<android.net.Uri>(relaxed = true)
+
+    var successCalled = false
+    var errorCalled = false
+    var errorMessage = ""
+
+    // When
+    viewModel.uploadAndSendImage(
+        context = mockContext,
+        imageUri = mockImageUri,
+        senderName = "Alice",
+        onSuccess = { successCalled = true },
+        onError = {
+          errorCalled = true
+          errorMessage = it
+        })
+    advanceUntilIdle()
+
+    // Then - verify error state
+    val state = viewModel.uiState.value
+    assertFalse(state.isUploadingImage) // Upload finished (with error)
+    assertNotNull(state.imageUploadError)
+    assertTrue(state.imageUploadError!!.contains("Upload failed"))
+    assertFalse(successCalled)
+    assertTrue(errorCalled)
+    assertTrue(errorMessage.contains("Upload failed"))
+
+    // Verify no message was added
+    assertEquals(0, state.messages.size)
+  }
+
+  @Test
+  fun clearImageUploadError_clearsErrorState() = runTest {
+    // Given
+    viewModel.initializeChat(testChatId, testUserId)
+    advanceUntilIdle()
+
+    fakeRepo.shouldThrowError = true
+    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
+    val mockImageUri = io.mockk.mockk<android.net.Uri>(relaxed = true)
+
+    // Upload to generate error
+    viewModel.uploadAndSendImage(mockContext, mockImageUri, "Alice")
+    advanceUntilIdle()
+
+    var state = viewModel.uiState.value
+    assertNotNull(state.imageUploadError)
+
+    // When
+    viewModel.clearImageUploadError()
+
+    // Then
+    state = viewModel.uiState.value
+    assertNull(state.imageUploadError)
   }
 }
