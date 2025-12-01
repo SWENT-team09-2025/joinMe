@@ -85,6 +85,8 @@ class GroupListViewModel(
   /**
    * Deletes a group from the repository and refreshes the UI state.
    *
+   * Also deletes all streak data for that group.
+   *
    * @param groupId The ID of the group to delete.
    * @param onSuccess Callback invoked when the group is successfully deleted.
    * @param onError Callback invoked when deletion fails, receives error message.
@@ -95,6 +97,14 @@ class GroupListViewModel(
         val currentUserId =
             FirebaseAuth.getInstance().currentUser?.uid
                 ?: throw Exception(ERROR_USER_NOT_AUTHENTICATED)
+
+        // Delete all streaks for this group before deleting the group
+        try {
+          StreakService.onGroupDeleted(groupId)
+        } catch (e: Exception) {
+          Log.e("GroupListViewModel", "Error deleting streaks for group $groupId", e)
+          // Non-critical: continue with group deletion even if streak deletion fails
+        }
 
         groupRepository.deleteGroup(groupId, currentUserId)
         refreshUIState()
