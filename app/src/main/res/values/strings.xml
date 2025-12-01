@@ -13,9 +13,12 @@
     <string name="record_audio">Record audio</string>
     <string name="send_message">Send message</string>
     <string name="gallery">Gallery</string>
+    <string name="camera">Camera</string>
     <string name="location">Location</string>
     <string name="poll">Poll</string>
     <string name="not_yet_implemented">Not yet implemented</string>
+    <string name="image_sent_success">Image sent successfully</string>
+    <string name="image_message">Image</string>
 
     <!-- Public Profile Screen -->
     <string name="back">Back</string>

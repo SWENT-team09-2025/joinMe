@@ -23,6 +23,7 @@ import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
+import com.google.firebase.FirebaseApp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before
@@ -30,6 +31,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 
 /**
  * Test suite for ChatScreen UI component
@@ -41,12 +43,18 @@ class ChatScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
 
+  private lateinit var context: Context
   private lateinit var fakeChatRepository: FakeChatRepository
   private lateinit var fakeProfileRepository: FakeProfileRepository
   private lateinit var viewModel: ChatViewModel
 
   @Before
   fun setup() {
+    context = RuntimeEnvironment.getApplication()
+    // Initialize Firebase if not already initialized
+    if (FirebaseApp.getApps(context).isEmpty()) {
+      FirebaseApp.initializeApp(context)
+    }
     fakeChatRepository = FakeChatRepository()
     fakeProfileRepository = FakeProfileRepository()
     viewModel = ChatViewModel(fakeChatRepository, fakeProfileRepository)
@@ -305,12 +313,8 @@ class ChatScreenTest {
   fun attachmentMenu_optionsCloseMenu_whenClicked() {
     setupChatScreen()
 
-    // Test Gallery option closes menu
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_GALLERY).performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertDoesNotExist()
+    // Note: Gallery option does NOT close immediately (waits for image picker result)
+    // This is by design to keep the launcher alive
 
     // Test Location option closes menu
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
@@ -336,8 +340,8 @@ class ChatScreenTest {
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertIsDisplayed()
 
-    // Close by clicking an option
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_GALLERY).performClick()
+    // Close by clicking an option (use Location, not Gallery which doesn't close immediately)
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_LOCATION).performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertDoesNotExist()
 
@@ -669,6 +673,51 @@ class ChatScreenTest {
 
     // Who read dialog should be dismissed
     composeTestRule.onNodeWithText(whoReadDialogTitle).assertDoesNotExist()
+  }
+
+  // ============================================================================
+  // Image Message Tests
+  // ============================================================================
+
+  @Test
+  fun chatScreen_imageMessages_renderAlongsideTextMessages() {
+    // Test that IMAGE type messages are handled correctly in the when(message.type) block
+    // NOTE: Image messages must come FIRST in tests due to Coil/LazyColumn interaction
+    val messages =
+        listOf(
+            Message(
+                id = "img1",
+                conversationId = "chat1",
+                senderId = "user1",
+                senderName = "Alice",
+                content = "https://example.com/image1.jpg",
+                timestamp = System.currentTimeMillis() - 2000,
+                type = MessageType.IMAGE),
+            Message(
+                id = "img2",
+                conversationId = "chat1",
+                senderId = "user2", // From Bob - will show sender name
+                senderName = "Bob",
+                content = "https://example.com/image2.jpg",
+                timestamp = System.currentTimeMillis() - 1000,
+                type = MessageType.IMAGE),
+            createMessage(id = "txt1", content = "Hello text message", timestampOffset = 0))
+    fakeChatRepository.setMessages(messages)
+
+    setupChatScreen()
+
+    composeTestRule.waitForIdle()
+
+    // Verify all three message containers exist (tests when block handles IMAGE type)
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("img1")).assertExists()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("img2")).assertExists()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("txt1")).assertExists()
+
+    // Verify text message content displays correctly alongside images
+    composeTestRule.onNodeWithText("Hello text message", useUnmergedTree = true).assertExists()
+
+    // Verify sender name displays for other user's image message (tests message structure)
+    composeTestRule.onNodeWithText("Bob", useUnmergedTree = true).assertExists()
   }
 
   // ============================================================================

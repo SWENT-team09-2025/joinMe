@@ -3,6 +3,8 @@ package com.android.joinme.ui.chat
 // Implemented with help of Claude AI
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,6 +34,8 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.BrokenImage
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DoneAll
@@ -48,6 +52,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -69,7 +74,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -130,6 +137,11 @@ object ChatScreenTestTags {
    * @return A string combining "messageBubble" with the message's unique ID
    */
   fun getTestTagForMessageBubble(messageId: String): String = "messageBubble_$messageId"
+
+  const val CHAT_IMAGE_CONTAINER = "chatImageContainer"
+  const val CHAT_IMAGE_LOADING = "chatImageLoading"
+  const val CHAT_IMAGE_REMOTE = "chatImageRemote"
+  const val CHAT_IMAGE_ERROR = "chatImageError"
 }
 
 /**
@@ -211,6 +223,7 @@ fun ChatScreen(
           ChatContent(
               messages = uiState.messages,
               currentUserId = currentUserId,
+              currentUserName = currentUserName,
               senderProfiles = uiState.senderProfiles,
               onSendMessage = { content -> viewModel.sendMessage(content, currentUserName) },
               paddingValues = paddingValues,
@@ -278,6 +291,7 @@ private fun ChatTopBar(
  *
  * @param messages The list of messages to display
  * @param currentUserId The ID of the current user
+ * @param currentUserName The display name of the current user
  * @param senderProfiles A map of sender IDs to their Profile objects containing photo URLs
  * @param onSendMessage Callback invoked when sending a new message
  * @param paddingValues Padding from the Scaffold
@@ -288,6 +302,7 @@ private fun ChatTopBar(
 private fun ChatContent(
     messages: List<Message>,
     currentUserId: String,
+    currentUserName: String,
     senderProfiles: Map<String, Profile>,
     onSendMessage: (String) -> Unit,
     paddingValues: PaddingValues,
@@ -296,12 +311,14 @@ private fun ChatContent(
     viewModel: ChatViewModel,
     totalParticipants: Int
 ) {
+  val uiState by viewModel.uiState.collectAsState()
   var messageText by remember { mutableStateOf("") }
   val listState = rememberLazyListState()
   var selectedMessage by remember { mutableStateOf<Message?>(null) }
   var showEditDialog by remember { mutableStateOf(false) }
   var showDeleteDialog by remember { mutableStateOf(false) }
   var showWhoReadDialog by remember { mutableStateOf(false) }
+  var fullScreenImageUrl by remember { mutableStateOf<String?>(null) }
 
   // Auto-scroll to bottom when new messages arrive
   LaunchedEffect(messages.size) {
@@ -332,6 +349,7 @@ private fun ChatContent(
               totalParticipants = totalParticipants,
               listState = listState,
               onMessageLongPress = { selectedMessage = it },
+              onImageClick = { imageUrl -> fullScreenImageUrl = imageUrl },
               modifier = Modifier.weight(1f))
 
           // Message input
@@ -345,7 +363,10 @@ private fun ChatContent(
                 }
               },
               sendButtonColor = chatColor,
-              onSendButtonColor = onChatColor)
+              onSendButtonColor = onChatColor,
+              viewModel = viewModel,
+              currentUserName = currentUserName,
+              isUploadingImage = uiState.isUploadingImage)
         }
 
     // Message interaction overlays
@@ -377,6 +398,11 @@ private fun ChatContent(
                   selectedMessage = null
                 }),
         viewModel = viewModel)
+
+    // Full-screen image viewer
+    fullScreenImageUrl?.let { imageUrl ->
+      FullScreenImageViewer(imageUrl = imageUrl, onDismiss = { fullScreenImageUrl = null })
+    }
   }
 }
 
@@ -389,6 +415,7 @@ private fun ChatContent(
  * @param totalParticipants Total number of participants in the chat
  * @param listState LazyListState for controlling scroll
  * @param onMessageLongPress Callback when a message is long-pressed
+ * @param onImageClick Callback when an image message is clicked
  * @param modifier Modifier for the LazyColumn
  */
 @Composable
@@ -399,6 +426,7 @@ private fun MessageList(
     totalParticipants: Int,
     listState: androidx.compose.foundation.lazy.LazyListState,
     onMessageLongPress: (Message) -> Unit,
+    onImageClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
   LazyColumn(
@@ -429,7 +457,8 @@ private fun MessageList(
                 bubbleColor = userColors.first,
                 onBubbleColor = userColors.second,
                 totalUsersInChat = totalParticipants,
-                onLongPress = { onMessageLongPress(message) })
+                onLongPress = { onMessageLongPress(message) },
+                onImageClick = onImageClick)
           }
         }
       }
@@ -494,6 +523,7 @@ private fun MessageInteractionOverlays(
   selectedMessage?.let { message ->
     MessageContextMenu(
         isCurrentUser = message.senderId == currentUserId,
+        messageType = message.type,
         onDismiss = callbacks.onDismissContextMenu,
         onCopy = {
           clipboardManager.setText(AnnotatedString(message.content))
@@ -545,6 +575,7 @@ private fun MessageInteractionOverlays(
  * @param onBubbleColor The color for text on the message bubble (must provide proper contrast)
  * @param totalUsersInChat Total number of users in the chat (for read receipts)
  * @param onLongPress Callback invoked when the message is long-pressed
+ * @param onImageClick Callback invoked when an image message is clicked for full-screen view
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -556,7 +587,8 @@ private fun MessageItem(
     bubbleColor: Color,
     onBubbleColor: Color,
     totalUsersInChat: Int = 0,
-    onLongPress: () -> Unit = {}
+    onLongPress: () -> Unit = {},
+    onImageClick: (String) -> Unit = {}
 ) {
   Row(
       modifier =
@@ -611,10 +643,22 @@ private fun MessageItem(
                   }
 
                   // Message content
-                  Text(
-                      text = message.content,
-                      style = MaterialTheme.typography.bodyMedium,
-                      color = onBubbleColor)
+                  when (message.type) {
+                    MessageType.IMAGE -> {
+                      // Display image message
+                      ChatImageMessage(
+                          imageUrl = message.content,
+                          bubbleColor = bubbleColor,
+                          onClick = { onImageClick(message.content) })
+                    }
+                    else -> {
+                      // Display text message
+                      Text(
+                          text = message.content,
+                          style = MaterialTheme.typography.bodyMedium,
+                          color = onBubbleColor)
+                    }
+                  }
 
                   // Timestamp with read receipts and edited indicator
                   Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
@@ -693,6 +737,74 @@ private fun UserAvatar(photoUrl: String?, userName: String, modifier: Modifier =
 }
 
 /**
+ * Displays an image message in the chat using Coil with proper loading states.
+ *
+ * This composable handles:
+ * - Loading remote images from Firebase Storage URLs with automatic caching
+ * - Showing a loading indicator while the image loads
+ * - Proper content scaling to maintain aspect ratio
+ * - Smooth crossfade transition when image loads
+ * - Consistent styling with message bubbles
+ * - Click to view in full screen
+ *
+ * @param imageUrl The Firebase Storage URL of the image to display
+ * @param bubbleColor The color for the loading indicator background
+ * @param onClick Callback when the image is clicked
+ */
+@Composable
+private fun ChatImageMessage(imageUrl: String, bubbleColor: Color, onClick: () -> Unit = {}) {
+  val context = LocalContext.current
+
+  Box(
+      modifier =
+          Modifier.widthIn(max = Dimens.Chat.messageBubbleMaxWidth)
+              .testTag(ChatScreenTestTags.CHAT_IMAGE_CONTAINER),
+      contentAlignment = Alignment.Center) {
+        coil.compose.SubcomposeAsyncImage(
+            model =
+                coil.request.ImageRequest.Builder(context)
+                    .data(imageUrl)
+                    .crossfade(true) // Smooth transition when image loads
+                    .build(),
+            contentDescription = stringResource(R.string.image_message),
+            modifier =
+                Modifier.widthIn(max = Dimens.Chat.messageBubbleMaxWidth)
+                    .clip(RoundedCornerShape(Dimens.CornerRadius.medium))
+                    .clickable(onClick = onClick)
+                    .testTag(ChatScreenTestTags.CHAT_IMAGE_REMOTE),
+            contentScale = ContentScale.Fit, // Maintain aspect ratio
+            loading = {
+              // Show loading indicator
+              Box(
+                  modifier =
+                      Modifier.widthIn(max = Dimens.Chat.messageBubbleMaxWidth)
+                          .height(Dimens.Chat.messageBubbleMaxWidth * 0.75f)
+                          .testTag(ChatScreenTestTags.CHAT_IMAGE_LOADING), // 4:3 aspect ratio
+                  contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = bubbleColor)
+                  }
+            },
+            error = {
+              // Show simple error icon like ProfilePhotoImage
+              Box(
+                  modifier =
+                      Modifier.widthIn(max = Dimens.Chat.messageBubbleMaxWidth)
+                          .height(Dimens.Chat.messageBubbleMaxWidth * 0.75f)
+                          .clip(RoundedCornerShape(Dimens.CornerRadius.medium))
+                          .background(MaterialTheme.colorScheme.errorContainer)
+                          .testTag(ChatScreenTestTags.CHAT_IMAGE_ERROR),
+                  contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.BrokenImage,
+                        contentDescription = stringResource(R.string.unknown_error),
+                        modifier = Modifier.size(Dimens.IconSize.large),
+                        tint = MaterialTheme.colorScheme.onErrorContainer)
+                  }
+            })
+      }
+}
+
+/**
  * Message input field with attachment button, text field, and dynamic send/mic button.
  *
  * Features:
@@ -705,6 +817,9 @@ private fun UserAvatar(photoUrl: String?, userName: String, modifier: Modifier =
  * @param onSendClick Callback when send button is clicked
  * @param sendButtonColor The color for the send button background
  * @param onSendButtonColor The color for the send button icon (must provide proper contrast)
+ * @param viewModel ChatViewModel for handling image uploads
+ * @param currentUserName The display name of the current user for image messages
+ * @param isUploadingImage Whether an image is currently being uploaded
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -713,81 +828,100 @@ private fun MessageInput(
     onTextChange: (String) -> Unit,
     onSendClick: () -> Unit,
     sendButtonColor: Color,
-    onSendButtonColor: Color
+    onSendButtonColor: Color,
+    viewModel: ChatViewModel,
+    currentUserName: String,
+    isUploadingImage: Boolean
 ) {
   var showAttachmentMenu by remember { mutableStateOf(false) }
   val context = LocalContext.current
   val notImplementedMsg = stringResource(R.string.not_yet_implemented)
 
-  Surface(shadowElevation = Dimens.Elevation.small, color = MaterialTheme.colorScheme.surface) {
-    Row(
-        modifier =
-            Modifier.fillMaxWidth()
-                .padding(horizontal = Dimens.Padding.small, vertical = Dimens.Padding.small),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
-          // Attachment button (left)
-          IconButton(
-              onClick = { showAttachmentMenu = true },
-              modifier =
-                  Modifier.size(Dimens.TouchTarget.minimum)
-                      .testTag(ChatScreenTestTags.ATTACHMENT_BUTTON)) {
-                Icon(
-                    imageVector = Icons.Default.AttachFile,
-                    contentDescription = stringResource(R.string.add_attachment),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
-              }
+  Column {
+    // Upload progress indicator
+    if (isUploadingImage) {
+      LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = sendButtonColor)
+    }
 
-          // Text input field (center)
-          OutlinedTextField(
-              value = text,
-              onValueChange = onTextChange,
-              modifier = Modifier.weight(1f).testTag(ChatScreenTestTags.MESSAGE_INPUT),
-              placeholder = {
-                Text(
-                    text = stringResource(R.string.message_placeholder),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-              },
-              shape = RoundedCornerShape(Dimens.CornerRadius.pill),
-              colors = MaterialTheme.customColors.outlinedTextField(),
-              maxLines = 4)
-
-          // Dynamic send/mic button (right)
-          if (text.isEmpty()) {
-            // Microphone button (placeholder for future audio recording)
-            // TODO(#364 and #367): Audio recording - Feature coming soon
+    Surface(shadowElevation = Dimens.Elevation.small, color = MaterialTheme.colorScheme.surface) {
+      Row(
+          modifier =
+              Modifier.fillMaxWidth()
+                  .padding(horizontal = Dimens.Padding.small, vertical = Dimens.Padding.small),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
+            // Attachment button (left)
             IconButton(
-                onClick = { Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show() },
+                onClick = { showAttachmentMenu = true },
+                enabled = !isUploadingImage,
                 modifier =
                     Modifier.size(Dimens.TouchTarget.minimum)
-                        .background(
-                            color = MaterialTheme.colorScheme.surfaceVariant, shape = CircleShape)
-                        .testTag(ChatScreenTestTags.MIC_BUTTON)) {
+                        .testTag(ChatScreenTestTags.ATTACHMENT_BUTTON)) {
                   Icon(
-                      imageVector = Icons.Default.Mic,
-                      contentDescription = stringResource(R.string.record_audio),
+                      imageVector = Icons.Default.AttachFile,
+                      contentDescription = stringResource(R.string.add_attachment),
                       tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-          } else {
-            // Send button
-            IconButton(
-                onClick = onSendClick,
-                modifier =
-                    Modifier.size(Dimens.TouchTarget.minimum)
-                        .background(color = sendButtonColor, shape = CircleShape)
-                        .testTag(ChatScreenTestTags.SEND_BUTTON)) {
-                  Icon(
-                      imageVector = Icons.AutoMirrored.Filled.Send,
-                      contentDescription = stringResource(R.string.send_message),
-                      tint = onSendButtonColor)
-                }
+
+            // Text input field (center)
+            OutlinedTextField(
+                value = text,
+                onValueChange = onTextChange,
+                enabled = !isUploadingImage,
+                modifier = Modifier.weight(1f).testTag(ChatScreenTestTags.MESSAGE_INPUT),
+                placeholder = {
+                  Text(
+                      text = stringResource(R.string.message_placeholder),
+                      color = MaterialTheme.colorScheme.onSurfaceVariant)
+                },
+                shape = RoundedCornerShape(Dimens.CornerRadius.pill),
+                colors = MaterialTheme.customColors.outlinedTextField(),
+                maxLines = 4)
+
+            // Dynamic send/mic button (right)
+            if (text.isEmpty()) {
+              // Microphone button (placeholder for future audio recording)
+              // TODO(#364 and #367): Audio recording - Feature coming soon
+              IconButton(
+                  onClick = {
+                    Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show()
+                  },
+                  enabled = !isUploadingImage,
+                  modifier =
+                      Modifier.size(Dimens.TouchTarget.minimum)
+                          .background(
+                              color = MaterialTheme.colorScheme.surfaceVariant, shape = CircleShape)
+                          .testTag(ChatScreenTestTags.MIC_BUTTON)) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = stringResource(R.string.record_audio),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                  }
+            } else {
+              // Send button
+              IconButton(
+                  onClick = onSendClick,
+                  enabled = !isUploadingImage,
+                  modifier =
+                      Modifier.size(Dimens.TouchTarget.minimum)
+                          .background(color = sendButtonColor, shape = CircleShape)
+                          .testTag(ChatScreenTestTags.SEND_BUTTON)) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Send,
+                        contentDescription = stringResource(R.string.send_message),
+                        tint = onSendButtonColor)
+                  }
+            }
           }
-        }
+    }
   }
 
   // Attachment menu bottom sheet
   if (showAttachmentMenu) {
-    AttachmentMenu(onDismiss = { showAttachmentMenu = false })
+    AttachmentMenu(
+        onDismiss = { showAttachmentMenu = false },
+        viewModel = viewModel,
+        currentUserName = currentUserName)
   }
 }
 
@@ -795,18 +929,53 @@ private fun MessageInput(
  * Bottom sheet menu for attachment options.
  *
  * Displays three options in a horizontal row:
- * - Gallery: For sending images (not yet implemented)
+ * - Gallery: For sending images
  * - Location: For sharing location (not yet implemented)
  * - Poll: For creating polls (not yet implemented)
  *
  * @param onDismiss Callback when the menu should be dismissed
+ * @param viewModel ChatViewModel for handling image uploads
+ * @param currentUserName The display name of the current user for image messages
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AttachmentMenu(onDismiss: () -> Unit) {
+private fun AttachmentMenu(
+    onDismiss: () -> Unit,
+    viewModel: ChatViewModel,
+    currentUserName: String
+) {
   val sheetState = rememberModalBottomSheetState()
   val context = LocalContext.current
   val notImplementedMsg = stringResource(R.string.not_yet_implemented)
+  val imageSentSuccess = stringResource(R.string.image_sent_success)
+  val coroutineScope = rememberCoroutineScope()
+
+  // Image picker launcher (includes camera option in most system pickers)
+  val imagePickerLauncher =
+      rememberLauncherForActivityResult(
+          contract = ActivityResultContracts.GetContent(),
+          onResult = { uri ->
+            if (uri != null) {
+              viewModel.uploadAndSendImage(
+                  context = context,
+                  imageUri = uri,
+                  senderName = currentUserName,
+                  onSuccess = {
+                    coroutineScope.launch {
+                      Toast.makeText(context, imageSentSuccess, Toast.LENGTH_SHORT).show()
+                    }
+                  },
+                  onError = { error ->
+                    android.util.Log.e("ChatScreen", "Upload ERROR callback triggered: $error")
+                    coroutineScope.launch {
+                      Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                    }
+                  })
+              onDismiss()
+            } else {
+              android.util.Log.w("ChatScreen", "Image picker returned null URI")
+            }
+          })
 
   ModalBottomSheet(
       onDismissRequest = onDismiss,
@@ -817,15 +986,11 @@ private fun AttachmentMenu(onDismiss: () -> Unit) {
           // Options row - horizontal layout matching Figma
           Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
 
-            // Gallery option
-            // TODO (#352): Implement image sending
+            // Gallery option (camera is included in the system picker)
             AttachmentOption(
                 icon = Icons.Default.Image,
                 label = stringResource(R.string.gallery),
-                onClick = {
-                  Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show()
-                  onDismiss()
-                },
+                onClick = { imagePickerLauncher.launch("image/*") },
                 modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_GALLERY))
 
             // Location option
@@ -954,6 +1119,64 @@ private fun DeleteMessageDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
 }
 
 /**
+ * Full-screen image viewer overlay.
+ *
+ * Displays an image in full screen with a close button. The background is dimmed and clicking
+ * outside the image dismisses the viewer.
+ *
+ * @param imageUrl The URL of the image to display in full screen
+ * @param onDismiss Callback when the viewer is dismissed
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun FullScreenImageViewer(imageUrl: String, onDismiss: () -> Unit) {
+  val context = LocalContext.current
+
+  Box(
+      modifier =
+          Modifier.fillMaxSize()
+              .background(MaterialTheme.customColors.scrimOverlay)
+              .combinedClickable(onClick = onDismiss, onLongClick = {}),
+      contentAlignment = Alignment.Center) {
+        // Close button (top right)
+        IconButton(
+            onClick = onDismiss,
+            modifier = Modifier.align(Alignment.TopEnd).padding(Dimens.Padding.medium)) {
+              Icon(
+                  imageVector = Icons.Default.Close,
+                  contentDescription = stringResource(R.string.close),
+                  tint = MaterialTheme.colorScheme.onSurface,
+                  modifier = Modifier.size(Dimens.IconSize.large))
+            }
+
+        // Full screen image
+        coil.compose.SubcomposeAsyncImage(
+            model =
+                coil.request.ImageRequest.Builder(context).data(imageUrl).crossfade(true).build(),
+            contentDescription = stringResource(R.string.image_message),
+            modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.medium),
+            contentScale = ContentScale.Fit,
+            loading = {
+              Box(
+                  modifier = Modifier.fillMaxSize().padding(Dimens.Padding.medium),
+                  contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                  }
+            },
+            error = {
+              Box(
+                  modifier = Modifier.fillMaxSize().padding(Dimens.Padding.medium),
+                  contentAlignment = Alignment.Center) {
+                    Text(
+                        text = stringResource(R.string.unknown_error),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface)
+                  }
+            })
+      }
+}
+
+/**
  * Dialog showing who has read a message.
  *
  * @param message The message to show read receipts for
@@ -1008,9 +1231,10 @@ private fun WhoReadDialog(
  * centered overlay with blur effect in the background.
  *
  * @param isCurrentUser Whether the message belongs to the current user
+ * @param messageType The type of message (TEXT, IMAGE, SYSTEM)
  * @param onDismiss Callback to close the menu
- * @param onCopy Callback to copy message content
- * @param onEdit Callback to edit the message (only for current user)
+ * @param onCopy Callback to copy message content (only shown for text messages)
+ * @param onEdit Callback to edit the message (only for current user's text messages)
  * @param onDelete Callback to delete the message (only for current user)
  * @param onSeeWhoRead Callback to see who read the message (only for current user)
  */
@@ -1018,6 +1242,7 @@ private fun WhoReadDialog(
 @Composable
 private fun MessageContextMenu(
     isCurrentUser: Boolean,
+    messageType: MessageType,
     onDismiss: () -> Unit,
     onCopy: () -> Unit,
     onEdit: () -> Unit,
@@ -1035,28 +1260,33 @@ private fun MessageContextMenu(
             shadowElevation = Dimens.Elevation.large,
             color = MaterialTheme.colorScheme.surface) {
               Column(modifier = Modifier.padding(Dimens.Padding.small)) {
-                // Copy option (available for all messages)
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.copy)) },
-                    onClick = onCopy,
-                    leadingIcon = {
-                      Icon(
-                          Icons.Default.ContentCopy,
-                          contentDescription = stringResource(R.string.copy),
-                          modifier = Modifier.size(Dimens.IconSize.medium))
-                    })
+                // Copy option (only for text messages)
+                if (messageType == MessageType.TEXT) {
+                  DropdownMenuItem(
+                      text = { Text(stringResource(R.string.copy)) },
+                      onClick = onCopy,
+                      leadingIcon = {
+                        Icon(
+                            Icons.Default.ContentCopy,
+                            contentDescription = stringResource(R.string.copy),
+                            modifier = Modifier.size(Dimens.IconSize.medium))
+                      })
+                }
 
                 // Options only for current user's messages
                 if (isCurrentUser) {
-                  DropdownMenuItem(
-                      text = { Text(stringResource(R.string.edit)) },
-                      onClick = onEdit,
-                      leadingIcon = {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = stringResource(R.string.edit),
-                            modifier = Modifier.size(Dimens.IconSize.medium))
-                      })
+                  // Edit option (only for text messages)
+                  if (messageType == MessageType.TEXT) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.edit)) },
+                        onClick = onEdit,
+                        leadingIcon = {
+                          Icon(
+                              Icons.Default.Edit,
+                              contentDescription = stringResource(R.string.edit),
+                              modifier = Modifier.size(Dimens.IconSize.medium))
+                        })
+                  }
 
                   DropdownMenuItem(
                       text = { Text(stringResource(R.string.delete)) },
