@@ -199,10 +199,14 @@ class ShowEventViewModel(
         return
       }
 
-      // Update streak for group events (only when joining)
-      if (isJoining && event.groupId != null) {
+      // Update streak for group events
+      if (event.groupId != null) {
         try {
-          StreakService.onActivityJoined(event.groupId, userId, event.date)
+          if (isJoining) {
+            StreakService.onActivityJoined(event.groupId, userId, event.date)
+          } else {
+            StreakService.onActivityLeft(event.groupId, userId, event.date)
+          }
         } catch (e: Exception) {
           Log.e("ShowEventViewModel", "Error updating streak for user $userId", e)
           // Non-critical: don't fail participation update if streak update fails

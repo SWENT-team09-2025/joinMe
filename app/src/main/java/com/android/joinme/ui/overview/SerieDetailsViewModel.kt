@@ -240,6 +240,8 @@ class SerieDetailsViewModel(
   /**
    * Removes the current user from the serie's participants list.
    *
+   * For group series, also updates the user's streak via StreakService.
+   *
    * @param currentUserId The ID of the user trying to quit.
    * @return True if the user successfully quit the serie, false otherwise
    */
@@ -277,6 +279,16 @@ class SerieDetailsViewModel(
 
       // Update in repository
       seriesRepository.editSerie(serie.serieId, updatedSerie)
+
+      // Update streak for group series
+      if (serie.groupId != null) {
+        try {
+          StreakService.onActivityLeft(serie.groupId, currentUserId, serie.date)
+        } catch (e: Exception) {
+          Log.e("SerieDetailsViewModel", "Error updating streak for user $currentUserId", e)
+          // Non-critical: don't fail quit operation if streak update fails
+        }
+      }
 
       // Update local state
       _uiState.value = _uiState.value.copy(serie = updatedSerie, errorMsg = null)
