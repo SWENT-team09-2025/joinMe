@@ -53,8 +53,8 @@ data class EditSerieUIState(
     override val invalidVisibilityMsg: String? = null,
 ) : SerieFormUIState {
   /**
-   * Indicates whether the serie belongs to a group.
-   * Group series have restricted editing - only title, description, date, and time can be edited.
+   * Indicates whether the serie belongs to a group. Group series have restricted editing - only
+   * title, description, date, and time can be edited.
    */
   val isGroupSerie: Boolean
     get() = groupId != null
@@ -62,8 +62,8 @@ data class EditSerieUIState(
   /**
    * Checks if all form fields are valid and filled.
    *
-   * For group series: maxParticipants and visibility are auto-filled and not editable.
-   * For standalone series: all fields are required.
+   * For group series: maxParticipants and visibility are auto-filled and not editable. For
+   * standalone series: all fields are required.
    *
    * @return True if all validation messages are null and all required fields are not blank
    */
@@ -160,8 +160,8 @@ class EditSerieViewModel(
    * 3. Updates the Serie object with the new values
    * 4. Saves the updated serie to the repository
    *
-   * For group series: only title, description, date, and time can be modified.
-   * MaxParticipants, visibility, and groupId are preserved from the original serie.
+   * For group series: only title, description, date, and time can be modified. MaxParticipants,
+   * visibility, and groupId are preserved from the original serie.
    *
    * The loading state is set to true at the start and false upon completion. If any error occurs
    * during the process (validation failure, date parsing error, or repository error), an

@@ -168,7 +168,6 @@ class CreateEventForSerieViewModel(
     }
   }
 
-
   /**
    * Calculates the appropriate start date for a new event in the serie.
    *

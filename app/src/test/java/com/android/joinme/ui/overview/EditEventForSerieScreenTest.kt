@@ -560,9 +560,7 @@ class EditEventForSerieScreenTest {
         .assertTextContains("SPORTS")
 
     // Verify dropdown doesn't open when clicked
-    composeTestRule
-        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TYPE)
-        .performClick()
+    composeTestRule.onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TYPE).performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("ACTIVITY").assertDoesNotExist()
     composeTestRule.onNodeWithText("SOCIAL").assertDoesNotExist()
