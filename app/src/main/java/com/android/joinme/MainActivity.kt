@@ -95,17 +95,17 @@ class MainActivity : ComponentActivity() {
     val conversationId = intent?.getStringExtra("conversationId")
 
     val initialEventId =
-        intent?.getStringExtra("eventId") ?:
-        (if (deepLinkData?.host == "event") deepLinkData.lastPathSegment else null)
+        intent?.getStringExtra("eventId")
+            ?: (if (deepLinkData?.host == "event") deepLinkData.lastPathSegment else null)
     val initialGroupId =
-        intent?.getStringExtra("groupId") ?:
-        when {
-          deepLinkData?.host == "group" -> deepLinkData.lastPathSegment
-          deepLinkData?.host == "joinme.app" &&
-              deepLinkData.pathSegments?.firstOrNull() == "group" ->
-              deepLinkData.pathSegments?.getOrNull(1)
-          else -> null
-        }
+        intent?.getStringExtra("groupId")
+            ?: when {
+              deepLinkData?.host == "group" -> deepLinkData.lastPathSegment
+              deepLinkData?.host == "joinme.app" &&
+                  deepLinkData.pathSegments?.firstOrNull() == "group" ->
+                  deepLinkData.pathSegments?.getOrNull(1)
+              else -> null
+            }
 
     setContent {
       JoinMeTheme {
@@ -234,22 +234,13 @@ fun JoinMe(
                       chatTitle = chatName,
                       totalParticipants = group.memberIds.size))
             } else {
-              // Invitation link flow - check if user is already a member
-              val group = groupRepository.getGroup(initialGroupId)
-              val isAlreadyMember = group.memberIds.contains(currentUser!!.uid)
-
-              if (isAlreadyMember) {
-                // User is already a member, navigate to group detail
-                navigationActions.navigateTo(Screen.GroupDetail(initialGroupId))
-              } else {
-                // User is not a member, try to join
-                groupRepository.joinGroup(initialGroupId, currentUser!!.uid)
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                  Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT)
-                      .show()
-                }
-                navigationActions.navigateTo(Screen.GroupDetail(initialGroupId))
+              // Invitation link flow - always try to join the group
+              // joinGroup is idempotent and will handle "already a member" case
+              groupRepository.joinGroup(initialGroupId, currentUser!!.uid)
+              kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT).show()
               }
+              navigationActions.navigateTo(Screen.GroupDetail(initialGroupId))
             }
           } catch (e: Exception) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {

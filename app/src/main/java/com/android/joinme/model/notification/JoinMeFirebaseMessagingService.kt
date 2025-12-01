@@ -90,7 +90,8 @@ class JoinMeFirebaseMessagingService : FirebaseMessagingService() {
    * @param body The notification body text
    * @param eventId Optional event ID to open when the notification is tapped
    * @param groupId Optional group ID to open when the notification is tapped
-   * @param notificationType The type of notification (e.g., "event_chat_message", "group_chat_message")
+   * @param notificationType The type of notification (e.g., "event_chat_message",
+   *   "group_chat_message")
    * @param chatName The name of the chat (for chat notifications)
    * @param conversationId The conversation ID (for chat notifications)
    */
