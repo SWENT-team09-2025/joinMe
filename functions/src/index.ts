@@ -377,8 +377,8 @@ export const cleanupOldEventsAndSeries = functions.pubsub
   });
 
 /**
- * Triggered when a new message is created in a group chat.
- * Sends push notifications to all group members except the sender.
+ * Triggered when a new message is created in a group or event chat.
+ * Sends push notifications to all members/participants except the sender.
  */
 export const onChatMessageCreated = functions.database
   .ref("conversations/{conversationId}/messages/{messageId}")
@@ -402,23 +402,41 @@ export const onChatMessageCreated = functions.database
         return null;
       }
 
-      // STEP 1: Fetch group document (conversationId = groupId)
+      // STEP 1: Try to fetch as a group first
       const groupDoc = await db.collection("groups").doc(conversationId).get();
 
-      if (!groupDoc.exists) {
-        console.log(`Group not found: ${conversationId}`);
-        return null;
+      let memberIds: string[] = [];
+      let chatName = "Chat";
+      let isEventChat = false;
+
+      if (groupDoc.exists) {
+        // It's a group chat
+        const groupData = groupDoc.data();
+        if (!groupData) {
+          return null;
+        }
+        memberIds = groupData.memberIds || [];
+        chatName = groupData.name || "Group Chat";
+        console.log(`Group "${chatName}" has ${memberIds.length} members`);
+      } else {
+        // STEP 2: Try to fetch as an event
+        const eventDoc = await db.collection("events").doc(conversationId).get();
+
+        if (!eventDoc.exists) {
+          console.log(`Neither group nor event found: ${conversationId}`);
+          return null;
+        }
+
+        const eventData = eventDoc.data();
+        if (!eventData) {
+          return null;
+        }
+
+        isEventChat = true;
+        memberIds = eventData.participants || [];
+        chatName = eventData.title || "Event Chat";
+        console.log(`Event "${chatName}" has ${memberIds.length} participants`);
       }
-
-      const groupData = groupDoc.data();
-      if (!groupData) {
-        return null;
-      }
-
-      const memberIds: string[] = groupData.memberIds || [];
-      const groupName = groupData.name || "Group Chat";
-
-      console.log(`Group "${groupName}" has ${memberIds.length} members`);
 
       // STEP 2: Filter out the sender (don't notify yourself)
       const recipientIds = memberIds.filter((userId) => userId !== senderId);
@@ -454,21 +472,29 @@ export const onChatMessageCreated = functions.database
           }
 
           // Build notification payload
+          const notificationData: {[key: string]: string} = {
+            type: isEventChat ? "event_chat_message" : "group_chat_message",
+            conversationId: conversationId,
+            messageId: messageId,
+            senderId: senderId,
+            senderName: senderName,
+            chatName: chatName,
+          };
+
+          // Add eventId or groupId based on chat type
+          if (isEventChat) {
+            notificationData.eventId = conversationId;
+          } else {
+            notificationData.groupId = conversationId;
+          }
+
           const message: admin.messaging.Message = {
             token: fcmToken,
             notification: {
-              title: `${groupName}: ${senderName}`,
+              title: `${chatName}: ${senderName}`,
               body: truncatedContent,
             },
-            data: {
-              type: "group_chat_message",
-              conversationId: conversationId,
-              groupId: conversationId,
-              messageId: messageId,
-              senderId: senderId,
-              senderName: senderName,
-              groupName: groupName,
-            },
+            data: notificationData,
             android: {
               priority: "high",
               notification: {

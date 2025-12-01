@@ -27,6 +27,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
 import com.android.joinme.model.chat.ChatRepositoryProvider
+import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.notification.FCMTokenManager
 import com.android.joinme.model.profile.ProfileRepositoryProvider
@@ -89,8 +90,15 @@ class MainActivity : ComponentActivity() {
     createNotificationChannel()
 
     val deepLinkData = intent?.data
-    val initialEventId = if (deepLinkData?.host == "event") deepLinkData.lastPathSegment else null
+    val notificationType = intent?.getStringExtra("notificationType")
+    val chatName = intent?.getStringExtra("chatName")
+    val conversationId = intent?.getStringExtra("conversationId")
+
+    val initialEventId =
+        intent?.getStringExtra("eventId") ?:
+        (if (deepLinkData?.host == "event") deepLinkData.lastPathSegment else null)
     val initialGroupId =
+        intent?.getStringExtra("groupId") ?:
         when {
           deepLinkData?.host == "group" -> deepLinkData.lastPathSegment
           deepLinkData?.host == "joinme.app" &&
@@ -102,7 +110,12 @@ class MainActivity : ComponentActivity() {
     setContent {
       JoinMeTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
-          JoinMe(initialEventId = initialEventId, initialGroupId = initialGroupId)
+          JoinMe(
+              initialEventId = initialEventId,
+              initialGroupId = initialGroupId,
+              notificationType = notificationType,
+              chatName = chatName,
+              conversationId = conversationId)
         }
       }
     }
@@ -146,6 +159,9 @@ fun JoinMe(
     startDestination: String? = null,
     initialEventId: String? = null,
     initialGroupId: String? = null,
+    notificationType: String? = null,
+    chatName: String? = null,
+    conversationId: String? = null,
     enableNotificationPermissionRequest: Boolean = true,
 ) {
   val navController = rememberNavController()
@@ -170,35 +186,81 @@ fun JoinMe(
     }
   }
 
-  // Navigate to event if opened from notification
-  LaunchedEffect(initialEventId) {
+  // Navigate to event or event chat if opened from notification
+  LaunchedEffect(initialEventId, notificationType) {
     if (initialEventId != null && currentUser != null) {
-      navigationActions.navigateTo(Screen.ShowEventScreen(initialEventId))
+      // Check if this is an event chat notification
+      if (notificationType == "event_chat_message" && conversationId != null && chatName != null) {
+        // Navigate directly to the event chat
+        coroutineScope.launch {
+          try {
+            val eventRepository = EventsRepositoryProvider.getRepository(isOnline = true, context)
+            val event = eventRepository.getEvent(initialEventId)
+            navigationActions.navigateTo(
+                Screen.Chat(
+                    chatId = conversationId,
+                    chatTitle = chatName,
+                    totalParticipants = event.participants.size))
+          } catch (e: Exception) {
+            // If we can't get event details, navigate with defaults
+            navigationActions.navigateTo(
+                Screen.Chat(chatId = conversationId, chatTitle = chatName, totalParticipants = 1))
+          }
+        }
+      } else {
+        // Regular event notification, navigate to event detail screen
+        navigationActions.navigateTo(Screen.ShowEventScreen(initialEventId))
+      }
     }
   }
 
-  // Join group if opened from invitation link
-  LaunchedEffect(initialGroupId) {
+  // Join group if opened from invitation link or navigate to group chat from notification
+  LaunchedEffect(initialGroupId, notificationType) {
     if (initialGroupId != null) {
       if (currentUser != null) {
         coroutineScope.launch {
           try {
             val groupRepository = GroupRepositoryProvider.repository
-            groupRepository.joinGroup(initialGroupId, currentUser!!.uid)
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-              Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT).show()
+
+            // Check if this is a group chat notification
+            if (notificationType == "group_chat_message" &&
+                conversationId != null &&
+                chatName != null) {
+              // Navigate directly to the group chat using notification data
+              val group = groupRepository.getGroup(initialGroupId)
+              navigationActions.navigateTo(
+                  Screen.Chat(
+                      chatId = conversationId,
+                      chatTitle = chatName,
+                      totalParticipants = group.memberIds.size))
+            } else {
+              // Invitation link flow - check if user is already a member
+              val group = groupRepository.getGroup(initialGroupId)
+              val isAlreadyMember = group.memberIds.contains(currentUser!!.uid)
+
+              if (isAlreadyMember) {
+                // User is already a member, navigate to group detail
+                navigationActions.navigateTo(Screen.GroupDetail(initialGroupId))
+              } else {
+                // User is not a member, try to join
+                groupRepository.joinGroup(initialGroupId, currentUser!!.uid)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                  Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT)
+                      .show()
+                }
+                navigationActions.navigateTo(Screen.GroupDetail(initialGroupId))
+              }
             }
-            navigationActions.navigateTo(Screen.GroupDetail(initialGroupId))
           } catch (e: Exception) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-              Toast.makeText(context, "Failed to join group: ${e.message}", Toast.LENGTH_LONG)
+              Toast.makeText(context, "Failed to access group: ${e.message}", Toast.LENGTH_LONG)
                   .show()
             }
           }
         }
       } else {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-          Toast.makeText(context, "Please sign in to join the group", Toast.LENGTH_SHORT).show()
+          Toast.makeText(context, "Please sign in to access the group", Toast.LENGTH_SHORT).show()
         }
       }
     }
