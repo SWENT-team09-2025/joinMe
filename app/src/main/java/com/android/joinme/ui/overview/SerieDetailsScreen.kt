@@ -388,6 +388,25 @@ private fun OwnerActionButtons(
       }
 }
 
+/** Handles the join/quit serie action. */
+private suspend fun handleJoinQuitAction(
+    currentUserId: String,
+    serieDetailsViewModel: SerieDetailsViewModel,
+    onQuitSerieSuccess: () -> Unit
+) {
+  val uiState = serieDetailsViewModel.uiState.value
+  val success =
+      if (uiState.isParticipant(currentUserId)) {
+        serieDetailsViewModel.quitSerie((currentUserId))
+      } else {
+        serieDetailsViewModel.joinSerie(currentUserId)
+      }
+  if (success && !serieDetailsViewModel.uiState.value.isParticipant(currentUserId)) {
+    // If user quit successfully, navigate back
+    onQuitSerieSuccess()
+  }
+}
+
 /** Participant action button (Join/Quit). */
 @Composable
 private fun ParticipantActionButtons(
@@ -402,16 +421,7 @@ private fun ParticipantActionButtons(
     Button(
         onClick = {
           coroutineScope.launch {
-            val success =
-                if (uiState.isParticipant(currentUserId)) {
-                  serieDetailsViewModel.quitSerie((currentUserId))
-                } else {
-                  serieDetailsViewModel.joinSerie(currentUserId)
-                }
-            if (success && !uiState.isParticipant(currentUserId)) {
-              // If user quit successfully, navigate back
-              onQuitSerieSuccess()
-            }
+            handleJoinQuitAction(currentUserId, serieDetailsViewModel, onQuitSerieSuccess)
           }
         },
         modifier =
