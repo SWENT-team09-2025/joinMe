@@ -1,11 +1,13 @@
 // Implemented with help of Claude AI
 package com.android.joinme.ui.groups
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.groups.GroupRepositoryProvider
+import com.android.joinme.model.groups.streaks.StreakService
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -108,6 +110,8 @@ class GroupListViewModel(
   /**
    * Removes the current user from a group and refreshes the UI state.
    *
+   * Also deletes the user's streak data for that group.
+   *
    * @param groupId The ID of the group to leave.
    * @param onSuccess Callback invoked when the user successfully leaves the group.
    * @param onError Callback invoked when leaving fails, receives error message.
@@ -120,6 +124,15 @@ class GroupListViewModel(
                 ?: throw Exception(ERROR_USER_NOT_AUTHENTICATED)
 
         groupRepository.leaveGroup(groupId, currentUserId)
+
+        // Delete the user's streak for this group
+        try {
+          StreakService.onUserLeftGroup(groupId, currentUserId)
+        } catch (e: Exception) {
+          Log.e("GroupListViewModel", "Error deleting streak for user $currentUserId", e)
+          // Non-critical: don't fail leave operation if streak deletion fails
+        }
+
         refreshUIState()
         onSuccess()
       } catch (e: Exception) {
