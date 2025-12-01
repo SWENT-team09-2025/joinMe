@@ -130,6 +130,55 @@ object StreakService {
     streakRepository.deleteStreakForUser(groupId, userId)
   }
 
+  /**
+   * Called when a group is deleted.
+   *
+   * Deletes all streak data for that group.
+   *
+   * @param groupId The group being deleted.
+   */
+  suspend fun onGroupDeleted(groupId: String) {
+    streakRepository.deleteAllStreaksForGroup(groupId)
+  }
+
+  /**
+   * Called when a user quits a group activity (event or serie).
+   *
+   * Reverts streak changes for the user by:
+   * 1. Decrementing currentStreakActivities
+   * 2. Adjusting currentStreakWeeks and lastActiveWeekStart if needed
+   * 3. Never modifies bestStreak fields (historical records)
+   *
+   * @param groupId The group the activity belongs to. If null, no streak update occurs.
+   * @param userId The user who quit the activity.
+   * @param activityDate The date of the activity.
+   */
+  suspend fun onActivityLeft(groupId: String?, userId: String, activityDate: Timestamp) {
+    if (groupId == null) return
+
+    val existingStreak = streakRepository.getStreakForUser(groupId, userId) ?: return
+
+    val leftActivityWeekStart = getWeekStart(activityDate)
+
+    // Check if user has other activities in the same week for this group
+    val hasOtherActivitiesInWeek =
+        hasOtherActivitiesInWeek(
+            groupId = groupId,
+            userId = userId,
+            weekStart = leftActivityWeekStart,
+            excludeDate = activityDate)
+
+    val updatedStreak =
+        computeStreakAfterDeletion(
+            existingStreak = existingStreak,
+            deletedActivityWeekStart = leftActivityWeekStart,
+            hasOtherActivitiesInWeek = hasOtherActivitiesInWeek,
+            groupId = groupId,
+            userId = userId)
+
+    streakRepository.updateStreak(groupId, userId, updatedStreak)
+  }
+
   /** Computes the updated streak after a user joins an activity. */
   private fun computeUpdatedStreak(
       existingStreak: GroupStreak,
