@@ -111,7 +111,6 @@ object StreakService {
       val updatedStreak =
           computeStreakAfterDeletion(
               existingStreak = existingStreak,
-              deletedActivityWeekStart = deletedActivityWeekStart,
               hasOtherActivitiesInWeek = hasOtherActivitiesInWeek,
               groupId = groupId,
               userId = userId)
@@ -173,7 +172,6 @@ object StreakService {
     val updatedStreak =
         computeStreakAfterDeletion(
             existingStreak = existingStreak,
-            deletedActivityWeekStart = leftActivityWeekStart,
             hasOtherActivitiesInWeek = hasOtherActivitiesInWeek,
             groupId = groupId,
             userId = userId)
@@ -222,10 +220,9 @@ object StreakService {
     }
   }
 
-  /** Computes the updated streak after an activity is deleted. */
+  /** Computes the updated streak after an activity is deleted or user quits. */
   private suspend fun computeStreakAfterDeletion(
       existingStreak: GroupStreak,
-      deletedActivityWeekStart: Timestamp,
       hasOtherActivitiesInWeek: Boolean,
       groupId: String,
       userId: String
@@ -334,20 +331,6 @@ object StreakService {
           val dayOfWeek = get(Calendar.DAY_OF_WEEK)
           val daysToSubtract = if (dayOfWeek == Calendar.SUNDAY) 6 else dayOfWeek - Calendar.MONDAY
           add(Calendar.DAY_OF_MONTH, -daysToSubtract)
-        }
-    return Timestamp(calendar.time)
-  }
-
-  /** Gets the end of the week (Sunday 23:59:59 UTC) for the given week start. */
-  private fun getWeekEnd(weekStart: Timestamp): Timestamp {
-    val calendar =
-        Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
-          time = weekStart.toDate()
-          add(Calendar.DAY_OF_MONTH, 6)
-          set(Calendar.HOUR_OF_DAY, 23)
-          set(Calendar.MINUTE, 59)
-          set(Calendar.SECOND, 59)
-          set(Calendar.MILLISECOND, 999)
         }
     return Timestamp(calendar.time)
   }
