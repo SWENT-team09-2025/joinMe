@@ -19,9 +19,16 @@ object PresenceRepositoryProvider {
     PresenceRepositoryRealtimeDatabase(Firebase.database)
   }
 
+  /** Backing field for custom repository injection (used in tests). */
+  private var _customRepository: PresenceRepository? = null
+
   /**
    * The current repository instance used throughout the application. Can be reassigned for testing
    * purposes to inject fake or mock implementations.
    */
-  var repository: PresenceRepository = _repository
+  var repository: PresenceRepository
+    get() = _customRepository ?: _repository
+    set(value) {
+      _customRepository = value
+    }
 }
