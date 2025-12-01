@@ -41,4 +41,13 @@ interface GroupStreakRepository {
    * @param userId The unique identifier of the user.
    */
   suspend fun deleteStreakForUser(groupId: String, userId: String)
+
+  /**
+   * Deletes all streaks for a specific group.
+   *
+   * This should be called when a group is deleted to clean up all streak data.
+   *
+   * @param groupId The unique identifier of the group.
+   */
+  suspend fun deleteAllStreaksForGroup(groupId: String)
 }

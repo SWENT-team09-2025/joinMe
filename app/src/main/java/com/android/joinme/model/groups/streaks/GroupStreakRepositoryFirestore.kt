@@ -65,6 +65,19 @@ class GroupStreakRepositoryFirestore(private val db: FirebaseFirestore) : GroupS
         .await()
   }
 
+  override suspend fun deleteAllStreaksForGroup(groupId: String) {
+    val snapshot =
+        db.collection(GROUPS_COLLECTION)
+            .document(groupId)
+            .collection(STREAKS_SUBCOLLECTION)
+            .get()
+            .await()
+
+    for (doc in snapshot.documents) {
+      doc.reference.delete().await()
+    }
+  }
+
   /**
    * Converts a Firestore DocumentSnapshot to a GroupStreak object.
    *
