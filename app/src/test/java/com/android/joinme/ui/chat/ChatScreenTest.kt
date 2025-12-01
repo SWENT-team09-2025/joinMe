@@ -788,6 +788,43 @@ class ChatScreenTest {
     composeTestRule.waitForIdle()
   }
 
+  @Test
+  fun contextMenu_otherUsersImageMessage_doesNotShowMenu() {
+    // Test that image messages from other users don't show context menu
+    val messages =
+        listOf(
+            Message(
+                id = "img1",
+                conversationId = "chat1",
+                senderId = "user2",
+                senderName = "Bob",
+                content = "https://example.com/image.jpg",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.IMAGE,
+                readBy = listOf("user1", "user2"),
+                isPinned = false,
+                isEdited = false))
+    fakeChatRepository.setMessages(messages)
+
+    setupChatScreen(currentUserId = "user1")
+
+    composeTestRule.waitForIdle()
+
+    // Long press on other user's image message
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.getTestTagForMessageBubble("img1"))
+        .performTouchInput { longClick() }
+
+    composeTestRule.waitForIdle()
+
+    // No context menu should appear for other users' image messages
+    val copyText = ApplicationProvider.getApplicationContext<Context>().getString(R.string.copy)
+    val deleteText = ApplicationProvider.getApplicationContext<Context>().getString(R.string.delete)
+
+    composeTestRule.onNodeWithText(copyText).assertDoesNotExist()
+    composeTestRule.onNodeWithText(deleteText).assertDoesNotExist()
+  }
+
   // ============================================================================
   // Fake Repository for Testing
   // ============================================================================

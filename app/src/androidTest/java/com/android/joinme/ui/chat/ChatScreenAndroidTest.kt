@@ -232,11 +232,13 @@ class ChatScreenAndroidTest {
   }
 
   /**
-   * Tests the gallery/camera button and attachment menu. Covers lines related to opening the
-   * attachment menu and displaying gallery/camera options.
+   * Tests PhotoSourceDialog opening and UI elements. Covers:
+   * - Opening the dialog via Photo button
+   * - Dialog UI elements
+   * - Dialog conditional rendering
    */
   @Test
-  fun chatScreen_attachmentButton_opensAttachmentMenu() = runTest {
+  fun chatScreen_photoSourceDialog_opensAndDisplaysUIElements() {
     val repo = FakeChatRepository(uploadShouldSucceed = true)
     val profileRepo = FakeProfileRepository()
     val viewModel = ChatViewModel(repo, profileRepo)
@@ -252,16 +254,151 @@ class ChatScreenAndroidTest {
 
     composeTestRule.waitForIdle()
 
-    // Click attachment button
+    // Open attachment menu
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
-
-    // Wait for modal bottom sheet to appear
+    composeTestRule.waitForIdle()
     Thread.sleep(500)
+
+    // Dialog should not exist initially
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG).assertDoesNotExist()
+
+    // Click Photo button to open dialog
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_PHOTO).performClick()
     composeTestRule.waitForIdle()
 
-    // Verify attachment menu items are displayed
-    composeTestRule.onNodeWithText("Photo").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Location").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Poll").assertIsDisplayed()
+    // Verify dialog is displayed
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG).assertIsDisplayed()
+
+    // Verify all UI elements
+    composeTestRule.onNodeWithText("Choose photo source").assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_GALLERY).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_CAMERA).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Gallery").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Camera").assertIsDisplayed()
+    composeTestRule.onNodeWithContentDescription("Gallery").assertIsDisplayed()
+    composeTestRule.onNodeWithContentDescription("Camera").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Cancel").assertIsDisplayed()
+  }
+
+  /**
+   * Tests PhotoSourceDialog Cancel button. Covers:
+   * - Cancel button dismissal
+   */
+  @Test
+  fun chatScreen_photoSourceDialog_cancelDismissesDialog() {
+    val repo = FakeChatRepository(uploadShouldSucceed = true)
+    val profileRepo = FakeProfileRepository()
+    val viewModel = ChatViewModel(repo, profileRepo)
+
+    composeTestRule.setContent {
+      ChatScreen(
+          chatId = testChatId,
+          chatTitle = "Test Chat",
+          currentUserId = testUserId,
+          currentUserName = "Alice",
+          viewModel = viewModel)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Open attachment menu and photo source dialog
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    Thread.sleep(500)
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_PHOTO).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify dialog is displayed
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG).assertIsDisplayed()
+
+    // Click Cancel button
+    composeTestRule.onNodeWithText("Cancel").performClick()
+    composeTestRule.waitForIdle()
+
+    // Dialog should be dismissed
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG).assertDoesNotExist()
+
+    // Attachment menu should still be visible
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertIsDisplayed()
+  }
+
+  /**
+   * Tests PhotoSourceDialog Gallery button click. Covers:
+   * - Gallery button click
+   */
+  @Test
+  fun chatScreen_photoSourceDialog_galleryButtonDismissesDialog() {
+    val repo = FakeChatRepository(uploadShouldSucceed = true)
+    val profileRepo = FakeProfileRepository()
+    val viewModel = ChatViewModel(repo, profileRepo)
+
+    composeTestRule.setContent {
+      ChatScreen(
+          chatId = testChatId,
+          chatTitle = "Test Chat",
+          currentUserId = testUserId,
+          currentUserName = "Alice",
+          viewModel = viewModel)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Open attachment menu and photo source dialog
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    Thread.sleep(500)
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_PHOTO).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify dialog is displayed
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG).assertIsDisplayed()
+
+    // Click Gallery button
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_GALLERY).performClick()
+    composeTestRule.waitForIdle()
+
+    // Dialog should be dismissed (imagePickerLauncher would open but can't test that)
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG).assertDoesNotExist()
+  }
+
+  /**
+   * Tests PhotoSourceDialog Camera button click. Covers:
+   * - Camera button click (lines 1108-1111, onCameraClick, cameraPermissionLauncher lines
+   *   1041-1055, cameraLauncher lines 1014-1038) Note: The actual launcher can't be tested in this
+   *   environment, but we verify the dialog dismisses.
+   */
+  @Test
+  fun chatScreen_photoSourceDialog_cameraButtonDismissesDialog() {
+    val repo = FakeChatRepository(uploadShouldSucceed = true)
+    val profileRepo = FakeProfileRepository()
+    val viewModel = ChatViewModel(repo, profileRepo)
+
+    composeTestRule.setContent {
+      ChatScreen(
+          chatId = testChatId,
+          chatTitle = "Test Chat",
+          currentUserId = testUserId,
+          currentUserName = "Alice",
+          viewModel = viewModel)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Open attachment menu and photo source dialog
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    Thread.sleep(500)
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_PHOTO).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify dialog is displayed
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG).assertIsDisplayed()
+
+    // Click Camera button
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_CAMERA).performClick()
+    composeTestRule.waitForIdle()
+
+    // Dialog should be dismissed (cameraPermissionLauncher would trigger but can't test that)
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG).assertDoesNotExist()
   }
 }
