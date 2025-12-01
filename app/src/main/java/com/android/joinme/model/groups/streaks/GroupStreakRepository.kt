@@ -31,4 +31,14 @@ interface GroupStreakRepository {
    * @param streak The GroupStreak data to save.
    */
   suspend fun updateStreak(groupId: String, userId: String, streak: GroupStreak)
+
+  /**
+   * Deletes the streak for a specific user within a group.
+   *
+   * This should be called when a user leaves a group to clean up their streak data.
+   *
+   * @param groupId The unique identifier of the group.
+   * @param userId The unique identifier of the user.
+   */
+  suspend fun deleteStreakForUser(groupId: String, userId: String)
 }
