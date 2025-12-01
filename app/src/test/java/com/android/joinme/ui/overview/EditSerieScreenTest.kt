@@ -803,6 +803,20 @@ class EditSerieScreenTest {
         groupId = "group-123")
   }
 
+  // Helper to setup group serie screen
+  private fun setupGroupSerieScreen(repo: SeriesRepositoryLocal, viewModel: EditSerieViewModel) {
+    val groupSerie = createTestGroupSerie()
+    runBlocking { repo.addSerie(groupSerie) }
+
+    composeTestRule.setContent {
+      EditSerieScreen(serieId = groupSerie.serieId, editSerieViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+  }
+
   @Test
   fun groupAndStandaloneSeries_loadCorrectGroupIdAndIsGroupSerieState() {
     val repo = SeriesRepositoryLocal()
@@ -835,21 +849,12 @@ class EditSerieScreenTest {
   }
 
   @Test
-  fun groupSerie_hidesMaxParticipantsAndVisibilityFields() {
+  fun groupSerie_hidesFieldsAndAllowsEditingWithValidation() {
     val repo = SeriesRepositoryLocal()
-    val groupSerie = createTestGroupSerie()
-    runBlocking { repo.addSerie(groupSerie) }
     val viewModel = EditSerieViewModel(repo)
+    setupGroupSerieScreen(repo, viewModel)
 
-    composeTestRule.setContent {
-      EditSerieScreen(serieId = groupSerie.serieId, editSerieViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Verify maxParticipants and visibility fields are not displayed
+    // Verify maxParticipants and visibility fields are hidden
     composeTestRule
         .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_MAX_PARTICIPANTS)
         .assertDoesNotExist()
@@ -862,39 +867,34 @@ class EditSerieScreenTest {
     composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_DESCRIPTION).assertExists()
     composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_DATE).assertExists()
     composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TIME).assertExists()
-  }
 
-  @Test
-  fun groupSerie_validationAndEditingBehavior() {
-    val repo = SeriesRepositoryLocal()
-    val groupSerie = createTestGroupSerie()
-    runBlocking { repo.addSerie(groupSerie) }
-    val viewModel = EditSerieViewModel(repo)
-
-    runBlocking { viewModel.loadSerie(groupSerie.serieId) }
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Verify initial state is valid and is a group serie
+    // Verify initial state is valid
     assert(viewModel.uiState.value.isGroupSerie)
     assert(viewModel.uiState.value.isValid)
 
     // Edit fields and verify groupId is preserved
-    viewModel.setTitle("Updated Group Serie Title")
-    viewModel.setDescription("Updated group serie description")
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE).performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE)
+        .performTextInput("Updated Title")
 
     assert(viewModel.uiState.value.groupId == "group-123")
     assert(viewModel.uiState.value.isGroupSerie)
-    assert(viewModel.uiState.value.isValid)
+
+    // Clear title to test validation
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE).performTextClearance()
+    composeTestRule.waitForIdle()
+
+    // Save button should be disabled
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.SERIE_SAVE).assertIsNotEnabled()
   }
 
   @Test
-  fun groupSerie_canEditFieldsAndSaveSuccessfully() {
+  fun groupSerie_savePreservesGroupControlledFields() {
     val repo = SeriesRepositoryLocal()
+    val viewModel = EditSerieViewModel(repo)
     val groupSerie = createTestGroupSerie()
     runBlocking { repo.addSerie(groupSerie) }
-    val viewModel = EditSerieViewModel(repo)
 
     var saveCalled = false
 
@@ -924,7 +924,7 @@ class EditSerieScreenTest {
 
     composeTestRule.waitForIdle()
 
-    // Save button should be enabled
+    // Wait for save button to be enabled and click it
     composeTestRule.waitUntil(timeoutMillis = 5_000) {
       composeTestRule
           .onAllNodesWithTag(EditSerieScreenTestTags.SERIE_SAVE)
@@ -934,7 +934,6 @@ class EditSerieScreenTest {
           ?.getOrNull(SemanticsProperties.Disabled) == null
     }
 
-    // Save changes
     composeTestRule
         .onNodeWithTag(EditSerieScreenTestTags.SERIE_SAVE)
         .performScrollTo()
@@ -944,52 +943,15 @@ class EditSerieScreenTest {
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
-    // Verify save was successful and groupId was preserved
+    // Verify save succeeded and group-controlled fields are preserved
     assert(saveCalled)
     runBlocking {
       val updatedSerie = repo.getSerie(groupSerie.serieId)
       assert(updatedSerie.title == "Updated Group Serie Title")
       assert(updatedSerie.description == "Updated group description")
-      assert(updatedSerie.groupId == "group-123")
-      assert(updatedSerie.maxParticipants == 300) // Unchanged
-      assert(updatedSerie.visibility == Visibility.PRIVATE) // Unchanged
+      assert(updatedSerie.groupId == "group-123") // Preserved
+      assert(updatedSerie.maxParticipants == 300) // Preserved
+      assert(updatedSerie.visibility == Visibility.PRIVATE) // Preserved
     }
-  }
-
-  @Test
-  fun groupSerie_clearingTitleOrDescription_disablesSaveButton() {
-    val repo = SeriesRepositoryLocal()
-    val groupSerie = createTestGroupSerie()
-    runBlocking { repo.addSerie(groupSerie) }
-    val viewModel = EditSerieViewModel(repo)
-
-    composeTestRule.setContent {
-      EditSerieScreen(serieId = groupSerie.serieId, editSerieViewModel = viewModel, onDone = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Clear title
-    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE).performTextClearance()
-
-    composeTestRule.waitForIdle()
-
-    // Save button should be disabled
-    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.SERIE_SAVE).assertIsNotEnabled()
-
-    // Restore title and clear description
-    composeTestRule
-        .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE)
-        .performTextInput("Valid Title")
-    composeTestRule
-        .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_DESCRIPTION)
-        .performTextClearance()
-
-    composeTestRule.waitForIdle()
-
-    // Save button should still be disabled
-    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.SERIE_SAVE).assertIsNotEnabled()
   }
 }
