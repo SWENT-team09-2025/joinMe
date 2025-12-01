@@ -162,14 +162,15 @@ fun JoinMe(
   }
 
   // Get current user ID with test mode support
-  val currentUserId = remember(currentUser) {
-    val isTestEnv =
-        android.os.Build.FINGERPRINT == "robolectric" ||
-            android.os.Debug.isDebuggerConnected() ||
-            System.getProperty("IS_TEST_ENV") == "true"
+  val currentUserId =
+      remember(currentUser) {
+        val isTestEnv =
+            android.os.Build.FINGERPRINT == "robolectric" ||
+                android.os.Debug.isDebuggerConnected() ||
+                System.getProperty("IS_TEST_ENV") == "true"
 
-    if (isTestEnv) "test-user-id" else (currentUser?.uid ?: "")
-  }
+        if (isTestEnv) "test-user-id" else (currentUser?.uid ?: "")
+      }
 
   val initialDestination =
       startDestination ?: if (currentUser == null) Screen.Auth.name else Screen.Overview.route
