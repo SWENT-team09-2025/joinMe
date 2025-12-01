@@ -348,7 +348,14 @@ private fun ChatContent(
               senderProfiles = senderProfiles,
               totalParticipants = totalParticipants,
               listState = listState,
-              onMessageLongPress = { selectedMessage = it },
+              onMessageLongPress = { message ->
+                // Only show context menu if there are items to display
+                val isCurrentUser = message.senderId == currentUserId
+                val hasMenuItems = message.type == MessageType.TEXT || isCurrentUser
+                if (hasMenuItems) {
+                  selectedMessage = message
+                }
+              },
               onImageClick = { imageUrl -> fullScreenImageUrl = imageUrl },
               modifier = Modifier.weight(1f))
 
@@ -521,17 +528,23 @@ private fun MessageInteractionOverlays(
 
   // Context menu overlay (shown when a message is selected)
   selectedMessage?.let { message ->
-    MessageContextMenu(
-        isCurrentUser = message.senderId == currentUserId,
-        messageType = message.type,
-        onDismiss = callbacks.onDismissContextMenu,
-        onCopy = {
-          clipboardManager.setText(AnnotatedString(message.content))
-          callbacks.onDismissContextMenu()
-        },
-        onEdit = callbacks.onShowEditDialog,
-        onDelete = callbacks.onShowDeleteDialog,
-        onSeeWhoRead = callbacks.onShowWhoReadDialog)
+    val isCurrentUser = message.senderId == currentUserId
+    val hasMenuItems = message.type == MessageType.TEXT || isCurrentUser
+
+    // Only show context menu if there are items to display
+    if (hasMenuItems) {
+      MessageContextMenu(
+          isCurrentUser = isCurrentUser,
+          messageType = message.type,
+          onDismiss = callbacks.onDismissContextMenu,
+          onCopy = {
+            clipboardManager.setText(AnnotatedString(message.content))
+            callbacks.onDismissContextMenu()
+          },
+          onEdit = callbacks.onShowEditDialog,
+          onDelete = callbacks.onShowDeleteDialog,
+          onSeeWhoRead = callbacks.onShowWhoReadDialog)
+    }
   }
 
   // Edit dialog
