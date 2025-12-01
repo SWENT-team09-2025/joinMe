@@ -1,6 +1,8 @@
 package com.android.joinme.ui.overview
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
+import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.map.Location
@@ -333,7 +335,14 @@ abstract class BaseEventForSerieViewModel(
           }
         }
       }
+    } catch (e: IllegalStateException) {
+      Log.e("BaseEventForSerieVM", "Invalid state when loading serie group", e)
+      setErrorMsg("Serie configuration error: ${e.message}")
+    } catch (e: NoSuchElementException) {
+      Log.e("BaseEventForSerieVM", "Group not found for serie $serieId: ${e.message}", e)
+      setErrorMsg("Group not found for this serie")
     } catch (e: Exception) {
+      Log.e("BaseEventForSerieVM", "Failed to load serie $serieId", e)
       setErrorMsg("Failed to load serie: ${e.message}")
     }
   }
@@ -346,10 +355,14 @@ abstract class BaseEventForSerieViewModel(
    *
    * @param serie The serie with a groupId
    * @return The EventType from the group's category
+   * @throws IllegalStateException if the serie has no groupId
    * @throws Exception if the group cannot be fetched
    */
   protected suspend fun determineEventTypeFromGroup(serie: Serie): EventType {
-    val groupId = serie.groupId ?: throw IllegalStateException("Serie has no groupId")
+    val groupId =
+        serie.groupId
+            ?: throw IllegalStateException(
+                "Serie ${serie.serieId} has no groupId but was expected to have one")
     val group = groupRepository.getGroup(groupId)
     return group.category
   }
@@ -365,7 +378,7 @@ abstract class BaseEventForSerieViewModel(
    * @param preservedType The type to preserve if serie has a group
    */
   protected fun populateEventData(
-      event: com.android.joinme.model.event.Event,
+      event: Event,
       serieHasGroup: Boolean = false,
       preservedType: String? = null
   ) {

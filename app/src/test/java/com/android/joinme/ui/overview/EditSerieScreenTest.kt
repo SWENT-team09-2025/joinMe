@@ -849,10 +849,24 @@ class EditSerieScreenTest {
   }
 
   @Test
-  fun groupSerie_hidesFieldsAndAllowsEditingWithValidation() {
+  fun groupSerie_hidesFieldsAllowsEditingWithValidationAndPreservesGroupControlledFieldsOnSave() {
     val repo = SeriesRepositoryLocal()
     val viewModel = EditSerieViewModel(repo)
-    setupGroupSerieScreen(repo, viewModel)
+    val groupSerie = createTestGroupSerie()
+    runBlocking { repo.addSerie(groupSerie) }
+
+    var saveCalled = false
+
+    composeTestRule.setContent {
+      EditSerieScreen(
+          serieId = groupSerie.serieId,
+          editSerieViewModel = viewModel,
+          onDone = { saveCalled = true })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
 
     // Verify maxParticipants and visibility fields are hidden
     composeTestRule
@@ -876,44 +890,10 @@ class EditSerieScreenTest {
     composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE).performTextClearance()
     composeTestRule
         .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE)
-        .performTextInput("Updated Title")
+        .performTextInput("Updated Group Serie Title")
 
     assert(viewModel.uiState.value.groupId == "group-123")
     assert(viewModel.uiState.value.isGroupSerie)
-
-    // Clear title to test validation
-    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE).performTextClearance()
-    composeTestRule.waitForIdle()
-
-    // Save button should be disabled
-    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.SERIE_SAVE).assertIsNotEnabled()
-  }
-
-  @Test
-  fun groupSerie_savePreservesGroupControlledFields() {
-    val repo = SeriesRepositoryLocal()
-    val viewModel = EditSerieViewModel(repo)
-    val groupSerie = createTestGroupSerie()
-    runBlocking { repo.addSerie(groupSerie) }
-
-    var saveCalled = false
-
-    composeTestRule.setContent {
-      EditSerieScreen(
-          serieId = groupSerie.serieId,
-          editSerieViewModel = viewModel,
-          onDone = { saveCalled = true })
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Edit title and description
-    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE).performTextClearance()
-    composeTestRule
-        .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE)
-        .performTextInput("Updated Group Serie Title")
 
     composeTestRule
         .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_DESCRIPTION)
@@ -953,5 +933,12 @@ class EditSerieScreenTest {
       assert(updatedSerie.maxParticipants == 300) // Preserved
       assert(updatedSerie.visibility == Visibility.PRIVATE) // Preserved
     }
+
+    // Test validation: clear title
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE).performTextClearance()
+    composeTestRule.waitForIdle()
+
+    // Save button should be disabled
+    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.SERIE_SAVE).assertIsNotEnabled()
   }
 }
