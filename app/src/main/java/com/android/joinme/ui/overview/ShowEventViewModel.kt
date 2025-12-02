@@ -157,7 +157,7 @@ class ShowEventViewModel(
     }
     return try {
       val group = groupRepository.getGroup(groupId)
-      group?.name
+      group.name
     } catch (_: Exception) {
       null
     }
