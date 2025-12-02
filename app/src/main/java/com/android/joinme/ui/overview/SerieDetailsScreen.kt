@@ -155,7 +155,9 @@ fun SerieDetailsScreen(
 
   // Delete confirmation dialog (composable placed at top level)
   ShowDeleteWindow(
-      showDeleteDialog = mutableStateOf(showDeleteDialog),
+      showDeleteDialog,
+      onDismiss = { showDeleteDialog = false },
+      onConfirm = { showDeleteDialog = false },
       onGoBack,
       serieId,
       serieDetailsViewModel,
@@ -451,15 +453,17 @@ private fun ParticipantActionButtons(
 
 @Composable
 fun ShowDeleteWindow(
-    showDeleteDialog: MutableState<Boolean>,
+    showDeleteDialog: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
     onGoBack: () -> Unit,
     serieId: String,
     serieDetailsViewModel: SerieDetailsViewModel,
     coroutineScope: CoroutineScope
 ) {
-  if (showDeleteDialog.value) {
+  if (showDeleteDialog) {
     AlertDialog(
-        onDismissRequest = { showDeleteDialog.value = false },
+        onDismissRequest = onDismiss,
         title = { Text("Delete Serie") },
         text = {
           Text("Are you sure you want to delete this serie? This action cannot be undone.")
@@ -469,15 +473,13 @@ fun ShowDeleteWindow(
               onClick = {
                 coroutineScope.launch {
                   serieDetailsViewModel.deleteSerie(serieId)
-                  showDeleteDialog.value = false
+                  onConfirm()
                   onGoBack()
                 }
               }) {
                 Text("Delete", color = MaterialTheme.colorScheme.error)
               }
         },
-        dismissButton = {
-          TextButton(onClick = { showDeleteDialog.value = false }) { Text("Cancel") }
-        })
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
   }
 }
