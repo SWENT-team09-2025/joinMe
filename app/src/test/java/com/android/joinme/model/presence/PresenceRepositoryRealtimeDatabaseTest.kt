@@ -133,6 +133,56 @@ class PresenceRepositoryRealtimeDatabaseTest {
   }
 
   @Test
+  fun `setUserOnline skips blank contextIds`() = runTest {
+    // Given
+    val mockContextRef = mockk<DatabaseReference>(relaxed = true)
+    val mockUserRef = mockk<DatabaseReference>(relaxed = true)
+    val mockOnlineRef = mockk<DatabaseReference>(relaxed = true)
+    val mockLastSeenRef = mockk<DatabaseReference>(relaxed = true)
+    val mockOnDisconnect = mockk<com.google.firebase.database.OnDisconnect>(relaxed = true)
+    val mockUserContextsUserRef = mockk<DatabaseReference>(relaxed = true)
+    val mockUserContextsContextRef = mockk<DatabaseReference>(relaxed = true)
+
+    every { mockPresenceRef.child("validContext") } returns mockContextRef
+    every { mockContextRef.child(testUserId) } returns mockUserRef
+    every { mockUserRef.child("online") } returns mockOnlineRef
+    every { mockUserRef.child("lastSeen") } returns mockLastSeenRef
+    every { mockOnlineRef.onDisconnect() } returns mockOnDisconnect
+    every { mockLastSeenRef.onDisconnect() } returns mockOnDisconnect
+    every { mockOnDisconnect.setValue(any()) } returns Tasks.forResult(null)
+    every { mockUserRef.setValue(any()) } returns Tasks.forResult(null)
+    every { mockUserContextsRef.child(testUserId) } returns mockUserContextsUserRef
+    every { mockUserContextsUserRef.child("validContext") } returns mockUserContextsContextRef
+    every { mockUserContextsContextRef.setValue(true) } returns Tasks.forResult(null)
+
+    // When - include blank context IDs which should be skipped
+    repository.setUserOnline(testUserId, listOf("", "   ", "validContext"))
+
+    // Then - only validContext should be processed
+    verify(exactly = 1) { mockPresenceRef.child("validContext") }
+    verify(exactly = 0) { mockPresenceRef.child("") }
+    verify(exactly = 0) { mockPresenceRef.child("   ") }
+  }
+
+  @Test
+  fun `setUserOnline handles Firebase exception gracefully`() = runTest {
+    // Given
+    val mockContextRef = mockk<DatabaseReference>(relaxed = true)
+    val mockUserRef = mockk<DatabaseReference>(relaxed = true)
+    val mockOnlineRef = mockk<DatabaseReference>(relaxed = true)
+
+    every { mockPresenceRef.child(testContextId) } returns mockContextRef
+    every { mockContextRef.child(testUserId) } returns mockUserRef
+    every { mockUserRef.child("online") } returns mockOnlineRef
+    every { mockOnlineRef.onDisconnect() } throws RuntimeException("Firebase error")
+
+    // When - should not throw
+    repository.setUserOnline(testUserId, listOf(testContextId))
+
+    // Then - exception is handled gracefully (logged)
+  }
+
+  @Test
   fun `setUserOnline also updates userContexts index`() = runTest {
     // Given
     val mockContextRef = mockk<DatabaseReference>(relaxed = true)
@@ -230,6 +280,71 @@ class PresenceRepositoryRealtimeDatabaseTest {
     // Then - no exception thrown, method completes (error is logged)
   }
 
+  @Test
+  fun `setUserOffline with blank userId returns early`() = runTest {
+    // When
+    repository.setUserOffline("")
+    repository.setUserOffline("   ")
+
+    // Then - no database operations attempted
+    verify(exactly = 0) { mockUserContextsRef.child(any()) }
+  }
+
+  @Test
+  fun `setUserOffline skips contexts with null key`() = runTest {
+    // Given
+    val mockUserContextsSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockContextSnapshot1 = mockk<DataSnapshot>(relaxed = true)
+    val mockContextSnapshot2 = mockk<DataSnapshot>(relaxed = true)
+    val mockUserContextsUserRef = mockk<DatabaseReference>(relaxed = true)
+    val mockContextRef = mockk<DatabaseReference>(relaxed = true)
+    val mockUserRef = mockk<DatabaseReference>(relaxed = true)
+    val mockOnDisconnect = mockk<com.google.firebase.database.OnDisconnect>(relaxed = true)
+
+    every { mockUserContextsRef.child(testUserId) } returns mockUserContextsUserRef
+    every { mockUserContextsUserRef.get() } returns Tasks.forResult(mockUserContextsSnapshot)
+    every { mockUserContextsSnapshot.children } returns
+        listOf(mockContextSnapshot1, mockContextSnapshot2)
+    every { mockContextSnapshot1.key } returns null // null key should be skipped
+    every { mockContextSnapshot2.key } returns testContextId
+
+    every { mockPresenceRef.child(testContextId) } returns mockContextRef
+    every { mockContextRef.child(testUserId) } returns mockUserRef
+    every { mockUserRef.onDisconnect() } returns mockOnDisconnect
+    every { mockOnDisconnect.cancel() } returns Tasks.forResult(null)
+    every { mockUserRef.updateChildren(any()) } returns Tasks.forResult(null)
+
+    // When
+    repository.setUserOffline(testUserId)
+
+    // Then - only valid context should be processed
+    verify(exactly = 1) { mockPresenceRef.child(testContextId) }
+  }
+
+  @Test
+  fun `setUserOffline handles per-context error gracefully`() = runTest {
+    // Given
+    val mockUserContextsSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockContextSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockUserContextsUserRef = mockk<DatabaseReference>(relaxed = true)
+    val mockContextRef = mockk<DatabaseReference>(relaxed = true)
+    val mockUserRef = mockk<DatabaseReference>(relaxed = true)
+
+    every { mockUserContextsRef.child(testUserId) } returns mockUserContextsUserRef
+    every { mockUserContextsUserRef.get() } returns Tasks.forResult(mockUserContextsSnapshot)
+    every { mockUserContextsSnapshot.children } returns listOf(mockContextSnapshot)
+    every { mockContextSnapshot.key } returns testContextId
+
+    every { mockPresenceRef.child(testContextId) } returns mockContextRef
+    every { mockContextRef.child(testUserId) } returns mockUserRef
+    every { mockUserRef.onDisconnect() } throws RuntimeException("Per-context error")
+
+    // When - should not throw
+    repository.setUserOffline(testUserId)
+
+    // Then - exception is handled gracefully (logged)
+  }
+
   // ==================== OBSERVE ONLINE USERS COUNT TESTS ====================
 
   @Test
@@ -290,6 +405,88 @@ class PresenceRepositoryRealtimeDatabaseTest {
     every { mockContextRef.addValueEventListener(capture(listenerSlot)) } answers
         {
           listenerSlot.captured.onDataChange(mockSnapshot)
+          mockk()
+        }
+
+    // When
+    val count = repository.observeOnlineUsersCount(testContextId, testUserId).first()
+
+    // Then
+    assertEquals(0, count)
+  }
+
+  @Test
+  fun `observeOnlineUsersCount returns zero for blank contextId`() = runTest {
+    // When
+    val count = repository.observeOnlineUsersCount("", testUserId).first()
+
+    // Then
+    assertEquals(0, count)
+    verify(exactly = 0) { mockPresenceRef.child(any()) }
+  }
+
+  @Test
+  fun `observeOnlineUsersCount returns zero for blank currentUserId`() = runTest {
+    // When
+    val count = repository.observeOnlineUsersCount(testContextId, "").first()
+
+    // Then
+    assertEquals(0, count)
+    verify(exactly = 0) { mockPresenceRef.child(any()) }
+  }
+
+  @Test
+  fun `observeOnlineUsersCount skips users with null key`() = runTest {
+    // Given
+    val mockContextRef = mockk<DatabaseReference>(relaxed = true)
+    val mockSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockUser1Snapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockUser2Snapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockOnlineChild1 = mockk<DataSnapshot>(relaxed = true)
+    val mockOnlineChild2 = mockk<DataSnapshot>(relaxed = true)
+
+    every { mockPresenceRef.child(testContextId) } returns mockContextRef
+
+    // user1 has null key (should be skipped)
+    every { mockUser1Snapshot.key } returns null
+    every { mockUser1Snapshot.child("online") } returns mockOnlineChild1
+    every { mockOnlineChild1.getValue(Boolean::class.java) } returns true
+
+    // user2 is online
+    every { mockUser2Snapshot.key } returns "user2"
+    every { mockUser2Snapshot.child("online") } returns mockOnlineChild2
+    every { mockOnlineChild2.getValue(Boolean::class.java) } returns true
+
+    every { mockSnapshot.children } returns listOf(mockUser1Snapshot, mockUser2Snapshot)
+
+    val listenerSlot = slot<ValueEventListener>()
+    every { mockContextRef.addValueEventListener(capture(listenerSlot)) } answers
+        {
+          listenerSlot.captured.onDataChange(mockSnapshot)
+          mockk()
+        }
+
+    // When
+    val count = repository.observeOnlineUsersCount(testContextId, testUserId).first()
+
+    // Then - only user2 counted (user1 skipped due to null key)
+    assertEquals(1, count)
+  }
+
+  @Test
+  fun `observeOnlineUsersCount handles onCancelled by returning zero`() = runTest {
+    // Given
+    val mockContextRef = mockk<DatabaseReference>(relaxed = true)
+    val mockDatabaseError = mockk<com.google.firebase.database.DatabaseError>(relaxed = true)
+
+    every { mockPresenceRef.child(testContextId) } returns mockContextRef
+    every { mockDatabaseError.toException() } returns
+        mockk<com.google.firebase.database.DatabaseException>(relaxed = true)
+
+    val listenerSlot = slot<ValueEventListener>()
+    every { mockContextRef.addValueEventListener(capture(listenerSlot)) } answers
+        {
+          listenerSlot.captured.onCancelled(mockDatabaseError)
           mockk()
         }
 
@@ -363,6 +560,89 @@ class PresenceRepositoryRealtimeDatabaseTest {
 
     // Then
     assertTrue(userIds.isEmpty())
+  }
+
+  @Test
+  fun `observeOnlineUserIds returns empty list for blank contextId`() = runTest {
+    // When
+    val userIds = repository.observeOnlineUserIds("", testUserId).first()
+
+    // Then
+    assertTrue(userIds.isEmpty())
+    verify(exactly = 0) { mockPresenceRef.child(any()) }
+  }
+
+  @Test
+  fun `observeOnlineUserIds returns empty list for blank currentUserId`() = runTest {
+    // When
+    val userIds = repository.observeOnlineUserIds(testContextId, "").first()
+
+    // Then
+    assertTrue(userIds.isEmpty())
+    verify(exactly = 0) { mockPresenceRef.child(any()) }
+  }
+
+  @Test
+  fun `observeOnlineUserIds handles onCancelled by returning empty list`() = runTest {
+    // Given
+    val mockContextRef = mockk<DatabaseReference>(relaxed = true)
+    val mockDatabaseError = mockk<com.google.firebase.database.DatabaseError>(relaxed = true)
+
+    every { mockPresenceRef.child(testContextId) } returns mockContextRef
+    every { mockDatabaseError.toException() } returns
+        mockk<com.google.firebase.database.DatabaseException>(relaxed = true)
+
+    val listenerSlot = slot<ValueEventListener>()
+    every { mockContextRef.addValueEventListener(capture(listenerSlot)) } answers
+        {
+          listenerSlot.captured.onCancelled(mockDatabaseError)
+          mockk()
+        }
+
+    // When
+    val userIds = repository.observeOnlineUserIds(testContextId, testUserId).first()
+
+    // Then
+    assertTrue(userIds.isEmpty())
+  }
+
+  @Test
+  fun `observeOnlineUserIds skips users with null key`() = runTest {
+    // Given
+    val mockContextRef = mockk<DatabaseReference>(relaxed = true)
+    val mockSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockUser1Snapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockUser2Snapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockOnlineChild1 = mockk<DataSnapshot>(relaxed = true)
+    val mockOnlineChild2 = mockk<DataSnapshot>(relaxed = true)
+
+    every { mockPresenceRef.child(testContextId) } returns mockContextRef
+
+    // user1 has null key (should be skipped)
+    every { mockUser1Snapshot.key } returns null
+    every { mockUser1Snapshot.child("online") } returns mockOnlineChild1
+    every { mockOnlineChild1.getValue(Boolean::class.java) } returns true
+
+    // user2 is online
+    every { mockUser2Snapshot.key } returns "user2"
+    every { mockUser2Snapshot.child("online") } returns mockOnlineChild2
+    every { mockOnlineChild2.getValue(Boolean::class.java) } returns true
+
+    every { mockSnapshot.children } returns listOf(mockUser1Snapshot, mockUser2Snapshot)
+
+    val listenerSlot = slot<ValueEventListener>()
+    every { mockContextRef.addValueEventListener(capture(listenerSlot)) } answers
+        {
+          listenerSlot.captured.onDataChange(mockSnapshot)
+          mockk()
+        }
+
+    // When
+    val userIds = repository.observeOnlineUserIds(testContextId, testUserId).first()
+
+    // Then - only user2 included (user1 skipped due to null key)
+    assertEquals(1, userIds.size)
+    assertTrue(userIds.contains("user2"))
   }
 
   // ==================== CLEANUP STALE PRESENCE TESTS ====================
