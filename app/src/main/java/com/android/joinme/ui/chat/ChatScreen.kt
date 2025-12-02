@@ -606,7 +606,13 @@ private fun getMessageBubbleShape(isCurrentUser: Boolean): RoundedCornerShape {
  * @param onBubbleColor Color for text on the bubble
  */
 @Composable
-private fun MessageContent(message: Message, isCurrentUser: Boolean, onBubbleColor: Color, bubbleColor: Color, onImageClick: (String) -> Unit) {
+private fun MessageContent(
+    message: Message,
+    isCurrentUser: Boolean,
+    onBubbleColor: Color,
+    bubbleColor: Color,
+    onImageClick: (String) -> Unit
+) {
   if (message.type == MessageType.SYSTEM) {
     Text(
         text = message.content,
@@ -623,23 +629,23 @@ private fun MessageContent(message: Message, isCurrentUser: Boolean, onBubbleCol
       Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
     }
 
-      // Message content
-      when (message.type) {
-          MessageType.IMAGE -> {
-              // Display image message
-              ChatImageMessage(
-                  imageUrl = message.content,
-                  bubbleColor = bubbleColor,
-                  onClick = { onImageClick(message.content) })
-          }
-          else -> {
-              // Display text message
-              Text(
-                  text = message.content,
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = onBubbleColor)
-          }
+    // Message content
+    when (message.type) {
+      MessageType.IMAGE -> {
+        // Display image message
+        ChatImageMessage(
+            imageUrl = message.content,
+            bubbleColor = bubbleColor,
+            onClick = { onImageClick(message.content) })
       }
+      else -> {
+        // Display text message
+        Text(
+            text = message.content,
+            style = MaterialTheme.typography.bodyMedium,
+            color = onBubbleColor)
+      }
+    }
 
     Text(text = message.content, style = MaterialTheme.typography.bodyMedium, color = onBubbleColor)
   }
