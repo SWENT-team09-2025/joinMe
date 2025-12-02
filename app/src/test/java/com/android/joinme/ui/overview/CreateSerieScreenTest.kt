@@ -989,7 +989,7 @@ class CreateSerieScreenTest {
   }
 
   @Test
-  fun selectingGroup_hidesMaxParticipantsAndVisibilityFields() {
+  fun selectingGroup_hidesVisibilityButShowsMaxParticipants() {
     val viewModel = CreateSerieViewModel()
     composeTestRule.setContent {
       CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
@@ -1003,9 +1003,8 @@ class CreateSerieScreenTest {
         .assertIsDisplayed()
     composeTestRule.onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_VISIBILITY).assertExists()
 
-    // Note: We can't actually select a group in tests without mock groups loaded
-    // But we can verify through ViewModel state
-    // The UI logic is: if selectedGroupId != null, hide fields
+    // Note: Now maxParticipants is always visible, even when a group is selected
+    // Only visibility field is hidden for group series
   }
 
   @Test
@@ -1045,7 +1044,7 @@ class CreateSerieScreenTest {
       CreateSerieScreen(createSerieViewModel = viewModel, onDone = { _ -> })
     }
 
-    // Fill required fields (without maxParticipants and visibility since group would auto-fill)
+    // Fill required fields (including maxParticipants since it's no longer auto-filled)
     composeTestRule
         .onNodeWithTag(CreateSerieScreenTestTags.INPUT_SERIE_TITLE)
         .performTextInput("Group Serie")
@@ -1054,9 +1053,10 @@ class CreateSerieScreenTest {
         .performTextInput("Serie for group")
     viewModel.setDate("25/12/2025")
     viewModel.setTime("18:00")
+    viewModel.setMaxParticipants("50") // Now required even for group series
 
-    // Simulate group selection (which would auto-fill maxParticipants and visibility)
-    viewModel.setSelectedGroup("group-1") // This auto-fills fields
+    // Simulate group selection (which only auto-fills visibility now)
+    viewModel.setSelectedGroup("group-1")
 
     composeTestRule.waitForIdle()
 

@@ -67,7 +67,7 @@ data class CreateSerieUIState(
    */
   val isValid: Boolean
     get() {
-      // When a group is selected, maxParticipants and visibility are auto-filled and always valid
+      // When a group is selected, visibility is auto-filled
       val selectedGroup = selectedGroupId != null
       return invalidTitleMsg == null &&
           invalidDescriptionMsg == null &&
@@ -79,8 +79,7 @@ data class CreateSerieUIState(
           description.isNotBlank() &&
           date.isNotBlank() &&
           time.isNotBlank() &&
-          (selectedGroup ||
-              maxParticipants.isNotBlank()) && // maxParticipants required only if no group
+          maxParticipants.isNotBlank() && // maxParticipants always required
           (selectedGroup || visibility.isNotBlank()) // visibility required only if no group
     }
 }
@@ -142,13 +141,11 @@ class CreateSerieViewModel(
       val selectedGroup = groupId?.let { id -> _uiState.value.availableGroups.find { it.id == id } }
 
       if (selectedGroup != null) {
-        // For group series, auto-set maxParticipants and visibility
+        // For group series, auto-set visibility
         _uiState.value =
             _uiState.value.copy(
                 selectedGroupId = groupId,
-                maxParticipants = DEFAULT_GROUP_SERIE_MAX_PARTICIPANTS.toString(),
                 visibility = Visibility.PRIVATE.name,
-                invalidMaxParticipantsMsg = null,
                 invalidVisibilityMsg = null,
                 createdSerieId = null) // Clear any existing serie
       } else {
@@ -156,9 +153,7 @@ class CreateSerieViewModel(
         _uiState.value =
             _uiState.value.copy(
                 selectedGroupId = null,
-                maxParticipants = "",
                 visibility = "",
-                invalidMaxParticipantsMsg = null,
                 invalidVisibilityMsg = null,
                 createdSerieId = null) // Clear any existing serie
       }

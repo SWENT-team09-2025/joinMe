@@ -770,21 +770,21 @@ class CreateSerieViewModelTest {
     assertEquals(2, vm.uiState.value.availableGroups.size)
     assertNull(vm.uiState.value.selectedGroupId)
 
-    // Test 1: Select group auto-fills fields
+    // Test 1: Select group auto-fills visibility only
     vm.setSelectedGroup("group-1")
     advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     val stateAfterSelection = vm.uiState.value
     assertEquals("group-1", stateAfterSelection.selectedGroupId)
-    assertEquals("300", stateAfterSelection.maxParticipants) // Default group max
+    assertEquals("", stateAfterSelection.maxParticipants) // Not auto-set anymore
     assertEquals("PRIVATE", stateAfterSelection.visibility)
-    assertNull(stateAfterSelection.invalidMaxParticipantsMsg)
     assertNull(stateAfterSelection.invalidVisibilityMsg)
 
-    // Test 2: Create serie with group
+    // Test 2: Create serie with group (need to set maxParticipants manually)
     vm.setTitle("Basketball Tournament")
     vm.setDescription("Weekly tournament series")
     vm.setDate("25/12/2025")
     vm.setTime("18:00")
+    vm.setMaxParticipants("300")
 
     assertTrue(vm.uiState.value.isValid)
 
@@ -806,12 +806,12 @@ class CreateSerieViewModelTest {
     assertNotNull(updatedGroup)
     assertTrue(updatedGroup!!.serieIds.contains(serieId))
 
-    // Test 5: Deselect group clears fields
+    // Test 5: Deselect group clears visibility, retains maxParticipants
     vm.setSelectedGroup(null)
     advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     val stateAfterDeselection = vm.uiState.value
     assertNull(stateAfterDeselection.selectedGroupId)
-    assertEquals("", stateAfterDeselection.maxParticipants)
+    assertEquals("300", stateAfterDeselection.maxParticipants) // Retained from before
     assertEquals("", stateAfterDeselection.visibility)
   }
 
@@ -866,20 +866,20 @@ class CreateSerieViewModelTest {
     vm.setSelectedGroup("group-1")
     advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     assertEquals("group-1", vm.uiState.value.selectedGroupId)
-    assertEquals("300", vm.uiState.value.maxParticipants)
+    assertEquals("", vm.uiState.value.maxParticipants) // Not auto-set anymore
 
     // Switch to second group
     vm.setSelectedGroup("group-2")
     advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     assertEquals("group-2", vm.uiState.value.selectedGroupId)
-    assertEquals("300", vm.uiState.value.maxParticipants) // Still auto-filled
+    assertEquals("", vm.uiState.value.maxParticipants) // Still not auto-set
 
     // Deselect (go standalone)
     vm.setSelectedGroup(null)
     advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     assertNull(vm.uiState.value.selectedGroupId)
-    assertEquals("", vm.uiState.value.maxParticipants) // Cleared
-    assertEquals("", vm.uiState.value.visibility) // Cleared
+    assertEquals("", vm.uiState.value.maxParticipants)
+    assertEquals("", vm.uiState.value.visibility)
   }
 
   @Test
@@ -952,6 +952,7 @@ class CreateSerieViewModelTest {
     vmWithFailingGroup.setDescription("Test description")
     vmWithFailingGroup.setDate("25/12/2025")
     vmWithFailingGroup.setTime("18:00")
+    vmWithFailingGroup.setMaxParticipants("50")
 
     val serieId1 = vmWithFailingGroup.createSerie()
     advanceUntilIdle()
@@ -1039,6 +1040,7 @@ class CreateSerieViewModelTest {
     vmSuccess.setDescription("Test description")
     vmSuccess.setDate("25/12/2025")
     vmSuccess.setTime("18:00")
+    vmSuccess.setMaxParticipants("50")
 
     val serieId3 = vmSuccess.createSerie()
     advanceUntilIdle()
@@ -1074,6 +1076,7 @@ class CreateSerieViewModelTest {
     vm.setDescription("Test description")
     vm.setDate("25/12/2025")
     vm.setTime("18:00")
+    vm.setMaxParticipants("50")
 
     val serieId1 = vm.createSerie()
     advanceUntilIdle()
