@@ -208,9 +208,11 @@ class CreateSerieViewModel(
       return stopLoadingAndReturn()
     }
 
-    // 8. Update Streaks (Non-critical)
-    if (group != null) {
-      updateStreaksSafe(group, parsedDate)
+    // 8. Update Streaks
+    if (group != null && !updateStreaks(group, parsedDate)) {
+      // Rollback serie and group association
+      tryRollbackSerie(serie.serieId, group)
+      return stopLoadingAndReturn()
     }
 
     onCreationSuccess(serie.serieId)
@@ -371,15 +373,31 @@ class CreateSerieViewModel(
     }
   }
 
-  /** Updates streaks for all group members. Failures here are logged but do not block creation. */
-  private suspend fun updateStreaksSafe(group: Group, date: Timestamp) {
-    for (memberId in group.memberIds) {
-      try {
+  /**
+   * Updates streaks for all group members.
+   *
+   * @return `true` if all streak updates succeeded; `false` if any failed.
+   */
+  private suspend fun updateStreaks(group: Group, date: Timestamp): Boolean {
+    return try {
+      for (memberId in group.memberIds) {
         StreakService.onActivityJoined(group.id, memberId, date)
-      } catch (e: Exception) {
-        Log.e("CreateSerieViewModel", "Error updating streak for user $memberId", e)
-        // Non-critical
       }
+      true
+    } catch (e: Exception) {
+      Log.e("CreateSerieViewModel", "Error updating streaks", e)
+      setErrorMsg("Failed to update streaks. Cannot create serie: ${e.message}")
+      false
+    }
+  }
+
+  /** Rolls back a created serie by deleting it and cleaning up group associations. */
+  private suspend fun tryRollbackSerie(serieId: String, group: Group) {
+    try {
+      repository.deleteSerie(serieId)
+      rollbackGroupUpdate(group, serieId)
+    } catch (e: Exception) {
+      Log.e("CreateSerieViewModel", "CRITICAL: Failed to rollback serie creation", e)
     }
   }
 
