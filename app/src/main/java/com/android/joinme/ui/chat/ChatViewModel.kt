@@ -7,9 +7,12 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.android.joinme.R
 import com.android.joinme.model.chat.ChatRepository
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
+import com.android.joinme.model.map.Location
+import com.android.joinme.model.map.UserLocation
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import kotlinx.coroutines.TimeoutCancellationException
@@ -64,6 +67,9 @@ class ChatViewModel(
   companion object {
     private const val TAG = "ChatViewModel"
     private const val IMAGE_UPLOAD_TIMEOUT_MS = 30000L // 30 seconds
+    private const val STATIC_MAPS_BASE_URL = "https://maps.googleapis.com/maps/api/staticmap"
+    private const val STATIC_MAPS_ZOOM = 15
+    private const val STATIC_MAPS_SIZE = "300x200"
   }
 
   /**
@@ -357,6 +363,90 @@ class ChatViewModel(
         onError(errorMsg)
       } finally {
         _uiState.value = _uiState.value.copy(isUploadingImage = false)
+      }
+    }
+  }
+
+  /**
+   * Generates a Google Static Maps URL for the given location.
+   *
+   * @param latitude The latitude of the location.
+   * @param longitude The longitude of the location.
+   * @param apiKey The Google Maps API key.
+   * @return The Static Maps URL string.
+   */
+  private fun generateStaticMapUrl(latitude: Double, longitude: Double, apiKey: String): String {
+    return "$STATIC_MAPS_BASE_URL?" +
+        "center=$latitude,$longitude&" +
+        "zoom=$STATIC_MAPS_ZOOM&" +
+        "size=$STATIC_MAPS_SIZE&" +
+        "markers=color:red%7C$latitude,$longitude&" +
+        "key=$apiKey"
+  }
+
+  /**
+   * Sends the user's current location as a message in the chat.
+   *
+   * This method creates a LOCATION type message with:
+   * 1. The user's GPS coordinates (latitude, longitude)
+   * 2. A location name (user-provided or default from string resources)
+   * 3. A Static Maps preview URL in the content field
+   *
+   * @param context Android context for accessing string resources.
+   * @param userLocation The current GPS location of the user.
+   * @param senderName The name of the user sending the location.
+   * @param locationName Optional custom name for the location (default from resources).
+   * @param apiKey The Google Maps API key for generating the Static Maps URL.
+   * @param onSuccess Callback invoked when the location is successfully sent.
+   * @param onError Callback invoked if sending fails, with an error message.
+   */
+  fun sendCurrentLocation(
+      context: Context,
+      userLocation: UserLocation,
+      senderName: String,
+      locationName: String? = null,
+      apiKey: String,
+      onSuccess: () -> Unit = {},
+      onError: (String) -> Unit = {}
+  ) {
+    viewModelScope.launch {
+      try {
+        val messageId = chatRepository.getNewMessageId()
+
+        // Use provided location name or default from string resources
+        val finalLocationName = locationName ?: context.getString(R.string.current_location)
+
+        // Generate Static Maps URL for preview
+        val staticMapUrl =
+            generateStaticMapUrl(userLocation.latitude, userLocation.longitude, apiKey)
+
+        // Create Location object
+        val location =
+            Location(
+                latitude = userLocation.latitude,
+                longitude = userLocation.longitude,
+                name = finalLocationName)
+
+        // Create and send the location message
+        val message =
+            Message(
+                id = messageId,
+                conversationId = currentConversationId,
+                senderId = _uiState.value.currentUserId,
+                senderName = senderName,
+                content = staticMapUrl, // Static Maps URL for preview
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.LOCATION,
+                location = location)
+
+        chatRepository.addMessage(message)
+
+        onSuccess()
+      } catch (e: Exception) {
+        val errorMsg = context.getString(R.string.failed_to_send_location, e.message)
+        Log.e(TAG, errorMsg, e)
+        setErrorMsg(errorMsg)
+        onError(errorMsg)
       }
     }
   }

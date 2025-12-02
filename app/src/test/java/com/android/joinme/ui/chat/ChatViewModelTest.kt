@@ -5,6 +5,7 @@ package com.android.joinme.ui.chat
 import com.android.joinme.model.chat.ChatRepository
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
+import com.android.joinme.model.map.UserLocation
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import kotlinx.coroutines.Dispatchers
@@ -1011,5 +1012,80 @@ class ChatViewModelTest {
     // Then
     state = viewModel.uiState.value
     assertNull(state.imageUploadError)
+  }
+
+  @Test
+  fun sendCurrentLocation_createsLocationMessageWithAllProperties() = runTest {
+    // Given
+    viewModel.initializeChat(testChatId, testUserId)
+    advanceUntilIdle()
+
+    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
+    io.mockk.every { mockContext.getString(com.android.joinme.R.string.current_location) } returns
+        "Current Location"
+
+    val userLocation = UserLocation(latitude = 46.5197, longitude = 6.6323)
+    var successCalled = false
+
+    // When
+    viewModel.sendCurrentLocation(
+        context = mockContext,
+        userLocation = userLocation,
+        senderName = "Alice",
+        apiKey = "test-api-key",
+        onSuccess = { successCalled = true })
+    advanceUntilIdle()
+
+    // Then
+    val messages = viewModel.uiState.value.messages
+    assertEquals(1, messages.size)
+
+    val locationMessage = messages[0]
+    assertEquals(MessageType.LOCATION, locationMessage.type)
+    assertNotNull(locationMessage.location)
+    assertEquals(46.5197, locationMessage.location!!.latitude, 0.0001)
+    assertEquals(6.6323, locationMessage.location!!.longitude, 0.0001)
+    assertEquals("Current Location", locationMessage.location!!.name)
+    assertEquals("Alice", locationMessage.senderName)
+    assertEquals(testUserId, locationMessage.senderId)
+    assertTrue(locationMessage.content.contains("maps.googleapis.com"))
+    assertTrue(locationMessage.content.contains("46.5197"))
+    assertTrue(locationMessage.content.contains("6.6323"))
+    assertTrue(successCalled)
+  }
+
+  @Test
+  fun sendCurrentLocation_onError_callsErrorCallback() = runTest {
+    // Given
+    viewModel.initializeChat(testChatId, testUserId)
+    advanceUntilIdle()
+
+    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
+    io.mockk.every { mockContext.getString(com.android.joinme.R.string.current_location) } returns
+        "Current Location"
+    io.mockk.every {
+      mockContext.getString(com.android.joinme.R.string.failed_to_send_location, any())
+    } returns "Failed to send location: Test error"
+
+    fakeRepo.shouldThrowError = true
+    fakeRepo.errorMessage = "Test error"
+
+    val userLocation = UserLocation(latitude = 46.5197, longitude = 6.6323)
+    var errorMsg: String? = null
+
+    // When
+    viewModel.sendCurrentLocation(
+        context = mockContext,
+        userLocation = userLocation,
+        senderName = "Alice",
+        apiKey = "test-api-key",
+        onError = { errorMsg = it })
+    advanceUntilIdle()
+
+    // Then
+    assertNotNull(viewModel.uiState.value.errorMsg)
+    assertTrue(viewModel.uiState.value.errorMsg!!.contains("Failed to send location"))
+    assertNotNull(errorMsg)
+    assertEquals(0, viewModel.uiState.value.messages.size) // No message added on error
   }
 }

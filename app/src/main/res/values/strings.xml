@@ -16,6 +16,8 @@
     <string name="location">Location</string>
     <string name="poll">Poll</string>
     <string name="not_yet_implemented">Not yet implemented</string>
+    <string name="current_location">Current Location</string>
+    <string name="failed_to_send_location">Failed to send location: %1$s</string>
 
     <!-- Public Profile Screen -->
     <string name="back">Back</string>
