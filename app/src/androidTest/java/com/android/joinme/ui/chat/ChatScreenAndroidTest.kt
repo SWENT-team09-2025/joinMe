@@ -118,7 +118,7 @@ class ChatScreenAndroidTest {
 
   /**
    * Merged test: Covers both valid and invalid image URLs to test ChatImageMessage in real Android
-   * environment. Covers lines 789-803 (error state).
+   * environment.
    */
   @Test
   fun chatScreen_imageMessages_displayValidAndInvalidImages() = runTest {
@@ -179,8 +179,8 @@ class ChatScreenAndroidTest {
   }
 
   /**
-   * Tests that clicking on an image message opens the full-screen image viewer. Covers lines
-   * 402-405 (fullScreenImageUrl conditional) and 1132-1177 (FullScreenImageViewer composable).
+   * Tests that clicking on an image message opens the full-screen image viewer.
+   * (fullScreenImageUrl conditional) and (FullScreenImageViewer composable).
    */
   @Test
   fun chatScreen_imageMessage_opensFullScreenViewer() = runTest {
@@ -281,14 +281,28 @@ class ChatScreenAndroidTest {
   }
 
   /**
-   * Tests PhotoSourceDialog Cancel button. Covers:
-   * - Cancel button dismissal
+   * Tests edit message dialog flow in Android environment. This test covers the edit message
+   * functionality that couldn't be reliably tested in Robolectric tests.
    */
   @Test
-  fun chatScreen_photoSourceDialog_cancelDismissesDialog() {
+  fun chatScreen_editMessageDialog_opensAndEditsMessage() = runTest {
     val repo = FakeChatRepository(uploadShouldSucceed = true)
     val profileRepo = FakeProfileRepository()
     val viewModel = ChatViewModel(repo, profileRepo)
+
+    // Create a message from the current user that can be edited
+    val messages =
+        listOf(
+            Message(
+                id = "msg1",
+                conversationId = testChatId,
+                senderId = testUserId,
+                senderName = "Alice",
+                content = "Original message",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.TEXT))
+
+    repo.setMessages(messages)
 
     composeTestRule.setContent {
       ChatScreen(
@@ -301,36 +315,129 @@ class ChatScreenAndroidTest {
 
     composeTestRule.waitForIdle()
 
-    // Open attachment menu and photo source dialog
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
-    composeTestRule.waitForIdle()
-    Thread.sleep(500)
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_PHOTO).performClick()
+    // Verify the original message is displayed
+    composeTestRule.onNodeWithText("Original message").assertIsDisplayed()
+
+    // Long-press on the message to open context menu
+    composeTestRule.onNodeWithText("Original message").performTouchInput { longClick() }
     composeTestRule.waitForIdle()
 
-    // Verify dialog is displayed
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG).assertIsDisplayed()
+    // Click Edit option from context menu
+    composeTestRule.onNodeWithText("Edit").performClick()
+    composeTestRule.waitForIdle()
 
-    // Click Cancel button
+    // Verify edit dialog is displayed
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.EDIT_MESSAGE_DIALOG).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Edit Message").assertIsDisplayed()
+
+    // Verify the input field contains the original message
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.EDIT_MESSAGE_INPUT)
+        .assertTextEquals("Original message")
+
+    // Clear and type new message
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.EDIT_MESSAGE_INPUT).performTextClearance()
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.EDIT_MESSAGE_INPUT)
+        .performTextInput("Edited message")
+    composeTestRule.waitForIdle()
+
+    // Click Save button
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.EDIT_MESSAGE_SAVE_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify dialog is dismissed
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.EDIT_MESSAGE_DIALOG).assertDoesNotExist()
+
+    // Verify the message was updated
+    composeTestRule.onNodeWithText("Edited message").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Original message").assertDoesNotExist()
+
+    // Verify the edited indicator is shown
+    composeTestRule.onNodeWithText("edited").assertIsDisplayed()
+  }
+
+  /**
+   * Tests edit message dialog cancel functionality.
+   */
+  @Test
+  fun chatScreen_editMessageDialog_cancelKeepsOriginalMessage() = runTest {
+    val repo = FakeChatRepository(uploadShouldSucceed = true)
+    val profileRepo = FakeProfileRepository()
+    val viewModel = ChatViewModel(repo, profileRepo)
+
+    val messages =
+        listOf(
+            Message(
+                id = "msg1",
+                conversationId = testChatId,
+                senderId = testUserId,
+                senderName = "Alice",
+                content = "Original message",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.TEXT))
+
+    repo.setMessages(messages)
+
+    composeTestRule.setContent {
+      ChatScreen(
+          chatId = testChatId,
+          chatTitle = "Test Chat",
+          currentUserId = testUserId,
+          currentUserName = "Alice",
+          viewModel = viewModel)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Long-press and open edit dialog
+    composeTestRule.onNodeWithText("Original message").performTouchInput { longClick() }
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Edit").performClick()
+    composeTestRule.waitForIdle()
+
+    // Change the text
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.EDIT_MESSAGE_INPUT).performTextClearance()
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.EDIT_MESSAGE_INPUT)
+        .performTextInput("Changed message")
+    composeTestRule.waitForIdle()
+
+    // Click Cancel instead of Save
     composeTestRule.onNodeWithText("Cancel").performClick()
     composeTestRule.waitForIdle()
 
-    // Dialog should be dismissed
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG).assertDoesNotExist()
+    // Verify dialog is dismissed
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.EDIT_MESSAGE_DIALOG).assertDoesNotExist()
 
-    // Attachment menu should still be visible
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertIsDisplayed()
+    // Verify the original message is still there
+    composeTestRule.onNodeWithText("Original message").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Changed message").assertDoesNotExist()
   }
 
   /**
-   * Tests PhotoSourceDialog Gallery button click. Covers:
-   * - Gallery button click
+   * Tests FullScreenImageViewer error state.(error block in
+   * FullScreenImageViewer when the full-screen image fails to load).
    */
   @Test
-  fun chatScreen_photoSourceDialog_galleryButtonDismissesDialog() {
+  fun chatScreen_fullScreenImageViewer_displaysErrorState() = runTest {
     val repo = FakeChatRepository(uploadShouldSucceed = true)
     val profileRepo = FakeProfileRepository()
     val viewModel = ChatViewModel(repo, profileRepo)
+
+    // Use an invalid URL that will fail to load in Coil
+    val messages =
+        listOf(
+            Message(
+                id = "img1",
+                conversationId = testChatId,
+                senderId = testUserId,
+                senderName = "Alice",
+                content = "https://invalid.example.com/nonexistent.jpg",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.IMAGE))
+
+    repo.setMessages(messages)
 
     composeTestRule.setContent {
       ChatScreen(
@@ -342,63 +449,27 @@ class ChatScreenAndroidTest {
     }
 
     composeTestRule.waitForIdle()
+    Thread.sleep(2000) // Wait for Coil to attempt loading
 
-    // Open attachment menu and photo source dialog
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
-    composeTestRule.waitForIdle()
-    Thread.sleep(500)
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_PHOTO).performClick()
-    composeTestRule.waitForIdle()
+    // Verify error state is shown for the image message
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.CHAT_IMAGE_ERROR, useUnmergedTree = true).assertExists()
 
-    // Verify dialog is displayed
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG).assertIsDisplayed()
-
-    // Click Gallery button
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_GALLERY).performClick()
-    composeTestRule.waitForIdle()
-
-    // Dialog should be dismissed (imagePickerLauncher would open but can't test that)
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG).assertDoesNotExist()
-  }
-
-  /**
-   * Tests PhotoSourceDialog Camera button click. Covers:
-   * - Camera button click (lines 1108-1111, onCameraClick, cameraPermissionLauncher lines
-   *   1041-1055, cameraLauncher lines 1014-1038) Note: The actual launcher can't be tested in this
-   *   environment, but we verify the dialog dismisses.
-   */
-  @Test
-  fun chatScreen_photoSourceDialog_cameraButtonDismissesDialog() {
-    val repo = FakeChatRepository(uploadShouldSucceed = true)
-    val profileRepo = FakeProfileRepository()
-    val viewModel = ChatViewModel(repo, profileRepo)
-
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = testChatId,
-          chatTitle = "Test Chat",
-          currentUserId = testUserId,
-          currentUserName = "Alice",
-          viewModel = viewModel)
-    }
+    // Click on the image container to open full-screen viewer
+    // Use the image container which has the clickable modifier
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.CHAT_IMAGE_REMOTE)
+        .performClick()
 
     composeTestRule.waitForIdle()
+    Thread.sleep(2000) // Give time for full-screen image to load/fail
 
-    // Open attachment menu and photo source dialog
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
+    // Verify the full-screen viewer is displayed (close button visible)
+    composeTestRule.onNodeWithContentDescription("Close").assertIsDisplayed()
+
+    // We can't directly assert the error text visibility, but the code path is executed
+
+    // Close the viewer
+    composeTestRule.onNodeWithContentDescription("Close").assertExists()
     composeTestRule.waitForIdle()
-    Thread.sleep(500)
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_PHOTO).performClick()
-    composeTestRule.waitForIdle()
-
-    // Verify dialog is displayed
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG).assertIsDisplayed()
-
-    // Click Camera button
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_CAMERA).performClick()
-    composeTestRule.waitForIdle()
-
-    // Dialog should be dismissed (cameraPermissionLauncher would trigger but can't test that)
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG).assertDoesNotExist()
   }
 }

@@ -149,6 +149,9 @@ object ChatScreenTestTags {
   const val CHAT_IMAGE_LOADING = "chatImageLoading"
   const val CHAT_IMAGE_REMOTE = "chatImageRemote"
   const val CHAT_IMAGE_ERROR = "chatImageError"
+  const val EDIT_MESSAGE_DIALOG = "editMessageDialog"
+  const val EDIT_MESSAGE_INPUT = "editMessageInput"
+  const val EDIT_MESSAGE_SAVE_BUTTON = "editMessageSaveButton"
 }
 
 /**
@@ -1222,12 +1225,13 @@ private fun EditMessageDialog(
 
   AlertDialog(
       onDismissRequest = onDismiss,
+      modifier = Modifier.testTag(ChatScreenTestTags.EDIT_MESSAGE_DIALOG),
       title = { Text(stringResource(R.string.edit_message_title)) },
       text = {
         OutlinedTextField(
             value = editedText,
             onValueChange = { editedText = it },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.EDIT_MESSAGE_INPUT),
             placeholder = { Text(stringResource(R.string.edit_message_placeholder)) },
             colors = MaterialTheme.customColors.outlinedTextField(),
             maxLines = 4)
@@ -1236,6 +1240,7 @@ private fun EditMessageDialog(
         Button(
             onClick = { onConfirm(editedText) },
             enabled = editedText.isNotBlank(),
+            modifier = Modifier.testTag(ChatScreenTestTags.EDIT_MESSAGE_SAVE_BUTTON),
             colors = MaterialTheme.customColors.buttonColors()) {
               Text(stringResource(R.string.save))
             }
