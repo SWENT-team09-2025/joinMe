@@ -2,6 +2,7 @@ package com.android.joinme.model.groups.streaks
 
 // Implemented with the help of AI tools, adapted and refactored to follow project pattern.
 
+import android.util.Log
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
@@ -300,8 +301,9 @@ object StreakService {
       if (group.eventIds.isEmpty()) return emptyList()
 
       eventsRepository.getEventsByIds(group.eventIds).filter { it.participants.contains(userId) }
-    } catch (_: Exception) {
-      emptyList()
+    } catch (e: Exception) {
+      Log.e("StreakService", "Failed to fetch events for user $userId in group $groupId", e)
+      throw e
     }
   }
 
@@ -312,8 +314,9 @@ object StreakService {
       if (group.serieIds.isEmpty()) return emptyList()
 
       seriesRepository.getSeriesByIds(group.serieIds).filter { it.participants.contains(userId) }
-    } catch (_: Exception) {
-      emptyList()
+    } catch (e: Exception) {
+      Log.e("StreakService", "Failed to fetch series for user $userId in group $groupId", e)
+      throw e
     }
   }
 
