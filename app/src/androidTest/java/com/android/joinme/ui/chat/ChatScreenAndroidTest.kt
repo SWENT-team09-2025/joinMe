@@ -179,8 +179,8 @@ class ChatScreenAndroidTest {
   }
 
   /**
-   * Tests that clicking on an image message opens the full-screen image viewer.
-   * (fullScreenImageUrl conditional) and (FullScreenImageViewer composable).
+   * Tests that clicking on an image message opens the full-screen image viewer. (fullScreenImageUrl
+   * conditional) and (FullScreenImageViewer composable).
    */
   @Test
   fun chatScreen_imageMessage_opensFullScreenViewer() = runTest {
@@ -357,9 +357,7 @@ class ChatScreenAndroidTest {
     composeTestRule.onNodeWithText("edited").assertIsDisplayed()
   }
 
-  /**
-   * Tests edit message dialog cancel functionality.
-   */
+  /** Tests edit message dialog cancel functionality. */
   @Test
   fun chatScreen_editMessageDialog_cancelKeepsOriginalMessage() = runTest {
     val repo = FakeChatRepository(uploadShouldSucceed = true)
@@ -416,8 +414,8 @@ class ChatScreenAndroidTest {
   }
 
   /**
-   * Tests FullScreenImageViewer error state.(error block in
-   * FullScreenImageViewer when the full-screen image fails to load).
+   * Tests FullScreenImageViewer error state.(error block in FullScreenImageViewer when the
+   * full-screen image fails to load).
    */
   @Test
   fun chatScreen_fullScreenImageViewer_displaysErrorState() = runTest {
@@ -452,13 +450,13 @@ class ChatScreenAndroidTest {
     Thread.sleep(2000) // Wait for Coil to attempt loading
 
     // Verify error state is shown for the image message
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.CHAT_IMAGE_ERROR, useUnmergedTree = true).assertExists()
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.CHAT_IMAGE_ERROR, useUnmergedTree = true)
+        .assertExists()
 
     // Click on the image container to open full-screen viewer
     // Use the image container which has the clickable modifier
-    composeTestRule
-        .onNodeWithTag(ChatScreenTestTags.CHAT_IMAGE_REMOTE)
-        .performClick()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.CHAT_IMAGE_REMOTE).performClick()
 
     composeTestRule.waitForIdle()
     Thread.sleep(2000) // Give time for full-screen image to load/fail
