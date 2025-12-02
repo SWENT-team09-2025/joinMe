@@ -5,6 +5,8 @@ import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
@@ -95,6 +97,7 @@ class SerieDetailsViewModelTest {
   private lateinit var seriesRepository: FakeSeriesRepository
   private lateinit var eventsRepository: FakeEventsRepository
   private lateinit var profileRepository: ProfileRepository
+  private lateinit var groupRepository: GroupRepository
   private lateinit var viewModel: SerieDetailsViewModel
   private val testDispatcher = StandardTestDispatcher()
   private val testUserId = "test-user-id"
@@ -151,7 +154,10 @@ class SerieDetailsViewModelTest {
     seriesRepository = FakeSeriesRepository()
     eventsRepository = FakeEventsRepository()
     profileRepository = mock(ProfileRepository::class.java)
-    viewModel = SerieDetailsViewModel(seriesRepository, eventsRepository, profileRepository)
+    groupRepository = mock(GroupRepository::class.java)
+    viewModel =
+        SerieDetailsViewModel(
+            seriesRepository, eventsRepository, profileRepository, groupRepository)
   }
 
   @After
@@ -179,6 +185,8 @@ class SerieDetailsViewModelTest {
     assertTrue(state.events.isEmpty())
     assertTrue(state.isLoading)
     assertNull(state.errorMsg)
+    assertNull(state.groupId)
+    assertNull(state.groupName)
   }
 
   /** --- SERIE DETAILS UI STATE COMPUTED PROPERTIES TESTS --- */
@@ -539,7 +547,8 @@ class SerieDetailsViewModelTest {
           }
         }
 
-    val errorViewModel = SerieDetailsViewModel(errorRepository, eventsRepository, profileRepository)
+    val errorViewModel =
+        SerieDetailsViewModel(errorRepository, eventsRepository, profileRepository, groupRepository)
 
     errorViewModel.loadSerieDetails("test-serie-1")
     advanceUntilIdle()
@@ -619,7 +628,8 @@ class SerieDetailsViewModelTest {
         }
 
     val errorViewModel =
-        SerieDetailsViewModel(seriesRepository, errorEventsRepository, profileRepository)
+        SerieDetailsViewModel(
+            seriesRepository, errorEventsRepository, profileRepository, groupRepository)
 
     errorViewModel.loadSerieDetails(serie.serieId)
     advanceUntilIdle()
@@ -760,7 +770,8 @@ class SerieDetailsViewModelTest {
           }
         }
 
-    val errorViewModel = SerieDetailsViewModel(errorRepository, eventsRepository, profileRepository)
+    val errorViewModel =
+        SerieDetailsViewModel(errorRepository, eventsRepository, profileRepository, groupRepository)
 
     errorViewModel.loadSerieDetails(serie.serieId)
     advanceUntilIdle()
@@ -999,7 +1010,8 @@ class SerieDetailsViewModelTest {
           }
         }
 
-    val errorViewModel = SerieDetailsViewModel(errorRepository, eventsRepository, profileRepository)
+    val errorViewModel =
+        SerieDetailsViewModel(errorRepository, eventsRepository, profileRepository, groupRepository)
 
     errorViewModel.loadSerieDetails(serie.serieId)
     advanceUntilIdle()
@@ -1317,5 +1329,71 @@ class SerieDetailsViewModelTest {
     val displayName = viewModel.getOwnerDisplayName("error-owner")
 
     assertEquals("UNKNOWN", displayName)
+  }
+
+  /** --- GROUP TESTS --- */
+  @Test
+  fun loadSerieDetails_withGroupId_loadsGroupName() = runTest {
+    val group = Group(id = "group-123", name = "Basketball Club", category = EventType.SPORTS)
+    val serie = createTestSerie().copy(groupId = "group-123")
+
+    seriesRepository.addSerie(serie)
+    whenever(groupRepository.getGroup("group-123")).thenReturn(group)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("group-123", state.groupId)
+    assertEquals("Basketball Club", state.groupName)
+    assertNull(state.errorMsg)
+  }
+
+  @Test
+  fun loadSerieDetails_withGroupId_groupNotFound_setsGroupNameToNull() = runTest {
+    val serie = createTestSerie().copy(groupId = "non-existent-group")
+
+    seriesRepository.addSerie(serie)
+    whenever(groupRepository.getGroup("non-existent-group"))
+        .thenThrow(NoSuchElementException("Group not found"))
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("non-existent-group", state.groupId)
+    assertNull(state.groupName)
+  }
+
+  @Test
+  fun loadSerieDetails_withGroupId_repositoryThrows_setsGroupNameToNull() = runTest {
+    val serie = createTestSerie().copy(groupId = "error-group")
+
+    seriesRepository.addSerie(serie)
+    whenever(groupRepository.getGroup("error-group")).thenThrow(RuntimeException("Network error"))
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("error-group", state.groupId)
+    assertNull(state.groupName)
+  }
+
+  @Test
+  fun loadSerieDetails_withNullGroupId_doesNotCallRepository() = runTest {
+    val serie = createTestSerie().copy(groupId = null)
+
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertNull(state.groupId)
+    assertNull(state.groupName)
+    // Verify getGroup was never called
+    org.mockito.Mockito.verify(groupRepository, org.mockito.Mockito.never())
+        .getGroup(org.mockito.kotlin.any())
   }
 }

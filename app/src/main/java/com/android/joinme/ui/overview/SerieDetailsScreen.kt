@@ -60,6 +60,9 @@ object SerieDetailsScreenTestTags {
   /** Test tag for the owner info text */
   const val OWNER_INFO = "ownerInfo"
 
+  /** Test tag for the group info text */
+  const val GROUP_INFO = "groupInfo"
+
   /** Test tag for the "Add event" button */
   const val BUTTON_ADD_EVENT = "buttonAddEvent"
 
@@ -316,6 +319,19 @@ fun SerieDetailsScreen(
                         .testTag(SerieDetailsScreenTestTags.OWNER_INFO)
                         .padding(vertical = Dimens.Spacing.small),
                 textAlign = TextAlign.Center)
+
+            // Group information (if serie belongs to a group)
+            if (uiState.groupName != null) {
+              Text(
+                  text = "Group: ${uiState.groupName}",
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurface,
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .testTag(SerieDetailsScreenTestTags.GROUP_INFO)
+                          .padding(vertical = Dimens.Spacing.small),
+                  textAlign = TextAlign.Center)
+            }
 
             // Only show buttons if the serie is not expired
             if (!uiState.isPastSerie) {

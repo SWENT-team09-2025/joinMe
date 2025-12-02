@@ -305,8 +305,7 @@ class ShowEventViewModelTest {
 
     whenever(profileRepository.getProfile("owner123"))
         .thenReturn(Profile(uid = "owner123", username = "TestUser", email = "test@example.com"))
-    whenever(groupRepository.getGroup("error-group"))
-        .thenThrow(RuntimeException("Network error"))
+    whenever(groupRepository.getGroup("error-group")).thenThrow(RuntimeException("Network error"))
 
     viewModel.loadEvent(event.eventId)
     advanceUntilIdle()
@@ -847,7 +846,8 @@ class ShowEventViewModelTest {
             groupId = "custom-group-456",
             groupName = "Custom Group")
 
-    val customViewModel = ShowEventViewModel(repository, profileRepository, groupRepository, customState)
+    val customViewModel =
+        ShowEventViewModel(repository, profileRepository, groupRepository, customState)
 
     val state = customViewModel.uiState.value
     assertEquals("SPORTS", state.type)
