@@ -94,6 +94,7 @@ class MainActivityNavigationTest {
   fun setup() {
     // Setup repository with test data
     System.setProperty("IS_TEST_ENV", "true")
+
     val repoEvents = EventsRepositoryProvider.getRepository(isOnline = false)
     val repoSerie = SeriesRepositoryProvider.repository
     val repoGroups = GroupRepositoryProvider.repository
@@ -180,7 +181,10 @@ class MainActivityNavigationTest {
     }
 
     composeTestRule.setContent {
-      JoinMe(startDestination = Screen.Overview.route, enableNotificationPermissionRequest = false)
+      JoinMe(
+          startDestination = Screen.Overview.route,
+          enableNotificationPermissionRequest = false,
+          testUserId = "test-user-id")
     }
   }
 
@@ -1527,6 +1531,9 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
+
+    // Wait for profile to load and username field to appear
+    waitUntilExists(EditProfileTestTags.USERNAME_FIELD)
 
     // Step 3: Modify profile name
     composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performClick()

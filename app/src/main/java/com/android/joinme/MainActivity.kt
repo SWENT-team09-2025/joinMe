@@ -199,12 +199,14 @@ fun JoinMe(
     chatName: String? = null,
     conversationId: String? = null,
     enableNotificationPermissionRequest: Boolean = true,
+    testUserId: String? = null,
 ) {
   val navController = rememberNavController()
   val navigationActions = NavigationActions(navController)
   val coroutineScope = rememberCoroutineScope()
 
   var currentUser by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
+  val effectiveUserId = testUserId ?: currentUser?.uid
 
   // Listen for auth state changes
   LaunchedEffect(Unit) {
@@ -277,7 +279,7 @@ fun JoinMe(
         }
       } else {
         // Invitation link flow
-        handleGroupJoin(initialGroupId, currentUser?.uid, context, navigationActions)
+        handleGroupJoin(initialGroupId, effectiveUserId, context, navigationActions)
       }
     }
   }
@@ -467,7 +469,7 @@ fun JoinMe(
     ) {
       composable(Screen.Profile.route) {
         ViewProfileScreen(
-            uid = currentUser?.uid ?: "",
+            uid = effectiveUserId ?: "",
             onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
             onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
@@ -494,7 +496,7 @@ fun JoinMe(
       }
       composable(Screen.EditProfile.route) {
         EditProfileScreen(
-            uid = currentUser?.uid ?: "",
+            uid = effectiveUserId ?: "",
             onBackClick = {
               navigationActions.navigateAndClearBackStackTo(
                   screen = Screen.Profile, popUpToRoute = Screen.Profile.route, inclusive = false)
@@ -628,7 +630,7 @@ fun JoinMe(
                         }
                       })
 
-          val currentUserId = currentUser?.uid ?: ""
+          val currentUserId = effectiveUserId ?: ""
           val currentUserName = currentUser?.displayName ?: "Unknown User"
 
           ChatScreen(
