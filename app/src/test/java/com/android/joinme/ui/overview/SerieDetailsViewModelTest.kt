@@ -1367,32 +1367,6 @@ class SerieDetailsViewModelTest {
     unmockkObject(StreakService)
   }
 
-  @Test
-  fun joinSerie_streakServiceThrows_doesNotBlockJoin() = runTest {
-    mockkObject(StreakService)
-    coEvery { StreakService.onActivityJoined(any(), any(), any()) } throws
-        RuntimeException("Streak error")
-
-    val serie =
-        createTestSerie(
-                participants = listOf("user1"), maxParticipants = 10, eventIds = emptyList())
-            .copy(groupId = "group123")
-    seriesRepository.addSerie(serie)
-
-    viewModel.loadSerieDetails(serie.serieId)
-    advanceUntilIdle()
-
-    val result = viewModel.joinSerie(testUserId)
-    advanceUntilIdle()
-
-    // Join should still succeed despite streak error
-    assertTrue(result)
-    val state = viewModel.uiState.first()
-    assertTrue(state.serie!!.participants.contains(testUserId))
-
-    unmockkObject(StreakService)
-  }
-
   /** --- QUIT SERIE STREAK TESTS --- */
   @Test
   fun quitSerie_groupSerie_callsStreakServiceOnActivityLeft() = runTest {
@@ -1436,34 +1410,6 @@ class SerieDetailsViewModelTest {
     advanceUntilIdle()
 
     coVerify(exactly = 0) { StreakService.onActivityLeft(any(), any(), any()) }
-
-    unmockkObject(StreakService)
-  }
-
-  @Test
-  fun quitSerie_streakServiceThrows_doesNotBlockQuit() = runTest {
-    mockkObject(StreakService)
-    coEvery { StreakService.onActivityLeft(any(), any(), any()) } throws
-        RuntimeException("Streak error")
-
-    val serie =
-        createTestSerie(
-                ownerId = "owner123",
-                participants = listOf(testUserId, "user1", "owner123"),
-                eventIds = emptyList())
-            .copy(groupId = "group123")
-    seriesRepository.addSerie(serie)
-
-    viewModel.loadSerieDetails(serie.serieId)
-    advanceUntilIdle()
-
-    val result = viewModel.quitSerie(testUserId)
-    advanceUntilIdle()
-
-    // Quit should still succeed despite streak error
-    assertTrue(result)
-    val state = viewModel.uiState.first()
-    assertFalse(state.serie!!.participants.contains(testUserId))
 
     unmockkObject(StreakService)
   }

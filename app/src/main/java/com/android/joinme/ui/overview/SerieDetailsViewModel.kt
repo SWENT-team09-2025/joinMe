@@ -222,8 +222,22 @@ class SerieDetailsViewModel(
           try {
             StreakService.onActivityJoined(serie.groupId, currentUserId, serie.date)
           } catch (e: Exception) {
-            Log.e("SerieDetailsViewModel", "Error updating streak for user $currentUserId", e)
-            // Non-critical: don't fail join operation if streak update fails
+            Log.e("SerieDetailsViewModel", "Error updating streak, rolling back", e)
+            // Rollback serie
+            seriesRepository.editSerie(serie.serieId, serie)
+            // Rollback all events
+            events.forEach { event ->
+              try {
+                eventsRepository.editEvent(event.eventId, event)
+              } catch (rollbackEx: Exception) {
+                Log.e(
+                    "SerieDetailsViewModel",
+                    "Failed to rollback event ${event.eventId}",
+                    rollbackEx)
+              }
+            }
+            setErrorMsg("Failed to update streak: ${e.message}")
+            return false
           }
         }
 
@@ -285,8 +299,20 @@ class SerieDetailsViewModel(
         try {
           StreakService.onActivityLeft(serie.groupId, currentUserId, serie.date)
         } catch (e: Exception) {
-          Log.e("SerieDetailsViewModel", "Error updating streak for user $currentUserId", e)
-          // Non-critical: don't fail quit operation if streak update fails
+          Log.e("SerieDetailsViewModel", "Error updating streak, rolling back", e)
+          // Rollback serie
+          seriesRepository.editSerie(serie.serieId, serie)
+          // Rollback all events
+          events.forEach { event ->
+            try {
+              eventsRepository.editEvent(event.eventId, event)
+            } catch (rollbackEx: Exception) {
+              Log.e(
+                  "SerieDetailsViewModel", "Failed to rollback event ${event.eventId}", rollbackEx)
+            }
+          }
+          setErrorMsg("Failed to update streak: ${e.message}")
+          return false
         }
       }
 
