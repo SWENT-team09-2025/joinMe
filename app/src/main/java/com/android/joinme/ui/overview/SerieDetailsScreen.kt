@@ -1,5 +1,6 @@
 package com.android.joinme.ui.overview
 
+import android.annotation.SuppressLint
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +23,7 @@ import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
@@ -99,6 +101,7 @@ object SerieDetailsScreenTestTags {
  *   serie ID
  * @param currentUserId The ID of the currently logged-in user
  */
+@SuppressLint("UnrememberedMutableState")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SerieDetailsScreen(
@@ -151,27 +154,14 @@ fun SerieDetailsScreen(
   }
 
   // Delete confirmation dialog (composable placed at top level)
-  if (showDeleteDialog) {
-    AlertDialog(
-        onDismissRequest = { showDeleteDialog = false },
-        title = { Text("Delete Serie") },
-        text = {
-          Text("Are you sure you want to delete this serie? This action cannot be undone.")
-        },
-        confirmButton = {
-          TextButton(
-              onClick = {
-                coroutineScope.launch {
-                  serieDetailsViewModel.deleteSerie(serieId)
-                  showDeleteDialog = false
-                  onGoBack()
-                }
-              }) {
-                Text("Delete", color = MaterialTheme.colorScheme.error)
-              }
-        },
-        dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } })
-  }
+  ShowDeleteWindow(
+      showDeleteDialog,
+      onDismiss = { showDeleteDialog = false },
+      onConfirm = { showDeleteDialog = false },
+      onGoBack,
+      serieId,
+      serieDetailsViewModel,
+      coroutineScope)
 
   // Main UI scaffold (now outside LaunchedEffect)
   Scaffold(
@@ -321,92 +311,22 @@ fun SerieDetailsScreen(
             if (!uiState.isPastSerie) {
               // Add event button (only shown to owner)
               if (uiState.isOwner(currentUserId)) {
-                Button(
-                    onClick = onAddEventClick,
-                    enabled = uiState.events.size < 30,
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .height(Dimens.Spacing.huge)
-                            .testTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT),
-                    shape = RoundedCornerShape(Dimens.CornerRadius.medium),
-                    colors = MaterialTheme.customColors.buttonColors()) {
-                      Text(text = "ADD EVENT", style = MaterialTheme.typography.headlineSmall)
-                    }
-
-                // Edit and Delete buttons
-                Button(
-                    onClick = { onEditSerieClick(serieId) },
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .height(Dimens.Spacing.huge)
-                            .testTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON),
-                    shape = RoundedCornerShape(Dimens.CornerRadius.medium),
-                    enabled = uiState.isOwner(currentUserId),
-                    colors = MaterialTheme.customColors.buttonColors()) {
-                      Text(text = "EDIT SERIE", style = MaterialTheme.typography.headlineSmall)
-                    }
-
-                Button(
-                    onClick = { showDeleteDialog = true },
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .height(Dimens.Spacing.huge)
-                            .testTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON),
-                    shape = RoundedCornerShape(Dimens.CornerRadius.medium),
-                    colors = MaterialTheme.customColors.buttonColors()) {
-                      Icon(
-                          imageVector = Icons.Default.Delete,
-                          contentDescription = "Delete",
-                          tint = MaterialTheme.customColors.deleteButton)
-                      Spacer(modifier = Modifier.width(Dimens.Spacing.small))
-                      Text(text = "DELETE SERIE", style = MaterialTheme.typography.headlineSmall)
-                    }
+                OwnerActionButtons(
+                    serieId = serieId,
+                    serieDetailsViewModel = serieDetailsViewModel,
+                    onAddEventClick = onAddEventClick,
+                    onEditSerieClick = onEditSerieClick,
+                    onShowDeleteDialog = { showDeleteDialog = true },
+                    currentUserId = currentUserId)
               }
 
               // Join/Quit serie button (shown to non-owners)
               if (!uiState.isOwner(currentUserId)) {
-                if (uiState.canJoin(currentUserId) || uiState.isParticipant(currentUserId)) {
-                  Button(
-                      onClick = {
-                        coroutineScope.launch {
-                          val success =
-                              if (uiState.isParticipant(currentUserId)) {
-                                serieDetailsViewModel.quitSerie((currentUserId))
-                              } else {
-                                serieDetailsViewModel.joinSerie(currentUserId)
-                              }
-                          if (success && !uiState.isParticipant(currentUserId)) {
-                            // If user quit successfully, navigate back
-                            onQuitSerieSuccess()
-                          }
-                        }
-                      },
-                      modifier =
-                          Modifier.fillMaxWidth()
-                              .height(Dimens.Spacing.huge)
-                              .testTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE),
-                      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
-                      enabled =
-                          uiState.isParticipant(currentUserId) || uiState.canJoin(currentUserId),
-                      colors = MaterialTheme.customColors.buttonColors()) {
-                        Text(
-                            text =
-                                if (uiState.isParticipant(currentUserId)) "QUIT SERIE"
-                                else "JOIN SERIE",
-                            style = MaterialTheme.typography.headlineSmall)
-                      }
-                } else {
-                  Text(
-                      text = "Sorry this serie is full",
-                      style = MaterialTheme.typography.headlineSmall,
-                      color = MaterialTheme.colorScheme.error,
-                      modifier =
-                          Modifier.fillMaxWidth()
-                              .padding(bottom = Dimens.Padding.extraLarge)
-                              .testTag(SerieDetailsScreenTestTags.MESSAGE_FULL_SERIE),
-                      textAlign = TextAlign.Center,
-                      fontWeight = FontWeight.Bold)
-                }
+                ParticipantActionButtons(
+                    currentUserId = currentUserId,
+                    serieDetailsViewModel = serieDetailsViewModel,
+                    onQuitSerieSuccess = onQuitSerieSuccess,
+                    coroutineScope = coroutineScope)
               }
             }
 
@@ -415,4 +335,151 @@ fun SerieDetailsScreen(
           }
         }
       }
+}
+
+/** Owner action buttons (Add Event, Edit Serie, Delete Serie). */
+@Composable
+private fun OwnerActionButtons(
+    serieId: String,
+    serieDetailsViewModel: SerieDetailsViewModel,
+    onAddEventClick: () -> Unit,
+    onEditSerieClick: (String) -> Unit,
+    onShowDeleteDialog: () -> Unit,
+    currentUserId: String
+) {
+  val uiState by serieDetailsViewModel.uiState.collectAsState()
+
+  Button(
+      onClick = onAddEventClick,
+      enabled = uiState.events.size < 30,
+      modifier =
+          Modifier.fillMaxWidth()
+              .height(Dimens.Spacing.huge)
+              .testTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT),
+      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+      colors = MaterialTheme.customColors.buttonColors()) {
+        Text(text = "ADD EVENT", style = MaterialTheme.typography.headlineSmall)
+      }
+
+  Button(
+      onClick = { onEditSerieClick(serieId) },
+      modifier =
+          Modifier.fillMaxWidth()
+              .height(Dimens.Spacing.huge)
+              .testTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON),
+      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+      enabled = uiState.isOwner(currentUserId),
+      colors = MaterialTheme.customColors.buttonColors()) {
+        Text(text = "EDIT SERIE", style = MaterialTheme.typography.headlineSmall)
+      }
+
+  Button(
+      onClick = onShowDeleteDialog,
+      modifier =
+          Modifier.fillMaxWidth()
+              .height(Dimens.Spacing.huge)
+              .testTag(SerieDetailsScreenTestTags.DELETE_SERIE_BUTTON),
+      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+      colors = MaterialTheme.customColors.buttonColors()) {
+        Icon(
+            imageVector = Icons.Default.Delete,
+            contentDescription = "Delete",
+            tint = MaterialTheme.customColors.deleteButton)
+        Spacer(modifier = Modifier.width(Dimens.Spacing.small))
+        Text(text = "DELETE SERIE", style = MaterialTheme.typography.headlineSmall)
+      }
+}
+
+/** Handles the join/quit serie action. */
+private suspend fun handleJoinQuitAction(
+    currentUserId: String,
+    serieDetailsViewModel: SerieDetailsViewModel,
+    onQuitSerieSuccess: () -> Unit
+) {
+  val uiState = serieDetailsViewModel.uiState.value
+  val success =
+      if (uiState.isParticipant(currentUserId)) {
+        serieDetailsViewModel.quitSerie((currentUserId))
+      } else {
+        serieDetailsViewModel.joinSerie(currentUserId)
+      }
+  if (success && !serieDetailsViewModel.uiState.value.isParticipant(currentUserId)) {
+    // If user quit successfully, navigate back
+    onQuitSerieSuccess()
+  }
+}
+
+/** Participant action button (Join/Quit). */
+@Composable
+private fun ParticipantActionButtons(
+    currentUserId: String,
+    serieDetailsViewModel: SerieDetailsViewModel,
+    onQuitSerieSuccess: () -> Unit,
+    coroutineScope: CoroutineScope
+) {
+  val uiState by serieDetailsViewModel.uiState.collectAsState()
+
+  if (uiState.canJoin(currentUserId) || uiState.isParticipant(currentUserId)) {
+    Button(
+        onClick = {
+          coroutineScope.launch {
+            handleJoinQuitAction(currentUserId, serieDetailsViewModel, onQuitSerieSuccess)
+          }
+        },
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(Dimens.Spacing.huge)
+                .testTag(SerieDetailsScreenTestTags.BUTTON_QUIT_SERIE),
+        shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+        enabled = uiState.isParticipant(currentUserId) || uiState.canJoin(currentUserId),
+        colors = MaterialTheme.customColors.buttonColors()) {
+          Text(
+              text = if (uiState.isParticipant(currentUserId)) "QUIT SERIE" else "JOIN SERIE",
+              style = MaterialTheme.typography.headlineSmall)
+        }
+  } else {
+    Text(
+        text = "Sorry this serie is full",
+        style = MaterialTheme.typography.headlineSmall,
+        color = MaterialTheme.colorScheme.error,
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(bottom = Dimens.Padding.extraLarge)
+                .testTag(SerieDetailsScreenTestTags.MESSAGE_FULL_SERIE),
+        textAlign = TextAlign.Center,
+        fontWeight = FontWeight.Bold)
+  }
+}
+
+@Composable
+fun ShowDeleteWindow(
+    showDeleteDialog: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+    onGoBack: () -> Unit,
+    serieId: String,
+    serieDetailsViewModel: SerieDetailsViewModel,
+    coroutineScope: CoroutineScope
+) {
+  if (showDeleteDialog) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete Serie") },
+        text = {
+          Text("Are you sure you want to delete this serie? This action cannot be undone.")
+        },
+        confirmButton = {
+          TextButton(
+              onClick = {
+                coroutineScope.launch {
+                  serieDetailsViewModel.deleteSerie(serieId)
+                  onConfirm()
+                  onGoBack()
+                }
+              }) {
+                Text("Delete", color = MaterialTheme.colorScheme.error)
+              }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+  }
 }
