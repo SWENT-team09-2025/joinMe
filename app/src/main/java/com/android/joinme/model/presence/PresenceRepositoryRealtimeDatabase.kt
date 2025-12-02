@@ -27,7 +27,6 @@ import kotlinx.coroutines.tasks.await
  * presence/
  *   {contextId}/
  *     {userId}/
- *       visitorId: "..."
  *       online: true/false
  *       lastSeen: <server timestamp>
  *
@@ -46,7 +45,6 @@ class PresenceRepositoryRealtimeDatabase(private val database: FirebaseDatabase)
     private const val TAG = "PresenceRepositoryRTDB"
     private const val PRESENCE_PATH = "presence"
     private const val USER_CONTEXTS_PATH = "userContexts"
-    private const val FIELD_USER_ID = "visitorId"
     private const val FIELD_ONLINE = "online"
     private const val FIELD_LAST_SEEN = "lastSeen"
   }
@@ -77,11 +75,7 @@ class PresenceRepositoryRealtimeDatabase(private val database: FirebaseDatabase)
             .await()
 
         // Set user as online with current data
-        val presenceData =
-            mapOf(
-                FIELD_USER_ID to userId,
-                FIELD_ONLINE to true,
-                FIELD_LAST_SEEN to ServerValue.TIMESTAMP)
+        val presenceData = mapOf(FIELD_ONLINE to true, FIELD_LAST_SEEN to ServerValue.TIMESTAMP)
 
         userPresenceRef.setValue(presenceData).await()
 
@@ -114,6 +108,9 @@ class PresenceRepositoryRealtimeDatabase(private val database: FirebaseDatabase)
           // Update presence to offline
           val updates = mapOf(FIELD_ONLINE to false, FIELD_LAST_SEEN to ServerValue.TIMESTAMP)
           userPresenceRef.updateChildren(updates).await()
+
+          // Delete the userContexts entry to avoid accumulating obsolete entries
+          userContextsRef.child(userId).child(contextId).removeValue().await()
         } catch (e: Exception) {
           Log.e(TAG, "Failed to set user offline in context $contextId", e)
         }
@@ -204,28 +201,4 @@ class PresenceRepositoryRealtimeDatabase(private val database: FirebaseDatabase)
 
         awaitClose { contextPresenceRef.removeEventListener(listener) }
       }
-
-  override suspend fun cleanupStalePresence(staleThresholdMs: Long) {
-    try {
-      val snapshot = presenceRef.get().await()
-      val currentTime = System.currentTimeMillis()
-
-      for (contextSnapshot in snapshot.children) {
-        val contextId = contextSnapshot.key ?: continue
-
-        for (userSnapshot in contextSnapshot.children) {
-          val userId = userSnapshot.key ?: continue
-          val lastSeen = userSnapshot.child(FIELD_LAST_SEEN).getValue(Long::class.java) ?: continue
-          val isOnline = userSnapshot.child(FIELD_ONLINE).getValue(Boolean::class.java) ?: false
-
-          // If user is marked as online but hasn't been seen recently, mark them offline
-          if (isOnline && currentTime - lastSeen > staleThresholdMs) {
-            presenceRef.child(contextId).child(userId).child(FIELD_ONLINE).setValue(false).await()
-          }
-        }
-      }
-    } catch (e: Exception) {
-      Log.e(TAG, "Failed to cleanup stale presence", e)
-    }
-  }
 }

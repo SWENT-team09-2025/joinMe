@@ -97,9 +97,5 @@ class PresenceRepositoryProviderTest {
     ): Flow<List<String>> {
       return MutableStateFlow(emptyList())
     }
-
-    override suspend fun cleanupStalePresence(staleThresholdMs: Long) {
-      // No-op
-    }
   }
 }

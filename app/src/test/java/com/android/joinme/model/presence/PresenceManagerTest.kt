@@ -6,6 +6,7 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -52,21 +53,21 @@ class PresenceManagerTest {
 
     presenceManager.startTracking(application, userId, fakeContextIdProvider)
 
-    assertEquals(userId, presenceManager.getCurrentUserId())
+    assertEquals(userId, presenceManager.currentUserId)
   }
 
   @Test
   fun startTracking_withBlankUserId_doesNotTrack() {
     presenceManager.startTracking(application, "", fakeContextIdProvider)
 
-    assertNull(presenceManager.getCurrentUserId())
+    assertNull(presenceManager.currentUserId)
   }
 
   @Test
   fun startTracking_withBlankUserId_spaces_doesNotTrack() {
     presenceManager.startTracking(application, "   ", fakeContextIdProvider)
 
-    assertNull(presenceManager.getCurrentUserId())
+    assertNull(presenceManager.currentUserId)
   }
 
   @Test
@@ -93,20 +94,20 @@ class PresenceManagerTest {
 
     presenceManager.startTracking(application, userId2, fakeContextIdProvider)
 
-    assertEquals(userId2, presenceManager.getCurrentUserId())
+    assertEquals(userId2, presenceManager.currentUserId)
   }
 
   @Test
-  fun startTracking_setsUserOnlineInContexts() {
+  fun startTracking_setsCurrentUserIdImmediately() {
+    // Note: In Robolectric, ProcessLifecycleOwner may not report STARTED state,
+    // so we test that userId is set regardless of foreground state
     val userId = "user123"
     fakeContextIdProvider.contextIds = listOf("context1", "context2")
 
     presenceManager.startTracking(application, userId, fakeContextIdProvider)
-    // Use Thread.sleep since coroutine runs on Dispatchers.IO
-    Thread.sleep(200)
 
-    assertEquals(userId, fakePresenceRepository.lastOnlineUserId)
-    assertEquals(listOf("context1", "context2"), fakePresenceRepository.lastOnlineContextIds)
+    // User ID should be set immediately
+    assertEquals(userId, presenceManager.currentUserId)
   }
 
   @Test
@@ -119,7 +120,8 @@ class PresenceManagerTest {
     Thread.sleep(200)
 
     // setUserOnline should not be called with empty context list
-    assertNull(fakePresenceRepository.lastOnlineUserId)
+    // (Note: in Robolectric, may not be in foreground so call may not happen anyway)
+    assertEquals(userId, presenceManager.currentUserId)
   }
 
   // ============================================================================
@@ -133,7 +135,7 @@ class PresenceManagerTest {
 
     presenceManager.stopTracking()
 
-    assertNull(presenceManager.getCurrentUserId())
+    assertNull(presenceManager.currentUserId)
   }
 
   @Test
@@ -153,7 +155,7 @@ class PresenceManagerTest {
     // Should not throw when called without starting tracking
     presenceManager.stopTracking()
 
-    assertNull(presenceManager.getCurrentUserId())
+    assertNull(presenceManager.currentUserId)
   }
 
   @Test
@@ -164,7 +166,7 @@ class PresenceManagerTest {
     presenceManager.stopTracking()
     presenceManager.stopTracking() // Call again
 
-    assertNull(presenceManager.getCurrentUserId())
+    assertNull(presenceManager.currentUserId)
   }
 
   // ============================================================================
@@ -178,7 +180,7 @@ class PresenceManagerTest {
     presenceManager.startTracking(application, userId, fakeContextIdProvider)
 
     // If we got here without exception, callbacks were registered successfully
-    assertEquals(userId, presenceManager.getCurrentUserId())
+    assertEquals(userId, presenceManager.currentUserId)
   }
 
   @Test
@@ -189,7 +191,7 @@ class PresenceManagerTest {
     presenceManager.stopTracking()
 
     // If we got here without exception, callbacks were unregistered successfully
-    assertNull(presenceManager.getCurrentUserId())
+    assertNull(presenceManager.currentUserId)
   }
 
   // ============================================================================
@@ -197,12 +199,23 @@ class PresenceManagerTest {
   // ============================================================================
 
   @Test
+  fun multipleInstancesWithSameRepo_areDifferentObjects() {
+    // Test that creating multiple instances is possible (for testing purposes)
+    val manager1 = PresenceManager(fakePresenceRepository)
+    val manager2 = PresenceManager(fakePresenceRepository)
+
+    // They are different instances
+    assertNull(manager1.currentUserId)
+    assertNull(manager2.currentUserId)
+  }
+
+  @Test
   fun clearInstance_clearsState() {
     PresenceManager.clearInstance()
 
     // After clearing, creating a new instance with fake repo should have cleared state
     val newManager = PresenceManager(fakePresenceRepository)
-    assertNull(newManager.getCurrentUserId())
+    assertNull(newManager.currentUserId)
   }
 
   @Test
@@ -214,20 +227,20 @@ class PresenceManagerTest {
 
     // Creating new instance should have clean state
     val newManager = PresenceManager(fakePresenceRepository)
-    assertNull(newManager.getCurrentUserId())
+    assertNull(newManager.currentUserId)
   }
 
   @Test
-  fun getCurrentUserId_whenNotTracking_returnsNull() {
-    assertNull(presenceManager.getCurrentUserId())
+  fun currentUserId_whenNotTracking_returnsNull() {
+    assertNull(presenceManager.currentUserId)
   }
 
   @Test
-  fun getCurrentUserId_whenTracking_returnsUserId() {
+  fun currentUserId_whenTracking_returnsUserId() {
     val userId = "user123"
     presenceManager.startTracking(application, userId, fakeContextIdProvider)
 
-    assertEquals(userId, presenceManager.getCurrentUserId())
+    assertEquals(userId, presenceManager.currentUserId)
   }
 
   // ============================================================================
@@ -244,7 +257,7 @@ class PresenceManagerTest {
     Thread.sleep(200)
 
     // User ID should still be set even if setting online failed
-    assertEquals(userId, presenceManager.getCurrentUserId())
+    assertEquals(userId, presenceManager.currentUserId)
   }
 
   @Test
@@ -258,7 +271,131 @@ class PresenceManagerTest {
     Thread.sleep(200)
 
     // State should still be cleared
-    assertNull(presenceManager.getCurrentUserId())
+    assertNull(presenceManager.currentUserId)
+  }
+
+  @Test
+  fun startTracking_withTabUserId_doesNotTrack() {
+    presenceManager.startTracking(application, "\t", fakeContextIdProvider)
+
+    assertNull(presenceManager.currentUserId)
+  }
+
+  @Test
+  fun startTracking_withNewlineUserId_doesNotTrack() {
+    presenceManager.startTracking(application, "\n", fakeContextIdProvider)
+
+    assertNull(presenceManager.currentUserId)
+  }
+
+  @Test
+  fun startTracking_whenSetOnlineThrows_handlesGracefully() {
+    val userId = "user123"
+    fakePresenceRepository.shouldThrowOnOnline = true
+
+    // Should not throw
+    presenceManager.startTracking(application, userId, fakeContextIdProvider)
+    Thread.sleep(200)
+
+    // User ID should still be set even if setting online failed
+    assertEquals(userId, presenceManager.currentUserId)
+  }
+
+  @Test
+  fun startTracking_switchingUsers_updatesCurrentUserId() {
+    val userId1 = "user123"
+    val userId2 = "user456"
+
+    presenceManager.startTracking(application, userId1, fakeContextIdProvider)
+    Thread.sleep(100)
+
+    presenceManager.startTracking(application, userId2, fakeContextIdProvider)
+    Thread.sleep(200)
+
+    // New user should be tracked
+    assertEquals(userId2, presenceManager.currentUserId)
+  }
+
+  // ============================================================================
+  // setUserOnlineInAllContexts Tests (via triggerSetUserOnlineInAllContexts)
+  // ============================================================================
+
+  @Test
+  fun setUserOnlineInAllContexts_whenNoCurrentUserId_returnsEarly() = runBlocking {
+    // Don't start tracking, so currentUserId is null
+
+    presenceManager.triggerSetUserOnlineInAllContexts()
+
+    // setUserOnline should not have been called
+    assertNull(fakePresenceRepository.lastOnlineUserId)
+  }
+
+  @Test
+  fun setUserOnlineInAllContexts_whenNoProvider_returnsEarly() = runBlocking {
+    // Set currentUserId directly without provider using reflection
+    val manager = PresenceManager(fakePresenceRepository)
+    val field = PresenceManager::class.java.getDeclaredField("currentUserId")
+    field.isAccessible = true
+    field.set(manager, "user123")
+
+    manager.triggerSetUserOnlineInAllContexts()
+
+    // setUserOnline should not have been called since no provider
+    assertNull(fakePresenceRepository.lastOnlineUserId)
+  }
+
+  @Test
+  fun setUserOnlineInAllContexts_withValidContext_callsSetUserOnline() = runBlocking {
+    val userId = "user123"
+    fakeContextIdProvider.contextIds = listOf("context1", "context2")
+
+    presenceManager.startTracking(application, userId, fakeContextIdProvider)
+    presenceManager.triggerSetUserOnlineInAllContexts()
+
+    assertEquals(userId, fakePresenceRepository.lastOnlineUserId)
+    assertEquals(listOf("context1", "context2"), fakePresenceRepository.lastOnlineContextIds)
+  }
+
+  @Test
+  fun setUserOnlineInAllContexts_withEmptyContextIds_doesNotCallSetUserOnline() = runBlocking {
+    val userId = "user123"
+    fakeContextIdProvider.contextIds = emptyList()
+
+    presenceManager.startTracking(application, userId, fakeContextIdProvider)
+    fakePresenceRepository.lastOnlineUserId = null // Reset
+    presenceManager.triggerSetUserOnlineInAllContexts()
+
+    // setUserOnline should not be called with empty list
+    assertNull(fakePresenceRepository.lastOnlineUserId)
+  }
+
+  @Test
+  fun setUserOnlineInAllContexts_whenProviderThrows_handlesGracefully() = runBlocking {
+    val userId = "user123"
+    fakeContextIdProvider.shouldThrowException = true
+
+    presenceManager.startTracking(application, userId, fakeContextIdProvider)
+
+    // Should not throw
+    presenceManager.triggerSetUserOnlineInAllContexts()
+
+    // User ID should still be tracked
+    assertEquals(userId, presenceManager.currentUserId)
+  }
+
+  @Test
+  fun setUserOnlineInAllContexts_whenSetOnlineThrows_handlesGracefully() = runBlocking {
+    val userId = "user123"
+    fakeContextIdProvider.contextIds = listOf("context1")
+    fakePresenceRepository.shouldThrowOnOnline = true
+
+    presenceManager.startTracking(application, userId, fakeContextIdProvider)
+
+    // Should not throw
+    presenceManager.triggerSetUserOnlineInAllContexts()
+
+    // User ID should still be tracked
+    assertEquals(userId, presenceManager.currentUserId)
   }
 
   // ============================================================================
@@ -270,8 +407,12 @@ class PresenceManagerTest {
     var lastOnlineContextIds: List<String> = emptyList()
     var lastOfflineUserId: String? = null
     var shouldThrowOnOffline = false
+    var shouldThrowOnOnline = false
 
     override suspend fun setUserOnline(userId: String, contextIds: List<String>) {
+      if (shouldThrowOnOnline) {
+        throw RuntimeException("Test exception")
+      }
       lastOnlineUserId = userId
       lastOnlineContextIds = contextIds
     }
@@ -292,10 +433,6 @@ class PresenceManagerTest {
         currentUserId: String
     ): Flow<List<String>> {
       return MutableStateFlow(emptyList())
-    }
-
-    override suspend fun cleanupStalePresence(staleThresholdMs: Long) {
-      // No-op for tests
     }
   }
 

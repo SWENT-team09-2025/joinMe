@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.Flow
  * presence/
  *   {contextId}/
  *     {userId}/
- *       visitorId: "..."
  *       online: true/false
  *       lastSeen: <server timestamp>
  * ```
@@ -74,20 +73,4 @@ interface PresenceRepository {
    * @return A Flow emitting the list of online user IDs in the context.
    */
   fun observeOnlineUserIds(contextId: String, currentUserId: String): Flow<List<String>>
-
-  /**
-   * Cleans up stale presence data.
-   *
-   * This method removes presence entries for users whose lastSeen timestamp is older than the
-   * specified threshold. Should be called periodically to handle cases where onDisconnect handlers
-   * failed.
-   *
-   * @param staleThresholdMs The threshold in milliseconds. Entries older than this are removed.
-   */
-  suspend fun cleanupStalePresence(staleThresholdMs: Long = STALE_THRESHOLD_MS)
-
-  companion object {
-    /** Default threshold for considering presence data stale (5 minutes). */
-    const val STALE_THRESHOLD_MS = 5 * 60 * 1000L
-  }
 }

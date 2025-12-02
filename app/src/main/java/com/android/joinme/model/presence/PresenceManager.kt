@@ -6,6 +6,9 @@ import android.app.Activity
 import android.app.Application
 import android.os.Bundle
 import android.util.Log
+import androidx.annotation.VisibleForTesting
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -31,10 +34,6 @@ interface ContextIdProvider {
    */
   suspend fun getContextIdsForUser(userId: String): List<String>
 }
-
-// Backward compatibility alias
-@Deprecated("Use ContextIdProvider instead", ReplaceWith("ContextIdProvider"))
-typealias ChatIdProvider = ContextIdProvider
 
 /**
  * Manages user presence tracking based on app lifecycle.
@@ -79,7 +78,10 @@ class PresenceManager(
     }
   }
 
-  private var currentUserId: String? = null
+  /** The current user ID being tracked, or null if not tracking. */
+  var currentUserId: String? = null
+    private set
+
   private var contextIdProvider: ContextIdProvider? = null
   private var isTracking = false
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -89,7 +91,9 @@ class PresenceManager(
 
   private val activityLifecycleCallbacks =
       object : Application.ActivityLifecycleCallbacks {
-        override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+        override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+          // No action needed: presence tracking is based on started/stopped lifecycle, not created
+        }
 
         override fun onActivityStarted(activity: Activity) {
           val wasInBackground = startedActivityCount == 0
@@ -101,9 +105,13 @@ class PresenceManager(
           }
         }
 
-        override fun onActivityResumed(activity: Activity) {}
+        override fun onActivityResumed(activity: Activity) {
+          // No action needed: presence is set on started, not resumed
+        }
 
-        override fun onActivityPaused(activity: Activity) {}
+        override fun onActivityPaused(activity: Activity) {
+          // No action needed: presence is cleared on stopped, not paused
+        }
 
         override fun onActivityStopped(activity: Activity) {
           startedActivityCount--
@@ -120,9 +128,13 @@ class PresenceManager(
           }
         }
 
-        override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+        override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
+          // No action needed: presence tracking doesn't require saving instance state
+        }
 
-        override fun onActivityDestroyed(activity: Activity) {}
+        override fun onActivityDestroyed(activity: Activity) {
+          // No action needed: presence is handled by started/stopped, not destroyed
+        }
       }
 
   /** Sets the user online in all their contexts by fetching context IDs from the provider. */
@@ -153,6 +165,7 @@ class PresenceManager(
    * @param userId The unique identifier of the current user.
    * @param contextIdProvider Provider to fetch all context IDs the user belongs to.
    */
+  @Synchronized
   fun startTracking(
       application: Application,
       userId: String,
@@ -174,12 +187,17 @@ class PresenceManager(
     this.contextIdProvider = contextIdProvider
     currentUserId = userId
     isTracking = true
-    startedActivityCount = 1 // App is already in foreground when startTracking is called
+
+    // Check actual lifecycle state instead of assuming foreground
+    val lifecycle = ProcessLifecycleOwner.get().lifecycle
+    startedActivityCount = if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) 1 else 0
 
     application.registerActivityLifecycleCallbacks(activityLifecycleCallbacks)
 
-    // Set user online immediately since app is in foreground
-    currentPresenceJob = scope.launch { setUserOnlineInAllContexts() }
+    // Set user online immediately only if app is in foreground
+    if (startedActivityCount > 0) {
+      currentPresenceJob = scope.launch { setUserOnlineInAllContexts() }
+    }
   }
 
   /**
@@ -188,6 +206,7 @@ class PresenceManager(
    * This should be called when the user logs out. It will mark the user as offline globally and
    * unregister lifecycle callbacks.
    */
+  @Synchronized
   fun stopTracking() {
     if (!isTracking) {
       return
@@ -225,6 +244,13 @@ class PresenceManager(
     application = null
   }
 
-  /** Gets the current user ID being tracked. */
-  fun getCurrentUserId(): String? = currentUserId
+  /**
+   * Triggers setting user online in all contexts. Exposed for testing purposes only.
+   *
+   * In production, this is called automatically when the app comes to the foreground.
+   */
+  @VisibleForTesting
+  internal suspend fun triggerSetUserOnlineInAllContexts() {
+    setUserOnlineInAllContexts()
+  }
 }

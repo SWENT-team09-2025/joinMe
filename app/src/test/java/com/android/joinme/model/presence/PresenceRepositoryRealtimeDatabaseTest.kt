@@ -223,6 +223,7 @@ class PresenceRepositoryRealtimeDatabaseTest {
         val mockUserContextsSnapshot = mockk<DataSnapshot>(relaxed = true)
         val mockContextSnapshot = mockk<DataSnapshot>(relaxed = true)
         val mockUserContextsUserRef = mockk<DatabaseReference>(relaxed = true)
+        val mockUserContextsContextRef = mockk<DatabaseReference>(relaxed = true)
         val mockContextRef = mockk<DatabaseReference>(relaxed = true)
         val mockUserRef = mockk<DatabaseReference>(relaxed = true)
         val mockOnDisconnect = mockk<com.google.firebase.database.OnDisconnect>(relaxed = true)
@@ -240,6 +241,10 @@ class PresenceRepositoryRealtimeDatabaseTest {
         every { mockOnDisconnect.cancel() } returns Tasks.forResult(null)
         every { mockUserRef.updateChildren(any()) } returns Tasks.forResult(null)
 
+        // Mock userContexts entry removal
+        every { mockUserContextsUserRef.child(testContextId) } returns mockUserContextsContextRef
+        every { mockUserContextsContextRef.removeValue() } returns Tasks.forResult(null)
+
         // When
         repository.setUserOffline(testUserId)
 
@@ -247,7 +252,8 @@ class PresenceRepositoryRealtimeDatabaseTest {
         verify { mockUserContextsUserRef.get() } // Verify it reads from userContexts index
         verify { mockOnDisconnect.cancel() }
         verify { mockUserRef.updateChildren(any()) }
-      }
+        verify { mockUserContextsContextRef.removeValue() } // Verify entry is removed
+  }
 
   @Test
   fun `setUserOffline with no contexts in index does nothing`() = runTest {
@@ -297,6 +303,7 @@ class PresenceRepositoryRealtimeDatabaseTest {
     val mockContextSnapshot1 = mockk<DataSnapshot>(relaxed = true)
     val mockContextSnapshot2 = mockk<DataSnapshot>(relaxed = true)
     val mockUserContextsUserRef = mockk<DatabaseReference>(relaxed = true)
+    val mockUserContextsContextRef = mockk<DatabaseReference>(relaxed = true)
     val mockContextRef = mockk<DatabaseReference>(relaxed = true)
     val mockUserRef = mockk<DatabaseReference>(relaxed = true)
     val mockOnDisconnect = mockk<com.google.firebase.database.OnDisconnect>(relaxed = true)
@@ -313,6 +320,10 @@ class PresenceRepositoryRealtimeDatabaseTest {
     every { mockUserRef.onDisconnect() } returns mockOnDisconnect
     every { mockOnDisconnect.cancel() } returns Tasks.forResult(null)
     every { mockUserRef.updateChildren(any()) } returns Tasks.forResult(null)
+
+    // Mock userContexts entry removal
+    every { mockUserContextsUserRef.child(testContextId) } returns mockUserContextsContextRef
+    every { mockUserContextsContextRef.removeValue() } returns Tasks.forResult(null)
 
     // When
     repository.setUserOffline(testUserId)
@@ -643,120 +654,5 @@ class PresenceRepositoryRealtimeDatabaseTest {
     // Then - only user2 included (user1 skipped due to null key)
     assertEquals(1, userIds.size)
     assertTrue(userIds.contains("user2"))
-  }
-
-  // ==================== CLEANUP STALE PRESENCE TESTS ====================
-
-  @Test
-  fun `cleanupStalePresence marks stale online users as offline`() = runTest {
-    // Given
-    val staleThreshold = 5 * 60 * 1000L // 5 minutes
-    val currentTime = System.currentTimeMillis()
-    val staleTime = currentTime - staleThreshold - 1000 // Older than threshold
-
-    val mockSnapshot = mockk<DataSnapshot>(relaxed = true)
-    val mockContextSnapshot = mockk<DataSnapshot>(relaxed = true)
-    val mockUserSnapshot = mockk<DataSnapshot>(relaxed = true)
-    val mockLastSeenChild = mockk<DataSnapshot>(relaxed = true)
-    val mockOnlineChild = mockk<DataSnapshot>(relaxed = true)
-    val mockContextRef = mockk<DatabaseReference>(relaxed = true)
-    val mockUserRef = mockk<DatabaseReference>(relaxed = true)
-    val mockOnlineRef = mockk<DatabaseReference>(relaxed = true)
-
-    every { mockPresenceRef.get() } returns Tasks.forResult(mockSnapshot)
-    every { mockSnapshot.children } returns listOf(mockContextSnapshot)
-    every { mockContextSnapshot.key } returns testContextId
-    every { mockContextSnapshot.children } returns listOf(mockUserSnapshot)
-    every { mockUserSnapshot.key } returns "staleUser"
-    every { mockUserSnapshot.child("lastSeen") } returns mockLastSeenChild
-    every { mockLastSeenChild.getValue(Long::class.java) } returns staleTime
-    every { mockUserSnapshot.child("online") } returns mockOnlineChild
-    every { mockOnlineChild.getValue(Boolean::class.java) } returns true
-
-    every { mockPresenceRef.child(testContextId) } returns mockContextRef
-    every { mockContextRef.child("staleUser") } returns mockUserRef
-    every { mockUserRef.child("online") } returns mockOnlineRef
-    every { mockOnlineRef.setValue(false) } returns Tasks.forResult(null)
-
-    // When
-    repository.cleanupStalePresence(staleThreshold)
-
-    // Then
-    verify { mockOnlineRef.setValue(false) }
-  }
-
-  @Test
-  fun `cleanupStalePresence does not affect recent users`() = runTest {
-    // Given
-    val staleThreshold = 5 * 60 * 1000L // 5 minutes
-    val currentTime = System.currentTimeMillis()
-    val recentTime = currentTime - 1000 // Very recent
-
-    val mockSnapshot = mockk<DataSnapshot>(relaxed = true)
-    val mockContextSnapshot = mockk<DataSnapshot>(relaxed = true)
-    val mockUserSnapshot = mockk<DataSnapshot>(relaxed = true)
-    val mockLastSeenChild = mockk<DataSnapshot>(relaxed = true)
-    val mockOnlineChild = mockk<DataSnapshot>(relaxed = true)
-
-    every { mockPresenceRef.get() } returns Tasks.forResult(mockSnapshot)
-    every { mockSnapshot.children } returns listOf(mockContextSnapshot)
-    every { mockContextSnapshot.key } returns testContextId
-    every { mockContextSnapshot.children } returns listOf(mockUserSnapshot)
-    every { mockUserSnapshot.key } returns "recentUser"
-    every { mockUserSnapshot.child("lastSeen") } returns mockLastSeenChild
-    every { mockLastSeenChild.getValue(Long::class.java) } returns recentTime
-    every { mockUserSnapshot.child("online") } returns mockOnlineChild
-    every { mockOnlineChild.getValue(Boolean::class.java) } returns true
-
-    // When
-    repository.cleanupStalePresence(staleThreshold)
-
-    // Then
-    verify(exactly = 0) {
-      mockPresenceRef.child(testContextId).child("recentUser").child("online").setValue(false)
-    }
-  }
-
-  @Test
-  fun `cleanupStalePresence ignores already offline users`() = runTest {
-    // Given
-    val staleThreshold = 5 * 60 * 1000L
-    val currentTime = System.currentTimeMillis()
-    val staleTime = currentTime - staleThreshold - 1000
-
-    val mockSnapshot = mockk<DataSnapshot>(relaxed = true)
-    val mockContextSnapshot = mockk<DataSnapshot>(relaxed = true)
-    val mockUserSnapshot = mockk<DataSnapshot>(relaxed = true)
-    val mockLastSeenChild = mockk<DataSnapshot>(relaxed = true)
-    val mockOnlineChild = mockk<DataSnapshot>(relaxed = true)
-
-    every { mockPresenceRef.get() } returns Tasks.forResult(mockSnapshot)
-    every { mockSnapshot.children } returns listOf(mockContextSnapshot)
-    every { mockContextSnapshot.key } returns testContextId
-    every { mockContextSnapshot.children } returns listOf(mockUserSnapshot)
-    every { mockUserSnapshot.key } returns "offlineUser"
-    every { mockUserSnapshot.child("lastSeen") } returns mockLastSeenChild
-    every { mockLastSeenChild.getValue(Long::class.java) } returns staleTime
-    every { mockUserSnapshot.child("online") } returns mockOnlineChild
-    every { mockOnlineChild.getValue(Boolean::class.java) } returns false // Already offline
-
-    // When
-    repository.cleanupStalePresence(staleThreshold)
-
-    // Then
-    verify(exactly = 0) {
-      mockPresenceRef.child(any()).child(any()).child("online").setValue(any())
-    }
-  }
-
-  @Test
-  fun `cleanupStalePresence handles database error gracefully`() = runTest {
-    // Given
-    every { mockPresenceRef.get() } returns Tasks.forException(Exception("Database error"))
-
-    // When - should not throw
-    repository.cleanupStalePresence(5 * 60 * 1000L)
-
-    // Then - no exception thrown, method completes
   }
 }
