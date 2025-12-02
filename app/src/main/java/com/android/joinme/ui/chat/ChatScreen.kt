@@ -535,6 +535,110 @@ private fun MessageInteractionOverlays(
 }
 
 /**
+ * Calculates the shape of a message bubble based on the sender.
+ *
+ * @param isCurrentUser Whether the message belongs to the current user
+ * @return RoundedCornerShape with appropriate corner radii
+ */
+private fun getMessageBubbleShape(isCurrentUser: Boolean): RoundedCornerShape {
+  return RoundedCornerShape(
+      topStart = Dimens.CornerRadius.extraLarge,
+      topEnd = Dimens.CornerRadius.extraLarge,
+      bottomStart =
+          if (isCurrentUser) Dimens.CornerRadius.extraLarge else Dimens.CornerRadius.small,
+      bottomEnd = if (isCurrentUser) Dimens.CornerRadius.small else Dimens.CornerRadius.extraLarge)
+}
+
+/**
+ * Renders the content of a message based on its type.
+ *
+ * @param message The message to display
+ * @param isCurrentUser Whether the message was sent by the current user
+ * @param onBubbleColor Color for text on the bubble
+ */
+@Composable
+private fun MessageContent(message: Message, isCurrentUser: Boolean, onBubbleColor: Color) {
+  if (message.type == MessageType.SYSTEM) {
+    Text(
+        text = message.content,
+        style = MaterialTheme.typography.bodySmall,
+        color = onBubbleColor.copy(alpha = 0.9f),
+        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+  } else {
+    if (!isCurrentUser) {
+      Text(
+          text = message.senderName,
+          style = MaterialTheme.typography.labelSmall,
+          fontWeight = FontWeight.Bold,
+          color = onBubbleColor.copy(alpha = 0.8f))
+      Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
+    }
+
+    Text(text = message.content, style = MaterialTheme.typography.bodyMedium, color = onBubbleColor)
+  }
+}
+
+/**
+ * Renders message metadata including timestamp, edited indicator, and read receipts.
+ *
+ * @param message The message to display metadata for
+ * @param isCurrentUser Whether the message was sent by the current user
+ * @param onBubbleColor Color for text on the bubble
+ * @param totalUsersInChat Total number of users in the chat
+ */
+@Composable
+private fun MessageMetadata(
+    message: Message,
+    isCurrentUser: Boolean,
+    onBubbleColor: Color,
+    totalUsersInChat: Int
+) {
+  Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
+  Row(
+      horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.extraSmall),
+      verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = formatTimestamp(message.timestamp),
+            style = MaterialTheme.typography.labelSmall,
+            color = onBubbleColor)
+
+        if (message.isEdited) {
+          Text(
+              text = stringResource(R.string.message_edited),
+              style = MaterialTheme.typography.labelSmall,
+              color = onBubbleColor,
+              fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+        }
+
+        val shouldShowReadReceipt = isCurrentUser && message.type != MessageType.SYSTEM
+        if (shouldShowReadReceipt) {
+          ReadReceiptIcon(message, onBubbleColor, totalUsersInChat)
+        }
+      }
+}
+
+/**
+ * Displays a read receipt icon indicating whether a message has been read by all recipients.
+ *
+ * @param message The message to display read receipt for
+ * @param onBubbleColor Color for the icon
+ * @param totalUsersInChat Total number of users in the chat
+ */
+@Composable
+private fun ReadReceiptIcon(message: Message, onBubbleColor: Color, totalUsersInChat: Int) {
+  val readByOthersCount = message.readBy.count { it != message.senderId }
+  val otherUsersCount = totalUsersInChat - 1
+  val isReadByAll = otherUsersCount > 0 && readByOthersCount >= otherUsersCount
+
+  Icon(
+      imageVector = Icons.Default.DoneAll,
+      contentDescription =
+          stringResource(if (isReadByAll) R.string.read_by_all else R.string.message_sent),
+      modifier = Modifier.size(Dimens.IconSize.small),
+      tint = if (isReadByAll) MaterialTheme.colorScheme.primary else onBubbleColor)
+}
+
+/**
  * Individual message item with bubble design and avatar.
  *
  * @param message The message to display
@@ -558,14 +662,15 @@ private fun MessageItem(
     totalUsersInChat: Int = 0,
     onLongPress: () -> Unit = {}
 ) {
+  val horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
+
   Row(
       modifier =
           Modifier.fillMaxWidth()
               .padding(horizontal = Dimens.Padding.small)
               .testTag(ChatScreenTestTags.getTestTagForMessage(message.id)),
-      horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start) {
+      horizontalArrangement = horizontalArrangement) {
         if (!isCurrentUser) {
-          // Avatar for other users (on left)
           UserAvatar(
               photoUrl = senderPhotoUrl,
               userName = message.senderName,
@@ -573,94 +678,23 @@ private fun MessageItem(
           Spacer(modifier = Modifier.width(Dimens.Spacing.small))
         }
 
-        // Message bubble
         Surface(
             modifier =
                 Modifier.widthIn(max = Dimens.Chat.messageBubbleMaxWidth)
                     .testTag(ChatScreenTestTags.getTestTagForMessageBubble(message.id))
                     .combinedClickable(onClick = {}, onLongClick = onLongPress),
-            shape =
-                RoundedCornerShape(
-                    topStart = Dimens.CornerRadius.extraLarge,
-                    topEnd = Dimens.CornerRadius.extraLarge,
-                    bottomStart =
-                        if (isCurrentUser) Dimens.CornerRadius.extraLarge
-                        else Dimens.CornerRadius.small,
-                    bottomEnd =
-                        if (isCurrentUser) Dimens.CornerRadius.small
-                        else Dimens.CornerRadius.extraLarge),
+            shape = getMessageBubbleShape(isCurrentUser),
             color = bubbleColor,
             shadowElevation = Dimens.Elevation.small) {
               Column(modifier = Modifier.padding(Dimens.Padding.small)) {
-                // System messages
-                if (message.type == MessageType.SYSTEM) {
-                  Text(
-                      text = message.content,
-                      style = MaterialTheme.typography.bodySmall,
-                      color = onBubbleColor.copy(alpha = 0.9f),
-                      fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
-                } else {
-                  // Show sender name for other users
-                  if (!isCurrentUser) {
-                    Text(
-                        text = message.senderName,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = onBubbleColor.copy(alpha = 0.8f))
-                    Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
-                  }
-
-                  // Message content
-                  Text(
-                      text = message.content,
-                      style = MaterialTheme.typography.bodyMedium,
-                      color = onBubbleColor)
-
-                  // Timestamp with read receipts and edited indicator
-                  Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
-                  Row(
-                      horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.extraSmall),
-                      verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = formatTimestamp(message.timestamp),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = onBubbleColor)
-
-                        // Show "edited" text if message has been edited
-                        if (message.isEdited) {
-                          Text(
-                              text = stringResource(R.string.message_edited),
-                              style = MaterialTheme.typography.labelSmall,
-                              color = onBubbleColor,
-                              fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
-                        }
-
-                        // Show read receipts only for current user's messages
-                        if (isCurrentUser && message.type != MessageType.SYSTEM) {
-                          // Calculate if read by all (excluding sender)
-                          val readByOthersCount = message.readBy.count { it != message.senderId }
-                          val otherUsersCount = totalUsersInChat - 1 // Exclude sender
-                          val isReadByAll =
-                              otherUsersCount > 0 && readByOthersCount >= otherUsersCount
-
-                          Icon(
-                              imageVector = Icons.Default.DoneAll,
-                              contentDescription =
-                                  stringResource(
-                                      if (isReadByAll) R.string.read_by_all
-                                      else R.string.message_sent),
-                              modifier = Modifier.size(Dimens.IconSize.small),
-                              tint =
-                                  if (isReadByAll) MaterialTheme.colorScheme.primary
-                                  else onBubbleColor)
-                        }
-                      }
+                MessageContent(message, isCurrentUser, onBubbleColor)
+                if (message.type != MessageType.SYSTEM) {
+                  MessageMetadata(message, isCurrentUser, onBubbleColor, totalUsersInChat)
                 }
               }
             }
 
         if (isCurrentUser) {
-          // Avatar for current user (on right)
           Spacer(modifier = Modifier.width(Dimens.Spacing.small))
           UserAvatar(
               photoUrl = currentUserPhotoUrl,

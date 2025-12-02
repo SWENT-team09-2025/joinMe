@@ -87,6 +87,19 @@ private const val DESCRIPTION_ALPHA = 0.8f
 private const val MEMBERS_ALPHA = 0.7f
 
 /**
+ * Gets the current user ID, with special handling for test environments.
+ *
+ * @return The current user's UID, or "test-user-id" in test environments
+ */
+private fun getCurrentUserId(): String? {
+  val isTestEnv =
+      android.os.Build.FINGERPRINT == "robolectric" ||
+          android.os.Debug.isDebuggerConnected() ||
+          System.getProperty("IS_TEST_ENV") == "true"
+  return if (isTestEnv) "test-user-id" else Firebase.auth.currentUser?.uid
+}
+
+/**
  * Contains test tags for UI elements in the GroupListScreen.
  *
  * These tags are used in instrumentation tests to identify and interact with specific UI
@@ -190,19 +203,7 @@ fun GroupListScreen(
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val groups = uiState.groups
-  // Current user ID with test environment detection
-  val currentUserId = run {
-    // Detect test environment first (same as CreateGroupViewModel)
-    val isTestEnv =
-        android.os.Build.FINGERPRINT == "robolectric" ||
-            android.os.Debug.isDebuggerConnected() ||
-            System.getProperty("IS_TEST_ENV") == "true"
-    if (isTestEnv) {
-      "test-user-id"
-    } else {
-      Firebase.auth.currentUser?.uid
-    }
-  }
+  val currentUserId = getCurrentUserId()
 
   // State for showing/hiding floating bubbles in the join/create group FAB
   var showJoinBubbles by remember { mutableStateOf(false) }
@@ -334,117 +335,19 @@ fun GroupListScreen(
 
     // Card menu overlay - OUTSIDE Scaffold, covers everything including FAB
     openMenuGroupId?.let { groupId ->
-      val selectedGroup = groups.find { it.id == groupId }
-      selectedGroup?.let { group ->
-        val density = LocalDensity.current
-        val configuration = LocalConfiguration.current
-        val screenHeightDp = configuration.screenHeightDp.dp
-
-        // Convert pixel position to dp
-        val buttonTopPaddingDp = with(density) { menuButtonYPosition.toDp() }
-
-        // Calculate dynamic menu height based on ownership
-        val isOwner = group.ownerId == currentUserId
-        val numberOfButtons =
-            if (isOwner) 4
-            else 2 // 4 if owner (share, edit, delete, leave removed), 2 if not (share, leave)
-        val dynamicMenuHeight =
-            Dimens.TouchTarget.minimum.times(numberOfButtons) +
-                Dimens.Spacing.small.times(numberOfButtons - 1)
-
-        // Check if menu would go off-screen (reserve space for FAB at bottom)
-        val spaceBelow =
-            (screenHeightDp.value -
-                    buttonTopPaddingDp.value -
-                    Dimens.GroupList.fabReservedSpace.value)
-                .dp
-        val shouldPositionAbove = spaceBelow < dynamicMenuHeight
-
-        // Calculate final top position
-        val topPaddingDp =
-            if (shouldPositionAbove) {
-              // Position menu so bottom aligns with button (menu above button)
-              (buttonTopPaddingDp - dynamicMenuHeight).coerceAtLeast(
-                  Dimens.GroupList.fabReservedSpace)
-            } else {
-              // Normal position (menu below button)
-              buttonTopPaddingDp
-            }
-
-        // Animate scrim opacity for smooth fade-in/fade-out (same as join menu)
-        val scrimAlpha by
-            animateFloatAsState(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = SCRIM_ANIMATION_DURATION),
-                label = "cardMenuScrimAlpha")
-        val scrimBaseColor = MaterialTheme.customColors.scrimOverlay
-        val scrimColor = scrimBaseColor.copy(alpha = scrimBaseColor.alpha * scrimAlpha)
-
-        // Full-screen scrim overlay with menu bubbles
-        Box(
-            modifier =
-                Modifier.fillMaxSize()
-                    .zIndex(SCRIM_Z_INDEX)
-                    .background(scrimColor)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = { openMenuGroupId = null })) {
-              // Menu bubbles positioned dynamically based on clicked card
-              Column(
-                  modifier =
-                      Modifier.align(Alignment.TopEnd)
-                          .padding(top = topPaddingDp, end = Dimens.Spacing.huge),
-                  verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small),
-                  horizontalAlignment = Alignment.End) {
-                    // Leave Group - Only shown for non-owners
-                    if (group.ownerId != currentUserId) {
-                      MenuBubble(
-                          text = "LEAVE GROUP",
-                          icon = Icons.AutoMirrored.Filled.ExitToApp,
-                          onClick = {
-                            openMenuGroupId = null
-                            groupToLeave = group
-                          },
-                          testTag = GroupListScreenTestTags.LEAVE_GROUP_BUBBLE)
-                    }
-
-                    // Share Group
-                    MenuBubble(
-                        text = "SHARE GROUP",
-                        icon = Icons.Default.Share,
-                        onClick = {
-                          openMenuGroupId = null
-                          groupToShare = group
-                        },
-                        testTag = GroupListScreenTestTags.SHARE_GROUP_BUBBLE)
-
-                    // Edit Group - Only shown for owners
-                    if (group.ownerId == currentUserId) {
-                      MenuBubble(
-                          text = "EDIT GROUP",
-                          icon = Icons.Default.Edit,
-                          onClick = {
-                            onEditGroup(group)
-                            openMenuGroupId = null
-                          },
-                          testTag = GroupListScreenTestTags.EDIT_GROUP_BUBBLE)
-                    }
-
-                    // Delete Group - Only shown for owners
-                    if (group.ownerId == currentUserId) {
-                      MenuBubble(
-                          text = "DELETE GROUP",
-                          icon = Icons.Default.Delete,
-                          onClick = {
-                            openMenuGroupId = null
-                            groupToDelete = group
-                          },
-                          testTag = GroupListScreenTestTags.DELETE_GROUP_BUBBLE)
-                    }
-                  }
-            }
-      }
+      groups
+          .find { it.id == groupId }
+          ?.let { group ->
+            GroupCardMenuOverlay(
+                group = group,
+                currentUserId = currentUserId,
+                menuButtonYPosition = menuButtonYPosition,
+                onDismiss = { openMenuGroupId = null },
+                onLeaveGroup = { groupToLeave = it },
+                onShareGroup = { groupToShare = it },
+                onEditGroup = onEditGroup,
+                onDeleteGroup = { groupToDelete = it })
+          }
     }
 
     // Floating action bubbles overlay for join/create group
@@ -568,6 +471,120 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: (Float) 
                         contentDescription = "More options",
                         tint = groupOnColor)
                   }
+            }
+      }
+}
+
+/**
+ * Displays the contextual menu overlay for a group card.
+ *
+ * @param group The group to display menu for
+ * @param currentUserId The current user's ID
+ * @param menuButtonYPosition The Y position of the three-dot button
+ * @param onDismiss Callback to dismiss the menu
+ * @param onLeaveGroup Callback when leave group is selected
+ * @param onShareGroup Callback when share group is selected
+ * @param onEditGroup Callback when edit group is selected
+ * @param onDeleteGroup Callback when delete group is selected
+ */
+@Composable
+private fun GroupCardMenuOverlay(
+    group: Group,
+    currentUserId: String?,
+    menuButtonYPosition: Float,
+    onDismiss: () -> Unit,
+    onLeaveGroup: (Group) -> Unit,
+    onShareGroup: (Group) -> Unit,
+    onEditGroup: (Group) -> Unit,
+    onDeleteGroup: (Group) -> Unit
+) {
+  val density = LocalDensity.current
+  val configuration = LocalConfiguration.current
+  val screenHeightDp = configuration.screenHeightDp.dp
+
+  val buttonTopPaddingDp = with(density) { menuButtonYPosition.toDp() }
+
+  val isOwner = group.ownerId == currentUserId
+  val numberOfButtons = if (isOwner) 4 else 2
+  val dynamicMenuHeight =
+      Dimens.TouchTarget.minimum.times(numberOfButtons) +
+          Dimens.Spacing.small.times(numberOfButtons - 1)
+
+  val spaceBelow =
+      (screenHeightDp.value - buttonTopPaddingDp.value - Dimens.GroupList.fabReservedSpace.value).dp
+  val shouldPositionAbove = spaceBelow < dynamicMenuHeight
+
+  val topPaddingDp =
+      if (shouldPositionAbove) {
+        (buttonTopPaddingDp - dynamicMenuHeight).coerceAtLeast(Dimens.GroupList.fabReservedSpace)
+      } else {
+        buttonTopPaddingDp
+      }
+
+  val scrimAlpha by
+      animateFloatAsState(
+          targetValue = 1f,
+          animationSpec = tween(durationMillis = SCRIM_ANIMATION_DURATION),
+          label = "cardMenuScrimAlpha")
+  val scrimBaseColor = MaterialTheme.customColors.scrimOverlay
+  val scrimColor = scrimBaseColor.copy(alpha = scrimBaseColor.alpha * scrimAlpha)
+
+  Box(
+      modifier =
+          Modifier.fillMaxSize()
+              .zIndex(SCRIM_Z_INDEX)
+              .background(scrimColor)
+              .clickable(
+                  interactionSource = remember { MutableInteractionSource() },
+                  indication = null,
+                  onClick = onDismiss)) {
+        Column(
+            modifier =
+                Modifier.align(Alignment.TopEnd)
+                    .padding(top = topPaddingDp, end = Dimens.Spacing.huge),
+            verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small),
+            horizontalAlignment = Alignment.End) {
+              if (!isOwner) {
+                MenuBubble(
+                    text = "LEAVE GROUP",
+                    icon = Icons.AutoMirrored.Filled.ExitToApp,
+                    onClick = {
+                      onDismiss()
+                      onLeaveGroup(group)
+                    },
+                    testTag = GroupListScreenTestTags.LEAVE_GROUP_BUBBLE)
+              }
+
+              MenuBubble(
+                  text = "SHARE GROUP",
+                  icon = Icons.Default.Share,
+                  onClick = {
+                    onDismiss()
+                    onShareGroup(group)
+                  },
+                  testTag = GroupListScreenTestTags.SHARE_GROUP_BUBBLE)
+
+              if (isOwner) {
+                MenuBubble(
+                    text = "EDIT GROUP",
+                    icon = Icons.Default.Edit,
+                    onClick = {
+                      onEditGroup(group)
+                      onDismiss()
+                    },
+                    testTag = GroupListScreenTestTags.EDIT_GROUP_BUBBLE)
+              }
+
+              if (isOwner) {
+                MenuBubble(
+                    text = "DELETE GROUP",
+                    icon = Icons.Default.Delete,
+                    onClick = {
+                      onDismiss()
+                      onDeleteGroup(group)
+                    },
+                    testTag = GroupListScreenTestTags.DELETE_GROUP_BUBBLE)
+              }
             }
       }
 }

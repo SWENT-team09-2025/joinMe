@@ -5,9 +5,12 @@ import com.android.joinme.HttpClientProvider
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
+import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.map.LocationRepository
 import com.android.joinme.model.map.NominatimLocationRepository
 import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.google.firebase.Timestamp
@@ -37,9 +40,10 @@ import kotlinx.coroutines.launch
 class EditEventForSerieViewModel(
     private val eventRepository: EventsRepository =
         EventsRepositoryProvider.getRepository(isOnline = true),
-    private val serieRepository: SeriesRepository = SeriesRepositoryProvider.repository,
+    serieRepository: SeriesRepository = SeriesRepositoryProvider.repository,
+    groupRepository: GroupRepository = GroupRepositoryProvider.repository,
     locationRepository: LocationRepository = NominatimLocationRepository(HttpClientProvider.client)
-) : BaseEventForSerieViewModel(locationRepository) {
+) : BaseEventForSerieViewModel(locationRepository, serieRepository, groupRepository) {
 
   override val _uiState = MutableStateFlow(EventForSerieFormState())
   val uiState: StateFlow<EventForSerieFormState> = _uiState.asStateFlow()
@@ -53,6 +57,8 @@ class EditEventForSerieViewModel(
   /**
    * Loads an event by its ID and populates the UI state with its data.
    *
+   * Also loads the serie to check if it has a group and set the serieHasGroup flag.
+   *
    * @param eventId The ID of the event to load
    */
   fun loadEvent(eventId: String) {
@@ -60,15 +66,21 @@ class EditEventForSerieViewModel(
       try {
         val event = eventRepository.getEvent(eventId)
 
-        _uiState.value =
-            EventForSerieFormState(
-                type = event.type.name,
-                title = event.title,
-                description = event.description,
-                location = event.location?.name ?: "",
-                locationQuery = event.location?.name ?: "",
-                selectedLocation = event.location,
-                duration = event.duration.toString())
+        // Load the serie to check if it has a group
+        val allSeries = serieRepository.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN)
+        val serie = allSeries.find { it.eventIds.contains(eventId) }
+
+        if (serie != null) {
+          // Load serie and check if it has a group
+          loadSerieAndCheckGroup(serie.serieId)
+
+          // Update the state with event data, preserving type if serie has a group
+          val currentState = _uiState.value
+          populateEventData(event, currentState.serieHasGroup, currentState.type)
+        } else {
+          // Serie not found, just load event data
+          populateEventData(event)
+        }
       } catch (e: Exception) {
         setErrorMsg("Failed to load event: ${e.message}")
       }
