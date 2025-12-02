@@ -178,15 +178,10 @@ class SerieDetailsViewModel(
    * @return True if the user successfully joined the serie, false otherwise
    */
   suspend fun joinSerie(currentUserId: String): Boolean {
-    val currentState = _uiState.value
-    val serie = currentState.serie
-
-    if (serie == null) {
-      setErrorMsg("Serie not loaded")
-      return false
-    }
+    val serie = requireSerieOrSetError() ?: return false
 
     // Validation checks
+    // Serie must be loaded, this is ensured by requireSerieOrSetError
     if (currentUserId == serie.ownerId) {
       setErrorMsg("You are the owner of this serie")
       return false
@@ -260,15 +255,10 @@ class SerieDetailsViewModel(
    * @return True if the user successfully quit the serie, false otherwise
    */
   suspend fun quitSerie(currentUserId: String): Boolean {
-    val currentState = _uiState.value
-    val serie = currentState.serie
-
-    if (serie == null) {
-      setErrorMsg("Serie not loaded")
-      return false
-    }
+    val serie = requireSerieOrSetError() ?: return false
 
     // Owner cannot quit their own serie
+    // Serie must be loaded, this is ensured by requireSerieOrSetError
     if (currentUserId == serie.ownerId) {
       setErrorMsg("You are the owner of this serie and cannot quit")
       return false
@@ -370,5 +360,22 @@ class SerieDetailsViewModel(
     } catch (e: Exception) {
       setErrorMsg("Failed to delete serie: ${e.message}")
     }
+  }
+
+  // helper functions
+
+  /**
+   * Requires that the serie is loaded in the UI state, otherwise sets an error message and returns
+   * null.
+   *
+   * @param errorMsg The error message to set if the serie is not loaded
+   * @return The loaded Serie object, or null if not loaded
+   */
+  private fun requireSerieOrSetError(errorMsg: String = "Serie not loaded"): Serie? {
+    val serie = _uiState.value.serie
+    if (serie == null) {
+      setErrorMsg(errorMsg)
+    }
+    return serie
   }
 }
