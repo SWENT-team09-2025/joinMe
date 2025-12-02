@@ -117,17 +117,17 @@ class ChatScreenAndroidTest {
   }
 
   /**
-   * Merged test: Covers both valid and invalid image URLs to test ChatImageMessage in real Android
-   * environment.
+   * Tests that IMAGE type messages are rendered correctly in real Android environment. Covers the
+   * when(message.type) branch for MessageType.IMAGE and verifies ChatImageMessage composable is
+   * invoked for image messages.
    */
   @Test
-  fun chatScreen_imageMessages_displayValidAndInvalidImages() = runTest {
+  fun chatScreen_imageMessages_renderCorrectly() = runTest {
     val repo = FakeChatRepository(uploadShouldSucceed = true)
     val profileRepo = FakeProfileRepository()
     val viewModel = ChatViewModel(repo, profileRepo)
 
-    // Create messages with both valid and invalid image URLs
-    // Using httpbin.org/html which returns HTML content (not an image), should trigger error
+    // Create multiple image messages to test IMAGE type handling
     val messages =
         listOf(
             Message(
@@ -141,9 +141,9 @@ class ChatScreenAndroidTest {
             Message(
                 id = "img2",
                 conversationId = testChatId,
-                senderId = testUserId,
-                senderName = "Alice",
-                content = "https://httpbin.org/html",
+                senderId = "user2",
+                senderName = "Bob",
+                content = "https://picsum.photos/250/350",
                 timestamp = System.currentTimeMillis() - 1000,
                 type = MessageType.IMAGE))
 
@@ -160,7 +160,7 @@ class ChatScreenAndroidTest {
 
     composeTestRule.waitForIdle()
 
-    // Verify both message containers exist
+    // Verify both image message containers exist (tests IMAGE type in when block)
     composeTestRule
         .onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("img1"))
         .assertIsDisplayed()
@@ -168,14 +168,11 @@ class ChatScreenAndroidTest {
         .onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("img2"))
         .assertIsDisplayed()
 
-    // Wait for Coil to load/fail (give it extra time to render error state)
-    Thread.sleep(2000)
-    composeTestRule.waitForIdle()
+    // Verify sender name is shown for other user's image (tests message structure)
+    composeTestRule.onNodeWithText("Bob", useUnmergedTree = true).assertExists()
 
-    // The invalid image should show error state
-    composeTestRule
-        .onNodeWithTag(ChatScreenTestTags.CHAT_IMAGE_ERROR, useUnmergedTree = true)
-        .assertExists()
+    // Note: Error state for images is specifically tested in
+    // chatScreen_fullScreenImageViewer_displaysErrorState test to avoid flakiness
   }
 
   /**
