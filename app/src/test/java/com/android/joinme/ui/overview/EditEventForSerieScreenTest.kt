@@ -1,5 +1,7 @@
 package com.android.joinme.ui.overview
 
+import android.content.Context
+import android.net.Uri
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
@@ -147,6 +149,19 @@ class EditEventForSerieScreenTest {
     override suspend fun getCommonGroups(userIds: List<String>): List<Group> = emptyList()
 
     override fun getNewGroupId(): String = "newGroupId"
+
+    override suspend fun uploadGroupPhoto(
+        context: Context,
+        groupId: String,
+        imageUri: Uri
+    ): String {
+      // Not needed for these tests
+      return "http://fakeurl.com/photo.jpg"
+    }
+
+    override suspend fun deleteGroupPhoto(groupId: String) {
+      // Not needed for these tests
+    }
   }
 
   private fun createTestEvent(): Event {

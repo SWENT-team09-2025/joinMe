@@ -1,5 +1,7 @@
 package com.android.joinme.ui.overview
 
+import android.content.Context
+import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventFilter
@@ -134,6 +136,19 @@ class CreateEventViewModelTest {
       return groups.values.filter { group ->
         userIds.all { userId -> group.memberIds.contains(userId) }
       }
+    }
+
+    override suspend fun uploadGroupPhoto(
+        context: Context,
+        groupId: String,
+        imageUri: Uri
+    ): String {
+      // Not needed for these tests
+      return "http://fakeurl.com/photo.jpg"
+    }
+
+    override suspend fun deleteGroupPhoto(groupId: String) {
+      // Not needed for these tests
     }
   }
 

@@ -1,5 +1,7 @@
 package com.android.joinme.ui.overview
 
+import android.content.Context
+import android.net.Uri
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
@@ -98,6 +100,19 @@ class CreateSerieViewModelTest {
     override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
       if (userIds.isEmpty()) return emptyList()
       return groups.filter { group -> userIds.all { userId -> group.memberIds.contains(userId) } }
+    }
+
+    override suspend fun uploadGroupPhoto(
+        context: Context,
+        groupId: String,
+        imageUri: Uri
+    ): String {
+      // Not needed for these tests
+      return "http://fakeurl.com/photo.jpg"
+    }
+
+    override suspend fun deleteGroupPhoto(groupId: String) {
+      // Not needed for these tests
     }
   }
 
@@ -908,6 +923,19 @@ class CreateSerieViewModelTest {
 
           override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
             return emptyList()
+          }
+
+          override suspend fun uploadGroupPhoto(
+              context: Context,
+              groupId: String,
+              imageUri: Uri
+          ): String {
+            // Not needed for these tests
+            return "http://fakeurl.com/photo.jpg"
+          }
+
+          override suspend fun deleteGroupPhoto(groupId: String) {
+            // Not needed for these tests
           }
         }
 
