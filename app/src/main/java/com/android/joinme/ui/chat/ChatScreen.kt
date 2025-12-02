@@ -4,8 +4,6 @@ package com.android.joinme.ui.chat
 
 import android.net.Uri
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -86,7 +84,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.core.content.FileProvider
 import com.android.joinme.R
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
@@ -97,7 +94,6 @@ import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
 import com.android.joinme.ui.theme.getUserColor
 import com.android.joinme.ui.theme.outlinedTextField
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -970,8 +966,6 @@ private fun AttachmentMenu(
   val sheetState = rememberModalBottomSheetState()
   val context = LocalContext.current
   val notImplementedMsg = stringResource(R.string.not_yet_implemented)
-  val imageSentSuccess = stringResource(R.string.image_sent_success)
-  val coroutineScope = rememberCoroutineScope()
 
   // State to hold the camera image URI
   var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -979,82 +973,27 @@ private fun AttachmentMenu(
   // State to show photo source selection dialog
   var showPhotoSourceDialog by remember { mutableStateOf(false) }
 
-  // Helper function to create a temporary file URI for the camera
-  fun createImageUri(): Uri {
-    val timeStamp = System.currentTimeMillis()
-    val imageFile = File(context.cacheDir, "camera_image_${timeStamp}.jpg")
-    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", imageFile)
-  }
-
-  // Image picker launcher for gallery
+  // Image picker launcher for gallery (untestable - extracted to ChatImageLaunchers.kt)
   val imagePickerLauncher =
-      rememberLauncherForActivityResult(
-          contract = ActivityResultContracts.GetContent(),
-          onResult = { uri ->
-            if (uri != null) {
-              viewModel.uploadAndSendImage(
-                  context = context,
-                  imageUri = uri,
-                  senderName = currentUserName,
-                  onSuccess = {
-                    coroutineScope.launch {
-                      Toast.makeText(context, imageSentSuccess, Toast.LENGTH_SHORT).show()
-                    }
-                  },
-                  onError = { error ->
-                    android.util.Log.e("ChatScreen", "Upload ERROR callback triggered: $error")
-                    coroutineScope.launch {
-                      Toast.makeText(context, error, Toast.LENGTH_LONG).show()
-                    }
-                  })
-              onDismiss()
-            } else {
-              android.util.Log.w("ChatScreen", "Image picker returned null URI")
-            }
-          })
+      rememberImagePickerLauncher(
+          viewModel = viewModel, currentUserName = currentUserName, onDismiss = onDismiss)
 
-  // Camera launcher
+  // Camera launcher (untestable - extracted to ChatImageLaunchers.kt)
   val cameraLauncher =
-      rememberLauncherForActivityResult(
-          contract = ActivityResultContracts.TakePicture(),
-          onResult = { success ->
-            if (success && cameraImageUri != null) {
-              viewModel.uploadAndSendImage(
-                  context = context,
-                  imageUri = cameraImageUri!!,
-                  senderName = currentUserName,
-                  onSuccess = {
-                    coroutineScope.launch {
-                      Toast.makeText(context, imageSentSuccess, Toast.LENGTH_SHORT).show()
-                    }
-                  },
-                  onError = { error ->
-                    android.util.Log.e("ChatScreen", "Camera upload ERROR: $error")
-                    coroutineScope.launch {
-                      Toast.makeText(context, error, Toast.LENGTH_LONG).show()
-                    }
-                  })
-              onDismiss()
-            } else {
-              android.util.Log.w("ChatScreen", "Camera capture failed or was cancelled")
-            }
-          })
+      rememberCameraLauncher(
+          viewModel = viewModel,
+          currentUserName = currentUserName,
+          cameraImageUri = { cameraImageUri },
+          onDismiss = onDismiss)
 
-  // Camera permission launcher
+  // Camera permission launcher (untestable - extracted to ChatImageLaunchers.kt)
   val cameraPermissionLauncher =
-      rememberLauncherForActivityResult(
-          contract = ActivityResultContracts.RequestPermission(),
-          onResult = { isGranted ->
-            if (isGranted) {
-              // Permission granted, launch camera
-              cameraImageUri = createImageUri()
-              cameraLauncher.launch(cameraImageUri)
-            } else {
-              // Permission denied
-              Toast.makeText(
-                      context, "Camera permission is required to take photos", Toast.LENGTH_LONG)
-                  .show()
-            }
+      rememberCameraPermissionLauncher(
+          cameraLauncher = cameraLauncher,
+          onCameraImageUriSet = {
+            val uri = createImageUri(context)
+            cameraImageUri = uri
+            uri
           })
 
   ModalBottomSheet(
