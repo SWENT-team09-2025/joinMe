@@ -160,10 +160,10 @@ abstract class BaseSerieFormViewModel : ViewModel() {
             // Compare dates at day level (start of day) instead of exact timestamp
             val calendar = java.util.Calendar.getInstance()
             calendar.timeInMillis = System.currentTimeMillis()
-            calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
-            calendar.set(java.util.Calendar.MINUTE, 0)
-            calendar.set(java.util.Calendar.SECOND, 0)
-            calendar.set(java.util.Calendar.MILLISECOND, 0)
+            calendar[java.util.Calendar.HOUR_OF_DAY] = 0
+            calendar[java.util.Calendar.MINUTE] = 0
+            calendar[java.util.Calendar.SECOND] = 0
+            calendar[java.util.Calendar.MILLISECOND] = 0
             val todayStart = calendar.timeInMillis
 
             if (parsedDate.time < todayStart) "Date cannot be in the past" else null

@@ -8,10 +8,15 @@ import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryLocal
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.groups.streaks.StreakService
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import com.google.firebase.Timestamp
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import java.util.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -1131,5 +1136,192 @@ class ShowEventViewModelTest {
 
     // No profile updates should have happened
     verify(profileRepository, never()).createOrUpdateProfile(any())
+  }
+
+  /** --- TOGGLE PARTICIPATION STREAK TESTS --- */
+  @Test
+  fun toggleParticipation_joiningGroupEvent_callsStreakServiceOnActivityJoined() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityJoined(any(), any(), any()) } returns Unit
+
+    val fakeRepo = FakeEventsRepository()
+    val event = createTestEvent(participants = listOf("user1")).copy(groupId = "group123")
+    fakeRepo.addEvent(event)
+
+    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+
+    val userProfile =
+        Profile(
+            uid = "user2", username = "NewUser", email = "new@example.com", eventsJoinedCount = 5)
+    whenever(profileRepository.getProfile("user2")).thenReturn(userProfile)
+
+    vm.toggleParticipation(event.eventId, "user2")
+    advanceUntilIdle()
+
+    coVerify { StreakService.onActivityJoined("group123", "user2", event.date) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun toggleParticipation_quittingGroupEvent_callsStreakServiceOnActivityLeft() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityLeft(any(), any(), any()) } returns Unit
+
+    val fakeRepo = FakeEventsRepository()
+    val event = createTestEvent(participants = listOf("user1", "user2")).copy(groupId = "group123")
+    fakeRepo.addEvent(event)
+
+    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+
+    val userProfile =
+        Profile(
+            uid = "user2",
+            username = "ExistingUser",
+            email = "existing@example.com",
+            eventsJoinedCount = 10)
+    whenever(profileRepository.getProfile("user2")).thenReturn(userProfile)
+
+    vm.toggleParticipation(event.eventId, "user2")
+    advanceUntilIdle()
+
+    coVerify { StreakService.onActivityLeft("group123", "user2", event.date) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun toggleParticipation_nonGroupEvent_doesNotCallStreakService() = runTest {
+    mockkObject(StreakService)
+
+    val fakeRepo = FakeEventsRepository()
+    val event = createTestEvent(participants = listOf("user1"))
+    fakeRepo.addEvent(event)
+
+    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+
+    val userProfile =
+        Profile(
+            uid = "user2", username = "NewUser", email = "new@example.com", eventsJoinedCount = 5)
+    whenever(profileRepository.getProfile("user2")).thenReturn(userProfile)
+
+    vm.toggleParticipation(event.eventId, "user2")
+    advanceUntilIdle()
+
+    coVerify(exactly = 0) { StreakService.onActivityJoined(any(), any(), any()) }
+    coVerify(exactly = 0) { StreakService.onActivityLeft(any(), any(), any()) }
+
+    unmockkObject(StreakService)
+  }
+
+  /** --- DELETE EVENT STREAK TESTS --- */
+  @Test
+  fun deleteEvent_upcomingGroupEvent_callsStreakServiceOnActivityDeleted() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityDeleted(any(), any(), any()) } returns Unit
+
+    val fakeRepo = FakeEventsRepository()
+    val event =
+        createTestEvent(participants = listOf("user1", "user2"), daysFromNow = 7)
+            .copy(groupId = "group123")
+    fakeRepo.addEvent(event)
+
+    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+
+    val profile1 =
+        Profile(uid = "user1", username = "User1", email = "u1@example.com", eventsJoinedCount = 5)
+    val profile2 =
+        Profile(uid = "user2", username = "User2", email = "u2@example.com", eventsJoinedCount = 3)
+    whenever(profileRepository.getProfilesByIds(listOf("user1", "user2")))
+        .thenReturn(listOf(profile1, profile2))
+
+    vm.deleteEvent(event.eventId)
+    advanceUntilIdle()
+
+    coVerify { StreakService.onActivityDeleted("group123", listOf("user1", "user2"), event.date) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun deleteEvent_pastGroupEvent_doesNotCallStreakService() = runTest {
+    mockkObject(StreakService)
+
+    val fakeRepo = FakeEventsRepository()
+    val event =
+        createTestEvent(participants = listOf("user1", "user2"), daysFromNow = -7)
+            .copy(groupId = "group123")
+    fakeRepo.addEvent(event)
+
+    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+
+    val profile1 =
+        Profile(uid = "user1", username = "User1", email = "u1@example.com", eventsJoinedCount = 5)
+    val profile2 =
+        Profile(uid = "user2", username = "User2", email = "u2@example.com", eventsJoinedCount = 3)
+    whenever(profileRepository.getProfilesByIds(listOf("user1", "user2")))
+        .thenReturn(listOf(profile1, profile2))
+
+    vm.deleteEvent(event.eventId)
+    advanceUntilIdle()
+
+    coVerify(exactly = 0) { StreakService.onActivityDeleted(any(), any(), any()) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun deleteEvent_nonGroupEvent_doesNotCallStreakService() = runTest {
+    mockkObject(StreakService)
+
+    val fakeRepo = FakeEventsRepository()
+    val event = createTestEvent(participants = listOf("user1", "user2"), daysFromNow = 7)
+    fakeRepo.addEvent(event)
+
+    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+
+    val profile1 =
+        Profile(uid = "user1", username = "User1", email = "u1@example.com", eventsJoinedCount = 5)
+    val profile2 =
+        Profile(uid = "user2", username = "User2", email = "u2@example.com", eventsJoinedCount = 3)
+    whenever(profileRepository.getProfilesByIds(listOf("user1", "user2")))
+        .thenReturn(listOf(profile1, profile2))
+
+    vm.deleteEvent(event.eventId)
+    advanceUntilIdle()
+
+    coVerify(exactly = 0) { StreakService.onActivityDeleted(any(), any(), any()) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun deleteEvent_streakServiceThrows_doesNotBlockDeletion() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityDeleted(any(), any(), any()) } throws
+        RuntimeException("Streak error")
+
+    val fakeRepo = FakeEventsRepository()
+    val event =
+        createTestEvent(participants = listOf("user1", "user2"), daysFromNow = 7)
+            .copy(groupId = "group123")
+    fakeRepo.addEvent(event)
+
+    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+
+    val profile1 =
+        Profile(uid = "user1", username = "User1", email = "u1@example.com", eventsJoinedCount = 5)
+    val profile2 =
+        Profile(uid = "user2", username = "User2", email = "u2@example.com", eventsJoinedCount = 3)
+    whenever(profileRepository.getProfilesByIds(listOf("user1", "user2")))
+        .thenReturn(listOf(profile1, profile2))
+
+    vm.deleteEvent(event.eventId)
+    advanceUntilIdle()
+
+    // Event should still be deleted despite streak error
+    assertTrue(fakeRepo.events.none { it.eventId == event.eventId })
+
+    unmockkObject(StreakService)
   }
 }
