@@ -1,7 +1,15 @@
 package com.android.joinme.ui.overview
 
+import com.android.joinme.model.event.Event
+import com.android.joinme.model.event.EventType
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.map.LocationRepository
+import com.android.joinme.model.serie.Serie
+import com.android.joinme.model.serie.SerieFilter
+import com.android.joinme.model.serie.SeriesRepository
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,8 +38,11 @@ class BaseEventForSerieViewModelTest {
 
   // ---- Test ViewModel ----
   // Uses EventForSerieFormState directly for testing
-  private class TestEventForSerieViewModel(locationRepository: LocationRepository) :
-      BaseEventForSerieViewModel(locationRepository) {
+  private class TestEventForSerieViewModel(
+      locationRepository: LocationRepository,
+      serieRepository: SeriesRepository,
+      groupRepository: GroupRepository
+  ) : BaseEventForSerieViewModel(locationRepository, serieRepository, groupRepository) {
 
     override val _uiState = MutableStateFlow(EventForSerieFormState())
     val uiState = _uiState
@@ -49,9 +60,20 @@ class BaseEventForSerieViewModelTest {
     fun testUpdateState(transform: (EventForSerieFormUIState) -> EventForSerieFormUIState) {
       updateState(transform)
     }
+
+    // Expose protected methods for testing
+    suspend fun testLoadSerieAndCheckGroup(serieId: String) = loadSerieAndCheckGroup(serieId)
+
+    suspend fun testDetermineEventTypeFromGroup(serie: Serie) = determineEventTypeFromGroup(serie)
+
+    fun testPopulateEventData(
+        event: Event,
+        serieHasGroup: Boolean = false,
+        preservedType: String? = null
+    ) = populateEventData(event, serieHasGroup, preservedType)
   }
 
-  // ---- Fake Location Repository ----
+  // ---- Fake Repositories ----
   private class FakeLocationRepository : LocationRepository {
     var shouldThrowError = false
 
@@ -68,7 +90,65 @@ class BaseEventForSerieViewModelTest {
     }
   }
 
+  private class FakeSeriesRepository : SeriesRepository {
+    private val series = mutableMapOf<String, Serie>()
+    var shouldThrowError = false
+
+    fun addTestSerie(serie: Serie) {
+      series[serie.serieId] = serie
+    }
+
+    override suspend fun getSerie(serieId: String): Serie {
+      if (shouldThrowError) throw RuntimeException("Network error")
+      return series[serieId] ?: throw NoSuchElementException("Serie not found: $serieId")
+    }
+
+    override suspend fun editSerie(serieId: String, serie: Serie) = throw NotImplementedError()
+
+    override suspend fun addSerie(serie: Serie) = throw NotImplementedError()
+
+    override suspend fun deleteSerie(serieId: String) = throw NotImplementedError()
+
+    override suspend fun getAllSeries(filter: SerieFilter): List<Serie> = series.values.toList()
+
+    override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> = emptyList()
+
+    override fun getNewSerieId(): String = "newSerieId"
+  }
+
+  private class FakeGroupRepository : GroupRepository {
+    private val groups = mutableMapOf<String, Group>()
+    var shouldThrowError = false
+
+    fun addTestGroup(group: Group) {
+      groups[group.id] = group
+    }
+
+    override suspend fun getGroup(groupId: String): Group {
+      if (shouldThrowError) throw RuntimeException("Network error")
+      return groups[groupId] ?: throw NoSuchElementException("Group not found: $groupId")
+    }
+
+    override suspend fun getAllGroups(): List<Group> = groups.values.toList()
+
+    override suspend fun addGroup(group: Group) = throw NotImplementedError()
+
+    override suspend fun deleteGroup(groupId: String, userId: String) = throw NotImplementedError()
+
+    override suspend fun leaveGroup(groupId: String, userId: String) = throw NotImplementedError()
+
+    override suspend fun joinGroup(groupId: String, userId: String) = throw NotImplementedError()
+
+    override suspend fun editGroup(groupId: String, group: Group) = throw NotImplementedError()
+
+    override suspend fun getCommonGroups(userIds: List<String>): List<Group> = emptyList()
+
+    override fun getNewGroupId(): String = "newGroupId"
+  }
+
   private lateinit var locationRepo: FakeLocationRepository
+  private lateinit var serieRepo: FakeSeriesRepository
+  private lateinit var groupRepo: FakeGroupRepository
   private lateinit var vm: TestEventForSerieViewModel
   private val testDispatcher = StandardTestDispatcher()
 
@@ -76,7 +156,9 @@ class BaseEventForSerieViewModelTest {
   fun setUp() {
     Dispatchers.setMain(testDispatcher)
     locationRepo = FakeLocationRepository()
-    vm = TestEventForSerieViewModel(locationRepo)
+    serieRepo = FakeSeriesRepository()
+    groupRepo = FakeGroupRepository()
+    vm = TestEventForSerieViewModel(locationRepo, serieRepo, groupRepo)
   }
 
   @After
@@ -490,5 +572,110 @@ class BaseEventForSerieViewModelTest {
     assertTrue(stateAfterType.isValid)
     assertEquals("SPORTS", stateAfterType.type)
     assertNull(stateAfterType.invalidTypeMsg)
+  }
+
+  // ---------- populateEventData tests ----------
+
+  @Test
+  fun populateEventData_standaloneVsGroupSerie_handlesTypeCorrectly() {
+    val location = Location(latitude = 46.52, longitude = 6.57, name = "EPFL")
+    val event =
+        Event(
+            eventId = "event1",
+            type = EventType.ACTIVITY,
+            title = "Test Event",
+            description = "Test Description",
+            location = location,
+            date = Timestamp.now(),
+            duration = 120,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = "user1")
+
+    // Part 1: Standalone event - uses event's type
+    vm.testPopulateEventData(event)
+
+    var state = vm.uiState.value
+    assertEquals("ACTIVITY", state.type)
+    assertEquals("Test Event", state.title)
+    assertEquals("Test Description", state.description)
+    assertEquals("EPFL", state.location)
+    assertEquals("120", state.duration)
+
+    // Part 2: Group serie event - preserves group type
+    vm.testPopulateEventData(event, serieHasGroup = true, preservedType = "SPORTS")
+
+    state = vm.uiState.value
+    assertEquals("SPORTS", state.type) // Preserved from group, not ACTIVITY
+    assertEquals("Test Event", state.title)
+    assertEquals("Test Description", state.description)
+    assertEquals("EPFL", state.location)
+    assertEquals("120", state.duration)
+
+    // Part 3: Event with null location
+    val eventNoLocation =
+        Event(
+            eventId = "event2",
+            type = EventType.SOCIAL,
+            title = "No Location Event",
+            description = "Desc",
+            location = null,
+            date = Timestamp.now(),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = com.android.joinme.model.event.EventVisibility.PRIVATE,
+            ownerId = "user1")
+
+    vm.testPopulateEventData(eventNoLocation)
+
+    state = vm.uiState.value
+    assertEquals("SOCIAL", state.type)
+    assertEquals("", state.location)
+    assertEquals("", state.locationQuery)
+    assertNull(state.selectedLocation)
+  }
+
+  // ---------- loadSerieAndCheckGroup tests ----------
+
+  @Test
+  fun loadSerieAndCheckGroup_withNonexistentSerie_setsErrorMsg() = runTest {
+    // Try to load a serie that doesn't exist
+    vm.testLoadSerieAndCheckGroup("nonexistent-serie")
+    advanceUntilIdle()
+
+    // Verify error message is set and contains expected text
+    val state = vm.uiState.value
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Failed to load serie"))
+  }
+
+  @Test
+  fun loadSerieAndCheckGroup_withMissingGroup_setsErrorMsg() = runTest {
+    // Create a serie with a groupId that doesn't exist in the repository
+    val serie =
+        Serie(
+            serieId = "serie-with-missing-group",
+            title = "Orphaned Serie",
+            description = "Group doesn't exist",
+            date = Timestamp.now(),
+            participants = listOf("owner-1"),
+            maxParticipants = 20,
+            visibility = com.android.joinme.model.utils.Visibility.PUBLIC,
+            eventIds = emptyList(),
+            ownerId = "owner-1",
+            groupId = "nonexistent-group") // Group doesn't exist
+
+    serieRepo.addTestSerie(serie)
+
+    // Try to load the serie
+    vm.testLoadSerieAndCheckGroup("serie-with-missing-group")
+    advanceUntilIdle()
+
+    // Verify error message is set and contains expected text
+    val state = vm.uiState.value
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Group not found"))
   }
 }
