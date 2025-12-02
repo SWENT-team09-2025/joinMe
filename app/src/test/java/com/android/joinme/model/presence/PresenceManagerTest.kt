@@ -198,6 +198,10 @@ class PresenceManagerTest {
   // Singleton Instance Tests
   // ============================================================================
 
+  // Note: getInstance() tests are not included because they require Firebase initialization
+  // which is not available in unit tests. The singleton pattern is tested indirectly
+  // through the clearInstance() tests which verify instance management works correctly.
+
   @Test
   fun multipleInstancesWithSameRepo_areDifferentObjects() {
     // Test that creating multiple instances is possible (for testing purposes)
@@ -396,6 +400,145 @@ class PresenceManagerTest {
 
     // User ID should still be tracked
     assertEquals(userId, presenceManager.currentUserId)
+  }
+
+  // ============================================================================
+  // Activity Lifecycle Simulation Tests
+  // ============================================================================
+
+  @Test
+  fun simulateActivityStarted_whenInBackground_setsUserOnline() {
+    val userId = "user123"
+    fakeContextIdProvider.contextIds = listOf("context1")
+
+    presenceManager.startTracking(application, userId, fakeContextIdProvider)
+    fakePresenceRepository.lastOnlineUserId = null // Reset
+
+    // Simulate coming from background (count = 0)
+    presenceManager.simulateActivityStarted()
+    Thread.sleep(200)
+
+    assertEquals(userId, fakePresenceRepository.lastOnlineUserId)
+  }
+
+  @Test
+  fun simulateActivityStarted_whenAlreadyInForeground_doesNotSetOnlineAgain() {
+    val userId = "user123"
+    fakeContextIdProvider.contextIds = listOf("context1")
+
+    presenceManager.startTracking(application, userId, fakeContextIdProvider)
+
+    // First activity start
+    presenceManager.simulateActivityStarted()
+    Thread.sleep(100)
+    fakePresenceRepository.lastOnlineUserId = null // Reset
+
+    // Second activity start (already in foreground)
+    presenceManager.simulateActivityStarted()
+    Thread.sleep(100)
+
+    // Should NOT call setUserOnline again
+    assertNull(fakePresenceRepository.lastOnlineUserId)
+  }
+
+  @Test
+  fun simulateActivityStopped_whenLastActivity_setsUserOffline() {
+    val userId = "user123"
+    fakeContextIdProvider.contextIds = listOf("context1")
+
+    presenceManager.startTracking(application, userId, fakeContextIdProvider)
+    presenceManager.simulateActivityStarted() // count = 1
+    Thread.sleep(100)
+
+    presenceManager.simulateActivityStopped() // count = 0
+    Thread.sleep(200)
+
+    assertEquals(userId, fakePresenceRepository.lastOfflineUserId)
+  }
+
+  @Test
+  fun simulateActivityStopped_whenNotLastActivity_doesNotSetOffline() {
+    val userId = "user123"
+    fakeContextIdProvider.contextIds = listOf("context1")
+
+    presenceManager.startTracking(application, userId, fakeContextIdProvider)
+    presenceManager.simulateActivityStarted() // count = 1
+    presenceManager.simulateActivityStarted() // count = 2
+    Thread.sleep(100)
+
+    presenceManager.simulateActivityStopped() // count = 1 (still foreground)
+    Thread.sleep(200)
+
+    // Should NOT call setUserOffline
+    assertNull(fakePresenceRepository.lastOfflineUserId)
+  }
+
+  @Test
+  fun simulateActivityStopped_whenSetOfflineThrows_handlesGracefully() {
+    val userId = "user123"
+    presenceManager.startTracking(application, userId, fakeContextIdProvider)
+    presenceManager.simulateActivityStarted()
+    fakePresenceRepository.shouldThrowOnOffline = true
+
+    // Should not throw
+    presenceManager.simulateActivityStopped()
+    Thread.sleep(200)
+
+    // Exception is handled gracefully (logged), count decremented to 0
+    assertEquals(0, presenceManager.getStartedActivityCount())
+  }
+
+  @Test
+  fun getStartedActivityCount_tracksCorrectly() {
+    presenceManager.startTracking(application, "user123", fakeContextIdProvider)
+
+    assertEquals(0, presenceManager.getStartedActivityCount())
+
+    presenceManager.simulateActivityStarted()
+    assertEquals(1, presenceManager.getStartedActivityCount())
+
+    presenceManager.simulateActivityStarted()
+    assertEquals(2, presenceManager.getStartedActivityCount())
+
+    presenceManager.simulateActivityStopped()
+    assertEquals(1, presenceManager.getStartedActivityCount())
+
+    presenceManager.simulateActivityStopped()
+    assertEquals(0, presenceManager.getStartedActivityCount())
+  }
+
+  @Test
+  fun simulateActivityStarted_whenNoCurrentUserId_doesNotCrash() {
+    // Start tracking then clear userId via reflection
+    presenceManager.startTracking(application, "user123", fakeContextIdProvider)
+    val field = PresenceManager::class.java.getDeclaredField("currentUserId")
+    field.isAccessible = true
+    field.set(presenceManager, null)
+
+    // Should not crash
+    presenceManager.simulateActivityStarted()
+    Thread.sleep(100)
+
+    // No online call made
+    assertNull(fakePresenceRepository.lastOnlineUserId)
+  }
+
+  @Test
+  fun simulateActivityStopped_whenNoCurrentUserId_doesNotCrash() {
+    presenceManager.startTracking(application, "user123", fakeContextIdProvider)
+    presenceManager.simulateActivityStarted()
+
+    // Clear userId via reflection
+    val field = PresenceManager::class.java.getDeclaredField("currentUserId")
+    field.isAccessible = true
+    field.set(presenceManager, null)
+
+    // Should not crash
+    presenceManager.simulateActivityStopped()
+    Thread.sleep(100)
+
+    // No offline call made (userId was null)
+    assertNull(fakePresenceRepository.lastOfflineUserId)
   }
 
   // ============================================================================

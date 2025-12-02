@@ -16,7 +16,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * Interface for providing context IDs that a user belongs to.
+ * Functional interface for providing context IDs that a user belongs to.
  *
  * A "context" can be any feature that needs presence tracking, such as:
  * - Chat conversations (group chats, event chats)
@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
  *
  * This is used by PresenceManager to fetch all context IDs when setting user online.
  */
-interface ContextIdProvider {
+fun interface ContextIdProvider {
   /**
    * Fetches all context IDs that the user belongs to.
    *
@@ -253,4 +253,42 @@ class PresenceManager(
   internal suspend fun triggerSetUserOnlineInAllContexts() {
     setUserOnlineInAllContexts()
   }
+
+  /**
+   * Simulates an activity starting. Exposed for testing purposes only.
+   *
+   * In production, this is called automatically via ActivityLifecycleCallbacks.
+   */
+  @VisibleForTesting
+  internal fun simulateActivityStarted() {
+    val wasInBackground = startedActivityCount == 0
+    startedActivityCount++
+
+    if (wasInBackground) {
+      scope.launch { setUserOnlineInAllContexts() }
+    }
+  }
+
+  /**
+   * Simulates an activity stopping. Exposed for testing purposes only.
+   *
+   * In production, this is called automatically via ActivityLifecycleCallbacks.
+   */
+  @VisibleForTesting
+  internal fun simulateActivityStopped() {
+    startedActivityCount--
+
+    if (startedActivityCount == 0) {
+      scope.launch {
+        try {
+          currentUserId?.let { userId -> presenceRepository.setUserOffline(userId) }
+        } catch (e: Exception) {
+          Log.e(TAG, "Failed to set offline status on background", e)
+        }
+      }
+    }
+  }
+
+  /** Returns the current started activity count. Exposed for testing purposes only. */
+  @VisibleForTesting internal fun getStartedActivityCount(): Int = startedActivityCount
 }
