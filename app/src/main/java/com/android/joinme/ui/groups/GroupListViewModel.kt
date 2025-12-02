@@ -103,7 +103,7 @@ class GroupListViewModel(
           StreakService.onGroupDeleted(groupId)
         } catch (e: Exception) {
           Log.e("GroupListViewModel", "Error deleting streaks for group $groupId", e)
-          // Non-critical: continue with group deletion even if streak deletion fails
+          throw e
         }
 
         groupRepository.deleteGroup(groupId, currentUserId)
@@ -140,7 +140,7 @@ class GroupListViewModel(
           StreakService.onUserLeftGroup(groupId, currentUserId)
         } catch (e: Exception) {
           Log.e("GroupListViewModel", "Error deleting streak for user $currentUserId", e)
-          // Non-critical: don't fail leave operation if streak deletion fails
+          throw e
         }
 
         refreshUIState()
