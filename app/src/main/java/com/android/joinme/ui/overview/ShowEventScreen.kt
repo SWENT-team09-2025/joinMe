@@ -44,6 +44,7 @@ object ShowEventScreenTestTags {
   const val EVENT_MEMBERS = "eventMembers"
   const val EVENT_DURATION = "eventDuration"
   const val EVENT_OWNER = "eventOwner"
+  const val EVENT_GROUP = "eventGroup"
   const val JOIN_QUIT_BUTTON = "joinQuitButton"
   const val EDIT_BUTTON = "editButton"
   const val DELETE_BUTTON = "deleteButton"
@@ -288,6 +289,20 @@ fun ShowEventScreen(
                           .testTag(ShowEventScreenTestTags.EVENT_OWNER)
                           .padding(vertical = Dimens.Padding.small),
                   textAlign = TextAlign.Center)
+
+              // Group display (if event belongs to a group)
+              if (eventUIState.groupName != null) {
+                Text(
+                    text = "Group: ${eventUIState.groupName}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .testTag(ShowEventScreenTestTags.EVENT_GROUP)
+                            .padding(vertical = Dimens.Padding.small),
+                    textAlign = TextAlign.Center)
+              }
 
               Spacer(modifier = Modifier.weight(1f))
 

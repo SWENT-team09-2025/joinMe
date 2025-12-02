@@ -6,6 +6,8 @@ import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryLocal
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
@@ -30,6 +32,7 @@ class ShowEventViewModelTest {
 
   private lateinit var repository: EventsRepositoryLocal
   private lateinit var profileRepository: ProfileRepository
+  private lateinit var groupRepository: GroupRepository
   private lateinit var viewModel: ShowEventViewModel
   private val testDispatcher = StandardTestDispatcher()
 
@@ -104,7 +107,8 @@ class ShowEventViewModelTest {
     Dispatchers.setMain(testDispatcher)
     repository = EventsRepositoryLocal()
     profileRepository = mock(ProfileRepository::class.java)
-    viewModel = ShowEventViewModel(repository, profileRepository)
+    groupRepository = mock(GroupRepository::class.java)
+    viewModel = ShowEventViewModel(repository, profileRepository, groupRepository)
   }
 
   @After
@@ -139,6 +143,8 @@ class ShowEventViewModelTest {
     assertEquals(listOf("user1", "user2", "owner123"), state.participants)
     assertFalse(state.isPastEvent)
     assertNull(state.serieId)
+    assertNull(state.groupId)
+    assertNull(state.groupName)
     assertNull(state.errorMsg)
   }
 
@@ -253,6 +259,95 @@ class ShowEventViewModelTest {
 
     val state = viewModel.uiState.first()
     assertEquals("Created by UNKNOWN", state.ownerName)
+  }
+
+  /** --- GROUP TESTS --- */
+  @Test
+  fun loadEvent_withGroupId_loadsGroupName() = runTest {
+    val group = Group(id = "group-123", name = "Basketball Club", category = EventType.SPORTS)
+    val event = createTestEvent().copy(groupId = "group-123")
+    repository.addEvent(event)
+
+    whenever(profileRepository.getProfile("owner123"))
+        .thenReturn(Profile(uid = "owner123", username = "TestUser", email = "test@example.com"))
+    whenever(groupRepository.getGroup("group-123")).thenReturn(group)
+
+    viewModel.loadEvent(event.eventId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("group-123", state.groupId)
+    assertEquals("Basketball Club", state.groupName)
+    assertNull(state.errorMsg)
+  }
+
+  @Test
+  fun loadEvent_withGroupId_groupNotFound_setsGroupNameToNull() = runTest {
+    val event = createTestEvent().copy(groupId = "non-existent-group")
+    repository.addEvent(event)
+
+    whenever(profileRepository.getProfile("owner123"))
+        .thenReturn(Profile(uid = "owner123", username = "TestUser", email = "test@example.com"))
+    whenever(groupRepository.getGroup("non-existent-group")).thenReturn(null)
+
+    viewModel.loadEvent(event.eventId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("non-existent-group", state.groupId)
+    assertNull(state.groupName)
+  }
+
+  @Test
+  fun loadEvent_withGroupId_repositoryThrows_setsGroupNameToNull() = runTest {
+    val event = createTestEvent().copy(groupId = "error-group")
+    repository.addEvent(event)
+
+    whenever(profileRepository.getProfile("owner123"))
+        .thenReturn(Profile(uid = "owner123", username = "TestUser", email = "test@example.com"))
+    whenever(groupRepository.getGroup("error-group"))
+        .thenThrow(RuntimeException("Network error"))
+
+    viewModel.loadEvent(event.eventId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("error-group", state.groupId)
+    assertNull(state.groupName)
+  }
+
+  @Test
+  fun loadEvent_withEmptyGroupId_doesNotCallRepository() = runTest {
+    val event = createTestEvent().copy(groupId = "")
+    repository.addEvent(event)
+
+    whenever(profileRepository.getProfile("owner123"))
+        .thenReturn(Profile(uid = "owner123", username = "TestUser", email = "test@example.com"))
+
+    viewModel.loadEvent(event.eventId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("", state.groupId)
+    assertNull(state.groupName)
+    verify(groupRepository, never()).getGroup(any())
+  }
+
+  @Test
+  fun loadEvent_withNullGroupId_doesNotCallRepository() = runTest {
+    val event = createTestEvent().copy(groupId = null)
+    repository.addEvent(event)
+
+    whenever(profileRepository.getProfile("owner123"))
+        .thenReturn(Profile(uid = "owner123", username = "TestUser", email = "test@example.com"))
+
+    viewModel.loadEvent(event.eventId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertNull(state.groupId)
+    assertNull(state.groupName)
+    verify(groupRepository, never()).getGroup(any())
   }
 
   /** --- CLEAR ERROR MESSAGE TESTS --- */
@@ -726,6 +821,8 @@ class ShowEventViewModelTest {
     assertTrue(state.participants.isEmpty())
     assertFalse(state.isPastEvent)
     assertNull(state.serieId)
+    assertNull(state.groupId)
+    assertNull(state.groupName)
     assertNull(state.errorMsg)
   }
 
@@ -746,9 +843,11 @@ class ShowEventViewModelTest {
             ownerName = "Created by CustomUser",
             participants = listOf("user1", "user2", "user3"),
             isPastEvent = true,
-            serieId = "custom-serie-123")
+            serieId = "custom-serie-123",
+            groupId = "custom-group-456",
+            groupName = "Custom Group")
 
-    val customViewModel = ShowEventViewModel(repository, profileRepository, customState)
+    val customViewModel = ShowEventViewModel(repository, profileRepository, groupRepository, customState)
 
     val state = customViewModel.uiState.value
     assertEquals("SPORTS", state.type)
@@ -765,6 +864,8 @@ class ShowEventViewModelTest {
     assertEquals(listOf("user1", "user2", "user3"), state.participants)
     assertTrue(state.isPastEvent)
     assertEquals("custom-serie-123", state.serieId)
+    assertEquals("custom-group-456", state.groupId)
+    assertEquals("Custom Group", state.groupName)
   }
 
   /** --- DATE FORMATTING TESTS --- */
@@ -943,7 +1044,7 @@ class ShowEventViewModelTest {
     fakeRepo.addEvent(event)
     fakeRepo.shouldThrowOnEdit = true
 
-    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
 
     val userProfile =
         Profile(
@@ -972,7 +1073,7 @@ class ShowEventViewModelTest {
     fakeRepo.addEvent(event)
     fakeRepo.shouldThrowOnDelete = true
 
-    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
 
     val profile1 =
         Profile(
@@ -1017,7 +1118,7 @@ class ShowEventViewModelTest {
             ownerId = "owner123")
     fakeRepo.addEvent(event)
 
-    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
 
     vm.deleteEvent(event.eventId)
     advanceUntilIdle()
