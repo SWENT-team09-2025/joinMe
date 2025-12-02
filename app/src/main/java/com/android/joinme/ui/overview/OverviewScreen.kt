@@ -56,115 +56,6 @@ import com.android.joinme.ui.navigation.NavigationTestTags
 import com.android.joinme.ui.navigation.Tab
 import com.android.joinme.ui.theme.Dimens
 
-/** Displays the list of ongoing and upcoming activities. */
-@Composable
-private fun OverviewContentList(
-    ongoingItems: List<EventItem>,
-    upcomingItems: List<EventItem>,
-    onSelectEvent: (Event) -> Unit,
-    onSelectedSerie: (Serie) -> Unit
-) {
-  LazyColumn(
-      contentPadding =
-          PaddingValues(vertical = Dimens.Padding.small, horizontal = Dimens.Padding.medium),
-      modifier = Modifier.fillMaxWidth().testTag(OverviewScreenTestTags.EVENT_LIST)) {
-        // Ongoing activities section
-        if (ongoingItems.isNotEmpty()) {
-          item {
-            Text(
-                text =
-                    if (ongoingItems.size == 1) "Your ongoing activity :"
-                    else "Your ongoing activities :",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier =
-                    Modifier.padding(Dimens.Padding.small)
-                        .testTag(OverviewScreenTestTags.ONGOING_EVENTS_TITLE))
-          }
-
-          // Render each ongoing item (event or serie)
-          items(ongoingItems.size) { index ->
-            when (val item = ongoingItems[index]) {
-              is EventItem.SingleEvent -> {
-                EventCard(
-                    modifier = Modifier.padding(vertical = Dimens.Padding.small),
-                    event = item.event,
-                    onClick = { onSelectEvent(item.event) },
-                    testTag = OverviewScreenTestTags.getTestTagForEvent(item.event))
-              }
-              is EventItem.EventSerie -> {
-                SerieCard(
-                    modifier = Modifier.padding(vertical = Dimens.Padding.small),
-                    serie = item.serie,
-                    onClick = { onSelectedSerie(item.serie) },
-                    testTag = OverviewScreenTestTags.getTestTagForSerie(item.serie))
-              }
-            }
-          }
-
-          item { Spacer(modifier = Modifier.height(Dimens.Padding.medium)) }
-        }
-
-        // Upcoming activities section
-        if (upcomingItems.isNotEmpty()) {
-          item {
-            Text(
-                text =
-                    if (upcomingItems.size == 1) "Your upcoming activity :"
-                    else "Your upcoming activities :",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier =
-                    Modifier.padding(Dimens.Padding.small)
-                        .testTag(OverviewScreenTestTags.UPCOMING_EVENTS_TITLE))
-          }
-
-          // Render each upcoming item (event or serie)
-          items(upcomingItems.size) { index ->
-            when (val item = upcomingItems[index]) {
-              is EventItem.SingleEvent -> {
-                EventCard(
-                    modifier = Modifier.padding(vertical = Dimens.Padding.small),
-                    event = item.event,
-                    onClick = { onSelectEvent(item.event) },
-                    testTag = OverviewScreenTestTags.getTestTagForEvent(item.event))
-              }
-              is EventItem.EventSerie -> {
-                SerieCard(
-                    modifier = Modifier.padding(vertical = Dimens.Padding.small),
-                    serie = item.serie,
-                    onClick = { onSelectedSerie(item.serie) },
-                    testTag = OverviewScreenTestTags.getTestTagForSerie(item.serie))
-              }
-            }
-          }
-        }
-      }
-}
-
-/** Displays empty state when there are no activities. */
-@Composable
-private fun EmptyStateMessage() {
-  Column(
-      modifier = Modifier.fillMaxSize(),
-      verticalArrangement = Arrangement.Center,
-      horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = "You have no events yet. Join one, or create your own event.",
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.testTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG))
-      }
-}
-
-/** Displays loading indicator. */
-@Composable
-private fun LoadingIndicator() {
-  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-    CircularProgressIndicator(modifier = Modifier.testTag(OverviewScreenTestTags.LOADING_INDICATOR))
-  }
-}
-
 /**
  * Test tags for UI testing of the Overview screen components.
  *
@@ -197,6 +88,115 @@ object OverviewScreenTestTags {
    * @return A string combining "eventItem" with the serie's unique ID
    */
   fun getTestTagForSerie(serie: Serie): String = "serieItem${serie.serieId}"
+}
+/** Renders a single event item (either SingleEvent or EventSerie). */
+@Composable
+private fun RenderEventItem(
+    item: EventItem,
+    onSelectEvent: (Event) -> Unit,
+    onSelectedSerie: (Serie) -> Unit
+) {
+  when (item) {
+    is EventItem.SingleEvent -> {
+      EventCard(
+          modifier = Modifier.padding(vertical = Dimens.Padding.small),
+          event = item.event,
+          onClick = { onSelectEvent(item.event) },
+          testTag = OverviewScreenTestTags.getTestTagForEvent(item.event))
+    }
+    is EventItem.EventSerie -> {
+      SerieCard(
+          modifier = Modifier.padding(vertical = Dimens.Padding.small),
+          serie = item.serie,
+          onClick = { onSelectedSerie(item.serie) },
+          testTag = OverviewScreenTestTags.getTestTagForSerie(item.serie))
+    }
+  }
+}
+
+/** Displays the list of ongoing and upcoming activities. */
+@Composable
+private fun OverviewContentList(
+    ongoingItems: List<EventItem>,
+    upcomingItems: List<EventItem>,
+    onSelectEvent: (Event) -> Unit,
+    onSelectedSerie: (Serie) -> Unit
+) {
+  LazyColumn(
+      contentPadding =
+          PaddingValues(vertical = Dimens.Padding.small, horizontal = Dimens.Padding.medium),
+      modifier = Modifier.fillMaxWidth().testTag(OverviewScreenTestTags.EVENT_LIST)) {
+        // Ongoing activities section
+        if (ongoingItems.isNotEmpty()) {
+          item {
+            Text(
+                text =
+                    if (ongoingItems.size == 1) "Your ongoing activity :"
+                    else "Your ongoing activities :",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier =
+                    Modifier.padding(Dimens.Padding.small)
+                        .testTag(OverviewScreenTestTags.ONGOING_EVENTS_TITLE))
+          }
+
+          // Render each ongoing item (event or serie)
+          items(ongoingItems.size) { index ->
+            RenderEventItem(
+                item = ongoingItems[index],
+                onSelectEvent = onSelectEvent,
+                onSelectedSerie = onSelectedSerie)
+          }
+
+          item { Spacer(modifier = Modifier.height(Dimens.Padding.medium)) }
+        }
+
+        // Upcoming activities section
+        if (upcomingItems.isNotEmpty()) {
+          item {
+            Text(
+                text =
+                    if (upcomingItems.size == 1) "Your upcoming activity :"
+                    else "Your upcoming activities :",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier =
+                    Modifier.padding(Dimens.Padding.small)
+                        .testTag(OverviewScreenTestTags.UPCOMING_EVENTS_TITLE))
+          }
+
+          // Render each upcoming item (event or serie)
+          items(upcomingItems.size) { index ->
+            RenderEventItem(
+                item = upcomingItems[index],
+                onSelectEvent = onSelectEvent,
+                onSelectedSerie = onSelectedSerie)
+          }
+        }
+      }
+}
+
+/** Displays empty state when there are no activities. */
+@Composable
+private fun EmptyStateMessage() {
+  Column(
+      modifier = Modifier.fillMaxSize(),
+      verticalArrangement = Arrangement.Center,
+      horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = "You have no events yet. Join one, or create your own event.",
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.testTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG))
+      }
+}
+
+/** Displays loading indicator. */
+@Composable
+private fun LoadingIndicator() {
+  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    CircularProgressIndicator(modifier = Modifier.testTag(OverviewScreenTestTags.LOADING_INDICATOR))
+  }
 }
 
 /**
