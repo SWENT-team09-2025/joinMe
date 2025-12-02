@@ -271,7 +271,7 @@ class CreateEventViewModel(
    * 2. Increments user's 'eventsJoinedCount'.
    * 3. Updates streaks.
    *
-   * @return `true` if critical updates (Group, Profile) succeeded; `false` if they failed.
+   * @return `true` if all updates succeeded; `false` if any failed.
    */
   private suspend fun processPostCreationUpdates(
       event: Event,
@@ -285,15 +285,16 @@ class CreateEventViewModel(
       return false
     }
 
-    // B. Update Profile (Increment count) - Critical step for consistency
+    // B. Update Profile (Increment count)
     if (!updateProfileStats(profile)) {
       // Return false to trigger rollback in the orchestrator
       return false
     }
 
-    // C. Update Streaks (Non-critical: failures here do not abort creation)
-    if (group != null) {
-      updateStreaksSafe(group, date)
+    // C. Update Streaks (for group events)
+    if (group != null && !updateStreaks(group, date)) {
+      // Return false to trigger rollback in the orchestrator
+      return false
     }
 
     return true
@@ -330,16 +331,20 @@ class CreateEventViewModel(
   }
 
   /**
-   * Updates streaks for all group members. Failures are logged but swallowed to prevent blocking
-   * event creation.
+   * Updates streaks for all group members.
+   *
+   * @return `true` if all streak updates succeeded; `false` if any failed.
    */
-  private suspend fun updateStreaksSafe(group: Group, date: Timestamp) {
-    for (memberId in group.memberIds) {
-      try {
+  private suspend fun updateStreaks(group: Group, date: Timestamp): Boolean {
+    return try {
+      for (memberId in group.memberIds) {
         StreakService.onActivityJoined(group.id, memberId, date)
-      } catch (e: Exception) {
-        Log.e("CreateEventViewModel", "Error updating streak for user $memberId", e)
       }
+      true
+    } catch (e: Exception) {
+      Log.e("CreateEventViewModel", "Error updating streaks", e)
+      setErrorMsg("Failed to update streaks. Cannot create event: ${e.message}")
+      false
     }
   }
 
