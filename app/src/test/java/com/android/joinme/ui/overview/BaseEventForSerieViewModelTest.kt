@@ -636,4 +636,46 @@ class BaseEventForSerieViewModelTest {
     assertEquals("", state.locationQuery)
     assertNull(state.selectedLocation)
   }
+
+  // ---------- loadSerieAndCheckGroup tests ----------
+
+  @Test
+  fun loadSerieAndCheckGroup_withNonexistentSerie_setsErrorMsg() = runTest {
+    // Try to load a serie that doesn't exist
+    vm.testLoadSerieAndCheckGroup("nonexistent-serie")
+    advanceUntilIdle()
+
+    // Verify error message is set and contains expected text
+    val state = vm.uiState.value
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Failed to load serie"))
+  }
+
+  @Test
+  fun loadSerieAndCheckGroup_withMissingGroup_setsErrorMsg() = runTest {
+    // Create a serie with a groupId that doesn't exist in the repository
+    val serie =
+        Serie(
+            serieId = "serie-with-missing-group",
+            title = "Orphaned Serie",
+            description = "Group doesn't exist",
+            date = Timestamp.now(),
+            participants = listOf("owner-1"),
+            maxParticipants = 20,
+            visibility = com.android.joinme.model.utils.Visibility.PUBLIC,
+            eventIds = emptyList(),
+            ownerId = "owner-1",
+            groupId = "nonexistent-group") // Group doesn't exist
+
+    serieRepo.addTestSerie(serie)
+
+    // Try to load the serie
+    vm.testLoadSerieAndCheckGroup("serie-with-missing-group")
+    advanceUntilIdle()
+
+    // Verify error message is set and contains expected text
+    val state = vm.uiState.value
+    assertNotNull(state.errorMsg)
+    assertTrue(state.errorMsg!!.contains("Group not found"))
+  }
 }

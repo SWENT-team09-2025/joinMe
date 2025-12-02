@@ -319,13 +319,18 @@ abstract class BaseEventForSerieViewModel(
     try {
       val serie = serieRepository.getSerie(serieId)
       if (serie.groupId != null) {
-        val eventType = determineEventTypeFromGroup(serie)
-        updateState { state ->
-          when (state) {
-            is EventForSerieFormState ->
-                state.copy(serieHasGroup = true, type = eventType.name, invalidTypeMsg = null)
-            else -> state
+        try {
+          val eventType = determineEventTypeFromGroup(serie)
+          updateState { state ->
+            when (state) {
+              is EventForSerieFormState ->
+                  state.copy(serieHasGroup = true, type = eventType.name, invalidTypeMsg = null)
+              else -> state
+            }
           }
+        } catch (e: NoSuchElementException) {
+          Log.e("BaseEventForSerieVM", "Group not found for serie $serieId: ${e.message}", e)
+          setErrorMsg("Group not found for this serie")
         }
       } else {
         updateState { state ->
@@ -335,12 +340,12 @@ abstract class BaseEventForSerieViewModel(
           }
         }
       }
+    } catch (e: NoSuchElementException) {
+      Log.e("BaseEventForSerieVM", "Serie not found: $serieId", e)
+      setErrorMsg("Failed to load serie: ${e.message}")
     } catch (e: IllegalStateException) {
       Log.e("BaseEventForSerieVM", "Invalid state when loading serie group", e)
       setErrorMsg("Serie configuration error: ${e.message}")
-    } catch (e: NoSuchElementException) {
-      Log.e("BaseEventForSerieVM", "Group not found for serie $serieId: ${e.message}", e)
-      setErrorMsg("Group not found for this serie")
     } catch (e: Exception) {
       Log.e("BaseEventForSerieVM", "Failed to load serie $serieId", e)
       setErrorMsg("Failed to load serie: ${e.message}")

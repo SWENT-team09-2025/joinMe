@@ -272,6 +272,93 @@ class EditEventForSerieViewModelTest {
     assertTrue(vm.uiState.value.errorMsg!!.contains("Failed to load event"))
   }
 
+  @Test
+  fun loadEvent_nonexistentEvent_setsErrorMessage() = runTest {
+    // Try to load an event that doesn't exist
+    vm.loadEvent("nonexistent-event")
+    advanceUntilIdle()
+
+    assertNotNull(vm.uiState.value.errorMsg)
+    assertTrue(vm.uiState.value.errorMsg!!.contains("Failed to load event"))
+  }
+
+  @Test
+  fun loadEvent_eventWithMissingSerie_loadsEventWithoutError() = runTest {
+    // Create an event that is marked as part of a serie, but no serie references it
+    // This tests the case where an orphaned event can still be edited
+    val location = Location(latitude = 1.0, longitude = 1.0, name = "Stadium")
+    val event =
+        Event(
+            eventId = "orphan-event",
+            type = EventType.SPORTS,
+            title = "Event Title",
+            description = "Event Description",
+            location = location,
+            date = Timestamp.now(),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "user1",
+            partOfASerie = true)
+    eventRepo.addTestEvent(event)
+
+    // Load the event - should succeed even though no serie references it
+    vm.loadEvent("orphan-event")
+    advanceUntilIdle()
+
+    // Verify event data loaded successfully without error
+    val state = vm.uiState.value
+    assertNull(state.errorMsg)
+    assertEquals("Event Title", state.title)
+    assertEquals("Event Description", state.description)
+    assertEquals("SPORTS", state.type)
+    assertFalse(state.serieHasGroup) // No serie found, so no group
+  }
+
+  @Test
+  fun loadEvent_serieWithMissingGroup_setsErrorMessage() = runTest {
+    // Create a serie with a groupId that doesn't exist
+    val serie =
+        Serie(
+            serieId = "serie-with-missing-group",
+            title = "Orphaned Serie",
+            description = "Group doesn't exist",
+            date = Timestamp.now(),
+            participants = listOf("user1"),
+            maxParticipants = 20,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event-orphan-group"),
+            ownerId = "user1",
+            groupId = "nonexistent-group")
+    serieRepo.addTestSerie(serie)
+
+    // Create an event in this serie
+    val location = Location(latitude = 1.0, longitude = 1.0, name = "Stadium")
+    val event =
+        Event(
+            eventId = "event-orphan-group",
+            type = EventType.SPORTS,
+            title = "Event Title",
+            description = "Event Description",
+            location = location,
+            date = Timestamp.now(),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 20,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "user1",
+            partOfASerie = true)
+    eventRepo.addTestEvent(event)
+
+    // Try to load the event
+    vm.loadEvent("event-orphan-group")
+    advanceUntilIdle()
+
+    assertNotNull(vm.uiState.value.errorMsg)
+    assertTrue(vm.uiState.value.errorMsg!!.contains("Group not found"))
+  }
+
   // ---------- Edit Event - Basic ----------
 
   @Test
