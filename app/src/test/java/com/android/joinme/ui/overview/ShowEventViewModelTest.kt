@@ -1113,33 +1113,6 @@ class ShowEventViewModelTest {
     unmockkObject(StreakService)
   }
 
-  @Test
-  fun toggleParticipation_streakServiceThrows_doesNotBlockParticipation() = runTest {
-    mockkObject(StreakService)
-    coEvery { StreakService.onActivityJoined(any(), any(), any()) } throws
-        RuntimeException("Streak error")
-
-    val fakeRepo = FakeEventsRepository()
-    val event = createTestEvent(participants = listOf("user1")).copy(groupId = "group123")
-    fakeRepo.addEvent(event)
-
-    val vm = ShowEventViewModel(fakeRepo, profileRepository)
-
-    val userProfile =
-        Profile(
-            uid = "user2", username = "NewUser", email = "new@example.com", eventsJoinedCount = 5)
-    whenever(profileRepository.getProfile("user2")).thenReturn(userProfile)
-
-    vm.toggleParticipation(event.eventId, "user2")
-    advanceUntilIdle()
-
-    // Participation should still succeed despite streak error
-    val updatedEvent = fakeRepo.getEvent(event.eventId)
-    assertTrue(updatedEvent.participants.contains("user2"))
-
-    unmockkObject(StreakService)
-  }
-
   /** --- DELETE EVENT STREAK TESTS --- */
   @Test
   fun deleteEvent_upcomingGroupEvent_callsStreakServiceOnActivityDeleted() = runTest {

@@ -163,8 +163,8 @@ class ShowEventViewModel(
 
       if (!eventUpdateSuccess) return
 
-      // 4. Update Streak (Non-critical)
-      updateStreakSafe(event, userId, isJoining)
+      // 4. Update Streak (rolls back event and profile if fails)
+      if (!updateStreakOrRollback(event, userId, isJoining, eventId, originalProfile)) return
 
       // 5. Refresh UI
       loadEvent(eventId)
@@ -286,18 +286,43 @@ class ShowEventViewModel(
     }
   }
 
-  /** Updates the StreakService. Failures are logged but do not interrupt the flow. */
-  private suspend fun updateStreakSafe(event: Event, userId: String, isJoining: Boolean) {
-    if (event.groupId != null) {
-      try {
-        if (isJoining) {
-          StreakService.onActivityJoined(event.groupId, userId, event.date)
-        } else {
-          StreakService.onActivityLeft(event.groupId, userId, event.date)
-        }
-      } catch (e: Exception) {
-        Log.e("ShowEventViewModel", "Error updating streak for user $userId", e)
+  /**
+   * Updates the StreakService. If it fails, rolls back the event and profile changes.
+   *
+   * @return True if successful or no streak update needed, False if failed (and rolled back).
+   */
+  private suspend fun updateStreakOrRollback(
+      event: Event,
+      userId: String,
+      isJoining: Boolean,
+      eventId: String,
+      originalProfile: Profile
+  ): Boolean {
+    if (event.groupId == null) return true
+
+    return try {
+      if (isJoining) {
+        StreakService.onActivityJoined(event.groupId, userId, event.date)
+      } else {
+        StreakService.onActivityLeft(event.groupId, userId, event.date)
       }
+      true
+    } catch (e: Exception) {
+      Log.e("ShowEventViewModel", "Error updating streak for user $userId, rolling back", e)
+      // Rollback event
+      try {
+        repository.editEvent(eventId, event)
+      } catch (rollbackEx: Exception) {
+        Log.e("ShowEventViewModel", "Failed to rollback event $eventId", rollbackEx)
+      }
+      // Rollback profile
+      try {
+        profileRepository.createOrUpdateProfile(originalProfile)
+      } catch (rollbackEx: Exception) {
+        Log.e("ShowEventViewModel", "Failed to rollback profile ${originalProfile.uid}", rollbackEx)
+      }
+      setErrorMsg("Failed to update streak: ${e.message}")
+      false
     }
   }
 
