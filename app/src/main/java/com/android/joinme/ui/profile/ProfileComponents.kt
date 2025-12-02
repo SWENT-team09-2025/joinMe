@@ -51,9 +51,7 @@ fun ProfileHeader(
               .testTag(statsRowTestTag),
       horizontalArrangement = Arrangement.SpaceBetween,
       verticalAlignment = Alignment.CenterVertically) {
-        Row(
-            modifier = Modifier.weight(1f, fill = false),
-            horizontalArrangement = Arrangement.SpaceEvenly) {
+        Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.SpaceEvenly) {
               StatItem(
                   value = profile.eventsJoinedCount.toString(),
                   label = stringResource(R.string.events_joined),
@@ -96,7 +94,7 @@ fun StatItem(value: String, label: String, testTag: String = "") {
         color = MaterialTheme.colorScheme.onBackground)
     Text(
         text = label,
-        style = MaterialTheme.typography.labelSmall,
+        style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
   }
 }

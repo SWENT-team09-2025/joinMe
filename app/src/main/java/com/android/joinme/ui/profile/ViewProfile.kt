@@ -173,15 +173,13 @@ private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
             }
 
         // Profile Stats and Picture
-        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.Padding.large)) {
-          ProfileHeader(
-              profile = profile,
-              statsRowTestTag = ViewProfileTestTags.STATS_ROW,
-              eventsJoinedTestTag = ViewProfileTestTags.EVENTS_JOINED_STAT,
-              followersTestTag = ViewProfileTestTags.FOLLOWERS_STAT,
-              followingTestTag = ViewProfileTestTags.FOLLOWING_STAT,
-              profilePhotoTestTag = ViewProfileTestTags.PROFILE_PICTURE)
-        }
+        ProfileHeader(
+            profile = profile,
+            statsRowTestTag = ViewProfileTestTags.STATS_ROW,
+            eventsJoinedTestTag = ViewProfileTestTags.EVENTS_JOINED_STAT,
+            followersTestTag = ViewProfileTestTags.FOLLOWERS_STAT,
+            followingTestTag = ViewProfileTestTags.FOLLOWING_STAT,
+            profilePhotoTestTag = ViewProfileTestTags.PROFILE_PICTURE)
 
         // Event Streaks
         Box(
