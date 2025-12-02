@@ -169,7 +169,7 @@ class CreateEventViewModel(
             location = state.selectedLocation!!,
             date = parsedDate,
             duration = state.duration.toInt(),
-            participants = selectedGroup?.memberIds ?: emptyList(),
+            participants = listOf(ownerId),
             maxParticipants = state.maxParticipants.toInt(),
             visibility = EventVisibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
             ownerId = ownerId,

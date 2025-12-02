@@ -703,10 +703,10 @@ class CreateEventViewModelTest {
     Assert.assertTrue(ok)
     Assert.assertEquals(1, repo.added.size)
 
-    // Verify event has group members as participants
+    // Verify event has only the owner as participant (not all group members)
     val createdEvent = repo.added[0]
-    Assert.assertEquals(3, createdEvent.participants.size)
-    Assert.assertTrue(createdEvent.participants.containsAll(listOf("user1", "user2", "user3")))
+    Assert.assertEquals(1, createdEvent.participants.size)
+    Assert.assertTrue(createdEvent.participants.contains("owner-123"))
 
     // Verify event has groupId set
     Assert.assertEquals("group-1", createdEvent.groupId)

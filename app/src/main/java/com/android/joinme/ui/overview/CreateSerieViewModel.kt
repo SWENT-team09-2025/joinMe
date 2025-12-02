@@ -232,7 +232,7 @@ class CreateSerieViewModel(
             title = state.title,
             description = state.description,
             date = parsedDate,
-            participants = selectedGroup?.memberIds ?: listOf(currentUserId),
+            participants = listOf(currentUserId),
             maxParticipants = state.maxParticipants.toInt(),
             visibility = Visibility.valueOf(state.visibility.uppercase(Locale.ROOT)),
             eventIds = emptyList(),

@@ -799,7 +799,7 @@ class CreateSerieViewModelTest {
     assertEquals("group-1", createdSerie.groupId)
     assertEquals(300, createdSerie.maxParticipants)
     assertEquals(
-        listOf("test-user-id", "user-2", "user-3"), createdSerie.participants) // Group members
+        listOf("test-user-id"), createdSerie.participants) // Only owner, not all group members
 
     // Test 4: Verify group's serieIds updated
     val updatedGroup = groupRepo.groups.find { it.id == "group-1" }
