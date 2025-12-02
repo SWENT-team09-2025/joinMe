@@ -646,8 +646,6 @@ private fun MessageContent(
             color = onBubbleColor)
       }
     }
-
-    Text(text = message.content, style = MaterialTheme.typography.bodyMedium, color = onBubbleColor)
   }
 }
 
