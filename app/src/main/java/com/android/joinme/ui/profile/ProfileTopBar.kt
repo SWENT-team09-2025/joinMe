@@ -10,7 +10,43 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+
+/** Navigation icon button with active/inactive states. */
+@Composable
+private fun ProfileNavigationIconButton(
+    imageVector: ImageVector,
+    contentDescription: String,
+    isActive: Boolean,
+    onClick: () -> Unit
+) {
+  IconButton(onClick = onClick) {
+    Icon(
+        imageVector = imageVector,
+        contentDescription = contentDescription,
+        modifier = Modifier.size(if (isActive) 32.dp else 24.dp),
+        tint =
+            if (isActive) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.outlineVariant)
+  }
+}
+
+/** Back button or spacer based on showBackButton parameter. */
+@Composable
+private fun BackButtonOrSpacer(showBackButton: Boolean, onBackClick: () -> Unit) {
+  if (showBackButton) {
+    IconButton(onClick = onBackClick) {
+      Icon(
+          imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+          contentDescription = "Back",
+          modifier = Modifier.size(24.dp),
+          tint = MaterialTheme.colorScheme.primary)
+    }
+  } else {
+    Spacer(modifier = Modifier.size(48.dp))
+  }
+}
 
 /**
  * ProfileScreen enum defines the different profile-related screens in the application. Used to
@@ -53,58 +89,26 @@ fun ProfileTopBar(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically) {
-          if (showBackButton) {
-            IconButton(onClick = onBackClick) {
-              Icon(
-                  imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                  contentDescription = "Back",
-                  modifier = Modifier.size(24.dp),
-                  tint = MaterialTheme.colorScheme.primary)
-            }
-          } else {
-            // Empty spacer to maintain layout balance
-            Spacer(modifier = Modifier.size(48.dp))
-          }
+          BackButtonOrSpacer(showBackButton = showBackButton, onBackClick = onBackClick)
+
           Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            // Profile Icon
-            IconButton(onClick = onProfileClick) {
-              Icon(
-                  imageVector = Icons.Default.Person,
-                  contentDescription = "Profile",
-                  modifier =
-                      Modifier.size(
-                          if (currentScreen == ProfileScreen.VIEW_PROFILE) 32.dp else 24.dp),
-                  tint =
-                      if (currentScreen == ProfileScreen.VIEW_PROFILE)
-                          MaterialTheme.colorScheme.primary
-                      else MaterialTheme.colorScheme.outlineVariant)
-            }
+            ProfileNavigationIconButton(
+                imageVector = Icons.Default.Person,
+                contentDescription = "Profile",
+                isActive = currentScreen == ProfileScreen.VIEW_PROFILE,
+                onClick = onProfileClick)
 
-            // Group Icon
-            IconButton(onClick = onGroupClick) {
-              Icon(
-                  imageVector = Icons.Filled.Group,
-                  contentDescription = "Group",
-                  modifier =
-                      Modifier.size(if (currentScreen == ProfileScreen.GROUPS) 32.dp else 24.dp),
-                  tint =
-                      if (currentScreen == ProfileScreen.GROUPS) MaterialTheme.colorScheme.primary
-                      else MaterialTheme.colorScheme.outlineVariant)
-            }
+            ProfileNavigationIconButton(
+                imageVector = Icons.Filled.Group,
+                contentDescription = "Group",
+                isActive = currentScreen == ProfileScreen.GROUPS,
+                onClick = onGroupClick)
 
-            // Edit Icon
-            IconButton(onClick = onEditClick) {
-              Icon(
-                  imageVector = Icons.Default.Edit,
-                  contentDescription = "Edit",
-                  modifier =
-                      Modifier.size(
-                          if (currentScreen == ProfileScreen.EDIT_PROFILE) 32.dp else 24.dp),
-                  tint =
-                      if (currentScreen == ProfileScreen.EDIT_PROFILE)
-                          MaterialTheme.colorScheme.primary
-                      else MaterialTheme.colorScheme.outlineVariant)
-            }
+            ProfileNavigationIconButton(
+                imageVector = Icons.Default.Edit,
+                contentDescription = "Edit",
+                isActive = currentScreen == ProfileScreen.EDIT_PROFILE,
+                onClick = onEditClick)
           }
         }
 
