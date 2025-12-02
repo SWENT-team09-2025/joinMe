@@ -5,6 +5,7 @@ import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
+import com.android.joinme.model.groups.streaks.StreakService
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
@@ -13,6 +14,10 @@ import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.utils.Visibility
 import com.google.firebase.Timestamp
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import java.util.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -1317,5 +1322,183 @@ class SerieDetailsViewModelTest {
     val displayName = viewModel.getOwnerDisplayName("error-owner")
 
     assertEquals("UNKNOWN", displayName)
+  }
+
+  /** --- JOIN SERIE STREAK TESTS --- */
+  @Test
+  fun joinSerie_groupSerie_callsStreakServiceOnActivityJoined() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityJoined(any(), any(), any()) } returns Unit
+
+    val serie =
+        createTestSerie(
+                participants = listOf("user1"), maxParticipants = 10, eventIds = emptyList())
+            .copy(groupId = "group123")
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    viewModel.joinSerie(testUserId)
+    advanceUntilIdle()
+
+    coVerify { StreakService.onActivityJoined("group123", testUserId, serie.date) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun joinSerie_nonGroupSerie_doesNotCallStreakService() = runTest {
+    mockkObject(StreakService)
+
+    val serie =
+        createTestSerie(
+            participants = listOf("user1"), maxParticipants = 10, eventIds = emptyList())
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    viewModel.joinSerie(testUserId)
+    advanceUntilIdle()
+
+    coVerify(exactly = 0) { StreakService.onActivityJoined(any(), any(), any()) }
+
+    unmockkObject(StreakService)
+  }
+
+  /** --- QUIT SERIE STREAK TESTS --- */
+  @Test
+  fun quitSerie_groupSerie_callsStreakServiceOnActivityLeft() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityLeft(any(), any(), any()) } returns Unit
+
+    val serie =
+        createTestSerie(
+                ownerId = "owner123",
+                participants = listOf(testUserId, "user1", "owner123"),
+                eventIds = emptyList())
+            .copy(groupId = "group123")
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    viewModel.quitSerie(testUserId)
+    advanceUntilIdle()
+
+    coVerify { StreakService.onActivityLeft("group123", testUserId, serie.date) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun quitSerie_nonGroupSerie_doesNotCallStreakService() = runTest {
+    mockkObject(StreakService)
+
+    val serie =
+        createTestSerie(
+            ownerId = "owner123",
+            participants = listOf(testUserId, "user1", "owner123"),
+            eventIds = emptyList())
+    seriesRepository.addSerie(serie)
+
+    viewModel.loadSerieDetails(serie.serieId)
+    advanceUntilIdle()
+
+    viewModel.quitSerie(testUserId)
+    advanceUntilIdle()
+
+    coVerify(exactly = 0) { StreakService.onActivityLeft(any(), any(), any()) }
+
+    unmockkObject(StreakService)
+  }
+
+  /** --- DELETE SERIE STREAK TESTS --- */
+  @Test
+  fun deleteSerie_upcomingGroupSerie_callsStreakServiceOnActivityDeleted() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityDeleted(any(), any(), any()) } returns Unit
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_YEAR, 7)
+    val serie =
+        createTestSerie(participants = listOf("user1", "user2", "owner123"))
+            .copy(groupId = "group123", date = Timestamp(calendar.time))
+    seriesRepository.addSerie(serie)
+
+    viewModel.deleteSerie(serie.serieId)
+    advanceUntilIdle()
+
+    coVerify {
+      StreakService.onActivityDeleted("group123", listOf("user1", "user2", "owner123"), serie.date)
+    }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun deleteSerie_pastGroupSerie_doesNotCallStreakService() = runTest {
+    mockkObject(StreakService)
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_YEAR, -7)
+    val serie =
+        createTestSerie(participants = listOf("user1", "user2", "owner123"))
+            .copy(groupId = "group123", date = Timestamp(calendar.time))
+    seriesRepository.addSerie(serie)
+
+    viewModel.deleteSerie(serie.serieId)
+    advanceUntilIdle()
+
+    coVerify(exactly = 0) { StreakService.onActivityDeleted(any(), any(), any()) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun deleteSerie_nonGroupSerie_doesNotCallStreakService() = runTest {
+    mockkObject(StreakService)
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_YEAR, 7)
+    val serie =
+        createTestSerie(participants = listOf("user1", "user2", "owner123"))
+            .copy(date = Timestamp(calendar.time))
+    seriesRepository.addSerie(serie)
+
+    viewModel.deleteSerie(serie.serieId)
+    advanceUntilIdle()
+
+    coVerify(exactly = 0) { StreakService.onActivityDeleted(any(), any(), any()) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun deleteSerie_streakServiceThrows_doesNotBlockDeletion() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityDeleted(any(), any(), any()) } throws
+        RuntimeException("Streak error")
+
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_YEAR, 7)
+    val serie =
+        createTestSerie(participants = listOf("user1", "user2", "owner123"))
+            .copy(groupId = "group123", date = Timestamp(calendar.time))
+    seriesRepository.addSerie(serie)
+
+    viewModel.deleteSerie(serie.serieId)
+    advanceUntilIdle()
+
+    // Serie should still be deleted despite streak error
+    try {
+      seriesRepository.getSerie(serie.serieId)
+      fail("Expected exception when getting deleted serie")
+    } catch (_: Exception) {
+      // Expected
+    }
+
+    unmockkObject(StreakService)
   }
 }
