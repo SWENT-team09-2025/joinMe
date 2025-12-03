@@ -326,8 +326,12 @@ class CalendarViewModelTest {
       fakeSeries.add(createSerie("serie1", "Today Serie", 0, emptyList()))
     }
 
-    private fun createSerie(id: String, title: String, daysOffset: Int, eventIds: List<String>):
-        Serie {
+    private fun createSerie(
+        id: String,
+        title: String,
+        daysOffset: Int,
+        eventIds: List<String>
+    ): Serie {
       val calendar =
           Calendar.getInstance().apply {
             add(Calendar.DAY_OF_MONTH, daysOffset)
@@ -357,7 +361,8 @@ class CalendarViewModelTest {
 
     fun addSerieWithEvents() {
       fakeSeries.add(
-          createSerie("serie2", "Serie With Events", 2, listOf("event_in_serie_1", "event_in_serie_2")))
+          createSerie(
+              "serie2", "Serie With Events", 2, listOf("event_in_serie_1", "event_in_serie_2")))
     }
 
     override fun getNewSerieId(): String = throw NotImplementedError()
