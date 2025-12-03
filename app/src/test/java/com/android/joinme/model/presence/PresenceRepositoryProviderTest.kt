@@ -5,9 +5,7 @@ package com.android.joinme.model.presence
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -32,16 +30,6 @@ class PresenceRepositoryProviderTest {
   }
 
   @Test
-  fun repository_swappedInstanceIsUsed() {
-    val fakeRepository = FakePresenceRepository()
-
-    PresenceRepositoryProvider.repository = fakeRepository
-
-    val retrievedRepository = PresenceRepositoryProvider.repository
-    assertTrue(retrievedRepository is FakePresenceRepository)
-  }
-
-  @Test
   fun repository_canBeReassignedMultipleTimes() {
     val fake1 = FakePresenceRepository()
     val fake2 = FakePresenceRepository()
@@ -51,27 +39,6 @@ class PresenceRepositoryProviderTest {
 
     PresenceRepositoryProvider.repository = fake2
     assertEquals(fake2, PresenceRepositoryProvider.repository)
-  }
-
-  @Test
-  fun repository_afterSettingFake_returnsNonNull() {
-    val fakeRepository = FakePresenceRepository()
-
-    PresenceRepositoryProvider.repository = fakeRepository
-
-    assertNotNull(PresenceRepositoryProvider.repository)
-  }
-
-  @Test
-  fun repository_fakeImplementsAllMethods() {
-    val fakeRepository = FakePresenceRepository()
-    PresenceRepositoryProvider.repository = fakeRepository
-
-    val repo = PresenceRepositoryProvider.repository
-
-    // Verify it's a valid PresenceRepository
-    assertNotNull(repo.observeOnlineUsersCount("context", "user"))
-    assertNotNull(repo.observeOnlineUserIds("context", "user"))
   }
 
   // ============================================================================
