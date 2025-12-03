@@ -1,7 +1,5 @@
 package com.android.joinme.ui.groups.leaderboard
 
-// Implemented with help of Claude AI
-
 import com.android.joinme.model.groups.streaks.GroupStreak
 import com.android.joinme.model.groups.streaks.GroupStreakRepository
 import com.android.joinme.model.profile.Profile
@@ -202,5 +200,59 @@ class GroupLeaderboardViewModelTest {
     assertTrue(state.currentLeaderboard.isEmpty())
     assertTrue(state.allTimeLeaderboard.isEmpty())
     assertNull(state.errorMsg)
+  }
+
+  /** Tests that users with identical stats share the same rank (standard competition ranking) */
+  @Test
+  fun loadLeaderboard_tiedUsers_shareSameRank() = runTest {
+    // Alice and Bob: identical current stats (5 activities, 3 weeks)
+    // Charlie: lower stats (3 activities, 2 weeks)
+    val streaks =
+        listOf(
+            createStreak(
+                "user1",
+                currentWeeks = 3,
+                currentActivities = 5,
+                bestWeeks = 5,
+                bestActivities = 10),
+            createStreak(
+                "user2",
+                currentWeeks = 3,
+                currentActivities = 5,
+                bestWeeks = 5,
+                bestActivities = 10),
+            createStreak(
+                "user3",
+                currentWeeks = 2,
+                currentActivities = 3,
+                bestWeeks = 4,
+                bestActivities = 8))
+    val profiles =
+        listOf(
+            createProfile("user1", "Alice"),
+            createProfile("user2", "Bob"),
+            createProfile("user3", "Charlie"))
+
+    whenever(streakRepository.getStreaksForGroup(testGroupId)).thenReturn(streaks)
+    whenever(profileRepository.getProfilesByIds(listOf("user1", "user2", "user3")))
+        .thenReturn(profiles)
+
+    viewModel.loadLeaderboard(testGroupId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+
+    // Current leaderboard: Alice and Bob tied at rank 1, Charlie at rank 3
+    assertEquals(3, state.currentLeaderboard.size)
+    assertEquals(1, state.currentLeaderboard[0].rank)
+    assertEquals(1, state.currentLeaderboard[1].rank)
+    assertEquals(3, state.currentLeaderboard[2].rank)
+    assertEquals("Charlie", state.currentLeaderboard[2].displayName)
+
+    // All-time leaderboard: Alice and Bob tied at rank 1, Charlie at rank 3
+    assertEquals(3, state.allTimeLeaderboard.size)
+    assertEquals(1, state.allTimeLeaderboard[0].rank)
+    assertEquals(1, state.allTimeLeaderboard[1].rank)
+    assertEquals(3, state.allTimeLeaderboard[2].rank)
   }
 }

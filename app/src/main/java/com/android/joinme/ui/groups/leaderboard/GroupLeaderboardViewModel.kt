@@ -1,6 +1,5 @@
-package com.android.joinme.ui.groups.leaderboard
-
 // Implemented with help of Claude AI
+package com.android.joinme.ui.groups.leaderboard
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -143,7 +142,7 @@ class GroupLeaderboardViewModel(
    * @param streaks The list of streaks to process.
    * @param displayNames A map of userId to displayName.
    * @param isCurrent If true, uses current streak values; if false, uses all-time best values.
-   * @return A sorted list of LeaderboardEntry with ranks assigned.
+   * @return A sorted list of LeaderboardEntry with ranks assigned (ties share the same rank).
    */
   private fun buildLeaderboard(
       streaks: List<GroupStreak>,
@@ -158,16 +157,38 @@ class GroupLeaderboardViewModel(
                 }
                 .thenByDescending { if (isCurrent) it.currentStreakWeeks else it.bestStreakWeeks })
 
-    // Assign ranks (1-indexed)
-    return sorted.mapIndexed { index, streak ->
-      LeaderboardEntry(
-          userId = streak.userId,
-          displayName = displayNames[streak.userId] ?: "Unknown",
-          streakWeeks = if (isCurrent) streak.currentStreakWeeks else streak.bestStreakWeeks,
-          streakActivities =
-              if (isCurrent) streak.currentStreakActivities else streak.bestStreakActivities,
-          rank = index + 1)
+    // Assign ranks with tie handling (standard competition ranking)
+    val result = mutableListOf<LeaderboardEntry>()
+    var currentRank = 1
+
+    sorted.forEachIndexed { index, streak ->
+      val activities =
+          if (isCurrent) streak.currentStreakActivities else streak.bestStreakActivities
+      val weeks = if (isCurrent) streak.currentStreakWeeks else streak.bestStreakWeeks
+
+      // Check if this entry ties with the previous one
+      if (index > 0) {
+        val prevStreak = sorted[index - 1]
+        val prevActivities =
+            if (isCurrent) prevStreak.currentStreakActivities else prevStreak.bestStreakActivities
+        val prevWeeks = if (isCurrent) prevStreak.currentStreakWeeks else prevStreak.bestStreakWeeks
+
+        // Only increment rank if stats differ from previous entry
+        if (activities != prevActivities || weeks != prevWeeks) {
+          currentRank = index + 1
+        }
+      }
+
+      result.add(
+          LeaderboardEntry(
+              userId = streak.userId,
+              displayName = displayNames[streak.userId] ?: "Unknown",
+              streakWeeks = weeks,
+              streakActivities = activities,
+              rank = currentRank))
     }
+
+    return result
   }
 
   /**
