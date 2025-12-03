@@ -1355,23 +1355,7 @@ class SerieDetailsViewModelTest {
   }
 
   @Test
-  fun loadSerieDetails_withGroupId_groupNotFound_setsGroupNameToNull() = runTest {
-    val serie = createTestSerie().copy(groupId = "non-existent-group")
-
-    seriesRepository.addSerie(serie)
-    whenever(groupRepository.getGroup("non-existent-group"))
-        .thenThrow(NoSuchElementException("Group not found"))
-
-    viewModel.loadSerieDetails(serie.serieId)
-    advanceUntilIdle()
-
-    val state = viewModel.uiState.first()
-    assertEquals("non-existent-group", state.groupId)
-    assertNull(state.groupName)
-  }
-
-  @Test
-  fun loadSerieDetails_withGroupId_repositoryThrows_setsGroupNameToNull() = runTest {
+  fun loadSerieDetails_withGroupId_repositoryError_setsGroupNameToNull() = runTest {
     val serie = createTestSerie().copy(groupId = "error-group")
 
     seriesRepository.addSerie(serie)

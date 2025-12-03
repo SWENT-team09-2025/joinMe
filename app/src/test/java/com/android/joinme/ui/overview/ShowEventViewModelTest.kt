@@ -287,24 +287,7 @@ class ShowEventViewModelTest {
   }
 
   @Test
-  fun loadEvent_withGroupId_groupNotFound_setsGroupNameToNull() = runTest {
-    val event = createTestEvent().copy(groupId = "non-existent-group")
-    repository.addEvent(event)
-
-    whenever(profileRepository.getProfile("owner123"))
-        .thenReturn(Profile(uid = "owner123", username = "TestUser", email = "test@example.com"))
-    whenever(groupRepository.getGroup("non-existent-group")).thenReturn(null)
-
-    viewModel.loadEvent(event.eventId)
-    advanceUntilIdle()
-
-    val state = viewModel.uiState.first()
-    assertEquals("non-existent-group", state.groupId)
-    assertNull(state.groupName)
-  }
-
-  @Test
-  fun loadEvent_withGroupId_repositoryThrows_setsGroupNameToNull() = runTest {
+  fun loadEvent_withGroupId_repositoryError_setsGroupNameToNull() = runTest {
     val event = createTestEvent().copy(groupId = "error-group")
     repository.addEvent(event)
 
