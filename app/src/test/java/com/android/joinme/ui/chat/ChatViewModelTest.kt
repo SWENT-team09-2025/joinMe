@@ -1116,4 +1116,54 @@ class ChatViewModelTest {
     assertEquals("Invalid location coordinates", errorMsg)
     assertEquals(0, viewModel.uiState.value.messages.size) // No message added on error
   }
+
+  @Test
+  fun addApiKeyToMapUrl_appendsApiKeyToUrl() = runTest {
+    // Given
+    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
+    val mockPackageManager = io.mockk.mockk<android.content.pm.PackageManager>(relaxed = true)
+    val mockApplicationInfo = android.content.pm.ApplicationInfo()
+    val mockMetaData = io.mockk.mockk<android.os.Bundle>(relaxed = true)
+
+    io.mockk.every { mockMetaData.getString("com.google.android.geo.API_KEY") } returns
+        "test-api-key-12345"
+    mockApplicationInfo.metaData = mockMetaData
+
+    io.mockk.every { mockContext.packageName } returns "com.android.joinme"
+    io.mockk.every { mockContext.packageManager } returns mockPackageManager
+    io.mockk.every { mockPackageManager.getApplicationInfo(any<String>(), any<Int>()) } returns
+        mockApplicationInfo
+
+    val urlWithoutKey =
+        "https://maps.googleapis.com/maps/api/staticmap?center=46.5,6.6&zoom=15&size=600x300"
+
+    // When
+    val urlWithKey = viewModel.addApiKeyToMapUrl(mockContext, urlWithoutKey)
+
+    // Then
+    assertEquals("$urlWithoutKey&key=test-api-key-12345", urlWithKey)
+  }
+
+  @Test
+  fun addApiKeyToMapUrl_handlesNullMetaData() = runTest {
+    // Given
+    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
+    val mockPackageManager = io.mockk.mockk<android.content.pm.PackageManager>(relaxed = true)
+    val mockApplicationInfo = android.content.pm.ApplicationInfo()
+    mockApplicationInfo.metaData = null
+
+    io.mockk.every { mockContext.packageName } returns "com.android.joinme"
+    io.mockk.every { mockContext.packageManager } returns mockPackageManager
+    io.mockk.every { mockPackageManager.getApplicationInfo(any<String>(), any<Int>()) } returns
+        mockApplicationInfo
+
+    val urlWithoutKey =
+        "https://maps.googleapis.com/maps/api/staticmap?center=46.5,6.6&zoom=15&size=600x300"
+
+    // When
+    val urlWithKey = viewModel.addApiKeyToMapUrl(mockContext, urlWithoutKey)
+
+    // Then - should append empty key if not found
+    assertEquals("$urlWithoutKey&key=", urlWithKey)
+  }
 }
