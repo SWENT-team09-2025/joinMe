@@ -1605,4 +1605,5 @@ class MainActivityNavigationTest {
     // Verify we're on Profile screen
     composeTestRule.onNodeWithTag(ViewProfileTestTags.SCREEN).assertExists()
   }
+
 }

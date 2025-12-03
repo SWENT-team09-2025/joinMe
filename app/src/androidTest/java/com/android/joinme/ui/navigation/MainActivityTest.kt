@@ -12,6 +12,7 @@ import com.android.joinme.HttpClientProvider
 import com.android.joinme.MainActivity
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepositoryProvider
+import com.android.joinme.model.groups.GroupRepositoryLocal
 import com.android.joinme.model.notification.FCMTokenManager
 import com.google.firebase.auth.FirebaseAuth
 import io.mockk.every
@@ -36,6 +37,64 @@ class MainActivityTest {
     mockkObject(FCMTokenManager)
     every { FCMTokenManager.initializeFCMToken(any()) } returns Unit
     every { FCMTokenManager.clearFCMToken() } returns Unit
+
+    // Setup test groups in repository to avoid "Failed to access group" toasts
+    System.setProperty("IS_TEST_ENV", "true")
+    val groupRepository = GroupRepositoryProvider.repository
+    if (groupRepository is GroupRepositoryLocal) {
+      runBlocking {
+        // Add test groups used by notification tests
+        // Note: Groups for chat notifications include test-user-id as member (they don't need to join)
+        // Groups for join flow tests don't include test-user-id (so they can successfully join)
+
+        // Group for chat notification test - includes members
+        groupRepository.addGroup(
+            Group(
+                id = "test-group-789",
+                name = "Test Group Chat 789",
+                description = "Test group for notifications",
+                category = com.android.joinme.model.event.EventType.SPORTS,
+                ownerId = "owner-id",
+                memberIds = listOf("owner-id", "user-2")))
+
+        // Groups for join flow tests - no members except owner
+        groupRepository.addGroup(
+            Group(
+                id = "test-group-444",
+                name = "Test Group Chat 444",
+                description = "Test group for notifications",
+                category = com.android.joinme.model.event.EventType.SPORTS,
+                ownerId = "owner-id",
+                memberIds = listOf("owner-id")))
+
+        groupRepository.addGroup(
+            Group(
+                id = "test-group-333",
+                name = "Test Group Chat 333",
+                description = "Test group for notifications",
+                category = com.android.joinme.model.event.EventType.SPORTS,
+                ownerId = "owner-id",
+                memberIds = listOf("owner-id")))
+
+        groupRepository.addGroup(
+            Group(
+                id = "test-group-888",
+                name = "Test Group Chat 888",
+                description = "Test group for notifications",
+                category = com.android.joinme.model.event.EventType.SPORTS,
+                ownerId = "owner-id",
+                memberIds = listOf("owner-id")))
+
+        groupRepository.addGroup(
+            Group(
+                id = "intent-group-555",
+                name = "Intent Group 555",
+                description = "Test group for notifications",
+                category = com.android.joinme.model.event.EventType.SPORTS,
+                ownerId = "owner-id",
+                memberIds = listOf("owner-id")))
+      }
+    }
   }
 
   @After
