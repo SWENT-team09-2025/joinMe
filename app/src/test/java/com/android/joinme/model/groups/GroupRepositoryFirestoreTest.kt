@@ -1,7 +1,10 @@
 // Implemented with help of Claude AI
 package com.android.joinme.model.groups
 
+import android.content.Context
+import android.net.Uri
 import com.android.joinme.model.event.EventType
+import com.android.joinme.model.utils.ImageProcessor
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -14,6 +17,7 @@ import com.google.firebase.firestore.QueryDocumentSnapshot
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
+import com.google.firebase.storage.UploadTask
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -27,10 +31,6 @@ import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import android.content.Context
-import android.net.Uri
-import com.android.joinme.model.utils.ImageProcessor
-import com.google.firebase.storage.UploadTask
 
 class GroupRepositoryFirestoreTest {
 
@@ -1008,11 +1008,7 @@ class GroupRepositoryFirestoreTest {
     assertEquals(downloadUrlStr, result)
     verify { mockImageProcessor.processImage(mockUri) }
     verify { photoRef.putBytes(processedBytes) }
-    verify {
-      mockDocument.set(match<Group> {
-        it.photoUrl == downloadUrlStr
-      })
-    }
+    verify { mockDocument.set(match<Group> { it.photoUrl == downloadUrlStr }) }
   }
 
   @Test
@@ -1049,9 +1045,10 @@ class GroupRepositoryFirestoreTest {
     every { mockDocument.set(any()) } throws Exception("Firestore Error")
 
     // When/Then
-    val exception = assertThrows(Exception::class.java) {
-      runBlocking { repository.uploadGroupPhoto(mockContext, testGroupId, mockUri) }
-    }
+    val exception =
+        assertThrows(Exception::class.java) {
+          runBlocking { repository.uploadGroupPhoto(mockContext, testGroupId, mockUri) }
+        }
     assertTrue(exception.message!!.contains("Failed to upload group photo"))
 
     verify { photoRef.putBytes(processedBytes) }
@@ -1072,9 +1069,10 @@ class GroupRepositoryFirestoreTest {
     repository = GroupRepositoryFirestore(mockDb, mockStorage) { mockImageProcessor }
 
     // When/Then
-    val exception = assertThrows(Exception::class.java) {
-      runBlocking { repository.uploadGroupPhoto(mockContext, testGroupId, mockUri) }
-    }
+    val exception =
+        assertThrows(Exception::class.java) {
+          runBlocking { repository.uploadGroupPhoto(mockContext, testGroupId, mockUri) }
+        }
     assertTrue(exception.message!!.contains("Failed to upload group photo"))
     assertTrue(exception.cause!!.message!!.contains("Corrupt image"))
 
@@ -1100,9 +1098,10 @@ class GroupRepositoryFirestoreTest {
     every { photoRef.putBytes(any()) } throws Exception("Network error")
 
     // When/Then
-    val exception = assertThrows(Exception::class.java) {
-      runBlocking { repository.uploadGroupPhoto(mockContext, testGroupId, mockUri) }
-    }
+    val exception =
+        assertThrows(Exception::class.java) {
+          runBlocking { repository.uploadGroupPhoto(mockContext, testGroupId, mockUri) }
+        }
     assertTrue(exception.message!!.contains("Failed to upload group photo"))
 
     // Verify Firestore was NOT touched
