@@ -245,7 +245,6 @@ private fun ProfileContent(
       }
 }
 
-
 @Composable
 private fun BioSection(
     profile: Profile,
@@ -348,7 +347,6 @@ private fun MessageButton() {
       }
 }
 
-
 @Composable
 private fun CommonEventsAndGroupsSection(
     commonEvents: List<Event>,
@@ -442,4 +440,3 @@ private fun EmptyCard(message: String, testTag: String) {
             color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
 }
-

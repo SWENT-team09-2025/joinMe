@@ -52,19 +52,19 @@ fun ProfileHeader(
       horizontalArrangement = Arrangement.SpaceBetween,
       verticalAlignment = Alignment.CenterVertically) {
         Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.SpaceEvenly) {
-              StatItem(
-                  value = profile.eventsJoinedCount.toString(),
-                  label = stringResource(R.string.events_joined),
-                  testTag = eventsJoinedTestTag)
-              StatItem(
-                  value = formatCount(profile.followersCount),
-                  label = stringResource(R.string.followers),
-                  testTag = followersTestTag)
-              StatItem(
-                  value = profile.followingCount.toString(),
-                  label = stringResource(R.string.following),
-                  testTag = followingTestTag)
-            }
+          StatItem(
+              value = profile.eventsJoinedCount.toString(),
+              label = stringResource(R.string.events_joined),
+              testTag = eventsJoinedTestTag)
+          StatItem(
+              value = formatCount(profile.followersCount),
+              label = stringResource(R.string.followers),
+              testTag = followersTestTag)
+          StatItem(
+              value = profile.followingCount.toString(),
+              label = stringResource(R.string.following),
+              testTag = followingTestTag)
+        }
         Spacer(modifier = Modifier.width(Dimens.Spacing.medium))
         ProfilePhotoImage(
             photoUrl = profile.photoUrl,
