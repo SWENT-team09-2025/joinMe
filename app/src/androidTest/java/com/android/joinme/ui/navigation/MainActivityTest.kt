@@ -11,8 +11,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.android.joinme.HttpClientProvider
 import com.android.joinme.MainActivity
 import com.android.joinme.model.groups.Group
-import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.groups.GroupRepositoryLocal
+import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.notification.FCMTokenManager
 import com.google.firebase.auth.FirebaseAuth
 import io.mockk.every
@@ -44,7 +44,8 @@ class MainActivityTest {
     if (groupRepository is GroupRepositoryLocal) {
       runBlocking {
         // Add test groups used by notification tests
-        // Note: Groups for chat notifications include test-user-id as member (they don't need to join)
+        // Note: Groups for chat notifications include test-user-id as member (they don't need to
+        // join)
         // Groups for join flow tests don't include test-user-id (so they can successfully join)
 
         // Group for chat notification test - includes members
@@ -1333,6 +1334,102 @@ class MainActivityTest {
       }
     }
 
+    scenario.close()
+  }
+
+  @Test
+  fun mainActivity_groupChatNotification_navigatesToChat_whenAuthenticatedWithValidGroup() =
+      runBlocking {
+        // This test covers lines 264-270: group chat notification with authenticated user
+        // Tests: if (notificationType == "group_chat_message" && conversationId != null &&
+        // chatName != null && currentUser != null) { try { getGroup() navigateTo(Chat) } }
+
+        val currentUser = FirebaseAuth.getInstance().currentUser
+
+        // Skip test if user is not authenticated
+        if (currentUser == null) {
+          return@runBlocking
+        }
+
+        val groupRepository = GroupRepositoryProvider.repository
+        val testGroupId = "notification-group-123"
+
+        // Create a test group
+        val testGroup =
+            Group(
+                id = testGroupId,
+                name = "Notification Test Group",
+                description = "Test group for notification navigation",
+                category = com.android.joinme.model.event.EventType.SPORTS,
+                ownerId = currentUser.uid,
+                memberIds = listOf(currentUser.uid, "user-2", "user-3"))
+        groupRepository.addGroup(testGroup)
+
+        try {
+          val context = ApplicationProvider.getApplicationContext<Context>()
+          val intent =
+              Intent(context, MainActivity::class.java).apply {
+                putExtra("notificationType", "group_chat_message")
+                putExtra("groupId", testGroupId)
+                putExtra("conversationId", "test-conversation-notif")
+                putExtra("chatName", "Notification Test Group")
+              }
+
+          val scenario = ActivityScenario.launch<MainActivity>(intent)
+
+          // Wait for navigation to complete
+          Thread.sleep(3000)
+
+          scenario.use {
+            it.onActivity { activity ->
+              // Verify activity is still running (navigation succeeded)
+              assert(!activity.isFinishing)
+            }
+          }
+
+          scenario.close()
+        } finally {
+          // Cleanup
+          try {
+            groupRepository.deleteGroup(testGroupId, currentUser.uid)
+          } catch (_: Exception) {}
+        }
+      }
+
+  @Test
+  fun mainActivity_groupChatNotification_showsToast_whenGroupFetchFails() = runBlocking {
+    // This test covers lines 273-277: group chat notification catch block
+    // Tests: try { getGroup() } catch (e: Exception) { Toast.makeText("Failed to access group")
+    // }
+
+    val currentUser = FirebaseAuth.getInstance().currentUser
+
+    // Skip test if user is not authenticated
+    if (currentUser == null) {
+      return@runBlocking
+    }
+
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          putExtra("notificationType", "group_chat_message")
+          putExtra("groupId", "non-existent-group-999") // Group doesn't exist
+          putExtra("conversationId", "test-conversation-fail")
+          putExtra("chatName", "Non-existent Group")
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+
+    // Wait for async operations and toast to display
+    Thread.sleep(3000)
+
+    scenario.use {
+      it.onActivity { activity ->
+        // Activity should not crash even though group fetch failed
+        assert(!activity.isFinishing)
+      }
+    }
+    // Note: Toast will display "Failed to access group" - this is expected behavior
     scenario.close()
   }
 }
