@@ -868,17 +868,17 @@ class EditSerieScreenTest {
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
-    // Verify maxParticipants and visibility fields are hidden
-    composeTestRule
-        .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_MAX_PARTICIPANTS)
-        .assertDoesNotExist()
+    // Verify visibility field is hidden (but maxParticipants is now shown)
     composeTestRule
         .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_VISIBILITY)
         .assertDoesNotExist()
 
-    // Verify editable fields are shown
+    // Verify editable fields are shown (including maxParticipants)
     composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE).assertExists()
     composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_DESCRIPTION).assertExists()
+    composeTestRule
+        .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_MAX_PARTICIPANTS)
+        .assertExists()
     composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_DATE).assertExists()
     composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TIME).assertExists()
 

@@ -165,7 +165,6 @@ private fun MaxParticipantsField(
 }
 
 /** Date and Time picker fields row. */
-@SuppressLint("DefaultLocale")
 @Composable
 private fun DateTimePickerRow(
     formState: SerieFormState,
@@ -318,109 +317,6 @@ private fun VisibilityDropdownField(
       }
 }
 
-/** Helper composable to display error text if present. */
-@Composable
-private fun ErrorSupportingText(errorMessage: String?, testTag: String) {
-  errorMessage?.let {
-    Text(text = it, color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag(testTag))
-  }
-}
-
-/** Title field with error display. */
-@Composable
-private fun TitleField(
-    formState: SerieFormState,
-    testTags: SerieFormTestTags,
-    onTitleChange: (String) -> Unit
-) {
-  OutlinedTextField(
-      value = formState.title,
-      onValueChange = onTitleChange,
-      label = { Text("Title") },
-      modifier = Modifier.fillMaxWidth().testTag(testTags.inputSerieTitle),
-      isError = formState.invalidTitleMsg != null,
-      supportingText = { ErrorSupportingText(formState.invalidTitleMsg, testTags.errorMessage) },
-      singleLine = true)
-}
-
-/** Description field with error display. */
-@Composable
-private fun DescriptionField(
-    formState: SerieFormState,
-    testTags: SerieFormTestTags,
-    onDescriptionChange: (String) -> Unit
-) {
-  OutlinedTextField(
-      value = formState.description,
-      onValueChange = onDescriptionChange,
-      label = { Text("Description") },
-      modifier =
-          Modifier.fillMaxWidth()
-              .height(Dimens.SerieForm.descriptionField)
-              .testTag(testTags.inputSerieDescription),
-      isError = formState.invalidDescriptionMsg != null,
-      supportingText = {
-        ErrorSupportingText(formState.invalidDescriptionMsg, testTags.errorMessage)
-      },
-      maxLines = 4)
-}
-
-/** Max participants field (only shown when no group is selected). */
-@Composable
-private fun ConditionalMaxParticipantsField(
-    selectedGroupId: String?,
-    formState: SerieFormState,
-    testTags: SerieFormTestTags,
-    onMaxParticipantsChange: (String) -> Unit
-) {
-  if (selectedGroupId == null) {
-    MaxParticipantsField(
-        formState = formState,
-        testTags = testTags,
-        onMaxParticipantsChange = onMaxParticipantsChange)
-  }
-}
-
-/** Visibility field (only shown when no group is selected). */
-@Composable
-private fun ConditionalVisibilityField(
-    selectedGroupId: String?,
-    formState: SerieFormState,
-    testTags: SerieFormTestTags,
-    onVisibilityChange: (String) -> Unit
-) {
-  if (selectedGroupId == null) {
-    VisibilityDropdownField(
-        formState = formState, testTags = testTags, onVisibilityChange = onVisibilityChange)
-  }
-}
-
-/** Save button with loading state. */
-@Composable
-private fun SaveButton(
-    formState: SerieFormState,
-    testTags: SerieFormTestTags,
-    saveButtonText: String,
-    onSave: () -> Boolean
-) {
-  Button(
-      onClick = { onSave() },
-      modifier =
-          Modifier.fillMaxWidth()
-              .height(Dimens.Button.standardHeight)
-              .testTag(testTags.buttonSaveSerie),
-      colors = MaterialTheme.customColors.buttonColors(),
-      enabled = formState.isValid && !formState.isLoading) {
-        if (formState.isLoading) {
-          CircularProgressIndicator(
-              modifier = Modifier.size(Dimens.IconSize.medium),
-              color = MaterialTheme.colorScheme.onPrimary)
-        } else {
-          Text(saveButtonText)
-        }
-      }
-}
-
 /** Data class representing the test tags for serie form fields. */
 data class SerieFormTestTags(
     val inputSerieTitle: String,
@@ -550,110 +446,119 @@ fun SerieFormScreen(
     onGoBack: () -> Unit,
     saveButtonText: String = "NEXT"
 ) {
-  Scaffold(topBar = { SerieFormTopBar(title = title, onGoBack = onGoBack) }) { paddingValues ->
-    SerieFormContent(
-        paddingValues = paddingValues,
-        formState = formState,
-        testTags = testTags,
-        selectedGroupId = selectedGroupId,
-        availableGroups = availableGroups,
-        groupTestTag = groupTestTag,
-        onGroupChange = onGroupChange,
-        onTitleChange = onTitleChange,
-        onDescriptionChange = onDescriptionChange,
-        onMaxParticipantsChange = onMaxParticipantsChange,
-        onDateChange = onDateChange,
-        onTimeChange = onTimeChange,
-        onVisibilityChange = onVisibilityChange,
-        onSave = onSave,
-        saveButtonText = saveButtonText)
-  }
-}
-
-/** Top bar for serie form screen. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SerieFormTopBar(title: String, onGoBack: () -> Unit) {
-  Column {
-    CenterAlignedTopAppBar(
-        title = { Text(title, style = MaterialTheme.typography.titleLarge) },
-        navigationIcon = {
-          IconButton(onClick = onGoBack) {
-            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-          }
-        })
-    HorizontalDivider(
-        thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
-  }
-}
-
-/** Main content area for the serie form. */
-@Composable
-private fun SerieFormContent(
-    paddingValues: PaddingValues,
-    formState: SerieFormState,
-    testTags: SerieFormTestTags,
-    selectedGroupId: String?,
-    availableGroups: List<Group>,
-    groupTestTag: String,
-    onGroupChange: ((String?) -> Unit)?,
-    onTitleChange: (String) -> Unit,
-    onDescriptionChange: (String) -> Unit,
-    onMaxParticipantsChange: (String) -> Unit,
-    onDateChange: (String) -> Unit,
-    onTimeChange: (String) -> Unit,
-    onVisibilityChange: (String) -> Unit,
-    onSave: () -> Boolean,
-    saveButtonText: String
-) {
-  Column(
-      modifier =
-          Modifier.fillMaxSize()
-              .padding(paddingValues)
-              .padding(horizontal = Dimens.Padding.medium)
-              .verticalScroll(rememberScrollState()),
-      verticalArrangement = Arrangement.spacedBy(Dimens.Padding.medium)) {
-        Spacer(modifier = Modifier.height(Dimens.Padding.small))
-
-        onGroupChange?.let {
-          GroupDropdownField(
-              selectedGroupId = selectedGroupId,
-              availableGroups = availableGroups,
-              groupTestTag = groupTestTag,
-              onGroupChange = it)
+  Scaffold(
+      topBar = {
+        Column {
+          CenterAlignedTopAppBar(
+              title = { Text(title, style = MaterialTheme.typography.titleLarge) },
+              navigationIcon = {
+                IconButton(onClick = onGoBack) {
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                      contentDescription = "Back")
+                }
+              })
+          HorizontalDivider(
+              thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
         }
+      }) { paddingValues ->
+        Column(
+            modifier =
+                Modifier.fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = Dimens.Padding.medium)
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(Dimens.Padding.medium)) {
+              Spacer(modifier = Modifier.height(Dimens.Padding.small))
 
-        TitleField(formState = formState, testTags = testTags, onTitleChange = onTitleChange)
+              // Group dropdown (only show if onGroupChange is provided)
+              if (onGroupChange != null) {
+                GroupDropdownField(
+                    selectedGroupId = selectedGroupId,
+                    availableGroups = availableGroups,
+                    groupTestTag = groupTestTag,
+                    onGroupChange = onGroupChange)
+              }
 
-        DescriptionField(
-            formState = formState, testTags = testTags, onDescriptionChange = onDescriptionChange)
+              // Title field
+              OutlinedTextField(
+                  value = formState.title,
+                  onValueChange = onTitleChange,
+                  label = { Text("Title") },
+                  modifier = Modifier.fillMaxWidth().testTag(testTags.inputSerieTitle),
+                  isError = formState.invalidTitleMsg != null,
+                  supportingText = {
+                    if (formState.invalidTitleMsg != null) {
+                      Text(
+                          text = formState.invalidTitleMsg,
+                          color = MaterialTheme.colorScheme.error,
+                          modifier = Modifier.testTag(testTags.errorMessage))
+                    }
+                  },
+                  singleLine = true)
 
-        ConditionalMaxParticipantsField(
-            selectedGroupId = selectedGroupId,
-            formState = formState,
-            testTags = testTags,
-            onMaxParticipantsChange = onMaxParticipantsChange)
+              // Description field
+              OutlinedTextField(
+                  value = formState.description,
+                  onValueChange = onDescriptionChange,
+                  label = { Text("Description") },
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .height(Dimens.SerieForm.descriptionField)
+                          .testTag(testTags.inputSerieDescription),
+                  isError = formState.invalidDescriptionMsg != null,
+                  supportingText = {
+                    if (formState.invalidDescriptionMsg != null) {
+                      Text(
+                          text = formState.invalidDescriptionMsg,
+                          color = MaterialTheme.colorScheme.error,
+                          modifier = Modifier.testTag(testTags.errorMessage))
+                    }
+                  },
+                  maxLines = 4)
 
-        DateTimePickerRow(
-            formState = formState,
-            testTags = testTags,
-            onDateChange = onDateChange,
-            onTimeChange = onTimeChange)
+              // Max Participants field with NumberPicker
+              MaxParticipantsField(
+                  formState = formState,
+                  testTags = testTags,
+                  onMaxParticipantsChange = onMaxParticipantsChange)
 
-        ConditionalVisibilityField(
-            selectedGroupId = selectedGroupId,
-            formState = formState,
-            testTags = testTags,
-            onVisibilityChange = onVisibilityChange)
+              // Date and Time row
+              DateTimePickerRow(
+                  formState = formState,
+                  testTags = testTags,
+                  onDateChange = onDateChange,
+                  onTimeChange = onTimeChange)
 
-        Spacer(modifier = Modifier.height(Dimens.Padding.medium))
+              // Serie Visibility field with dropdown (hidden when group is selected)
+              if (selectedGroupId == null) {
+                VisibilityDropdownField(
+                    formState = formState,
+                    testTags = testTags,
+                    onVisibilityChange = onVisibilityChange)
+              }
 
-        SaveButton(
-            formState = formState,
-            testTags = testTags,
-            saveButtonText = saveButtonText,
-            onSave = onSave)
+              Spacer(modifier = Modifier.height(Dimens.Padding.medium))
 
-        Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
+              // Save button
+              Button(
+                  onClick = { onSave() },
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .height(Dimens.Button.standardHeight)
+                          .testTag(testTags.buttonSaveSerie),
+                  colors = MaterialTheme.customColors.buttonColors(),
+                  enabled = formState.isValid && !formState.isLoading) {
+                    if (formState.isLoading) {
+                      CircularProgressIndicator(
+                          modifier = Modifier.size(Dimens.IconSize.medium),
+                          color = MaterialTheme.colorScheme.onPrimary)
+                    } else {
+                      Text(saveButtonText)
+                    }
+                  }
+
+              Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
+            }
       }
 }
