@@ -62,4 +62,10 @@
     <string name="copy">Copy</string>
     <string name="edit">Edit</string>
     <string name="see_who_read">See who read</string>
+
+    <!-- Presence (Online Users) -->
+    <string name="online_users_zero">0 users online</string>
+    <string name="online_users_one">1 user online</string>
+    <string name="online_users_many">%1$d users online</string>
+    <string name="online_indicator_description">Online status indicator</string>
 </resources>

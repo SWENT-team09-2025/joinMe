@@ -29,9 +29,13 @@ import androidx.navigation.navigation
 import com.android.joinme.model.chat.ChatRepositoryProvider
 import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.notification.FCMTokenManager
+import com.android.joinme.model.presence.JoinMeContextIdProvider
+import com.android.joinme.model.presence.PresenceManager
+import com.android.joinme.model.presence.PresenceRepositoryProvider
 import com.android.joinme.model.profile.ProfileRepositoryProvider
 import com.android.joinme.ui.chat.ChatScreen
 import com.android.joinme.ui.chat.ChatViewModel
+import com.android.joinme.ui.chat.PresenceViewModel
 import com.android.joinme.ui.groups.ActivityGroupScreen
 import com.android.joinme.ui.groups.CreateGroupScreen
 import com.android.joinme.ui.groups.EditGroupScreen
@@ -163,10 +167,20 @@ fun JoinMe(
   val initialDestination =
       startDestination ?: if (currentUser == null) Screen.Auth.name else Screen.Overview.route
 
-  // Initialize FCM token when user is logged in
-  LaunchedEffect(Unit) {
+  // Initialize FCM token and presence tracking when user is logged in
+  LaunchedEffect(currentUser) {
     if (currentUser != null) {
       FCMTokenManager.initializeFCMToken(context)
+
+      // Start presence tracking for this user
+      val activity = context as? ComponentActivity
+      activity?.application?.let { app ->
+        PresenceManager.getInstance()
+            .startTracking(app, currentUser!!.uid, JoinMeContextIdProvider())
+      }
+    } else {
+      // Stop presence tracking when user logs out
+      PresenceManager.getInstance().stopTracking()
     }
   }
 
@@ -550,6 +564,19 @@ fun JoinMe(
                         }
                       })
 
+          // Create PresenceViewModel for tracking online users
+          val presenceViewModel: PresenceViewModel =
+              viewModel(
+                  factory =
+                      object : androidx.lifecycle.ViewModelProvider.Factory {
+                        override fun <T : androidx.lifecycle.ViewModel> create(
+                            modelClass: Class<T>
+                        ): T {
+                          @Suppress("UNCHECKED_CAST")
+                          return PresenceViewModel(PresenceRepositoryProvider.repository) as T
+                        }
+                      })
+
           val currentUserId = currentUser?.uid ?: ""
           val currentUserName = currentUser?.displayName ?: "Unknown User"
 
@@ -560,7 +587,8 @@ fun JoinMe(
               currentUserName = currentUserName,
               viewModel = chatViewModel,
               totalParticipants = totalParticipants,
-              onLeaveClick = { navigationActions.goBack() })
+              onLeaveClick = { navigationActions.goBack() },
+              presenceViewModel = presenceViewModel)
         } else {
           Toast.makeText(context, "Chat ID or title is null", Toast.LENGTH_SHORT).show()
         }
