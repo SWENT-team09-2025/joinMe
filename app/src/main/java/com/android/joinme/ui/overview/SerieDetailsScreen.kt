@@ -29,6 +29,23 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
+ * Gets the current user ID with test environment support.
+ *
+ * @return The current user's UID, or "test-user-id" in test environments
+ */
+private fun getCurrentUserIdForSerieDetails(): String {
+  val firebaseUser = Firebase.auth.currentUser?.uid
+  if (firebaseUser != null) return firebaseUser
+
+  val isTestEnv =
+      android.os.Build.FINGERPRINT == "robolectric" ||
+          android.os.Debug.isDebuggerConnected() ||
+          System.getProperty("IS_TEST_ENV") == "true"
+
+  return if (isTestEnv) "test-user-id" else "unknown"
+}
+
+/**
  * Test tags for UI testing of the Serie Details screen components.
  *
  * Provides consistent identifiers for testing individual UI elements.
@@ -117,242 +134,298 @@ fun SerieDetailsScreen(
     onAddEventClick: () -> Unit = {},
     onQuitSerieSuccess: () -> Unit = {},
     onEditSerieClick: (String) -> Unit = {},
-    currentUserId: String = run {
-      // First check if Firebase auth has a user
-      val firebaseUser = Firebase.auth.currentUser?.uid
-      if (firebaseUser != null) {
-        firebaseUser
-      } else {
-        // Detect test environment
-        val isTestEnv =
-            android.os.Build.FINGERPRINT == "robolectric" ||
-                android.os.Debug.isDebuggerConnected() ||
-                System.getProperty("IS_TEST_ENV") == "true"
-        // Return test user ID in test environments only if Firebase auth is not available
-        if (isTestEnv) "test-user-id" else "unknown"
-      }
-    }
+    currentUserId: String = getCurrentUserIdForSerieDetails()
 ) {
   val uiState by serieDetailsViewModel.uiState.collectAsState()
-  val errorMsg = uiState.errorMsg
   val context = LocalContext.current
   val coroutineScope = rememberCoroutineScope()
   var showDeleteDialog by remember { mutableStateOf(false) }
-
-  // Load serie details when the screen is first displayed
-  LaunchedEffect(serieId) { serieDetailsViewModel.loadSerieDetails(serieId) }
-
-  // Show error messages as toasts
-  LaunchedEffect(errorMsg) {
-    if (errorMsg != null) {
-      Toast.makeText(context, errorMsg, Toast.LENGTH_SHORT).show()
-      serieDetailsViewModel.clearErrorMsg()
-    }
-  }
-
   var ownerDisplayName by remember { mutableStateOf("...") }
-  // Only use LaunchedEffect to fetch owner display name (no composable calls here)
-  LaunchedEffect(uiState.serie?.ownerId) {
-    uiState.serie?.ownerId?.let { id ->
-      ownerDisplayName = serieDetailsViewModel.getOwnerDisplayName(id)
-    }
-  }
 
-  // Delete confirmation dialog (composable placed at top level)
+  // Load serie details and show error messages
+  SerieDetailsEffects(
+      serieId = serieId,
+      errorMsg = uiState.errorMsg,
+      ownerId = uiState.serie?.ownerId,
+      viewModel = serieDetailsViewModel,
+      context = context,
+      onOwnerNameLoaded = { ownerDisplayName = it })
+
+  // Delete confirmation dialog
   ShowDeleteWindow(
-      showDeleteDialog,
+      showDeleteDialog = showDeleteDialog,
       onDismiss = { showDeleteDialog = false },
       onConfirm = { showDeleteDialog = false },
-      onGoBack,
-      serieId,
-      serieDetailsViewModel,
-      coroutineScope)
+      onGoBack = onGoBack,
+      serieId = serieId,
+      serieDetailsViewModel = serieDetailsViewModel,
+      coroutineScope = coroutineScope)
 
-  // Main UI scaffold (now outside LaunchedEffect)
+  // Main UI scaffold
   Scaffold(
       modifier = Modifier.testTag(SerieDetailsScreenTestTags.SCREEN),
       topBar = {
-        Column {
-          CenterAlignedTopAppBar(
-              title = {
-                Text(
-                    text = uiState.serie?.title ?: "Loading...",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.testTag(SerieDetailsScreenTestTags.SERIE_TITLE))
-              },
-              navigationIcon = {
-                IconButton(
-                    onClick = onGoBack,
-                    modifier = Modifier.testTag(SerieDetailsScreenTestTags.BACK_BUTTON)) {
-                      Icon(
-                          imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                          contentDescription = "Back")
-                    }
-              },
-              colors =
-                  TopAppBarDefaults.topAppBarColors(
-                      containerColor = MaterialTheme.colorScheme.surface))
-          HorizontalDivider(
-              thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
-        }
+        SerieDetailsTopBar(serieTitle = uiState.serie?.title ?: "Loading...", onGoBack = onGoBack)
       }) { paddingValues ->
-        if (uiState.isLoading) {
-          // Loading state
-          Box(
-              modifier = Modifier.fillMaxSize().padding(paddingValues),
-              contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(
-                    modifier = Modifier.testTag(SerieDetailsScreenTestTags.LOADING))
-              }
-        } else if (uiState.serie != null) {
-          // Content state
-          Column(
-              modifier =
-                  Modifier.fillMaxSize()
-                      .padding(paddingValues)
-                      .padding(horizontal = Dimens.Spacing.large),
-              verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium),
-          ) {
-            Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
-
-            // Meeting date/time
-            Text(
-                text = "MEETING: ${uiState.formattedDateTime}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.fillMaxWidth().testTag(SerieDetailsScreenTestTags.MEETING_INFO),
-                textAlign = TextAlign.Center)
-
-            Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
-
-            // Info row: Visibility, Members, Duration
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically) {
-                  Text(
-                      text = uiState.visibilityDisplay,
-                      style = MaterialTheme.typography.bodyMedium,
-                      color = MaterialTheme.colorScheme.onSurface,
-                      modifier = Modifier.testTag(SerieDetailsScreenTestTags.VISIBILITY))
-
-                  Text(
-                      text = "MEMBERS : ${uiState.participantsCount}",
-                      style = MaterialTheme.typography.bodyMedium,
-                      color = MaterialTheme.colorScheme.onSurface,
-                      modifier = Modifier.testTag(SerieDetailsScreenTestTags.MEMBERS_COUNT))
-
-                  Text(
-                      text = uiState.formattedDuration,
-                      style = MaterialTheme.typography.bodyMedium,
-                      color = MaterialTheme.colorScheme.onSurface,
-                      modifier = Modifier.testTag(SerieDetailsScreenTestTags.DURATION))
+        when {
+          uiState.isLoading -> {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                contentAlignment = Alignment.Center) {
+                  CircularProgressIndicator(
+                      modifier = Modifier.testTag(SerieDetailsScreenTestTags.LOADING))
                 }
-
-            HorizontalDivider(
-                thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
-
-            // Description
-            Text(
-                text = uiState.serie?.description ?: "",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .heightIn(min = Dimens.Spacing.large)
-                        .testTag(SerieDetailsScreenTestTags.DESCRIPTION))
-
-            HorizontalDivider(
-                thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
-
-            // Events list in LazyColumn with fixed size
-            if (uiState.events.isNotEmpty()) {
-              LazyColumn(
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .weight(1f)
-                          .testTag(SerieDetailsScreenTestTags.EVENT_LIST),
-                  verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium),
-              ) {
-                items(uiState.events.size) { index ->
-                  val event = uiState.events[index]
-                  EventCard(
-                      event = event,
-                      onClick = { onEventCardClick(event.eventId) },
-                      testTag = "${SerieDetailsScreenTestTags.EVENT_CARD}_${event.eventId}")
-                }
-              }
-            } else {
-              // Empty state - same height as LazyColumn
-              Box(
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .weight(1f) // Same height as LazyColumn
-                          .testTag(SerieDetailsScreenTestTags.EVENT_LIST),
-                  contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "No events in this serie yet",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center)
-                  }
-            }
-
-            HorizontalDivider(
-                thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
-
-            // Owner information
-            Text(
-                text = "Created by $ownerDisplayName",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .testTag(SerieDetailsScreenTestTags.OWNER_INFO)
-                        .padding(vertical = Dimens.Spacing.small),
-                textAlign = TextAlign.Center)
-
-            // Group information (if serie belongs to a group)
-            uiState.groupName?.let { groupName ->
-              Text(
-                  text = stringResource(R.string.group_name, groupName),
-                  style = MaterialTheme.typography.bodyMedium,
-                  fontWeight = FontWeight.Medium,
-                  color = MaterialTheme.colorScheme.onSurface,
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .testTag(SerieDetailsScreenTestTags.GROUP_INFO)
-                          .padding(vertical = Dimens.Spacing.small),
-                  textAlign = TextAlign.Center)
-            }
-
-            // Only show buttons if the serie is not expired
-            if (!uiState.isPastSerie) {
-              // Add event button (only shown to owner)
-              if (uiState.isOwner(currentUserId)) {
-                OwnerActionButtons(
-                    serieId = serieId,
-                    serieDetailsViewModel = serieDetailsViewModel,
-                    onAddEventClick = onAddEventClick,
-                    onEditSerieClick = onEditSerieClick,
-                    onShowDeleteDialog = { showDeleteDialog = true },
-                    currentUserId = currentUserId)
-              }
-
-              // Join/Quit serie button (shown to non-owners)
-              if (!uiState.isOwner(currentUserId)) {
-                ParticipantActionButtons(
-                    currentUserId = currentUserId,
-                    serieDetailsViewModel = serieDetailsViewModel,
-                    onQuitSerieSuccess = onQuitSerieSuccess,
-                    coroutineScope = coroutineScope)
-              }
-            }
-
-            // Add space at the bottom for better visual appearance
-            Spacer(modifier = Modifier.height(Dimens.Spacing.small))
+          }
+          uiState.serie != null -> {
+            SerieDetailsContent(
+                uiState = uiState,
+                paddingValues = paddingValues,
+                ownerDisplayName = ownerDisplayName,
+                currentUserId = currentUserId,
+                serieId = serieId,
+                serieDetailsViewModel = serieDetailsViewModel,
+                onEventCardClick = onEventCardClick,
+                onAddEventClick = onAddEventClick,
+                onEditSerieClick = onEditSerieClick,
+                onQuitSerieSuccess = onQuitSerieSuccess,
+                onShowDeleteDialog = { showDeleteDialog = true },
+                coroutineScope = coroutineScope)
           }
         }
+      }
+}
+
+/** Handles LaunchedEffects for loading data and showing errors. */
+@Composable
+private fun SerieDetailsEffects(
+    serieId: String,
+    errorMsg: String?,
+    ownerId: String?,
+    viewModel: SerieDetailsViewModel,
+    context: android.content.Context,
+    onOwnerNameLoaded: (String) -> Unit
+) {
+  LaunchedEffect(serieId) { viewModel.loadSerieDetails(serieId) }
+
+  LaunchedEffect(errorMsg) {
+    errorMsg?.let {
+      Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+      viewModel.clearErrorMsg()
+    }
+  }
+
+  LaunchedEffect(ownerId) {
+    ownerId?.let { id -> onOwnerNameLoaded(viewModel.getOwnerDisplayName(id)) }
+  }
+}
+
+/** Top bar for serie details screen. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SerieDetailsTopBar(serieTitle: String, onGoBack: () -> Unit) {
+  Column {
+    CenterAlignedTopAppBar(
+        title = {
+          Text(
+              text = serieTitle,
+              style = MaterialTheme.typography.titleLarge,
+              modifier = Modifier.testTag(SerieDetailsScreenTestTags.SERIE_TITLE))
+        },
+        navigationIcon = {
+          IconButton(
+              onClick = onGoBack,
+              modifier = Modifier.testTag(SerieDetailsScreenTestTags.BACK_BUTTON)) {
+                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+              }
+        },
+        colors =
+            TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface))
+    HorizontalDivider(
+        thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
+  }
+}
+
+/** Serie information display (meeting time, visibility, members, duration, description). */
+@Composable
+private fun SerieInfo(uiState: SerieDetailsUIState) {
+  Text(
+      text = "MEETING: ${uiState.formattedDateTime}",
+      style = MaterialTheme.typography.bodyMedium,
+      color = MaterialTheme.colorScheme.onSurface,
+      modifier = Modifier.fillMaxWidth().testTag(SerieDetailsScreenTestTags.MEETING_INFO),
+      textAlign = TextAlign.Center)
+
+  Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
+
+  Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = uiState.visibilityDisplay,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.testTag(SerieDetailsScreenTestTags.VISIBILITY))
+
+        Text(
+            text = "MEMBERS : ${uiState.participantsCount}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.testTag(SerieDetailsScreenTestTags.MEMBERS_COUNT))
+
+        Text(
+            text = uiState.formattedDuration,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.testTag(SerieDetailsScreenTestTags.DURATION))
+      }
+
+  HorizontalDivider(thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
+
+  Text(
+      text = uiState.serie?.description ?: "",
+      style = MaterialTheme.typography.bodyMedium,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      modifier =
+          Modifier.fillMaxWidth()
+              .heightIn(min = Dimens.Spacing.large)
+              .testTag(SerieDetailsScreenTestTags.DESCRIPTION))
+
+  HorizontalDivider(thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
+}
+
+/** Events list or empty state. */
+@Composable
+private fun ColumnScope.EventsList(
+    events: List<com.android.joinme.model.event.Event>,
+    onEventCardClick: (String) -> Unit
+) {
+  if (events.isNotEmpty()) {
+    LazyColumn(
+        modifier =
+            Modifier.fillMaxWidth().weight(1f).testTag(SerieDetailsScreenTestTags.EVENT_LIST),
+        verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium)) {
+          items(events.size) { index ->
+            val event = events[index]
+            EventCard(
+                event = event,
+                onClick = { onEventCardClick(event.eventId) },
+                testTag = "${SerieDetailsScreenTestTags.EVENT_CARD}_${event.eventId}")
+          }
+        }
+  } else {
+    Box(
+        modifier =
+            Modifier.fillMaxWidth().weight(1f).testTag(SerieDetailsScreenTestTags.EVENT_LIST),
+        contentAlignment = Alignment.Center) {
+          Text(
+              text = "No events in this serie yet",
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              textAlign = TextAlign.Center)
+        }
+  }
+}
+
+/** Action buttons based on user role. */
+@Composable
+private fun SerieActionButtons(
+    uiState: SerieDetailsUIState,
+    currentUserId: String,
+    serieId: String,
+    serieDetailsViewModel: SerieDetailsViewModel,
+    onAddEventClick: () -> Unit,
+    onEditSerieClick: (String) -> Unit,
+    onQuitSerieSuccess: () -> Unit,
+    onShowDeleteDialog: () -> Unit,
+    coroutineScope: CoroutineScope
+) {
+  if (!uiState.isPastSerie) {
+    when {
+      uiState.isOwner(currentUserId) -> {
+        OwnerActionButtons(
+            serieId = serieId,
+            serieDetailsViewModel = serieDetailsViewModel,
+            onAddEventClick = onAddEventClick,
+            onEditSerieClick = onEditSerieClick,
+            onShowDeleteDialog = onShowDeleteDialog,
+            currentUserId = currentUserId)
+      }
+      else -> {
+        ParticipantActionButtons(
+            currentUserId = currentUserId,
+            serieDetailsViewModel = serieDetailsViewModel,
+            onQuitSerieSuccess = onQuitSerieSuccess,
+            coroutineScope = coroutineScope)
+      }
+    }
+  }
+}
+
+/** Content shown when serie is loaded. */
+@Composable
+private fun SerieDetailsContent(
+    uiState: SerieDetailsUIState,
+    paddingValues: PaddingValues,
+    ownerDisplayName: String,
+    currentUserId: String,
+    serieId: String,
+    serieDetailsViewModel: SerieDetailsViewModel,
+    onEventCardClick: (String) -> Unit,
+    onAddEventClick: () -> Unit,
+    onEditSerieClick: (String) -> Unit,
+    onQuitSerieSuccess: () -> Unit,
+    onShowDeleteDialog: () -> Unit,
+    coroutineScope: CoroutineScope
+) {
+  Column(
+      modifier =
+          Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = Dimens.Spacing.large),
+      verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium)) {
+        Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
+
+        SerieInfo(uiState = uiState)
+
+        EventsList(events = uiState.events, onEventCardClick = onEventCardClick)
+
+        HorizontalDivider(
+            thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
+
+        Text(
+            text = "Created by $ownerDisplayName",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier =
+                Modifier.fillMaxWidth()
+                    .testTag(SerieDetailsScreenTestTags.OWNER_INFO)
+                    .padding(vertical = Dimens.Spacing.small),
+            textAlign = TextAlign.Center)
+
+        uiState.groupName?.let { groupName ->
+          Text(
+              text = stringResource(R.string.group_name, groupName),
+              style = MaterialTheme.typography.bodyMedium,
+              fontWeight = FontWeight.Medium,
+              color = MaterialTheme.colorScheme.onSurface,
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .testTag(SerieDetailsScreenTestTags.GROUP_INFO)
+                      .padding(vertical = Dimens.Spacing.small),
+              textAlign = TextAlign.Center)
+        }
+
+        SerieActionButtons(
+            uiState = uiState,
+            currentUserId = currentUserId,
+            serieId = serieId,
+            serieDetailsViewModel = serieDetailsViewModel,
+            onAddEventClick = onAddEventClick,
+            onEditSerieClick = onEditSerieClick,
+            onQuitSerieSuccess = onQuitSerieSuccess,
+            onShowDeleteDialog = onShowDeleteDialog,
+            coroutineScope = coroutineScope)
+
+        Spacer(modifier = Modifier.height(Dimens.Spacing.small))
       }
 }
 
