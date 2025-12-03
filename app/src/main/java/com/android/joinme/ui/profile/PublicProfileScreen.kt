@@ -4,6 +4,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -109,6 +110,8 @@ object PublicProfileScreenTestTags {
  * @param onBackClick Callback invoked when the user taps the back button
  * @param onEventClick Callback invoked when the user taps on an event card
  * @param onGroupClick Callback invoked when the user taps on a group card
+ * @param onFollowersClick Callback invoked when the user taps on the followers count
+ * @param onFollowingClick Callback invoked when the user taps on the following count
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,7 +120,9 @@ fun PublicProfileScreen(
     viewModel: PublicProfileViewModel = viewModel(),
     onBackClick: () -> Unit = {},
     onEventClick: (Event) -> Unit = {},
-    onGroupClick: (Group) -> Unit = {}
+    onGroupClick: (Group) -> Unit = {},
+    onFollowersClick: (String) -> Unit = {},
+    onFollowingClick: (String) -> Unit = {}
 ) {
   val profile by viewModel.profile.collectAsState()
   val commonEvents by viewModel.commonEvents.collectAsState()
@@ -202,7 +207,9 @@ fun PublicProfileScreen(
                       commonEvents = commonEvents,
                       commonGroups = commonGroups,
                       onEventClick = onEventClick,
-                      onGroupClick = onGroupClick)
+                      onGroupClick = onGroupClick,
+                      onFollowersClick = { onFollowersClick(userId) },
+                      onFollowingClick = { onFollowingClick(userId) })
                 }
               }
             }
@@ -218,12 +225,17 @@ private fun ProfileContent(
     commonEvents: List<Event>,
     commonGroups: List<Group>,
     onEventClick: (Event) -> Unit,
-    onGroupClick: (Group) -> Unit
+    onGroupClick: (Group) -> Unit,
+    onFollowersClick: () -> Unit,
+    onFollowingClick: () -> Unit
 ) {
   Column(
       modifier = Modifier.fillMaxSize().padding(Dimens.Padding.medium),
       verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium)) {
-        ProfileHeader(profile = profile)
+        ProfileHeader(
+            profile = profile,
+            onFollowersClick = onFollowersClick,
+            onFollowingClick = onFollowingClick)
         BioSection(
             profile = profile,
             isFollowing = isFollowing,
@@ -240,7 +252,11 @@ private fun ProfileContent(
 }
 
 @Composable
-private fun ProfileHeader(profile: Profile) {
+private fun ProfileHeader(
+    profile: Profile,
+    onFollowersClick: () -> Unit,
+    onFollowingClick: () -> Unit
+) {
   Row(
       modifier =
           Modifier.fillMaxWidth()
@@ -256,11 +272,13 @@ private fun ProfileHeader(profile: Profile) {
           StatItem(
               value = formatCount(profile.followersCount),
               label = stringResource(R.string.followers),
-              testTag = PublicProfileScreenTestTags.FOLLOWERS_STAT)
+              testTag = PublicProfileScreenTestTags.FOLLOWERS_STAT,
+              onClick = onFollowersClick)
           StatItem(
               value = profile.followingCount.toString(),
               label = stringResource(R.string.following),
-              testTag = PublicProfileScreenTestTags.FOLLOWING_STAT)
+              testTag = PublicProfileScreenTestTags.FOLLOWING_STAT,
+              onClick = onFollowingClick)
         }
         ProfilePhotoImage(
             photoUrl = profile.photoUrl,
@@ -487,18 +505,28 @@ private fun EmptyCard(message: String, testTag: String) {
 }
 
 @Composable
-private fun StatItem(value: String, label: String, testTag: String = "") {
-  Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.testTag(testTag)) {
-    Text(
-        text = value,
-        style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onBackground)
-    Text(
-        text = label,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
-  }
+private fun StatItem(
+    value: String,
+    label: String,
+    testTag: String = "",
+    onClick: (() -> Unit)? = null
+) {
+  Column(
+      horizontalAlignment = Alignment.CenterHorizontally,
+      modifier =
+          Modifier.testTag(testTag).let { modifier ->
+            if (onClick != null) modifier.clickable(onClick = onClick) else modifier
+          }) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
+      }
 }
 
 /**
