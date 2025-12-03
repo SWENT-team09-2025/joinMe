@@ -149,46 +149,66 @@ class GroupLeaderboardViewModel(
       displayNames: Map<String, String>,
       isCurrent: Boolean
   ): List<LeaderboardEntry> {
-    // Sort by activities descending, then weeks descending as tiebreaker
-    val sorted =
-        streaks.sortedWith(
-            compareByDescending<GroupStreak> {
-                  if (isCurrent) it.currentStreakActivities else it.bestStreakActivities
-                }
-                .thenByDescending { if (isCurrent) it.currentStreakWeeks else it.bestStreakWeeks })
+    val sorted = sortStreaks(streaks, isCurrent)
+    return assignRanks(sorted, displayNames, isCurrent)
+  }
 
-    // Assign ranks with tie handling (standard competition ranking)
+  /** Sorts streaks by activities descending, then weeks descending as tiebreaker. */
+  private fun sortStreaks(streaks: List<GroupStreak>, isCurrent: Boolean): List<GroupStreak> {
+    return streaks.sortedWith(
+        compareByDescending<GroupStreak> { getActivities(it, isCurrent) }
+            .thenByDescending { getWeeks(it, isCurrent) })
+  }
+
+  /** Assigns ranks with tie handling (standard competition ranking). */
+  private fun assignRanks(
+      sorted: List<GroupStreak>,
+      displayNames: Map<String, String>,
+      isCurrent: Boolean
+  ): List<LeaderboardEntry> {
     val result = mutableListOf<LeaderboardEntry>()
     var currentRank = 1
 
     sorted.forEachIndexed { index, streak ->
-      val activities =
-          if (isCurrent) streak.currentStreakActivities else streak.bestStreakActivities
-      val weeks = if (isCurrent) streak.currentStreakWeeks else streak.bestStreakWeeks
-
-      // Check if this entry ties with the previous one
-      if (index > 0) {
-        val prevStreak = sorted[index - 1]
-        val prevActivities =
-            if (isCurrent) prevStreak.currentStreakActivities else prevStreak.bestStreakActivities
-        val prevWeeks = if (isCurrent) prevStreak.currentStreakWeeks else prevStreak.bestStreakWeeks
-
-        // Only increment rank if stats differ from previous entry
-        if (activities != prevActivities || weeks != prevWeeks) {
-          currentRank = index + 1
-        }
+      if (index > 0 && !isTied(sorted[index - 1], streak, isCurrent)) {
+        currentRank = index + 1
       }
 
-      result.add(
-          LeaderboardEntry(
-              userId = streak.userId,
-              displayName = displayNames[streak.userId] ?: "Unknown",
-              streakWeeks = weeks,
-              streakActivities = activities,
-              rank = currentRank))
+      result.add(createEntry(streak, displayNames, isCurrent, currentRank))
     }
 
     return result
+  }
+
+  /** Checks if two streaks have identical stats (tied). */
+  private fun isTied(prev: GroupStreak, current: GroupStreak, isCurrent: Boolean): Boolean {
+    return getActivities(prev, isCurrent) == getActivities(current, isCurrent) &&
+        getWeeks(prev, isCurrent) == getWeeks(current, isCurrent)
+  }
+
+  /** Creates a LeaderboardEntry from a streak. */
+  private fun createEntry(
+      streak: GroupStreak,
+      displayNames: Map<String, String>,
+      isCurrent: Boolean,
+      rank: Int
+  ): LeaderboardEntry {
+    return LeaderboardEntry(
+        userId = streak.userId,
+        displayName = displayNames[streak.userId] ?: "Unknown",
+        streakWeeks = getWeeks(streak, isCurrent),
+        streakActivities = getActivities(streak, isCurrent),
+        rank = rank)
+  }
+
+  /** Gets activities count based on leaderboard type. */
+  private fun getActivities(streak: GroupStreak, isCurrent: Boolean): Int {
+    return if (isCurrent) streak.currentStreakActivities else streak.bestStreakActivities
+  }
+
+  /** Gets weeks count based on leaderboard type. */
+  private fun getWeeks(streak: GroupStreak, isCurrent: Boolean): Int {
+    return if (isCurrent) streak.currentStreakWeeks else streak.bestStreakWeeks
   }
 
   /**
