@@ -1,6 +1,8 @@
 // Implemented with help of Claude AI
 package com.android.joinme.ui.groups
 
+import android.content.Context
+import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.groups.Group
@@ -79,6 +81,18 @@ class CreateGroupScreenAndroidTest {
     override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
       if (userIds.isEmpty()) return emptyList()
       return groups.filter { group -> userIds.all { userId -> group.memberIds.contains(userId) } }
+    }
+
+    override suspend fun uploadGroupPhoto(
+      context: Context,
+      groupId: String,
+      imageUri: Uri
+    ): String {
+        return "https://example.com/group_photos/$groupId.jpg"
+    }
+
+    override suspend fun deleteGroupPhoto(groupId: String) {
+        // No-op for fake repository
     }
   }
 
