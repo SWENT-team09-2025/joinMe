@@ -62,4 +62,7 @@
     <string name="copy">Copy</string>
     <string name="edit">Edit</string>
     <string name="see_who_read">See who read</string>
+
+    <!-- Events/Series Details Screens -->
+    <string name="group_name">Group: %1$s</string>
 </resources>
