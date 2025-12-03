@@ -447,17 +447,47 @@ class PollRepositoryRealtimeDatabaseTest {
   @Test
   fun closePoll_updatesClosedStatus() = runTest {
     // Given
-    val mockTask = Tasks.forResult<Void>(null)
-    every { mockPollRef.updateChildren(any()) } returns mockTask
+    val mockSnapshot =
+        createMockPollSnapshot(
+            pollId = testPollId,
+            question = "Test question?",
+            creatorId = "user1",
+            creatorName = "Alice",
+            options =
+                listOf(mapOf("id" to 0, "text" to "Option A", "voterIds" to emptyList<String>())),
+            isClosed = false)
+    val mockGetTask = Tasks.forResult(mockSnapshot)
+    val mockUpdateTask = Tasks.forResult<Void>(null)
+    every { mockPollRef.get() } returns mockGetTask
+    every { mockPollRef.updateChildren(any()) } returns mockUpdateTask
 
     // When
-    repository.closePoll(testConversationId, testPollId)
+    repository.closePoll(testConversationId, testPollId, "user1")
 
     // Then
     verify {
       mockPollRef.updateChildren(
           match { updates -> updates["isClosed"] == true && updates.containsKey("closedAt") })
     }
+  }
+
+  @Test(expected = Exception::class)
+  fun closePoll_throwsExceptionWhenNotOwner() = runTest {
+    // Given
+    val mockSnapshot =
+        createMockPollSnapshot(
+            pollId = testPollId,
+            question = "Test question?",
+            creatorId = "user1",
+            creatorName = "Alice",
+            options =
+                listOf(mapOf("id" to 0, "text" to "Option A", "voterIds" to emptyList<String>())),
+            isClosed = false)
+    val mockGetTask = Tasks.forResult(mockSnapshot)
+    every { mockPollRef.get() } returns mockGetTask
+
+    // When - should throw Exception because user2 is not the owner
+    repository.closePoll(testConversationId, testPollId, "user2")
   }
 
   // ============================================================================
@@ -467,17 +497,47 @@ class PollRepositoryRealtimeDatabaseTest {
   @Test
   fun reopenPoll_clearsClosedStatus() = runTest {
     // Given
-    val mockTask = Tasks.forResult<Void>(null)
-    every { mockPollRef.updateChildren(any()) } returns mockTask
+    val mockSnapshot =
+        createMockPollSnapshot(
+            pollId = testPollId,
+            question = "Test question?",
+            creatorId = "user1",
+            creatorName = "Alice",
+            options =
+                listOf(mapOf("id" to 0, "text" to "Option A", "voterIds" to emptyList<String>())),
+            isClosed = true)
+    val mockGetTask = Tasks.forResult(mockSnapshot)
+    val mockUpdateTask = Tasks.forResult<Void>(null)
+    every { mockPollRef.get() } returns mockGetTask
+    every { mockPollRef.updateChildren(any()) } returns mockUpdateTask
 
     // When
-    repository.reopenPoll(testConversationId, testPollId)
+    repository.reopenPoll(testConversationId, testPollId, "user1")
 
     // Then
     verify {
       mockPollRef.updateChildren(
           match { updates -> updates["isClosed"] == false && updates["closedAt"] == null })
     }
+  }
+
+  @Test(expected = Exception::class)
+  fun reopenPoll_throwsExceptionWhenNotOwner() = runTest {
+    // Given
+    val mockSnapshot =
+        createMockPollSnapshot(
+            pollId = testPollId,
+            question = "Test question?",
+            creatorId = "user1",
+            creatorName = "Alice",
+            options =
+                listOf(mapOf("id" to 0, "text" to "Option A", "voterIds" to emptyList<String>())),
+            isClosed = true)
+    val mockGetTask = Tasks.forResult(mockSnapshot)
+    every { mockPollRef.get() } returns mockGetTask
+
+    // When - should throw Exception because user2 is not the owner
+    repository.reopenPoll(testConversationId, testPollId, "user2")
   }
 
   // ============================================================================
@@ -487,14 +547,44 @@ class PollRepositoryRealtimeDatabaseTest {
   @Test
   fun deletePoll_removesFromDatabase() = runTest {
     // Given
-    val mockTask = Tasks.forResult<Void>(null)
-    every { mockPollRef.removeValue() } returns mockTask
+    val mockSnapshot =
+        createMockPollSnapshot(
+            pollId = testPollId,
+            question = "Test question?",
+            creatorId = "user1",
+            creatorName = "Alice",
+            options =
+                listOf(mapOf("id" to 0, "text" to "Option A", "voterIds" to emptyList<String>())),
+            isClosed = false)
+    val mockGetTask = Tasks.forResult(mockSnapshot)
+    val mockRemoveTask = Tasks.forResult<Void>(null)
+    every { mockPollRef.get() } returns mockGetTask
+    every { mockPollRef.removeValue() } returns mockRemoveTask
 
     // When
-    repository.deletePoll(testConversationId, testPollId)
+    repository.deletePoll(testConversationId, testPollId, "user1")
 
     // Then
     verify { mockPollRef.removeValue() }
+  }
+
+  @Test(expected = Exception::class)
+  fun deletePoll_throwsExceptionWhenNotOwner() = runTest {
+    // Given
+    val mockSnapshot =
+        createMockPollSnapshot(
+            pollId = testPollId,
+            question = "Test question?",
+            creatorId = "user1",
+            creatorName = "Alice",
+            options =
+                listOf(mapOf("id" to 0, "text" to "Option A", "voterIds" to emptyList<String>())),
+            isClosed = false)
+    val mockGetTask = Tasks.forResult(mockSnapshot)
+    every { mockPollRef.get() } returns mockGetTask
+
+    // When - should throw Exception because user2 is not the owner
+    repository.deletePoll(testConversationId, testPollId, "user2")
   }
 
   // ============================================================================

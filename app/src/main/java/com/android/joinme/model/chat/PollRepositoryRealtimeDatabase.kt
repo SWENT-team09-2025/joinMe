@@ -1,5 +1,7 @@
 package com.android.joinme.model.chat
 
+// Implemented with help of Claude AI
+
 import android.util.Log
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -76,29 +78,23 @@ class PollRepositoryRealtimeDatabase(database: FirebaseDatabase) : PollRepositor
 
   override fun observePollsForConversation(conversationId: String): Flow<List<Poll>> =
       callbackFlow {
-        Log.d(TAG, "Starting to observe polls for conversation: $conversationId")
         val pollsRef =
             conversationsRef.child(conversationId).child(POLLS_PATH).orderByChild(FIELD_CREATED_AT)
-
-        Log.d(TAG, "Polls path: conversations/$conversationId/$POLLS_PATH")
 
         val listener =
             object : ValueEventListener {
               override fun onDataChange(snapshot: DataSnapshot) {
-                Log.d(TAG, "onDataChange: received ${snapshot.childrenCount} poll snapshots")
                 val polls = mutableListOf<Poll>()
 
                 for (pollSnapshot in snapshot.children) {
                   val poll = dataSnapshotToPoll(pollSnapshot, conversationId)
                   if (poll != null) {
                     polls.add(poll)
-                    Log.d(TAG, "Parsed poll: ${poll.id} - ${poll.question}")
                   } else {
                     Log.w(TAG, "Failed to parse poll snapshot: ${pollSnapshot.key}")
                   }
                 }
 
-                Log.d(TAG, "Sending ${polls.size} polls to flow")
                 trySend(polls)
               }
 
@@ -110,10 +106,7 @@ class PollRepositoryRealtimeDatabase(database: FirebaseDatabase) : PollRepositor
 
         pollsRef.addValueEventListener(listener)
 
-        awaitClose {
-          Log.d(TAG, "Stopping poll observation for conversation: $conversationId")
-          pollsRef.removeEventListener(listener)
-        }
+        awaitClose { pollsRef.removeEventListener(listener) }
       }
 
   override suspend fun getPoll(conversationId: String, pollId: String): Poll? {
@@ -129,12 +122,9 @@ class PollRepositoryRealtimeDatabase(database: FirebaseDatabase) : PollRepositor
   }
 
   override suspend fun createPoll(poll: Poll) {
-    Log.d(TAG, "Creating poll: id=${poll.id}, conversationId=${poll.conversationId}")
     val pollRef = conversationsRef.child(poll.conversationId).child(POLLS_PATH).child(poll.id)
 
-    Log.d(TAG, "Poll path: conversations/${poll.conversationId}/$POLLS_PATH/${poll.id}")
     pollRef.setValue(pollToMap(poll)).await()
-    Log.d(TAG, "Poll saved to Firebase successfully")
   }
 
   override suspend fun vote(conversationId: String, pollId: String, optionId: Int, userId: String) {
@@ -198,24 +188,51 @@ class PollRepositoryRealtimeDatabase(database: FirebaseDatabase) : PollRepositor
     pollRef.child(FIELD_OPTIONS).setValue(optionsToList(updatedOptions)).await()
   }
 
-  override suspend fun closePoll(conversationId: String, pollId: String) {
+  override suspend fun closePoll(conversationId: String, pollId: String, userId: String) {
     val pollRef = conversationsRef.child(conversationId).child(POLLS_PATH).child(pollId)
+
+    // Verify ownership
+    val snapshot = pollRef.get().await()
+    val poll =
+        dataSnapshotToPoll(snapshot, conversationId) ?: throw Exception("Poll not found: $pollId")
+
+    if (poll.creatorId != userId) {
+      throw Exception("Only the poll owner can close this poll")
+    }
 
     val updates = mapOf(FIELD_IS_CLOSED to true, FIELD_CLOSED_AT to System.currentTimeMillis())
 
     pollRef.updateChildren(updates).await()
   }
 
-  override suspend fun reopenPoll(conversationId: String, pollId: String) {
+  override suspend fun reopenPoll(conversationId: String, pollId: String, userId: String) {
     val pollRef = conversationsRef.child(conversationId).child(POLLS_PATH).child(pollId)
+
+    // Verify ownership
+    val snapshot = pollRef.get().await()
+    val poll =
+        dataSnapshotToPoll(snapshot, conversationId) ?: throw Exception("Poll not found: $pollId")
+
+    if (poll.creatorId != userId) {
+      throw Exception("Only the poll owner can reopen this poll")
+    }
 
     val updates = mapOf(FIELD_IS_CLOSED to false, FIELD_CLOSED_AT to null)
 
     pollRef.updateChildren(updates).await()
   }
 
-  override suspend fun deletePoll(conversationId: String, pollId: String) {
+  override suspend fun deletePoll(conversationId: String, pollId: String, userId: String) {
     val pollRef = conversationsRef.child(conversationId).child(POLLS_PATH).child(pollId)
+
+    // Verify ownership
+    val snapshot = pollRef.get().await()
+    val poll =
+        dataSnapshotToPoll(snapshot, conversationId) ?: throw Exception("Poll not found: $pollId")
+
+    if (poll.creatorId != userId) {
+      throw Exception("Only the poll owner can delete this poll")
+    }
 
     pollRef.removeValue().await()
   }

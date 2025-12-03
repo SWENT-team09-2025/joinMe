@@ -1,5 +1,7 @@
 package com.android.joinme.model.chat
 
+// Implemented with help of Claude AI
+
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -77,9 +79,10 @@ interface PollRepository {
    *
    * @param conversationId The unique identifier of the conversation containing the poll.
    * @param pollId The unique identifier of the poll to close.
-   * @throws Exception if the poll is not found.
+   * @param userId The ID of the user attempting to close the poll.
+   * @throws Exception if the poll is not found or user is not the poll owner.
    */
-  suspend fun closePoll(conversationId: String, pollId: String)
+  suspend fun closePoll(conversationId: String, pollId: String, userId: String)
 
   /**
    * Reopens a closed poll, allowing voting again.
@@ -88,9 +91,10 @@ interface PollRepository {
    *
    * @param conversationId The unique identifier of the conversation containing the poll.
    * @param pollId The unique identifier of the poll to reopen.
-   * @throws Exception if the poll is not found.
+   * @param userId The ID of the user attempting to reopen the poll.
+   * @throws Exception if the poll is not found or user is not the poll owner.
    */
-  suspend fun reopenPoll(conversationId: String, pollId: String)
+  suspend fun reopenPoll(conversationId: String, pollId: String, userId: String)
 
   /**
    * Deletes a poll from a conversation.
@@ -99,7 +103,8 @@ interface PollRepository {
    *
    * @param conversationId The unique identifier of the conversation containing the poll.
    * @param pollId The unique identifier of the poll to delete.
-   * @throws Exception if the poll is not found.
+   * @param userId The ID of the user attempting to delete the poll.
+   * @throws Exception if the poll is not found or user is not the poll owner.
    */
-  suspend fun deletePoll(conversationId: String, pollId: String)
+  suspend fun deletePoll(conversationId: String, pollId: String, userId: String)
 }
