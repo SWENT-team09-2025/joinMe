@@ -167,6 +167,7 @@ dependencies {
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.material)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.process)
     implementation(platform(libs.compose.bom))
     implementation(libs.androidx.ui.text.google.fonts)
     testImplementation(libs.junit)
