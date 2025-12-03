@@ -1,8 +1,17 @@
 // Implemented with help of Claude AI
 package com.android.joinme.model.groups
 
+import android.content.Context
+import android.net.Uri
+import androidx.core.net.toUri
+import java.io.File
+import java.io.FileOutputStream
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 /** Exception message for when a group is not found in the local repository. */
 const val GROUP_NOT_FOUND = "GroupRepositoryLocal: Group not found"
+
 /** Represents a repository that manages a local list of groups (for offline mode or testing). */
 class GroupRepositoryLocal : GroupRepository {
   private val groups: MutableList<Group> = mutableListOf()
@@ -84,4 +93,62 @@ class GroupRepositoryLocal : GroupRepository {
     // Filter groups where all specified users are members
     return groups.filter { group -> userIds.all { userId -> group.memberIds.contains(userId) } }
   }
+
+  override suspend fun uploadGroupPhoto(context: Context, groupId: String, imageUri: Uri): String =
+      withContext(Dispatchers.IO) {
+        // 1) Resolve current group
+        val current =
+            groups.find { it.id == groupId }
+                ?: throw IllegalArgumentException("Group with ID $groupId does not exist")
+
+        // 2) Ensure app-local pictures dir
+        val picturesDir = File(context.filesDir, "group_photos").apply { mkdirs() }
+
+        // 3) If there was a previous local file, delete it
+        current.photoUrl?.let { previousUrl ->
+          runCatching {
+            val prev = previousUrl.toUri()
+            if (prev.scheme == "file") {
+              File(prev.path ?: "").takeIf { it.exists() && it.parentFile == picturesDir }?.delete()
+            }
+          }
+        }
+
+        // 4) Copy new content into app storage with a stable name
+        val filename = "${groupId}_${System.currentTimeMillis()}.jpg"
+        val dest = File(picturesDir, filename)
+
+        context.contentResolver.openInputStream(imageUri).use { inStream ->
+          requireNotNull(inStream) { "Unable to open input stream for $imageUri" }
+          FileOutputStream(dest).use { out -> inStream.copyTo(out) }
+        }
+
+        // 5) Build a file:// URL
+        val fileUrl = dest.toURI().toURL().toString()
+
+        // 6) Update group
+        val index = groups.indexOfFirst { it.id == groupId }
+        if (index != -1) {
+          groups[index] = current.copy(photoUrl = fileUrl)
+        }
+
+        return@withContext fileUrl
+      }
+
+  override suspend fun deleteGroupPhoto(groupId: String) =
+      withContext(Dispatchers.IO) {
+        val current = groups.find { it.id == groupId } ?: return@withContext
+        current.photoUrl?.let { url ->
+          runCatching {
+            val uri = url.toUri()
+            if (uri.scheme == "file") {
+              File(uri.path ?: "").takeIf { it.exists() }?.delete()
+            }
+          }
+        }
+        val index = groups.indexOfFirst { it.id == groupId }
+        if (index != -1) {
+          groups[index] = current.copy(photoUrl = null)
+        }
+      }
 }

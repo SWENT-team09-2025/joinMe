@@ -16,9 +16,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.R
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
@@ -191,6 +193,7 @@ object ShowEventScreenTestTags {
   const val EVENT_MEMBERS = "eventMembers"
   const val EVENT_DURATION = "eventDuration"
   const val EVENT_OWNER = "eventOwner"
+  const val EVENT_GROUP = "eventGroup"
   const val JOIN_QUIT_BUTTON = "joinQuitButton"
   const val EDIT_BUTTON = "editButton"
   const val DELETE_BUTTON = "deleteButton"
@@ -401,6 +404,20 @@ fun ShowEventScreen(
                           .testTag(ShowEventScreenTestTags.EVENT_OWNER)
                           .padding(vertical = Dimens.Padding.small),
                   textAlign = TextAlign.Center)
+
+              // Group display (if event belongs to a group)
+              eventUIState.groupName?.let { groupName ->
+                Text(
+                    text = stringResource(R.string.group_name, groupName),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .testTag(ShowEventScreenTestTags.EVENT_GROUP)
+                            .padding(vertical = Dimens.Padding.small),
+                    textAlign = TextAlign.Center)
+              }
 
               Spacer(modifier = Modifier.weight(1f))
 

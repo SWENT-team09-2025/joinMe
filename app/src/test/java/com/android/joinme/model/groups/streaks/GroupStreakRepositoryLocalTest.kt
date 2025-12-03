@@ -140,6 +140,53 @@ class GroupStreakRepositoryLocalTest {
     assertEquals(testUserId, result?.userId)
   }
 
+  // ==================== deleteStreakForUser ====================
+
+  @Test
+  fun `deleteStreakForUser removes streak and handles non-existent streak`() = runTest {
+    // Given: add a streak
+    val streak = createTestStreak()
+    repository.updateStreak(testGroupId, testUserId, streak)
+    assertEquals(
+        streak.currentStreakWeeks,
+        repository.getStreakForUser(testGroupId, testUserId)?.currentStreakWeeks)
+
+    // When: delete the streak
+    repository.deleteStreakForUser(testGroupId, testUserId)
+
+    // Then: streak is removed
+    assertNull(repository.getStreakForUser(testGroupId, testUserId))
+
+    // Deleting non-existent streak should not throw
+    repository.deleteStreakForUser(testGroupId, "nonExistentUser")
+    repository.deleteStreakForUser("nonExistentGroup", testUserId)
+  }
+
+  // ==================== deleteAllStreaksForGroup ====================
+
+  @Test
+  fun `deleteAllStreaksForGroup removes all streaks for group and preserves others`() = runTest {
+    // Given: streaks in multiple groups
+    repository.updateStreak(testGroupId, "userA", createTestStreak(testGroupId, "userA"))
+    repository.updateStreak(testGroupId, "userB", createTestStreak(testGroupId, "userB"))
+    repository.updateStreak(testGroupId, "userC", createTestStreak(testGroupId, "userC"))
+    repository.updateStreak("otherGroup", "userD", createTestStreak("otherGroup", "userD"))
+
+    assertEquals(3, repository.getStreaksForGroup(testGroupId).size)
+    assertEquals(1, repository.getStreaksForGroup("otherGroup").size)
+
+    // When: delete all streaks for testGroupId
+    repository.deleteAllStreaksForGroup(testGroupId)
+
+    // Then: testGroupId streaks are removed, otherGroup streak preserved
+    assertTrue(repository.getStreaksForGroup(testGroupId).isEmpty())
+    assertEquals(1, repository.getStreaksForGroup("otherGroup").size)
+
+    // Deleting from empty/non-existent group should not throw
+    repository.deleteAllStreaksForGroup("nonExistentGroup")
+    repository.deleteAllStreaksForGroup(testGroupId)
+  }
+
   // ==================== clear ====================
 
   @Test

@@ -24,6 +24,15 @@ class GroupStreakRepositoryLocal : GroupStreakRepository {
     streaks[key(groupId, userId)] = streak.copy(groupId = groupId, userId = userId)
   }
 
+  override suspend fun deleteStreakForUser(groupId: String, userId: String) {
+    streaks.remove(key(groupId, userId))
+  }
+
+  override suspend fun deleteAllStreaksForGroup(groupId: String) {
+    val keysToRemove = streaks.keys.filter { it.startsWith("${groupId}_") }
+    keysToRemove.forEach { streaks.remove(it) }
+  }
+
   /** Clears all streaks. Useful for test setup/teardown. */
   fun clear() {
     streaks.clear()

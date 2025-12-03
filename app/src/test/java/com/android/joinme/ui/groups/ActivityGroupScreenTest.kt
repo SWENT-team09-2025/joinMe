@@ -2,6 +2,8 @@ package com.android.joinme.ui.groups
 
 // Implemented with the help of AI tools, adapted and refactored to follow project pattern.
 
+import android.content.Context
+import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.Event
@@ -342,6 +344,19 @@ class ActivityGroupScreenTest {
       return groups.values.filter { group ->
         userIds.all { userId -> group.memberIds.contains(userId) }
       }
+    }
+
+    override suspend fun uploadGroupPhoto(
+        context: Context,
+        groupId: String,
+        imageUri: Uri
+    ): String {
+      // Not needed for these tests
+      return "http://fakeurl.com/photo.jpg"
+    }
+
+    override suspend fun deleteGroupPhoto(groupId: String) {
+      // Not needed for these tests
     }
   }
 

@@ -1,5 +1,7 @@
 package com.android.joinme.ui.overview
 
+import android.content.Context
+import android.net.Uri
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventType
@@ -178,6 +180,19 @@ class EditEventForSerieViewModelTest {
     override suspend fun getCommonGroups(userIds: List<String>): List<Group> = emptyList()
 
     override fun getNewGroupId(): String = "newGroupId"
+
+    override suspend fun uploadGroupPhoto(
+        context: Context,
+        groupId: String,
+        imageUri: Uri
+    ): String {
+      // Not needed for these tests
+      return "http://fakeurl.com/photo.jpg"
+    }
+
+    override suspend fun deleteGroupPhoto(groupId: String) {
+      // Not needed for these tests
+    }
   }
 
   private lateinit var locationRepo: FakeLocationRepository
