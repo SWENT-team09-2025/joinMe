@@ -229,7 +229,7 @@ fun JoinMe(
 
   // Navigate to event or event chat if opened from notification
   LaunchedEffect(initialEventId, notificationType) {
-    if (initialEventId != null && currentUser != null) {
+    if (initialEventId != null && effectiveUserId != null) {
       // Check if this is an event chat notification
       if (notificationType == "event_chat_message" && conversationId != null && chatName != null) {
         // Navigate directly to the event chat
@@ -262,7 +262,7 @@ fun JoinMe(
       if (notificationType == "group_chat_message" &&
           conversationId != null &&
           chatName != null &&
-          currentUser != null) {
+          effectiveUserId != null) {
         // Navigate directly to the group chat using notification data
         coroutineScope.launch {
           try {
