@@ -398,7 +398,7 @@ class CreateEventViewModelTest {
   }
 
   @Test
-  fun setMaxParticipants_whenGroupSelected_validatesAgainstGroupSize() = runTest {
+  fun setMaxParticipants_whenGroupSelected_validatesPositiveNumber() = runTest {
     // Set up a group with 5 members
     val testGroup =
         Group(id = "group-1", name = "Test Group", memberIds = listOf("u1", "u2", "u3", "u4", "u5"))
@@ -410,10 +410,9 @@ class CreateEventViewModelTest {
     // Select the group
     newVm.setSelectedGroup("group-1")
 
-    // Try to set maxParticipants less than group size
+    // Try to set maxParticipants less than group size - should now be valid
     newVm.setMaxParticipants("3")
-    Assert.assertNotNull(newVm.uiState.value.invalidMaxParticipantsMsg)
-    Assert.assertTrue(newVm.uiState.value.invalidMaxParticipantsMsg!!.contains("at least 5"))
+    Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
 
     // Set maxParticipants equal to group size
     newVm.setMaxParticipants("5")
@@ -425,7 +424,7 @@ class CreateEventViewModelTest {
   }
 
   @Test
-  fun setSelectedGroup_revalidatesMaxParticipants() = runTest {
+  fun setSelectedGroup_doesNotChangeMaxParticipants() = runTest {
     // Set up a group with 5 members
     val testGroup =
         Group(id = "group-1", name = "Test Group", memberIds = listOf("u1", "u2", "u3", "u4", "u5"))
@@ -434,23 +433,24 @@ class CreateEventViewModelTest {
     val newVm = CreateEventViewModel(repo, profileRepository, groupRepo)
     advanceUntilIdle()
 
-    // Set maxParticipants to 3 (valid for standalone)
+    // Set maxParticipants to 3 (valid for standalone and now also valid for groups)
     newVm.setMaxParticipants("3")
     Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
 
-    // Select group - auto-sets to 300, so validation passes
+    // Select group - maxParticipants is not auto-set and remains valid
     newVm.setSelectedGroup("group-1")
-    Assert.assertEquals("300", newVm.uiState.value.maxParticipants)
+    // maxParticipants should retain its previous value and still be valid
+    Assert.assertEquals("3", newVm.uiState.value.maxParticipants)
     Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
 
-    // Clear group selection - resets to empty
+    // Clear group selection
     newVm.setSelectedGroup(null)
-    Assert.assertEquals("", newVm.uiState.value.maxParticipants)
-    Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
+    // maxParticipants should retain its value
+    Assert.assertEquals("3", newVm.uiState.value.maxParticipants)
   }
 
   @Test
-  fun setSelectedGroup_autoSetsTypeMaxParticipantsAndVisibility() = runTest {
+  fun setSelectedGroup_autoSetsTypeAndVisibility() = runTest {
     // Set up a SPORTS group with 3 members
     val testGroup =
         Group(
@@ -471,14 +471,13 @@ class CreateEventViewModelTest {
     // Select group
     newVm.setSelectedGroup("group-1")
 
-    // Verify auto-set fields
+    // Verify auto-set fields (maxParticipants is NOT auto-set anymore)
     Assert.assertEquals("SPORTS", newVm.uiState.value.type)
-    Assert.assertEquals("300", newVm.uiState.value.maxParticipants)
+    Assert.assertEquals("", newVm.uiState.value.maxParticipants)
     Assert.assertEquals("PRIVATE", newVm.uiState.value.visibility)
 
     // Verify validation messages are cleared
     Assert.assertNull(newVm.uiState.value.invalidTypeMsg)
-    Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
     Assert.assertNull(newVm.uiState.value.invalidVisibilityMsg)
   }
 
@@ -538,20 +537,19 @@ class CreateEventViewModelTest {
     // Select group to set fields
     newVm.setSelectedGroup("group-1")
     Assert.assertEquals("SPORTS", newVm.uiState.value.type)
-    Assert.assertEquals("300", newVm.uiState.value.maxParticipants)
+    Assert.assertEquals("", newVm.uiState.value.maxParticipants) // Not auto-set anymore
     Assert.assertEquals("PRIVATE", newVm.uiState.value.visibility)
 
     // Clear group selection
     newVm.setSelectedGroup(null)
 
-    // Verify fields are reset to empty
+    // Verify type and visibility are reset, maxParticipants stays as is
     Assert.assertEquals("", newVm.uiState.value.type)
     Assert.assertEquals("", newVm.uiState.value.maxParticipants)
     Assert.assertEquals("", newVm.uiState.value.visibility)
 
     // Verify validation messages are cleared
     Assert.assertNull(newVm.uiState.value.invalidTypeMsg)
-    Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
     Assert.assertNull(newVm.uiState.value.invalidVisibilityMsg)
   }
 
@@ -578,16 +576,16 @@ class CreateEventViewModelTest {
     newVm.setMaxParticipants("15")
     newVm.setVisibility("PRIVATE")
 
-    // Select group - should override with group values
+    // Select group - should override type and visibility, keep maxParticipants
     newVm.setSelectedGroup("group-1")
     Assert.assertEquals("ACTIVITY", newVm.uiState.value.type) // Group's category
-    Assert.assertEquals("300", newVm.uiState.value.maxParticipants)
+    Assert.assertEquals("15", newVm.uiState.value.maxParticipants) // Retains previous value
     Assert.assertEquals("PRIVATE", newVm.uiState.value.visibility)
 
-    // Clear group - should reset to empty
+    // Clear group - should reset type and visibility
     newVm.setSelectedGroup(null)
     Assert.assertEquals("", newVm.uiState.value.type)
-    Assert.assertEquals("", newVm.uiState.value.maxParticipants)
+    Assert.assertEquals("15", newVm.uiState.value.maxParticipants) // Still retained
     Assert.assertEquals("", newVm.uiState.value.visibility)
   }
 
@@ -686,15 +684,16 @@ class CreateEventViewModelTest {
     val newVm = CreateEventViewModel(repo, profileRepository, groupRepo)
     advanceUntilIdle()
 
-    // Select group first (this will auto-set type, maxParticipants, visibility)
+    // Select group first (this will auto-set type and visibility)
     newVm.setSelectedGroup("group-1")
 
-    // Fill remaining form fields
+    // Fill remaining form fields (including maxParticipants which is no longer auto-set)
     newVm.setTitle("Football")
     newVm.setDescription("Friendly 5v5")
     newVm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
     newVm.setDate("25/12/2023")
     newVm.setTime("10:00")
+    newVm.setMaxParticipants("10")
     newVm.setDuration("90")
 
     val ok = newVm.createEvent(userId = "owner-123")
@@ -703,10 +702,10 @@ class CreateEventViewModelTest {
     Assert.assertTrue(ok)
     Assert.assertEquals(1, repo.added.size)
 
-    // Verify event has group members as participants
+    // Verify event has only the owner as participant (not all group members)
     val createdEvent = repo.added[0]
-    Assert.assertEquals(3, createdEvent.participants.size)
-    Assert.assertTrue(createdEvent.participants.containsAll(listOf("user1", "user2", "user3")))
+    Assert.assertEquals(1, createdEvent.participants.size)
+    Assert.assertTrue(createdEvent.participants.contains("owner-123"))
 
     // Verify event has groupId set
     Assert.assertEquals("group-1", createdEvent.groupId)

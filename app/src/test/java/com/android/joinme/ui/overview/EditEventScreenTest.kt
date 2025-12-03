@@ -677,19 +677,19 @@ class EditEventScreenTest {
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
-    // Verify non-editable fields are hidden
+    // Verify non-editable fields are hidden (type and visibility)
     composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TYPE).assertDoesNotExist()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
-        .assertDoesNotExist()
     composeTestRule
         .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_VISIBILITY)
         .assertDoesNotExist()
 
-    // Verify editable fields are shown
+    // Verify editable fields are shown (including maxParticipants)
     composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).assertExists()
     composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION).assertExists()
     composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION).assertExists()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .assertExists()
     composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION).assertExists()
     composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DATE).assertExists()
     composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TIME).assertExists()

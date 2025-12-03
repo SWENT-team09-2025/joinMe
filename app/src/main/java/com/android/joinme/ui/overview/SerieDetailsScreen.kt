@@ -14,9 +14,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.R
 import com.android.joinme.ui.components.EventCard
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
@@ -61,6 +63,9 @@ object SerieDetailsScreenTestTags {
 
   /** Test tag for the owner info text */
   const val OWNER_INFO = "ownerInfo"
+
+  /** Test tag for the group info text */
+  const val GROUP_INFO = "groupInfo"
 
   /** Test tag for the "Add event" button */
   const val BUTTON_ADD_EVENT = "buttonAddEvent"
@@ -306,6 +311,20 @@ fun SerieDetailsScreen(
                         .testTag(SerieDetailsScreenTestTags.OWNER_INFO)
                         .padding(vertical = Dimens.Spacing.small),
                 textAlign = TextAlign.Center)
+
+            // Group information (if serie belongs to a group)
+            uiState.groupName?.let { groupName ->
+              Text(
+                  text = stringResource(R.string.group_name, groupName),
+                  style = MaterialTheme.typography.bodyMedium,
+                  fontWeight = FontWeight.Medium,
+                  color = MaterialTheme.colorScheme.onSurface,
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .testTag(SerieDetailsScreenTestTags.GROUP_INFO)
+                          .padding(vertical = Dimens.Spacing.small),
+                  textAlign = TextAlign.Center)
+            }
 
             // Only show buttons if the serie is not expired
             if (!uiState.isPastSerie) {
