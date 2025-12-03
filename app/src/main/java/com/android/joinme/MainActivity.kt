@@ -60,8 +60,8 @@ import com.android.joinme.ui.profile.ViewProfileScreen
 import com.android.joinme.ui.signIn.SignInScreen
 import com.android.joinme.ui.theme.JoinMeTheme
 import com.google.firebase.auth.FirebaseAuth
-import okhttp3.OkHttpClient
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
 
 /** Provides a singleton OkHttpClient instance for network operations. */
 object HttpClientProvider {
