@@ -387,21 +387,36 @@ class ChatViewModel(
   }
 
   /**
-   * Generates a Google Static Maps URL for the given location.
+   * Adds the API key to a Static Maps URL for display purposes.
+   *
+   * This should be called in the UI layer when displaying location messages. The stored URLs don't
+   * contain the API key for security reasons.
    *
    * @param context Android context for retrieving the API key.
+   * @param urlWithoutKey The base Static Maps URL without the API key parameter.
+   * @return The complete URL with API key appended.
+   */
+  fun addApiKeyToMapUrl(context: Context, urlWithoutKey: String): String {
+    val apiKey = getMapsApiKey(context)
+    return "$urlWithoutKey&key=$apiKey"
+  }
+
+  /**
+   * Generates a Google Static Maps URL for the given location WITHOUT the API key.
+   *
+   * The API key should be added only when displaying the image in the UI layer, not when storing
+   * the URL in the database (to avoid exposing the key).
+   *
    * @param latitude The latitude of the location.
    * @param longitude The longitude of the location.
-   * @return The Static Maps URL string.
+   * @return The Static Maps URL string without the API key.
    */
-  private fun generateStaticMapUrl(context: Context, latitude: Double, longitude: Double): String {
-    val apiKey = getMapsApiKey(context)
+  private fun generateStaticMapUrlWithoutKey(latitude: Double, longitude: Double): String {
     return "$STATIC_MAPS_BASE_URL?" +
         "center=$latitude,$longitude&" +
         "zoom=$STATIC_MAPS_ZOOM&" +
         "size=$STATIC_MAPS_SIZE&" +
-        "markers=color:red%7C$latitude,$longitude&" +
-        "key=$apiKey"
+        "markers=color:red%7C$latitude,$longitude"
   }
 
   /**
@@ -459,9 +474,9 @@ class ChatViewModel(
         // Use provided location name or default from string resources
         val finalLocationName = locationName ?: context.getString(R.string.current_location)
 
-        // Generate Static Maps URL for preview
+        // Generate Static Maps URL for preview (without API key to avoid leaking in database)
         val staticMapUrl =
-            generateStaticMapUrl(context, userLocation.latitude, userLocation.longitude)
+            generateStaticMapUrlWithoutKey(userLocation.latitude, userLocation.longitude)
 
         // Create Location object
         val location =
