@@ -3,6 +3,7 @@ package com.android.joinme.ui.chat
 // Implemented with help of Claude AI, essentially rewritten for clarity, structure and
 // documentation
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -368,20 +369,53 @@ class ChatViewModel(
   }
 
   /**
+   * Retrieves the Google Maps API key from AndroidManifest metadata.
+   *
+   * @param context Android context for accessing package manager.
+   * @return The Maps API key, or empty string if not found.
+   */
+  private fun getMapsApiKey(context: Context): String {
+    return try {
+      val appInfo =
+          context.packageManager.getApplicationInfo(
+              context.packageName, PackageManager.GET_META_DATA)
+      appInfo.metaData?.getString("com.google.android.geo.API_KEY") ?: ""
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to retrieve Maps API key from manifest", e)
+      ""
+    }
+  }
+
+  /**
    * Generates a Google Static Maps URL for the given location.
    *
+   * @param context Android context for retrieving the API key.
    * @param latitude The latitude of the location.
    * @param longitude The longitude of the location.
-   * @param apiKey The Google Maps API key.
    * @return The Static Maps URL string.
    */
-  private fun generateStaticMapUrl(latitude: Double, longitude: Double, apiKey: String): String {
+  private fun generateStaticMapUrl(context: Context, latitude: Double, longitude: Double): String {
+    val apiKey = getMapsApiKey(context)
     return "$STATIC_MAPS_BASE_URL?" +
         "center=$latitude,$longitude&" +
         "zoom=$STATIC_MAPS_ZOOM&" +
         "size=$STATIC_MAPS_SIZE&" +
         "markers=color:red%7C$latitude,$longitude&" +
         "key=$apiKey"
+  }
+
+  /**
+   * Validates that latitude and longitude coordinates are within valid ranges.
+   *
+   * @param latitude The latitude coordinate to validate (-90 to 90).
+   * @param longitude The longitude coordinate to validate (-180 to 180).
+   * @return True if both coordinates are valid, false otherwise.
+   */
+  private fun isValidLocation(latitude: Double, longitude: Double): Boolean {
+    return latitude in -90.0..90.0 &&
+        longitude in -180.0..180.0 &&
+        !latitude.isNaN() &&
+        !longitude.isNaN()
   }
 
   /**
@@ -392,11 +426,12 @@ class ChatViewModel(
    * 2. A location name (user-provided or default from string resources)
    * 3. A Static Maps preview URL in the content field
    *
+   * The Google Maps API key is securely retrieved from BuildConfig.
+   *
    * @param context Android context for accessing string resources.
    * @param userLocation The current GPS location of the user.
    * @param senderName The name of the user sending the location.
    * @param locationName Optional custom name for the location (default from resources).
-   * @param apiKey The Google Maps API key for generating the Static Maps URL.
    * @param onSuccess Callback invoked when the location is successfully sent.
    * @param onError Callback invoked if sending fails, with an error message.
    */
@@ -405,12 +440,20 @@ class ChatViewModel(
       userLocation: UserLocation,
       senderName: String,
       locationName: String? = null,
-      apiKey: String,
       onSuccess: () -> Unit = {},
       onError: (String) -> Unit = {}
   ) {
     viewModelScope.launch {
       try {
+        // Validate coordinates first
+        if (!isValidLocation(userLocation.latitude, userLocation.longitude)) {
+          val errorMsg = context.getString(R.string.invalid_location_coordinates)
+          Log.e(TAG, errorMsg)
+          setErrorMsg(errorMsg)
+          onError(errorMsg)
+          return@launch
+        }
+
         val messageId = chatRepository.getNewMessageId()
 
         // Use provided location name or default from string resources
@@ -418,7 +461,7 @@ class ChatViewModel(
 
         // Generate Static Maps URL for preview
         val staticMapUrl =
-            generateStaticMapUrl(userLocation.latitude, userLocation.longitude, apiKey)
+            generateStaticMapUrl(context, userLocation.latitude, userLocation.longitude)
 
         // Create Location object
         val location =

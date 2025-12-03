@@ -254,9 +254,9 @@ class ChatRepositoryRealtimeDatabase(
           snapshot.child(FIELD_LOCATION).let { locationSnapshot ->
             if (locationSnapshot.exists()) {
               val latitude =
-                  locationSnapshot.child(FIELD_LOCATION_LATITUDE).getValue(Double::class.java)
+                  (locationSnapshot.child(FIELD_LOCATION_LATITUDE).value as? Number?)?.toDouble()
               val longitude =
-                  locationSnapshot.child(FIELD_LOCATION_LONGITUDE).getValue(Double::class.java)
+                  (locationSnapshot.child(FIELD_LOCATION_LONGITUDE).value as? Number?)?.toDouble()
               val name = locationSnapshot.child(FIELD_LOCATION_NAME).getValue(String::class.java)
 
               if (latitude != null && longitude != null && name != null) {

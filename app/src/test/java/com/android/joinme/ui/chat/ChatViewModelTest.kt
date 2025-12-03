@@ -1032,7 +1032,6 @@ class ChatViewModelTest {
         context = mockContext,
         userLocation = userLocation,
         senderName = "Alice",
-        apiKey = "test-api-key",
         onSuccess = { successCalled = true })
     advanceUntilIdle()
 
@@ -1078,7 +1077,6 @@ class ChatViewModelTest {
         context = mockContext,
         userLocation = userLocation,
         senderName = "Alice",
-        apiKey = "test-api-key",
         onError = { errorMsg = it })
     advanceUntilIdle()
 
@@ -1086,6 +1084,36 @@ class ChatViewModelTest {
     assertNotNull(viewModel.uiState.value.errorMsg)
     assertTrue(viewModel.uiState.value.errorMsg!!.contains("Failed to send location"))
     assertNotNull(errorMsg)
+    assertEquals(0, viewModel.uiState.value.messages.size) // No message added on error
+  }
+
+  @Test
+  fun sendCurrentLocation_withInvalidCoordinates_callsErrorCallback() = runTest {
+    // Given
+    viewModel.initializeChat(testChatId, testUserId)
+    advanceUntilIdle()
+
+    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
+    io.mockk.every {
+      mockContext.getString(com.android.joinme.R.string.invalid_location_coordinates)
+    } returns "Invalid location coordinates"
+
+    val invalidLocation = UserLocation(latitude = 91.0, longitude = 6.6323) // Invalid latitude
+    var errorMsg: String? = null
+
+    // When
+    viewModel.sendCurrentLocation(
+        context = mockContext,
+        userLocation = invalidLocation,
+        senderName = "Alice",
+        onError = { errorMsg = it })
+    advanceUntilIdle()
+
+    // Then
+    assertNotNull(viewModel.uiState.value.errorMsg)
+    assertEquals("Invalid location coordinates", viewModel.uiState.value.errorMsg)
+    assertNotNull(errorMsg)
+    assertEquals("Invalid location coordinates", errorMsg)
     assertEquals(0, viewModel.uiState.value.messages.size) // No message added on error
   }
 }

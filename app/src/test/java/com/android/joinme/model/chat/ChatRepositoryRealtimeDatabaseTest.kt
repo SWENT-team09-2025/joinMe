@@ -513,8 +513,13 @@ class ChatRepositoryRealtimeDatabaseTest {
     // Setup location field
     every { mockLocationMessage.child("location") } returns mockLocationSnapshot
     every { mockLocationSnapshot.exists() } returns true
-    every { mockLocationSnapshot.child("latitude").getValue(Double::class.java) } returns 46.5197
-    every { mockLocationSnapshot.child("longitude").getValue(Double::class.java) } returns 6.6323
+
+    val mockLatitudeSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockLongitudeSnapshot = mockk<DataSnapshot>(relaxed = true)
+    every { mockLocationSnapshot.child("latitude") } returns mockLatitudeSnapshot
+    every { mockLatitudeSnapshot.value } returns 46.5197
+    every { mockLocationSnapshot.child("longitude") } returns mockLongitudeSnapshot
+    every { mockLongitudeSnapshot.value } returns 6.6323
     every { mockLocationSnapshot.child("name").getValue(String::class.java) } returns
         "EPFL, Lausanne"
 
