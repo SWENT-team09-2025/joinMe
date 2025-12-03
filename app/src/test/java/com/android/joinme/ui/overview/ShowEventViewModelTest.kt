@@ -1148,7 +1148,7 @@ class ShowEventViewModelTest {
     val event = createTestEvent(participants = listOf("user1")).copy(groupId = "group123")
     fakeRepo.addEvent(event)
 
-    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
 
     val userProfile =
         Profile(
@@ -1172,7 +1172,7 @@ class ShowEventViewModelTest {
     val event = createTestEvent(participants = listOf("user1", "user2")).copy(groupId = "group123")
     fakeRepo.addEvent(event)
 
-    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
 
     val userProfile =
         Profile(
@@ -1198,7 +1198,7 @@ class ShowEventViewModelTest {
     val event = createTestEvent(participants = listOf("user1"))
     fakeRepo.addEvent(event)
 
-    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
 
     val userProfile =
         Profile(
@@ -1226,7 +1226,7 @@ class ShowEventViewModelTest {
             .copy(groupId = "group123")
     fakeRepo.addEvent(event)
 
-    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
 
     val profile1 =
         Profile(uid = "user1", username = "User1", email = "u1@example.com", eventsJoinedCount = 5)
@@ -1253,7 +1253,7 @@ class ShowEventViewModelTest {
             .copy(groupId = "group123")
     fakeRepo.addEvent(event)
 
-    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
 
     val profile1 =
         Profile(uid = "user1", username = "User1", email = "u1@example.com", eventsJoinedCount = 5)
@@ -1278,7 +1278,7 @@ class ShowEventViewModelTest {
     val event = createTestEvent(participants = listOf("user1", "user2"), daysFromNow = 7)
     fakeRepo.addEvent(event)
 
-    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
 
     val profile1 =
         Profile(uid = "user1", username = "User1", email = "u1@example.com", eventsJoinedCount = 5)
@@ -1307,7 +1307,7 @@ class ShowEventViewModelTest {
             .copy(groupId = "group123")
     fakeRepo.addEvent(event)
 
-    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
 
     val profile1 =
         Profile(uid = "user1", username = "User1", email = "u1@example.com", eventsJoinedCount = 5)
