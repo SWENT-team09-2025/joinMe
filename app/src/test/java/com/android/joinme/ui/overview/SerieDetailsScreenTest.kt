@@ -8,6 +8,8 @@ import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SerieFilter
@@ -1116,5 +1118,82 @@ class SerieDetailsScreenTest {
     }
 
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.OWNER_INFO).assertIsDisplayed()
+  }
+
+  /** --- GROUP TESTS --- */
+  @Test
+  fun serieWithGroup_displaysGroupName() {
+    setup()
+    val groupRepo =
+        object : GroupRepository {
+          override fun getNewGroupId(): String = "new-group-id"
+
+          override suspend fun getAllGroups(): List<Group> = emptyList()
+
+          override suspend fun getGroup(groupId: String): Group {
+            return if (groupId == "group-123") {
+              Group(id = "group-123", name = "Basketball Club", category = EventType.SPORTS)
+            } else throw NoSuchElementException("Group not found")
+          }
+
+          override suspend fun addGroup(group: Group) {}
+
+          override suspend fun editGroup(groupId: String, newValue: Group) {}
+
+          override suspend fun deleteGroup(groupId: String, userId: String) {}
+
+          override suspend fun leaveGroup(groupId: String, userId: String) {}
+
+          override suspend fun joinGroup(groupId: String, userId: String) {}
+
+          override suspend fun getCommonGroups(userIds: List<String>): List<Group> = emptyList()
+        }
+
+    val serie = createTestSerie().copy(groupId = "group-123")
+    fakeSeriesRepo.setSerie(serie)
+
+    val viewModel =
+        SerieDetailsViewModel(
+            seriesRepository = fakeSeriesRepo,
+            eventsRepository = fakeEventsRepo,
+            groupRepository = groupRepo)
+
+    composeTestRule.setContent {
+      SerieDetailsScreen(serieId = serie.serieId, serieDetailsViewModel = viewModel)
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.GROUP_INFO)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.GROUP_INFO).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(SerieDetailsScreenTestTags.GROUP_INFO)
+        .assertTextContains("Group: Basketball Club")
+  }
+
+  @Test
+  fun serieWithoutGroup_doesNotDisplayGroupSection() {
+    setup()
+    val serie = createTestSerie().copy(groupId = null)
+    fakeSeriesRepo.setSerie(serie)
+
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      SerieDetailsScreen(serieId = serie.serieId, serieDetailsViewModel = viewModel)
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.OWNER_INFO)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.GROUP_INFO).assertDoesNotExist()
   }
 }
