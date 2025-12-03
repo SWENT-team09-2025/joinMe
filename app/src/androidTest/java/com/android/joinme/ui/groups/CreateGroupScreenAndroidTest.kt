@@ -84,15 +84,15 @@ class CreateGroupScreenAndroidTest {
     }
 
     override suspend fun uploadGroupPhoto(
-      context: Context,
-      groupId: String,
-      imageUri: Uri
+        context: Context,
+        groupId: String,
+        imageUri: Uri
     ): String {
-        return "https://example.com/group_photos/$groupId.jpg"
+      return "https://example.com/group_photos/$groupId.jpg"
     }
 
     override suspend fun deleteGroupPhoto(groupId: String) {
-        // No-op for fake repository
+      // No-op for fake repository
     }
   }
 
