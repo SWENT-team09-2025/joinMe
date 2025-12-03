@@ -41,7 +41,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
 import com.android.joinme.model.profile.Profile
@@ -274,7 +273,7 @@ private fun ProfileListItem(profile: Profile, onClick: () -> Unit) {
         ProfilePhotoImage(
             photoUrl = profile.photoUrl,
             contentDescription = "${profile.username}'s profile picture",
-            size = 56.dp,
+            size = Dimens.LoadingIndicator.large,
             showLoadingIndicator = false)
 
         Spacer(modifier = Modifier.width(Dimens.Spacing.medium))
@@ -290,7 +289,7 @@ private fun ProfileListItem(profile: Profile, onClick: () -> Unit) {
               overflow = TextOverflow.Ellipsis)
 
           if (!profile.bio.isNullOrBlank()) {
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
             Text(
                 text = profile.bio,
                 style = MaterialTheme.typography.bodyMedium,
