@@ -398,7 +398,7 @@ class CreateEventViewModelTest {
   }
 
   @Test
-  fun setMaxParticipants_whenGroupSelected_validatesAgainstGroupSize() = runTest {
+  fun setMaxParticipants_whenGroupSelected_validatesPositiveNumber() = runTest {
     // Set up a group with 5 members
     val testGroup =
         Group(id = "group-1", name = "Test Group", memberIds = listOf("u1", "u2", "u3", "u4", "u5"))
@@ -410,10 +410,9 @@ class CreateEventViewModelTest {
     // Select the group
     newVm.setSelectedGroup("group-1")
 
-    // Try to set maxParticipants less than group size
+    // Try to set maxParticipants less than group size - should now be valid
     newVm.setMaxParticipants("3")
-    Assert.assertNotNull(newVm.uiState.value.invalidMaxParticipantsMsg)
-    Assert.assertTrue(newVm.uiState.value.invalidMaxParticipantsMsg!!.contains("at least 5"))
+    Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
 
     // Set maxParticipants equal to group size
     newVm.setMaxParticipants("5")
@@ -425,7 +424,7 @@ class CreateEventViewModelTest {
   }
 
   @Test
-  fun setSelectedGroup_revalidatesMaxParticipants() = runTest {
+  fun setSelectedGroup_doesNotChangeMaxParticipants() = runTest {
     // Set up a group with 5 members
     val testGroup =
         Group(id = "group-1", name = "Test Group", memberIds = listOf("u1", "u2", "u3", "u4", "u5"))
@@ -434,14 +433,15 @@ class CreateEventViewModelTest {
     val newVm = CreateEventViewModel(repo, profileRepository, groupRepo)
     advanceUntilIdle()
 
-    // Set maxParticipants to 3 (valid for standalone)
+    // Set maxParticipants to 3 (valid for standalone and now also valid for groups)
     newVm.setMaxParticipants("3")
     Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
 
-    // Select group - maxParticipants is not auto-set anymore
+    // Select group - maxParticipants is not auto-set and remains valid
     newVm.setSelectedGroup("group-1")
-    // maxParticipants should retain its previous value
+    // maxParticipants should retain its previous value and still be valid
     Assert.assertEquals("3", newVm.uiState.value.maxParticipants)
+    Assert.assertNull(newVm.uiState.value.invalidMaxParticipantsMsg)
 
     // Clear group selection
     newVm.setSelectedGroup(null)

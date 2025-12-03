@@ -102,10 +102,6 @@ class CreateSerieViewModel(
   override val _uiState = MutableStateFlow(CreateSerieUIState())
   val uiState: StateFlow<CreateSerieUIState> = _uiState.asStateFlow()
 
-  companion object {
-    private const val DEFAULT_GROUP_SERIE_MAX_PARTICIPANTS = 300
-  }
-
   override fun getState(): SerieFormUIState = _uiState.value
 
   override fun updateState(transform: (SerieFormUIState) -> SerieFormUIState) {
@@ -196,7 +192,7 @@ class CreateSerieViewModel(
     val group = groupResult.getOrNull()
 
     // 6. Build Object
-    val serie = buildSerie(userId, parsedDate, group)
+    val serie = buildSerie(userId, parsedDate)
 
     // 7. Persist (Repo + Group Link)
     if (!tryPersistSerie(serie, group)) {
@@ -300,7 +296,7 @@ class CreateSerieViewModel(
   }
 
   /** Constructs the [Serie] object based on the current form state and context. */
-  private fun buildSerie(userId: String, date: Timestamp, group: Group?): Serie {
+  private fun buildSerie(userId: String, date: Timestamp): Serie {
     val state = _uiState.value
     val serieId = repository.getNewSerieId()
     return Serie(

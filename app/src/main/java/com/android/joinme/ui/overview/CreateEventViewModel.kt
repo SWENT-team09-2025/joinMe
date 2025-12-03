@@ -100,10 +100,6 @@ class CreateEventViewModel(
   override val _uiState = MutableStateFlow(CreateEventUIState())
   val uiState: StateFlow<CreateEventUIState> = _uiState.asStateFlow()
 
-  companion object {
-    private const val DEFAULT_GROUP_EVENT_MAX_PARTICIPANTS = 300
-  }
-
   init {
     loadUserGroups()
   }
@@ -159,7 +155,7 @@ class CreateEventViewModel(
     val ownerProfile = fetchProfileOrError(ownerId) ?: return false
 
     // 2. Build and Save Event
-    val event = buildEvent(ownerId, parsedDate, selectedGroup)
+    val event = buildEvent(ownerId, parsedDate)
     if (!saveEventOrError(event)) return false
 
     // 3. Post-Creation Updates (Group, Profile, Streaks)
@@ -230,9 +226,11 @@ class CreateEventViewModel(
   /**
    * Constructs the [Event] domain object from the current UI state.
    *
-   * @param group The selected group, or null if standalone. Used to determine participants.
+   * @param ownerId The user ID of the event owner.
+   * @param date The event date as a [Timestamp].
+   * @return The constructed [Event] object.
    */
-  private fun buildEvent(ownerId: String, date: Timestamp, group: Group?): Event {
+  private fun buildEvent(ownerId: String, date: Timestamp): Event {
     val state = _uiState.value
     return Event(
         eventId = repository.getNewEventId(),
@@ -370,28 +368,15 @@ class CreateEventViewModel(
             invalidLocationMsg = if (location.isBlank()) "Must be a valid Location" else null)
   }
 
-  /**
-   * Updates and validates maxParticipants. If a group is selected, ensures the max is at least the
-   * current group size.
-   */
+  /** Updates and validates maxParticipants. */
   fun setMaxParticipants(value: String) {
     val num = value.toIntOrNull()
-    val selectedGroup =
-        _uiState.value.selectedGroupId?.let { groupId ->
-          _uiState.value.availableGroups.find { it.id == groupId }
-        }
-    val groupMembersCount = selectedGroup?.memberIds?.size ?: 0
 
     _uiState.value =
         _uiState.value.copy(
             maxParticipants = value,
             invalidMaxParticipantsMsg =
-                when {
-                  num == null || num <= 0 -> "Must be a positive number"
-                  groupMembersCount > 0 && num < groupMembersCount ->
-                      "Must be at least $groupMembersCount (group size)"
-                  else -> null
-                })
+                if (num == null || num <= 0) "Must be a positive number" else null)
   }
 
   /**
