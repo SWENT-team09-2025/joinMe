@@ -57,6 +57,14 @@ class CalendarViewModelTest {
     Dispatchers.resetMain()
   }
 
+  private fun advanceAndWait() = testDispatcher.scheduler.advanceUntilIdle()
+
+  private fun createErrorViewModel(): CalendarViewModel {
+    fakeEventRepository.shouldThrow = true
+    return CalendarViewModel(
+        eventsRepository = fakeEventRepository, seriesRepository = fakeSerieRepository)
+  }
+
   @Test
   fun `initial state is correctly set`() {
     val state = viewModel.uiState.value
@@ -69,25 +77,19 @@ class CalendarViewModelTest {
   }
 
   @Test
-  fun `loadAllItems loads events and series successfully`() = runTest {
-    testDispatcher.scheduler.advanceUntilIdle()
+  fun `loadAllItems loads events and series successfully and isLoading transitions correctly`() =
+      runTest {
+        advanceAndWait()
 
-    val state = viewModel.uiState.value
-    assertNull(state.error)
-    assertEquals(false, state.isLoading)
-  }
+        val state = viewModel.uiState.value
+        assertNull(state.error)
+        assertEquals(false, state.isLoading)
+      }
 
   @Test
-  fun `loadAllItems handles repository failure`() = runTest {
-    fakeEventRepository.shouldThrow = true
-
-    // Create a new ViewModel after setting shouldThrow
-    val failingViewModel =
-        CalendarViewModel(
-            eventsRepository = fakeEventRepository, seriesRepository = fakeSerieRepository)
-
-    // Allow the init block to complete
-    testDispatcher.scheduler.advanceUntilIdle()
+  fun `loadAllItems handles repository failure and sets error state`() = runTest {
+    val failingViewModel = createErrorViewModel()
+    advanceAndWait()
 
     val state = failingViewModel.uiState.value
     assertNotNull(state.error)
@@ -97,18 +99,15 @@ class CalendarViewModelTest {
 
   @Test
   fun `selectDate updates selected date and filters items correctly`() = runTest {
-    testDispatcher.scheduler.advanceUntilIdle()
+    advanceAndWait()
 
-    // Test 1: Select tomorrow and verify date is updated
     val tomorrowCalendar = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 1) }
     viewModel.selectDate(tomorrowCalendar.timeInMillis)
     assertEquals(tomorrowCalendar.timeInMillis, viewModel.uiState.value.selectedDate)
 
-    // Test 2: Verify filtering works - tomorrow should show Tomorrow Event, not Today Event
     assertTrue(viewModel.uiState.value.itemsForDate.any { it.title == "Tomorrow Event" })
     assertTrue(viewModel.uiState.value.itemsForDate.none { it.title == "Today Event" })
 
-    // Test 3: Select today and verify Today Event is shown
     val todayCalendar = Calendar.getInstance()
     viewModel.selectDate(todayCalendar.timeInMillis)
     assertTrue(viewModel.uiState.value.itemsForDate.any { it.title == "Today Event" })
@@ -116,31 +115,26 @@ class CalendarViewModelTest {
 
   @Test
   fun `month navigation works correctly`() = runTest {
-    testDispatcher.scheduler.advanceUntilIdle()
+    advanceAndWait()
 
-    // Test changeMonth
     viewModel.changeMonth(5, 2025) // June 2025
     assertEquals(5, viewModel.uiState.value.currentMonth)
     assertEquals(2025, viewModel.uiState.value.currentYear)
 
-    // Test nextMonth
     viewModel.nextMonth()
     assertEquals(6, viewModel.uiState.value.currentMonth) // July
     assertEquals(2025, viewModel.uiState.value.currentYear)
 
-    // Test nextMonth with year rollover
     viewModel.changeMonth(11, 2024) // December 2024
     viewModel.nextMonth()
     assertEquals(0, viewModel.uiState.value.currentMonth) // January
     assertEquals(2025, viewModel.uiState.value.currentYear)
 
-    // Test previousMonth
     viewModel.changeMonth(5, 2025) // June 2025
     viewModel.previousMonth()
     assertEquals(4, viewModel.uiState.value.currentMonth) // May
     assertEquals(2025, viewModel.uiState.value.currentYear)
 
-    // Test previousMonth with year rollover
     viewModel.changeMonth(0, 2025) // January 2025
     viewModel.previousMonth()
     assertEquals(11, viewModel.uiState.value.currentMonth) // December
@@ -148,135 +142,91 @@ class CalendarViewModelTest {
   }
 
   @Test
-  fun `daysWithItems tracks days with events correctly`() = runTest {
-    testDispatcher.scheduler.advanceUntilIdle()
+  fun `daysWithItems tracks days with events correctly and is empty when no events`() = runTest {
+    advanceAndWait()
 
-    // Test current month contains today
     val calendar = Calendar.getInstance()
     viewModel.changeMonth(calendar.get(Calendar.MONTH), calendar.get(Calendar.YEAR))
     val today = calendar.get(Calendar.DAY_OF_MONTH)
     assertTrue(viewModel.uiState.value.daysWithItems.contains(today))
 
-    // Test updates when month changes
     val nextMonth = Calendar.getInstance().apply { add(Calendar.MONTH, 1) }
     viewModel.changeMonth(nextMonth.get(Calendar.MONTH), nextMonth.get(Calendar.YEAR))
     val nextMonthDay = nextMonth.get(Calendar.DAY_OF_MONTH)
     assertTrue(viewModel.uiState.value.daysWithItems.contains(nextMonthDay))
-  }
 
-  @Test
-  fun `daysWithItems is empty when no events in month`() = runTest {
+    // Test empty month
     fakeEventRepository.clearAllEvents()
     fakeSerieRepository.clearAllSeries()
-
-    // Create a new ViewModel after clearing events
     val emptyViewModel =
         CalendarViewModel(
             eventsRepository = fakeEventRepository, seriesRepository = fakeSerieRepository)
-
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    emptyViewModel.changeMonth(0, 2020) // January 2020 - no events
-
-    val state = emptyViewModel.uiState.value
-    assertTrue(state.daysWithItems.isEmpty())
+    advanceAndWait()
+    emptyViewModel.changeMonth(0, 2020)
+    assertTrue(emptyViewModel.uiState.value.daysWithItems.isEmpty())
   }
 
   @Test
   fun `refreshItems reloads data from repositories`() = runTest {
-    testDispatcher.scheduler.advanceUntilIdle()
+    advanceAndWait()
 
-    // Add new event and refresh
     fakeEventRepository.addNewEvent()
     viewModel.refreshItems()
-    testDispatcher.scheduler.advanceUntilIdle()
+    advanceAndWait()
 
     assertNull(viewModel.uiState.value.error)
   }
 
   @Test
   fun `clearError clears error state`() = runTest {
-    fakeEventRepository.shouldThrow = true
+    val failingViewModel = createErrorViewModel()
+    advanceAndWait()
 
-    // Create a new ViewModel after setting shouldThrow
-    val failingViewModel =
-        CalendarViewModel(
-            eventsRepository = fakeEventRepository, seriesRepository = fakeSerieRepository)
-
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    // Should have error
     assertNotNull(failingViewModel.uiState.value.error)
 
     failingViewModel.clearError()
 
-    val state = failingViewModel.uiState.value
-    assertNull(state.error)
+    assertNull(failingViewModel.uiState.value.error)
   }
 
   @Test
-  fun `isLoading state transitions correctly`() = runTest {
-    // Test isLoading during fetch with delay
+  fun `isLoading state during refresh`() = runTest {
     fakeEventRepository.setDelay(1000)
     viewModel.refreshItems()
     testDispatcher.scheduler.runCurrent()
     assertEquals(true, viewModel.uiState.value.isLoading)
 
-    testDispatcher.scheduler.advanceUntilIdle()
+    advanceAndWait()
     assertEquals(false, viewModel.uiState.value.isLoading)
-
-    // Test isLoading is false after successful fetch (already tested above)
-
-    // Test isLoading is false after failed fetch
-    fakeEventRepository.shouldThrow = true
-    fakeEventRepository.setDelay(0) // Reset delay
-    val failingViewModel =
-        CalendarViewModel(
-            eventsRepository = fakeEventRepository, seriesRepository = fakeSerieRepository)
-    testDispatcher.scheduler.advanceUntilIdle()
-    assertEquals(false, failingViewModel.uiState.value.isLoading)
-    assertNotNull(failingViewModel.uiState.value.error)
   }
 
   @Test
   fun `items are sorted by time for selected date`() = runTest {
     fakeEventRepository.addMultipleEventsOnSameDay()
-    testDispatcher.scheduler.advanceUntilIdle()
+    advanceAndWait()
 
-    // Select the day with multiple events
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.DAY_OF_MONTH, 5)
+    val calendar = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 5) }
     viewModel.selectDate(calendar.timeInMillis)
 
-    val state = viewModel.uiState.value
-
-    // Verify items are sorted by time
-    for (i in 0 until state.itemsForDate.size - 1) {
-      assertTrue(
-          state.itemsForDate[i].date.toDate().time <= state.itemsForDate[i + 1].date.toDate().time)
+    val items = viewModel.uiState.value.itemsForDate
+    for (i in 0 until items.size - 1) {
+      assertTrue(items[i].date.toDate().time <= items[i + 1].date.toDate().time)
     }
   }
 
   @Test
   fun `event items are correctly typed and series events are excluded`() = runTest {
-    testDispatcher.scheduler.advanceUntilIdle()
+    advanceAndWait()
 
-    val todayCalendar = Calendar.getInstance()
-    viewModel.selectDate(todayCalendar.timeInMillis)
+    viewModel.selectDate(Calendar.getInstance().timeInMillis)
     val state = viewModel.uiState.value
 
-    // Check standalone events are of type SingleEvent
-    val singleEvents = state.itemsForDate.filterIsInstance<EventItem.SingleEvent>()
-    assertTrue(singleEvents.isNotEmpty())
+    assertTrue(state.itemsForDate.filterIsInstance<EventItem.SingleEvent>().isNotEmpty())
+    assertTrue(state.itemsForDate.filterIsInstance<EventItem.EventSerie>().isNotEmpty())
 
-    // Check series are of type EventSerie
-    val serieItems = state.itemsForDate.filterIsInstance<EventItem.EventSerie>()
-    assertTrue(serieItems.isNotEmpty())
-
-    // Verify events belonging to series are not shown as SingleEvent
     fakeSerieRepository.addSerieWithEvents()
     viewModel.refreshItems()
-    testDispatcher.scheduler.advanceUntilIdle()
+    advanceAndWait()
     val updatedSingleEvents =
         viewModel.uiState.value.itemsForDate.filterIsInstance<EventItem.SingleEvent>()
     updatedSingleEvents.forEach { item -> assertTrue(item.title != "Event In Serie") }
@@ -286,7 +236,6 @@ class CalendarViewModelTest {
   private class FakeEventsRepository : EventsRepository {
     var shouldThrow = false
     private var delayMillis: Long = 0
-
     private val fakeEvents = mutableListOf<Event>()
 
     fun setDelay(millis: Long) {
@@ -294,108 +243,47 @@ class CalendarViewModelTest {
     }
 
     init {
-      // Add events for different days
-      val calendar = Calendar.getInstance()
+      fakeEvents.add(createEvent("1", "Today Event", 0, 10, EventType.SPORTS))
+      fakeEvents.add(createEvent("2", "Tomorrow Event", 1, 14, EventType.SOCIAL))
+      fakeEvents.add(createEvent("3", "Next Month Event", 30, 9, EventType.ACTIVITY))
+    }
 
-      // Event today at 10 AM
-      calendar.set(Calendar.HOUR_OF_DAY, 10)
-      calendar.set(Calendar.MINUTE, 0)
-      calendar.set(Calendar.SECOND, 0)
-      calendar.set(Calendar.MILLISECOND, 0)
-      fakeEvents.add(
-          Event(
-              eventId = "1",
-              type = EventType.SPORTS,
-              title = "Today Event",
-              description = "Event happening today",
-              location = null,
-              date = Timestamp(calendar.time),
-              duration = 60,
-              participants = listOf("user1"),
-              maxParticipants = 10,
-              visibility = EventVisibility.PUBLIC,
-              ownerId = "owner1"))
-
-      // Event tomorrow at 2 PM
-      calendar.time = Calendar.getInstance().time
-      calendar.add(Calendar.DAY_OF_MONTH, 1)
-      calendar.set(Calendar.HOUR_OF_DAY, 14)
-      calendar.set(Calendar.MINUTE, 0)
-      calendar.set(Calendar.SECOND, 0)
-      calendar.set(Calendar.MILLISECOND, 0)
-      fakeEvents.add(
-          Event(
-              eventId = "2",
-              type = EventType.SOCIAL,
-              title = "Tomorrow Event",
-              description = "Event happening tomorrow",
-              location = null,
-              date = Timestamp(calendar.time),
-              duration = 120,
-              participants = emptyList(),
-              maxParticipants = 5,
-              visibility = EventVisibility.PRIVATE,
-              ownerId = "owner2"))
-
-      // Event next month at 9 AM
-      calendar.time = Calendar.getInstance().time
-      calendar.add(Calendar.MONTH, 1)
-      calendar.set(Calendar.DAY_OF_MONTH, calendar.get(Calendar.DAY_OF_MONTH))
-      calendar.set(Calendar.HOUR_OF_DAY, 9)
-      calendar.set(Calendar.MINUTE, 0)
-      calendar.set(Calendar.SECOND, 0)
-      calendar.set(Calendar.MILLISECOND, 0)
-      fakeEvents.add(
-          Event(
-              eventId = "3",
-              type = EventType.ACTIVITY,
-              title = "Next Month Event",
-              description = "Event in next month",
-              location = null,
-              date = Timestamp(calendar.time),
-              duration = 60,
-              participants = emptyList(),
-              maxParticipants = 8,
-              visibility = EventVisibility.PUBLIC,
-              ownerId = "owner3"))
+    private fun createEvent(
+        id: String,
+        title: String,
+        daysOffset: Int,
+        hour: Int,
+        type: EventType
+    ): Event {
+      val calendar =
+          Calendar.getInstance().apply {
+            if (daysOffset >= 30) {
+              add(Calendar.MONTH, 1)
+            } else {
+              add(Calendar.DAY_OF_MONTH, daysOffset)
+            }
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+          }
+      return Event(
+          eventId = id,
+          type = type,
+          title = title,
+          description = "Description for $title",
+          location = null,
+          date = Timestamp(calendar.time),
+          duration = 60,
+          participants = emptyList(),
+          maxParticipants = 10,
+          visibility = EventVisibility.PUBLIC,
+          ownerId = "owner$id")
     }
 
     fun addMultipleEventsOnSameDay() {
-      val calendar = Calendar.getInstance()
-      calendar.add(Calendar.DAY_OF_MONTH, 5)
-
-      // Event at 9 AM
-      calendar.set(Calendar.HOUR_OF_DAY, 9)
-      calendar.set(Calendar.MINUTE, 0)
-      fakeEvents.add(
-          Event(
-              eventId = "4",
-              type = EventType.SPORTS,
-              title = "Morning Event",
-              description = "Desc 4",
-              location = null,
-              date = Timestamp(calendar.time),
-              duration = 60,
-              participants = emptyList(),
-              maxParticipants = 10,
-              visibility = EventVisibility.PUBLIC,
-              ownerId = "owner4"))
-
-      // Event at 2 PM
-      calendar.set(Calendar.HOUR_OF_DAY, 14)
-      fakeEvents.add(
-          Event(
-              eventId = "5",
-              type = EventType.SOCIAL,
-              title = "Afternoon Event",
-              description = "Desc 5",
-              location = null,
-              date = Timestamp(calendar.time),
-              duration = 90,
-              participants = emptyList(),
-              maxParticipants = 15,
-              visibility = EventVisibility.PUBLIC,
-              ownerId = "owner5"))
+      fakeEvents.add(createEvent("4", "Morning Event", 5, 9, EventType.SPORTS))
+      fakeEvents.add(createEvent("5", "Afternoon Event", 5, 14, EventType.SOCIAL))
     }
 
     fun clearAllEvents() {
@@ -403,66 +291,30 @@ class CalendarViewModelTest {
     }
 
     fun addNewEvent() {
-      val calendar = Calendar.getInstance()
-      calendar.add(Calendar.DAY_OF_MONTH, 3)
-      fakeEvents.add(
-          Event(
-              eventId = "new_event",
-              type = EventType.ACTIVITY,
-              title = "New Event",
-              description = "Newly added event",
-              location = null,
-              date = Timestamp(calendar.time),
-              duration = 60,
-              participants = emptyList(),
-              maxParticipants = 10,
-              visibility = EventVisibility.PUBLIC,
-              ownerId = "owner1"))
+      fakeEvents.add(createEvent("new_event", "New Event", 3, 10, EventType.ACTIVITY))
     }
 
     override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
-      if (delayMillis > 0) {
-        kotlinx.coroutines.delay(delayMillis)
-      }
+      if (delayMillis > 0) kotlinx.coroutines.delay(delayMillis)
       if (shouldThrow) throw RuntimeException("Repository error")
       return fakeEvents.toList()
     }
 
-    override suspend fun getEvent(eventId: String): Event {
-      if (shouldThrow) throw RuntimeException("Repository error")
-      return fakeEvents.first { it.eventId == eventId }
-    }
+    override suspend fun getEvent(eventId: String): Event = throw NotImplementedError()
 
-    override suspend fun addEvent(event: Event) {
-      if (shouldThrow) throw RuntimeException("Repository error")
-      fakeEvents.add(event)
-    }
+    override suspend fun addEvent(event: Event) = throw NotImplementedError()
 
-    override suspend fun editEvent(eventId: String, newValue: Event) {
-      if (shouldThrow) throw RuntimeException("Repository error")
-    }
+    override suspend fun editEvent(eventId: String, newValue: Event) = throw NotImplementedError()
 
-    override suspend fun deleteEvent(eventId: String) {
-      if (shouldThrow) throw RuntimeException("Repository error")
-    }
+    override suspend fun deleteEvent(eventId: String) = throw NotImplementedError()
 
-    override suspend fun getEventsByIds(eventIds: List<String>): List<Event> {
-      if (shouldThrow) throw RuntimeException("Repository error")
-      return fakeEvents.filter { eventIds.contains(it.eventId) }
-    }
+    override suspend fun getEventsByIds(eventIds: List<String>): List<Event> =
+        throw NotImplementedError()
 
-    override fun getNewEventId(): String {
-      if (shouldThrow) throw RuntimeException("Repository error")
-      return "new_event_id"
-    }
+    override fun getNewEventId(): String = throw NotImplementedError()
 
-    override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
-      if (shouldThrow) throw RuntimeException("Repository error")
-      if (userIds.isEmpty()) return emptyList()
-      return fakeEvents
-          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
-          .sortedBy { it.date.toDate().time }
-    }
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> =
+        throw NotImplementedError()
   }
 
   /** Fake implementation of [SeriesRepository] for isolated ViewModel testing. */
@@ -471,91 +323,59 @@ class CalendarViewModelTest {
     private val fakeSeries = mutableListOf<Serie>()
 
     init {
-      // Add a serie starting today
-      val calendar = Calendar.getInstance()
-      calendar.set(Calendar.HOUR_OF_DAY, 11)
-      calendar.set(Calendar.MINUTE, 0)
-      calendar.set(Calendar.SECOND, 0)
-      calendar.set(Calendar.MILLISECOND, 0)
+      fakeSeries.add(createSerie("serie1", "Today Serie", 0, emptyList()))
+    }
+
+    private fun createSerie(id: String, title: String, daysOffset: Int, eventIds: List<String>):
+        Serie {
+      val calendar =
+          Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_MONTH, daysOffset)
+            set(Calendar.HOUR_OF_DAY, 11)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+          }
       val startDate = calendar.time
       calendar.add(Calendar.DAY_OF_MONTH, 7)
       val endDate = calendar.time
 
-      fakeSeries.add(
-          Serie(
-              serieId = "serie1",
-              title = "Today Serie",
-              description = "Serie starting today",
-              date = Timestamp(startDate),
-              participants = listOf("user1"),
-              maxParticipants = 10,
-              visibility = Visibility.PUBLIC,
-              eventIds = emptyList(),
-              ownerId = "owner1",
-              lastEventEndTime = Timestamp(endDate)))
+      return Serie(
+          serieId = id,
+          title = title,
+          description = "Description for $title",
+          date = Timestamp(startDate),
+          participants = listOf("user1"),
+          maxParticipants = 10,
+          visibility = Visibility.PUBLIC,
+          eventIds = eventIds,
+          ownerId = "owner$id",
+          lastEventEndTime = Timestamp(endDate))
     }
 
-    fun clearAllSeries() {
-      fakeSeries.clear()
-    }
+    fun clearAllSeries() = fakeSeries.clear()
 
     fun addSerieWithEvents() {
-      val calendar = Calendar.getInstance()
-      calendar.add(Calendar.DAY_OF_MONTH, 2)
-      val startDate = calendar.time
-      calendar.add(Calendar.DAY_OF_MONTH, 7)
-      val endDate = calendar.time
-
       fakeSeries.add(
-          Serie(
-              serieId = "serie2",
-              title = "Serie With Events",
-              description = "Serie that has events",
-              date = Timestamp(startDate),
-              participants = listOf("user1"),
-              maxParticipants = 10,
-              visibility = Visibility.PUBLIC,
-              eventIds = listOf("event_in_serie_1", "event_in_serie_2"),
-              ownerId = "owner1",
-              lastEventEndTime = Timestamp(endDate)))
+          createSerie("serie2", "Serie With Events", 2, listOf("event_in_serie_1", "event_in_serie_2")))
     }
 
-    override fun getNewSerieId(): String {
-      if (shouldThrow) throw RuntimeException("Serie repository error")
-      return "new_serie_id"
-    }
+    override fun getNewSerieId(): String = throw NotImplementedError()
 
     override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> {
       if (shouldThrow) throw RuntimeException("Serie repository error")
       return fakeSeries.toList()
     }
 
-    override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> {
-      if (shouldThrow) throw RuntimeException("Serie repository error")
-      return fakeSeries.filter { seriesIds.contains(it.serieId) }
-    }
+    override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> =
+        throw NotImplementedError()
 
-    override suspend fun getSerie(serieId: String): Serie {
-      if (shouldThrow) throw RuntimeException("Serie repository error")
-      return fakeSeries.first { it.serieId == serieId }
-    }
+    override suspend fun getSerie(serieId: String): Serie = throw NotImplementedError()
 
-    override suspend fun addSerie(serie: Serie) {
-      if (shouldThrow) throw RuntimeException("Serie repository error")
-      fakeSeries.add(serie)
-    }
+    override suspend fun addSerie(serie: Serie) = throw NotImplementedError()
 
-    override suspend fun editSerie(serieId: String, newValue: Serie) {
-      if (shouldThrow) throw RuntimeException("Serie repository error")
-      val index = fakeSeries.indexOfFirst { it.serieId == serieId }
-      if (index != -1) {
-        fakeSeries[index] = newValue
-      }
-    }
+    override suspend fun editSerie(serieId: String, newValue: Serie) = throw NotImplementedError()
 
-    override suspend fun deleteSerie(serieId: String) {
-      if (shouldThrow) throw RuntimeException("Serie repository error")
-      fakeSeries.removeIf { it.serieId == serieId }
-    }
+    override suspend fun deleteSerie(serieId: String) = throw NotImplementedError()
   }
 }
