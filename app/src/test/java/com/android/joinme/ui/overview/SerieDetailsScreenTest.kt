@@ -1,6 +1,7 @@
 package com.android.joinme.ui.overview
 
 import android.content.Context
+import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.Event
@@ -1147,6 +1148,16 @@ class SerieDetailsScreenTest {
           override suspend fun joinGroup(groupId: String, userId: String) {}
 
           override suspend fun getCommonGroups(userIds: List<String>): List<Group> = emptyList()
+
+          override suspend fun uploadGroupPhoto(
+              context: Context,
+              groupId: String,
+              imageUri: Uri
+          ): String {
+            return ""
+          }
+
+          override suspend fun deleteGroupPhoto(groupId: String) {}
         }
 
     val serie = createTestSerie().copy(groupId = "group-123")
