@@ -940,7 +940,7 @@ class SerieFormScreenTest {
   }
 
   @Test
-  fun serieFormScreen_hidesMaxParticipantsAndVisibilityWhenGroupSelected() {
+  fun serieFormScreen_hidesVisibilityButShowsMaxParticipantsWhenGroupSelected() {
     val formState = createValidFormState()
     val testTags = createDefaultTestTags()
     val groups =
@@ -971,7 +971,9 @@ class SerieFormScreenTest {
           onGoBack = {})
     }
 
-    composeTestRule.onNodeWithTag(testTags.inputSerieMaxParticipants).assertDoesNotExist()
+    // MaxParticipants is now always visible
+    composeTestRule.onNodeWithTag(testTags.inputSerieMaxParticipants).assertIsDisplayed()
+    // Visibility is still hidden for group series
     composeTestRule.onNodeWithTag(testTags.inputSerieVisibility).assertDoesNotExist()
   }
 

@@ -517,13 +517,11 @@ fun SerieFormScreen(
                   },
                   maxLines = 4)
 
-              // Max Participants field with NumberPicker (hidden when group is selected)
-              if (selectedGroupId == null) {
-                MaxParticipantsField(
-                    formState = formState,
-                    testTags = testTags,
-                    onMaxParticipantsChange = onMaxParticipantsChange)
-              }
+              // Max Participants field with NumberPicker
+              MaxParticipantsField(
+                  formState = formState,
+                  testTags = testTags,
+                  onMaxParticipantsChange = onMaxParticipantsChange)
 
               // Date and Time row
               DateTimePickerRow(

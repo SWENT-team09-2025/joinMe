@@ -367,7 +367,7 @@ class CreateEventScreenTest {
   }
 
   @Test
-  fun whenGroupSelected_typeMaxParticipantsAndVisibilityFieldsAreHidden() {
+  fun whenGroupSelected_typeAndVisibilityFieldsAreHiddenButMaxParticipantsIsVisible() {
     composeTestRule.setContent { CreateEventScreen(onDone = {}) }
 
     // Initially all fields should be visible for standalone
