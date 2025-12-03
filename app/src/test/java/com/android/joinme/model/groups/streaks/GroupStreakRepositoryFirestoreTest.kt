@@ -1,5 +1,7 @@
 package com.android.joinme.model.groups.streaks
 
+// Implemented with the help of AI tools, adapted and refactored to follow project pattern.
+
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.CollectionReference
@@ -216,5 +218,50 @@ class GroupStreakRepositoryFirestoreTest {
           },
           eq(SetOptions.merge()))
     }
+  }
+
+  // ==================== deleteStreakForUser ====================
+
+  @Test
+  fun `deleteStreakForUser deletes correct document`() = runTest {
+    // Given
+    every { mockStreakDocument.delete() } returns Tasks.forResult(null)
+
+    // When
+    repository.deleteStreakForUser(testGroupId, testUserId)
+
+    // Then
+    verify { mockStreakDocument.delete() }
+  }
+
+  // ==================== deleteAllStreaksForGroup ====================
+
+  @Test
+  fun `deleteAllStreaksForGroup deletes all documents and handles empty subcollection`() = runTest {
+    // Test with multiple documents first
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockDoc1 = mockk<DocumentSnapshot>(relaxed = true)
+    val mockDoc2 = mockk<DocumentSnapshot>(relaxed = true)
+    val mockDocRef1 = mockk<DocumentReference>(relaxed = true)
+    val mockDocRef2 = mockk<DocumentReference>(relaxed = true)
+
+    every { mockStreaksCollection.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.documents } returns listOf(mockDoc1, mockDoc2)
+    every { mockDoc1.reference } returns mockDocRef1
+    every { mockDoc2.reference } returns mockDocRef2
+    every { mockDocRef1.delete() } returns Tasks.forResult(null)
+    every { mockDocRef2.delete() } returns Tasks.forResult(null)
+
+    // When
+    repository.deleteAllStreaksForGroup(testGroupId)
+
+    // Then: all documents deleted
+    verify { mockDocRef1.delete() }
+    verify { mockDocRef2.delete() }
+
+    // Test empty subcollection
+    every { mockQuerySnapshot.documents } returns emptyList()
+    repository.deleteAllStreaksForGroup(testGroupId)
+    // No additional delete calls beyond the 2 already verified
   }
 }
