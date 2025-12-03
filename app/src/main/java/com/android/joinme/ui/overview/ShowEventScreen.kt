@@ -406,9 +406,9 @@ fun ShowEventScreen(
                   textAlign = TextAlign.Center)
 
               // Group display (if event belongs to a group)
-              if (eventUIState.groupName != null) {
+              eventUIState.groupName?.let { groupName ->
                 Text(
-                    text = "${stringResource(R.string.group_name)} ${eventUIState.groupName}",
+                    text = stringResource(R.string.group_name, groupName),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface,

@@ -313,10 +313,11 @@ fun SerieDetailsScreen(
                 textAlign = TextAlign.Center)
 
             // Group information (if serie belongs to a group)
-            if (uiState.groupName != null) {
+            uiState.groupName?.let { groupName ->
               Text(
-                  text = "${stringResource(R.string.group_name)} ${uiState.groupName}",
+                  text = stringResource(R.string.group_name, groupName),
                   style = MaterialTheme.typography.bodyMedium,
+                  fontWeight = FontWeight.Medium,
                   color = MaterialTheme.colorScheme.onSurface,
                   modifier =
                       Modifier.fillMaxWidth()

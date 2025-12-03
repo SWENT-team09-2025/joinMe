@@ -321,12 +321,13 @@ class ShowEventViewModelTest {
   }
 
   @Test
-  fun loadEvent_withEmptyGroupId_doesNotCallRepository() = runTest {
+  fun loadEvent_withEmptyGroupId_callsRepositoryAndHandlesEmptyString() = runTest {
     val event = createTestEvent().copy(groupId = "")
     repository.addEvent(event)
 
     whenever(profileRepository.getProfile("owner123"))
         .thenReturn(Profile(uid = "owner123", username = "TestUser", email = "test@example.com"))
+    whenever(groupRepository.getGroup("")).thenReturn(null)
 
     viewModel.loadEvent(event.eventId)
     advanceUntilIdle()
@@ -334,7 +335,6 @@ class ShowEventViewModelTest {
     val state = viewModel.uiState.first()
     assertEquals("", state.groupId)
     assertNull(state.groupName)
-    verify(groupRepository, never()).getGroup(any())
   }
 
   @Test

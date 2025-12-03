@@ -156,9 +156,6 @@ class ShowEventViewModel(
    * @return The name of the group, or null if not found or if an error occurs
    */
   private suspend fun getGroupName(groupId: String): String? {
-    if (groupId.isEmpty()) {
-      return null
-    }
     return try {
       val group = groupRepository.getGroup(groupId)
       group.name
