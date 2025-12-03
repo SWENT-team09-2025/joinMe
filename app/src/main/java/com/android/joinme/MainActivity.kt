@@ -29,6 +29,7 @@ import com.android.joinme.model.chat.ChatRepositoryProvider
 import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.notification.FCMTokenManager
 import com.android.joinme.model.profile.ProfileRepositoryProvider
+import com.android.joinme.ui.calendar.CalendarScreen
 import com.android.joinme.ui.chat.ChatScreen
 import com.android.joinme.ui.chat.ChatViewModel
 import com.android.joinme.ui.groups.ActivityGroupScreen
@@ -261,6 +262,7 @@ fun JoinMe(
             onAddSerie = { navigationActions.navigateTo(Screen.CreateSerie) },
             onSelectedSerie = { navigationActions.navigateTo(Screen.SerieDetails(it.serieId)) },
             onGoToHistory = { navigationActions.navigateTo(Screen.History) },
+            onGoToCalendar = { navigationActions.navigateTo(Screen.Calendar) },
             navigationActions = navigationActions,
             enableNotificationPermissionRequest = enableNotificationPermissionRequest)
       }
@@ -298,6 +300,12 @@ fun JoinMe(
       }
       composable(Screen.History.route) {
         HistoryScreen(
+            onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
+            onSelectSerie = { navigationActions.navigateTo(Screen.SerieDetails(it.serieId)) },
+            onGoBack = { navigationActions.goBack() })
+      }
+      composable(Screen.Calendar.route) {
+        CalendarScreen(
             onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
             onSelectSerie = { navigationActions.navigateTo(Screen.SerieDetails(it.serieId)) },
             onGoBack = { navigationActions.goBack() })

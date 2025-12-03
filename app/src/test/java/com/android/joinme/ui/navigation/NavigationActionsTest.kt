@@ -466,6 +466,30 @@ class NavigationActionsTest {
   }
 
   @Test
+  fun `Calendar screen has correct properties`() {
+    assertEquals("calendar", Screen.Calendar.route)
+    assertEquals("Calendar", Screen.Calendar.name)
+    assertFalse(Screen.Calendar.isTopLevelDestination)
+  }
+
+  @Test
+  fun `navigateTo Calendar from Overview navigates correctly`() {
+    every { navController.currentDestination?.route } returns Screen.Overview.route
+
+    actions.navigateTo(Screen.Calendar)
+
+    verify {
+      navController.navigate(
+          eq(Screen.Calendar.route),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
   fun `Auth screen has correct properties`() {
     assertEquals("auth", Screen.Auth.route)
     assertEquals("Authentication", Screen.Auth.name)

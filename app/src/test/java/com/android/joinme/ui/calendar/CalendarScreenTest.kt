@@ -124,9 +124,7 @@ class CalendarScreenTest {
 
     // Should display current month and year
     composeTestRule.onNodeWithTag(CalendarScreenTestTags.MONTH_YEAR_TEXT).assertIsDisplayed()
-    composeTestRule
-        .onNodeWithTag(CalendarScreenTestTags.PREVIOUS_MONTH_BUTTON)
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(CalendarScreenTestTags.PREVIOUS_MONTH_BUTTON).assertIsDisplayed()
     composeTestRule.onNodeWithTag(CalendarScreenTestTags.NEXT_MONTH_BUTTON).assertIsDisplayed()
   }
 

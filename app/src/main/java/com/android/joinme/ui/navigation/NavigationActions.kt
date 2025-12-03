@@ -132,6 +132,13 @@ sealed class Screen(
   object Map : Screen(route = "map", name = "Map", isTopLevelDestination = true)
 
   // ============================================================================
+  // Calendar
+  // ============================================================================
+
+  /** Calendar screen showing events in calendar view */
+  object Calendar : Screen(route = "calendar", name = "Calendar")
+
+  // ============================================================================
   // Profile & Groups
   // ============================================================================
 
