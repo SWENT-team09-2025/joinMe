@@ -190,109 +190,6 @@ fun SerieDetailsScreen(
                 onQuitSerieSuccess = onQuitSerieSuccess,
                 onShowDeleteDialog = { showDeleteDialog = true },
                 coroutineScope = coroutineScope)
-
-            HorizontalDivider(
-                thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
-
-            // Description
-            Text(
-                text = uiState.serie?.description ?: "",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .heightIn(min = Dimens.Spacing.large)
-                        .testTag(SerieDetailsScreenTestTags.DESCRIPTION))
-
-            HorizontalDivider(
-                thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
-
-            // Events list in LazyColumn with fixed size
-            if (uiState.events.isNotEmpty()) {
-              LazyColumn(
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .weight(1f)
-                          .testTag(SerieDetailsScreenTestTags.EVENT_LIST),
-                  verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium),
-              ) {
-                items(uiState.events.size) { index ->
-                  val event = uiState.events[index]
-                  EventCard(
-                      event = event,
-                      onClick = { onEventCardClick(event.eventId) },
-                      testTag = "${SerieDetailsScreenTestTags.EVENT_CARD}_${event.eventId}")
-                }
-              }
-            } else {
-              // Empty state - same height as LazyColumn
-              Box(
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .weight(1f) // Same height as LazyColumn
-                          .testTag(SerieDetailsScreenTestTags.EVENT_LIST),
-                  contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "No events in this serie yet",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center)
-                  }
-            }
-
-            HorizontalDivider(
-                thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
-
-            // Owner information
-            Text(
-                text = "Created by $ownerDisplayName",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .testTag(SerieDetailsScreenTestTags.OWNER_INFO)
-                        .padding(vertical = Dimens.Spacing.small),
-                textAlign = TextAlign.Center)
-
-            // Group information (if serie belongs to a group)
-            uiState.groupName?.let { groupName ->
-              Text(
-                  text = stringResource(R.string.group_name, groupName),
-                  style = MaterialTheme.typography.bodyMedium,
-                  fontWeight = FontWeight.Medium,
-                  color = MaterialTheme.colorScheme.onSurface,
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .testTag(SerieDetailsScreenTestTags.GROUP_INFO)
-                          .padding(vertical = Dimens.Spacing.small),
-                  textAlign = TextAlign.Center)
-            }
-
-            // Only show buttons if the serie is not expired
-            if (!uiState.isPastSerie) {
-              // Add event button (only shown to owner)
-              if (uiState.isOwner(currentUserId)) {
-                OwnerActionButtons(
-                    serieId = serieId,
-                    serieDetailsViewModel = serieDetailsViewModel,
-                    onAddEventClick = onAddEventClick,
-                    onEditSerieClick = onEditSerieClick,
-                    onShowDeleteDialog = { showDeleteDialog = true },
-                    currentUserId = currentUserId)
-              }
-
-              // Join/Quit serie button (shown to non-owners)
-              if (!uiState.isOwner(currentUserId)) {
-                ParticipantActionButtons(
-                    currentUserId = currentUserId,
-                    serieDetailsViewModel = serieDetailsViewModel,
-                    onQuitSerieSuccess = onQuitSerieSuccess,
-                    coroutineScope = coroutineScope)
-              }
-            }
-
-            // Add space at the bottom for better visual appearance
-            Spacer(modifier = Modifier.height(Dimens.Spacing.small))
           }
         }
       }
@@ -503,6 +400,19 @@ private fun SerieDetailsContent(
                     .testTag(SerieDetailsScreenTestTags.OWNER_INFO)
                     .padding(vertical = Dimens.Spacing.small),
             textAlign = TextAlign.Center)
+
+        uiState.groupName?.let { groupName ->
+          Text(
+              text = stringResource(R.string.group_name, groupName),
+              style = MaterialTheme.typography.bodyMedium,
+              fontWeight = FontWeight.Medium,
+              color = MaterialTheme.colorScheme.onSurface,
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .testTag(SerieDetailsScreenTestTags.GROUP_INFO)
+                      .padding(vertical = Dimens.Spacing.small),
+              textAlign = TextAlign.Center)
+        }
 
         SerieActionButtons(
             uiState = uiState,
