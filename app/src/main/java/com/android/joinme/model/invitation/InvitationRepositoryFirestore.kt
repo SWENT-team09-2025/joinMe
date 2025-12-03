@@ -13,14 +13,6 @@ class InvitationRepositoryFirestore(db: FirebaseFirestore = FirebaseFirestore.ge
     InvitationsRepository {
   private val invitationsCollection = db.collection(INVITATIONS_COLLECTION_PATH)
 
-  /**
-   * Creates an invitation for a target entity.
-   *
-   * @param type The type of invitation to create.
-   * @param targetId The ID of the target entity.
-   * @return A [Result] containing the token of the created invitation on success, or an exception
-   *   on failure.
-   */
   override suspend fun createInvitation(
       type: InvitationType,
       targetId: String,
@@ -48,12 +40,6 @@ class InvitationRepositoryFirestore(db: FirebaseFirestore = FirebaseFirestore.ge
     }
   }
 
-  /**
-   * Resolves an invitation by its token.
-   *
-   * @param token The token of the invitation to resolve.
-   * @return A [Result] containing the resolved invitation on success, or an exception on failure.
-   */
   override suspend fun resolveInvitation(token: String): Result<Invitation?> {
     return try {
       val doc = invitationsCollection.document(token).get().await()
@@ -84,12 +70,6 @@ class InvitationRepositoryFirestore(db: FirebaseFirestore = FirebaseFirestore.ge
     }
   }
 
-  /**
-   * Revokes an invitation by its token.
-   *
-   * @param token The token of the invitation to revoke.
-   * @return A [Result] indicating success or failure.
-   */
   override suspend fun revokeInvitation(token: String): Result<Unit> {
     return try {
       invitationsCollection.document(token).delete().await()
@@ -99,12 +79,6 @@ class InvitationRepositoryFirestore(db: FirebaseFirestore = FirebaseFirestore.ge
     }
   }
 
-  /**
-   * Retrieves a list of invitations for a given user.
-   *
-   * @param userId The ID of the user for whom to retrieve invitations.
-   * @return A [Result] containing the list of invitations on success, or an exception on failure.
-   */
   override suspend fun getInvitationsByUser(userId: String): Result<List<Invitation>> {
     return try {
       val snapshot = invitationsCollection.whereEqualTo("createdBy", userId).get().await()
