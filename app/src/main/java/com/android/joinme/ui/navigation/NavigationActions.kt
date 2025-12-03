@@ -145,6 +145,20 @@ sealed class Screen(
     }
   }
 
+  /**
+   * Screen for viewing a user's followers/following lists with tab switching
+   *
+   * @param userId The ID of the user whose followers/following to display
+   * @param initialTab The tab to show initially ("FOLLOWERS" or "FOLLOWING", defaults to
+   *   "FOLLOWERS")
+   */
+  data class FollowList(val userId: String, val initialTab: String = "FOLLOWERS") :
+      Screen(route = "follow_list/${userId}?initialTab=${initialTab}", name = "Follow List") {
+    companion object {
+      const val route = "follow_list/{userId}?initialTab={initialTab}"
+    }
+  }
+
   /** Profile editing screen */
   object EditProfile : Screen(route = "edit_profile", name = "Edit Profile")
 
