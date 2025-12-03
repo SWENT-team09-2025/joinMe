@@ -45,8 +45,8 @@ class FollowListViewModel(
     /** Tag for logging purposes. */
     private const val TAG = "FollowListViewModel"
 
-    /** Default limit for number of profiles to fetch per request. */
-    private const val DEFAULT_LIMIT = 50
+    /** Number of items to load per page. */
+    private const val PAGE_SIZE = 25
   }
 
   private val _selectedTab = MutableStateFlow(FollowTab.FOLLOWERS)
@@ -64,6 +64,15 @@ class FollowListViewModel(
   private val _isLoading = MutableStateFlow(false)
   val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+  private val _isLoadingMore = MutableStateFlow(false)
+  val isLoadingMore: StateFlow<Boolean> = _isLoadingMore.asStateFlow()
+
+  private val _hasMoreFollowers = MutableStateFlow(false)
+  val hasMoreFollowers: StateFlow<Boolean> = _hasMoreFollowers.asStateFlow()
+
+  private val _hasMoreFollowing = MutableStateFlow(false)
+  val hasMoreFollowing: StateFlow<Boolean> = _hasMoreFollowing.asStateFlow()
+
   private val _error = MutableStateFlow<String?>(null)
   val error: StateFlow<String?> = _error.asStateFlow()
 
@@ -73,12 +82,22 @@ class FollowListViewModel(
   /** The user ID whose followers/following are being displayed. */
   private var currentUserId: String? = null
 
+  /** Current page number for followers (0-indexed). */
+  private var followersPage = 0
+
+  /** Current page number for following (0-indexed). */
+  private var followingPage = 0
+
   /**
    * Initializes the screen with a specific user's data and tab.
    *
    * This method should be called when the screen is first opened. It sets up the initial tab and
    * loads the corresponding data. If called multiple times (e.g., with different users), it resets
    * the loaded tabs cache to ensure fresh data is fetched.
+   *
+   * Exception handling: Any exceptions during profile or follower/following data fetching are
+   * caught internally and exposed through the [error] StateFlow. The loading will complete
+   * gracefully with the error state set.
    *
    * @param userId The unique identifier of the user whose followers/following should be displayed
    * @param initialTab The tab to show initially (defaults to FOLLOWERS)
@@ -89,12 +108,16 @@ class FollowListViewModel(
       loadedTabs.clear()
       _followers.value = emptyList()
       _following.value = emptyList()
+      followersPage = 0
+      followingPage = 0
+      _hasMoreFollowers.value = false
+      _hasMoreFollowing.value = false
     }
 
     currentUserId = userId
     _selectedTab.value = initialTab
-    loadProfileUsername(userId)
     loadCurrentTab()
+    loadProfileUsername(userId)
   }
 
   /** Loads the username of the profile being viewed. */
@@ -105,6 +128,7 @@ class FollowListViewModel(
         _profileUsername.value = profile?.username ?: ""
       } catch (e: Exception) {
         Log.e(TAG, "Error loading profile username", e)
+        _error.value = "Failed to load Profile username: ${e.message}"
         _profileUsername.value = ""
       }
     }
@@ -114,6 +138,9 @@ class FollowListViewModel(
    * Switches to a different tab and loads its data if not already loaded.
    *
    * Uses lazy loading - data is only fetched the first time a tab is selected.
+   *
+   * Exception handling: Any exceptions during data fetching are caught internally and exposed
+   * through the [error] StateFlow. The tab switch will complete regardless of loading errors.
    *
    * @param tab The tab to switch to
    */
@@ -162,8 +189,10 @@ class FollowListViewModel(
    * @param userId The user whose followers should be fetched
    */
   private suspend fun loadFollowers(userId: String) {
-    val result = profileRepository.getFollowers(userId, DEFAULT_LIMIT)
+    val limit = (followersPage + 1) * PAGE_SIZE
+    val result = profileRepository.getFollowers(userId, limit)
     _followers.value = result
+    _hasMoreFollowers.value = result.size >= limit
   }
 
   /**
@@ -172,19 +201,87 @@ class FollowListViewModel(
    * @param userId The user whose following list should be fetched
    */
   private suspend fun loadFollowing(userId: String) {
-    val result = profileRepository.getFollowing(userId, DEFAULT_LIMIT)
+    val limit = (followingPage + 1) * PAGE_SIZE
+    val result = profileRepository.getFollowing(userId, limit)
     _following.value = result
+    _hasMoreFollowing.value = result.size >= limit
   }
 
   /**
    * Forces a refresh of the current tab's data.
    *
-   * This can be used for pull-to-refresh functionality or when data may have changed.
+   * This can be used for pull-to-refresh functionality or when data may have changed. Resets
+   * pagination state and fetches the first page again.
+   *
+   * Exception handling: Any exceptions during refresh are caught internally and exposed through the
+   * [error] StateFlow. Previous data will remain visible if the refresh fails.
    */
   fun refresh() {
     val tab = _selectedTab.value
+    // Reset pagination for the current tab
+    when (tab) {
+      FollowTab.FOLLOWERS -> {
+        followersPage = 0
+        _hasMoreFollowers.value = false
+      }
+      FollowTab.FOLLOWING -> {
+        followingPage = 0
+        _hasMoreFollowing.value = false
+      }
+    }
     loadedTabs.remove(tab)
     loadCurrentTab()
+  }
+
+  /**
+   * Loads the next page of data for the current tab.
+   *
+   * This should be called when the user scrolls near the end of the list to load more items. Uses
+   * the [isLoadingMore] state to indicate loading status.
+   *
+   * Exception handling: Any exceptions during load are caught internally and exposed through the
+   * [error] StateFlow. The pagination state remains unchanged if loading fails.
+   */
+  fun loadMore() {
+    val tab = _selectedTab.value
+    val userId = currentUserId
+    val hasMore =
+        when (tab) {
+          FollowTab.FOLLOWERS -> _hasMoreFollowers.value
+          FollowTab.FOLLOWING -> _hasMoreFollowing.value
+        }
+
+    // Don't load if already loading, no user ID, or no more data
+    if (_isLoadingMore.value || userId == null || !hasMore) {
+      return
+    }
+
+    viewModelScope.launch {
+      _isLoadingMore.value = true
+
+      try {
+        when (tab) {
+          FollowTab.FOLLOWERS -> {
+            followersPage++
+            loadFollowers(userId)
+          }
+          FollowTab.FOLLOWING -> {
+            followingPage++
+            loadFollowing(userId)
+          }
+        }
+      } catch (e: Exception) {
+        Log.e(TAG, "Error loading more ${tab.name.lowercase()}", e)
+        _error.value = "Failed to load more ${tab.name.lowercase()}: ${e.message}"
+        // Revert page increment on error
+        when (tab) {
+          FollowTab.FOLLOWERS -> followersPage--
+          FollowTab.FOLLOWING -> followingPage--
+        }
+      } finally {
+        _isLoadingMore.value = false
+      }
+    }
   }
 
   /** Clears the current error state. */
