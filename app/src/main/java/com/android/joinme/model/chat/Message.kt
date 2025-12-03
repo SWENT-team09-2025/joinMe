@@ -9,7 +9,9 @@ enum class MessageType {
   /** System-generated message (e.g., "User joined," "User left") */
   SYSTEM,
   /** Image message */
-  IMAGE
+  IMAGE,
+  /** Poll message - content contains the poll ID */
+  POLL
   // VIDEO, Implement this later if possible
   // AUDIO, Implement this later if possible
 }
