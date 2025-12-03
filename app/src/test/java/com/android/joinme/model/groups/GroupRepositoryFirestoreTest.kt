@@ -1,7 +1,10 @@
 // Implemented with help of Claude AI
 package com.android.joinme.model.groups
 
+import android.content.Context
+import android.net.Uri
 import com.android.joinme.model.event.EventType
+import com.android.joinme.model.utils.ImageProcessor
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -12,6 +15,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QueryDocumentSnapshot
 import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageReference
+import com.google.firebase.storage.UploadTask
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -34,6 +40,8 @@ class GroupRepositoryFirestoreTest {
   private lateinit var mockSnapshot: DocumentSnapshot
   private lateinit var mockAuth: FirebaseAuth
   private lateinit var mockUser: FirebaseUser
+  private lateinit var mockStorage: FirebaseStorage
+  private lateinit var mockStorageRef: StorageReference
   private lateinit var repository: GroupRepositoryFirestore
 
   private val testGroupId = "testGroup123"
@@ -63,12 +71,16 @@ class GroupRepositoryFirestoreTest {
     mockAuth = mockk(relaxed = true)
     mockUser = mockk(relaxed = true)
 
+    // Mock Firebase Storage
+    mockStorage = mockk(relaxed = true)
+    mockStorageRef = mockk(relaxed = true)
+
     every { mockDb.collection(GROUPS_COLLECTION_PATH) } returns mockCollection
     every { mockCollection.document(any()) } returns mockDocument
     every { mockCollection.document() } returns mockDocument
     every { mockDocument.id } returns testGroupId
 
-    repository = GroupRepositoryFirestore(mockDb)
+    repository = GroupRepositoryFirestore(mockDb, mockStorage)
   }
 
   @Test
@@ -913,5 +925,190 @@ class GroupRepositoryFirestoreTest {
     // Then - only group with all three users
     assertEquals(1, result.size)
     assertEquals("All Three", result[0].name)
+  }
+
+  // =======================================
+  // Group Photo Tests
+  // =======================================
+
+  /** Helper to setup storage mocks and return the photo reference for verification. */
+  private fun setupStorageMocksForPhoto(): StorageReference {
+    val groupsRef = mockk<StorageReference>(relaxed = true)
+    val groupIdRef = mockk<StorageReference>(relaxed = true)
+    val photoRef = mockk<StorageReference>(relaxed = true)
+
+    every { mockStorage.reference } returns mockStorageRef
+    every { mockStorageRef.child("groups") } returns groupsRef
+    every { groupsRef.child(testGroupId) } returns groupIdRef
+    every { groupIdRef.child("group.jpg") } returns photoRef
+
+    return photoRef
+  }
+
+  // =======================================
+  // Upload Group Photo Tests
+  // =======================================
+
+  @Test
+  fun uploadGroupPhoto_success_processesUploadsAndUpdatesFirestore() = runTest {
+    // Given
+    val mockContext = mockk<Context>()
+    val mockUri = mockk<Uri>()
+    val mockImageProcessor = mockk<ImageProcessor>()
+    val processedBytes = byteArrayOf(1, 2, 3, 4)
+    val downloadUrlStr = "https://storage.googleapis.com/new-photo.jpg"
+    val mockDownloadUri = mockk<Uri>()
+
+    // Mock Image Processor
+    every { mockImageProcessor.processImage(mockUri) } returns processedBytes
+    repository = GroupRepositoryFirestore(mockDb, mockStorage) { mockImageProcessor }
+
+    // Mock Storage (using the fix for ClassCastException)
+    val photoRef = setupStorageMocksForPhoto()
+    val mockUploadTask = mockk<UploadTask>()
+    val mockSnapshot = mockk<UploadTask.TaskSnapshot>()
+
+    every { mockUploadTask.isComplete } returns true
+    every { mockUploadTask.isSuccessful } returns true
+    every { mockUploadTask.exception } returns null
+    every { mockUploadTask.isCanceled } returns false
+    every { mockUploadTask.result } returns mockSnapshot
+    every { photoRef.putBytes(processedBytes) } returns mockUploadTask
+
+    every { mockDownloadUri.toString() } returns downloadUrlStr
+    every { photoRef.downloadUrl } returns Tasks.forResult(mockDownloadUri)
+
+    // Mock Firestore update
+    every { mockDocument.update(any<String>(), any()) } returns Tasks.forResult(null)
+
+    // When
+    val result = repository.uploadGroupPhoto(mockContext, testGroupId, mockUri)
+
+    // Then
+    assertEquals(downloadUrlStr, result)
+    verify { mockImageProcessor.processImage(mockUri) }
+    verify { photoRef.putBytes(processedBytes) }
+    // Verify partial update is used
+    verify { mockDocument.update("photoUrl", downloadUrlStr) }
+  }
+
+  @Test
+  fun uploadGroupPhoto_firestoreUpdateFails_throwsException() = runTest {
+    // Given
+    val mockContext = mockk<Context>()
+    val mockUri = mockk<Uri>()
+    val mockImageProcessor = mockk<ImageProcessor>()
+    val processedBytes = byteArrayOf(1, 2)
+    val mockDownloadUri = mockk<Uri>()
+
+    every { mockImageProcessor.processImage(mockUri) } returns processedBytes
+    repository = GroupRepositoryFirestore(mockDb, mockStorage) { mockImageProcessor }
+
+    // Mock Storage Success
+    val photoRef = setupStorageMocksForPhoto()
+    val mockUploadTask = mockk<UploadTask>()
+    val mockSnapshot = mockk<UploadTask.TaskSnapshot>()
+
+    // 1. Mock UploadTask state for await()
+    every { mockUploadTask.isComplete } returns true
+    every { mockUploadTask.isSuccessful } returns true
+    every { mockUploadTask.result } returns mockSnapshot
+    every { mockUploadTask.exception } returns null
+    every { mockUploadTask.isCanceled } returns false
+    every { photoRef.putBytes(any()) } returns mockUploadTask
+
+    // 2. Mock Download URL
+    every { mockDownloadUri.toString() } returns "http://url"
+    every { photoRef.downloadUrl } returns Tasks.forResult(mockDownloadUri)
+
+    // 3. --- FIX FOR HANGING: Mock the cleanup delete() call ---
+    // The implementation calls delete() in the catch block, so we must mock it to return success
+    every { photoRef.delete() } returns Tasks.forResult(null)
+
+    // Mock Firestore Update Failure
+    every { mockDocument.update(any<String>(), any()) } throws Exception("Firestore Error")
+
+    // When/Then
+    val exception =
+        assertThrows(Exception::class.java) {
+          runBlocking { repository.uploadGroupPhoto(mockContext, testGroupId, mockUri) }
+        }
+
+    // Verify the exception wrapper
+    assertTrue(exception.message!!.contains("Failed to upload group photo"))
+
+    // Verify update was attempted
+    verify { mockDocument.update("photoUrl", any()) }
+
+    // Verify cleanup was attempted (the delete call)
+    verify { photoRef.delete() }
+  }
+
+  @Test
+  fun uploadGroupPhoto_imageProcessingFails_throwsException() = runTest {
+    // Given
+    val mockContext = mockk<Context>()
+    val mockUri = mockk<Uri>()
+    val mockImageProcessor = mockk<ImageProcessor>()
+
+    // Mock Processor Failure
+    every { mockImageProcessor.processImage(mockUri) } throws Exception("Corrupt image")
+
+    // Re-initialize repository
+    repository = GroupRepositoryFirestore(mockDb, mockStorage) { mockImageProcessor }
+
+    // When/Then
+    val exception =
+        assertThrows(Exception::class.java) {
+          runBlocking { repository.uploadGroupPhoto(mockContext, testGroupId, mockUri) }
+        }
+
+    // --- FIX FOR ASSERTION: Expect the raw exception message ---
+    // Because processing happens before the try/catch block in the implementation,
+    // the exception is NOT wrapped in "Failed to upload group photo".
+    assertTrue(exception.message!!.contains("Corrupt image"))
+
+    // Verify Storage was NOT touched
+    verify(exactly = 0) { mockStorageRef.child(any()) }
+    // Verify Firestore was NOT touched
+    verify(exactly = 0) { mockDocument.update(any<String>(), any()) }
+  }
+
+  // =======================================
+  // Delete Group Photo Tests
+  // =======================================
+
+  @Test
+  fun deleteGroupPhoto_deletesFromStorageAndClearsPhotoUrl() = runTest {
+    // Given
+    val photoRef = setupStorageMocksForPhoto()
+    every { photoRef.delete() } returns Tasks.forResult(null)
+
+    // Mock update call for the race condition fix
+    every { mockDocument.update(any<String>(), any()) } returns Tasks.forResult(null)
+
+    // When
+    repository.deleteGroupPhoto(testGroupId)
+
+    // Then
+    verify { photoRef.delete() }
+    // Verify we use update instead of set to prevent race conditions
+    verify { mockDocument.update("photoUrl", null) }
+  }
+
+  @Test
+  fun deleteGroupPhoto_continuesWhenStorageFileNotFound() = runTest {
+    // Given
+    val photoRef = setupStorageMocksForPhoto()
+    every { photoRef.delete() } throws Exception("File not found")
+
+    // Mock update call
+    every { mockDocument.update(any<String>(), any()) } returns Tasks.forResult(null)
+
+    // When
+    repository.deleteGroupPhoto(testGroupId)
+
+    // Then
+    verify { mockDocument.update("photoUrl", null) }
   }
 }
