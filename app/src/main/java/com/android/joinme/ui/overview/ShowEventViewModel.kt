@@ -9,6 +9,8 @@ import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.event.displayString
 import com.android.joinme.model.event.isActive
 import com.android.joinme.model.event.isUpcoming
+import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.groups.streaks.StreakService
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
@@ -37,6 +39,8 @@ data class ShowEventUIState(
     val isPastEvent: Boolean = false,
     val partOfASerie: Boolean = false,
     val serieId: String? = null,
+    val groupId: String? = null,
+    val groupName: String? = null,
     val errorMsg: String? = null,
 ) {
   /**
@@ -61,6 +65,7 @@ class ShowEventViewModel(
     private val repository: EventsRepository =
         EventsRepositoryProvider.getRepository(isOnline = true),
     private val profileRepository: ProfileRepository = ProfileRepositoryProvider.repository,
+    private val groupRepository: GroupRepository = GroupRepositoryProvider.repository,
     initialState: ShowEventUIState = ShowEventUIState()
 ) : ViewModel() {
 
@@ -95,6 +100,9 @@ class ShowEventViewModel(
         // Get owner name
         val ownerDisplayName = "Created by ${getOwnerDisplayName(event.ownerId)}"
 
+        // Get group name if event belongs to a group
+        val groupName = event.groupId?.let { getGroupName(it) }
+
         // Check if the event is past (not active and not upcoming)
         val isPast = !event.isActive() && !event.isUpcoming()
 
@@ -114,7 +122,9 @@ class ShowEventViewModel(
                 participants = event.participants,
                 isPastEvent = isPast,
                 partOfASerie = event.partOfASerie,
-                serieId = serieId)
+                serieId = serieId,
+                groupId = event.groupId,
+                groupName = groupName)
       } catch (e: Exception) {
         setErrorMsg("Failed to load Event: ${e.message}")
       }
@@ -136,6 +146,21 @@ class ShowEventViewModel(
       profile?.username ?: "UNKNOWN"
     } catch (_: Exception) {
       "UNKNOWN"
+    }
+  }
+
+  /**
+   * Fetches the name of the group given its ID.
+   *
+   * @param groupId The ID of the group
+   * @return The name of the group, or null if not found or if an error occurs
+   */
+  private suspend fun getGroupName(groupId: String): String? {
+    return try {
+      val group = groupRepository.getGroup(groupId)
+      group.name
+    } catch (_: Exception) {
+      null
     }
   }
 

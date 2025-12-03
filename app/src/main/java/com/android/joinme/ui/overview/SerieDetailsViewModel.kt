@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
+import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.groups.streaks.StreakService
 import com.android.joinme.model.profile.ProfileRepository
 import com.android.joinme.model.profile.ProfileRepositoryProvider
@@ -35,7 +37,9 @@ data class SerieDetailsUIState(
     val serie: Serie? = null,
     val events: List<Event> = emptyList(),
     val isLoading: Boolean = true,
-    val errorMsg: String? = null
+    val errorMsg: String? = null,
+    val groupId: String? = null,
+    val groupName: String? = null
 ) {
   /**
    * Gets the title of the serie.
@@ -122,7 +126,8 @@ data class SerieDetailsUIState(
 class SerieDetailsViewModel(
     private val seriesRepository: SeriesRepository = SeriesRepositoryProvider.repository,
     private val eventsRepository: EventsRepository = EventsRepositoryProvider.getRepository(true),
-    private val profileRepository: ProfileRepository = ProfileRepositoryProvider.repository
+    private val profileRepository: ProfileRepository = ProfileRepositoryProvider.repository,
+    private val groupRepository: GroupRepository = GroupRepositoryProvider.repository
 ) : ViewModel() {
 
   private val _uiState = MutableStateFlow(SerieDetailsUIState())
@@ -141,9 +146,17 @@ class SerieDetailsViewModel(
         val serie = seriesRepository.getSerie(serieId)
         val serieEvents = eventsRepository.getEventsByIds(serie.eventIds)
 
+        // Get group name if serie belongs to a group
+        val groupName = serie.groupId?.let { getGroupName(it) }
+
         _uiState.value =
             _uiState.value.copy(
-                serie = serie, events = serieEvents, isLoading = false, errorMsg = null)
+                serie = serie,
+                events = serieEvents,
+                isLoading = false,
+                errorMsg = null,
+                groupId = serie.groupId,
+                groupName = groupName)
       } catch (e: Exception) {
         _uiState.value =
             _uiState.value.copy(isLoading = false, errorMsg = "Failed to load serie: ${e.message}")
@@ -166,6 +179,21 @@ class SerieDetailsViewModel(
       profile?.username ?: "UNKNOWN"
     } catch (_: Exception) {
       "UNKNOWN"
+    }
+  }
+
+  /**
+   * Fetches the name of the group given its ID.
+   *
+   * @param groupId The ID of the group
+   * @return The name of the group, or null if not found or if an error occurs
+   */
+  private suspend fun getGroupName(groupId: String): String? {
+    return try {
+      val group = groupRepository.getGroup(groupId)
+      group.name
+    } catch (_: Exception) {
+      null
     }
   }
 
