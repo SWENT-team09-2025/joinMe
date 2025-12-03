@@ -40,7 +40,7 @@ class JoinMeContextIdProvider : ContextIdProvider {
     // Fetch group IDs where user is a member
     try {
       val groups = GroupRepositoryProvider.repository.getAllGroups()
-      val groupIds = groups.map { it.id }
+      val groupIds = groups.filter { it.memberIds.contains(userId) }.map { it.id }
       contextIds.addAll(groupIds)
     } catch (e: Exception) {
       Log.e(TAG, "Failed to fetch groups for user $userId", e)
@@ -51,7 +51,7 @@ class JoinMeContextIdProvider : ContextIdProvider {
       val events =
           EventsRepositoryProvider.getRepository(isOnline = true)
               .getAllEvents(EventFilter.EVENTS_FOR_OVERVIEW_SCREEN)
-      val eventIds = events.map { it.eventId }
+      val eventIds = events.filter { it.participants.contains(userId) }.map { it.eventId }
       contextIds.addAll(eventIds)
     } catch (e: Exception) {
       Log.e(TAG, "Failed to fetch events for user $userId", e)

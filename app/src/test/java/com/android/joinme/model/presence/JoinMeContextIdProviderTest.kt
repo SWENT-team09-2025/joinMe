@@ -57,33 +57,61 @@ class JoinMeContextIdProviderTest {
   }
 
   @Test
-  fun getContextIdsForUser_withGroups_returnsGroupIds() = runTest {
-    // Add groups
+  fun getContextIdsForUser_withGroups_returnsOnlyGroupsWhereUserIsMember() = runTest {
+    // Add groups where user is a member
     val group1 = createTestGroup("group1")
     val group2 = createTestGroup("group2")
     groupRepo.addGroup(group1)
     groupRepo.addGroup(group2)
+
+    // Add group where user is NOT a member
+    val otherGroup =
+        Group(
+            id = "otherGroup",
+            name = "Other Group",
+            description = "Description",
+            ownerId = "otherUser",
+            memberIds = listOf("otherUser"))
+    groupRepo.addGroup(otherGroup)
 
     val contextIds = provider.getContextIdsForUser(testUserId)
 
     assertEquals(2, contextIds.size)
     assertTrue(contextIds.contains("group1"))
     assertTrue(contextIds.contains("group2"))
+    assertTrue(!contextIds.contains("otherGroup"))
   }
 
   @Test
-  fun getContextIdsForUser_withEvents_returnsEventIds() = runTest {
-    // Add events
+  fun getContextIdsForUser_withEvents_returnsOnlyEventsWhereUserIsParticipant() = runTest {
+    // Add events where user is a participant
     val event1 = createTestEvent("event1")
     val event2 = createTestEvent("event2")
     eventRepo.addEvent(event1)
     eventRepo.addEvent(event2)
+
+    // Add event where user is NOT a participant
+    val otherEvent =
+        Event(
+            eventId = "otherEvent",
+            type = EventType.ACTIVITY,
+            title = "Other Event",
+            description = "Description",
+            location = Location(0.0, 0.0, "Test Location"),
+            date = Timestamp.now(),
+            duration = 60,
+            participants = listOf("otherUser"),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "otherUser")
+    eventRepo.addEvent(otherEvent)
 
     val contextIds = provider.getContextIdsForUser(testUserId)
 
     assertEquals(2, contextIds.size)
     assertTrue(contextIds.contains("event1"))
     assertTrue(contextIds.contains("event2"))
+    assertTrue(!contextIds.contains("otherEvent"))
   }
 
   @Test
