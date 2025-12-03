@@ -106,7 +106,7 @@ class FollowListViewModelTest {
     assertNull(viewModel.error.value)
 
     coVerify { mockProfileRepository.getProfile(testUserId) }
-    coVerify { mockProfileRepository.getFollowers(testUserId, 50) }
+    coVerify { mockProfileRepository.getFollowers(testUserId, 25) }
     coVerify(exactly = 0) { mockProfileRepository.getFollowing(any(), any()) }
   }
 
@@ -126,7 +126,7 @@ class FollowListViewModelTest {
     assertFalse(viewModel.isLoading.value)
 
     coVerify { mockProfileRepository.getProfile(testUserId) }
-    coVerify { mockProfileRepository.getFollowing(testUserId, 50) }
+    coVerify { mockProfileRepository.getFollowing(testUserId, 25) }
     coVerify(exactly = 0) { mockProfileRepository.getFollowers(any(), any()) }
   }
 
@@ -148,7 +148,8 @@ class FollowListViewModelTest {
   }
 
   @Test
-  fun `initialize handles null profile username gracefully`() = runTest {
+  fun `initialize handles username loading failures gracefully`() = runTest {
+    // Test case 1: null profile - followers still load successfully
     coEvery { mockProfileRepository.getProfile(testUserId) } returns null
     coEvery { mockProfileRepository.getFollowers(testUserId, any()) } returns emptyList()
 
@@ -158,20 +159,23 @@ class FollowListViewModelTest {
     assertEquals("", viewModel.profileUsername.value)
     assertTrue(viewModel.followers.value.isEmpty())
     assertFalse(viewModel.isLoading.value)
-  }
 
-  @Test
-  fun `initialize handles username fetch exception`() = runTest {
-    coEvery { mockProfileRepository.getProfile(testUserId) } throws Exception("Network error")
-    coEvery { mockProfileRepository.getFollowers(testUserId, any()) } returns
+    // Test case 2: exception during username fetch - data loading continues
+    // Username is now loaded after tab data, so error persists when tab loading succeeds
+    val anotherUserId = "another-user-id"
+    coEvery { mockProfileRepository.getProfile(anotherUserId) } throws Exception("Network error")
+    coEvery { mockProfileRepository.getFollowers(anotherUserId, any()) } returns
         listOf(follower1, follower2)
 
-    viewModel.initialize(testUserId)
+    viewModel.initialize(anotherUserId)
     testDispatcher.scheduler.advanceUntilIdle()
 
     assertEquals("", viewModel.profileUsername.value)
     assertEquals(2, viewModel.followers.value.size)
     assertFalse(viewModel.isLoading.value)
+    // Error from username fetch persists since it's loaded after tab data
+    assertNotNull(viewModel.error.value)
+    assertTrue(viewModel.error.value!!.contains("Failed to load Profile username"))
   }
 
   // ==================== TAB SWITCHING / LAZY LOADING TESTS ====================
@@ -208,8 +212,8 @@ class FollowListViewModelTest {
     testDispatcher.scheduler.advanceUntilIdle()
 
     // Each should only be loaded once (lazy loading + caching)
-    coVerify(exactly = 1) { mockProfileRepository.getFollowers(testUserId, 50) }
-    coVerify(exactly = 1) { mockProfileRepository.getFollowing(testUserId, 50) }
+    coVerify(exactly = 1) { mockProfileRepository.getFollowers(testUserId, 25) }
+    coVerify(exactly = 1) { mockProfileRepository.getFollowing(testUserId, 25) }
   }
 
   @Test
@@ -274,7 +278,7 @@ class FollowListViewModelTest {
   }
 
   @Test
-  fun `clearError clears error state`() = runTest {
+  fun `error state is properly managed and cleared`() = runTest {
     coEvery { mockProfileRepository.getProfile(testUserId) } returns testProfile
     coEvery { mockProfileRepository.getFollowers(testUserId, any()) } throws
         Exception("Network error")
@@ -284,14 +288,11 @@ class FollowListViewModelTest {
 
     assertNotNull(viewModel.error.value)
 
+    // Test case 1: Manual error clearing
     viewModel.clearError()
-
     assertNull(viewModel.error.value)
-  }
 
-  @Test
-  fun `error is cleared before loading new tab`() = runTest {
-    coEvery { mockProfileRepository.getProfile(testUserId) } returns testProfile
+    // Test case 2: Error cleared automatically when loading new tab successfully
     coEvery { mockProfileRepository.getFollowers(testUserId, any()) } throws Exception("Error 1")
     coEvery { mockProfileRepository.getFollowing(testUserId, any()) } returns listOf(following1)
 
@@ -327,7 +328,7 @@ class FollowListViewModelTest {
     testDispatcher.scheduler.advanceUntilIdle()
 
     assertEquals(3, viewModel.followers.value.size)
-    coVerify(exactly = 2) { mockProfileRepository.getFollowers(testUserId, 50) }
+    coVerify(exactly = 2) { mockProfileRepository.getFollowers(testUserId, 25) }
 
     // Test refresh on FOLLOWING tab
     coEvery { mockProfileRepository.getFollowing(testUserId, any()) } returns
@@ -343,7 +344,7 @@ class FollowListViewModelTest {
     testDispatcher.scheduler.advanceUntilIdle()
 
     assertEquals(2, viewModel.following.value.size)
-    coVerify(exactly = 2) { mockProfileRepository.getFollowing(testUserId, 50) }
+    coVerify(exactly = 2) { mockProfileRepository.getFollowing(testUserId, 25) }
   }
 
   @Test
@@ -406,7 +407,8 @@ class FollowListViewModelTest {
   }
 
   @Test
-  fun `handles profile with null bio in lists`() = runTest {
+  fun `handles profiles with null or empty optional fields`() = runTest {
+    // Test case 1: Profile with null bio in follower list
     val followerNullBio = follower1.copy(bio = null)
     coEvery { mockProfileRepository.getProfile(testUserId) } returns testProfile
     coEvery { mockProfileRepository.getFollowers(testUserId, any()) } returns
@@ -417,15 +419,14 @@ class FollowListViewModelTest {
 
     assertEquals(1, viewModel.followers.value.size)
     assertNull(viewModel.followers.value[0].bio)
-  }
 
-  @Test
-  fun `handles profile with empty username`() = runTest {
-    val profileEmptyUsername = testProfile.copy(username = "")
-    coEvery { mockProfileRepository.getProfile(testUserId) } returns profileEmptyUsername
-    coEvery { mockProfileRepository.getFollowers(testUserId, any()) } returns emptyList()
+    // Test case 2: Profile with empty username (different user)
+    val anotherUserId = "another-user-id"
+    val profileEmptyUsername = testProfile.copy(uid = anotherUserId, username = "")
+    coEvery { mockProfileRepository.getProfile(anotherUserId) } returns profileEmptyUsername
+    coEvery { mockProfileRepository.getFollowers(anotherUserId, any()) } returns emptyList()
 
-    viewModel.initialize(testUserId)
+    viewModel.initialize(anotherUserId)
     testDispatcher.scheduler.advanceUntilIdle()
 
     assertEquals("", viewModel.profileUsername.value)
@@ -465,11 +466,204 @@ class FollowListViewModelTest {
     viewModel.initialize(testUserId, FollowTab.FOLLOWERS)
     testDispatcher.scheduler.advanceUntilIdle()
 
-    coVerify { mockProfileRepository.getFollowers(testUserId, 50) }
+    coVerify { mockProfileRepository.getFollowers(testUserId, 25) }
 
     viewModel.selectTab(FollowTab.FOLLOWING)
     testDispatcher.scheduler.advanceUntilIdle()
 
+    coVerify { mockProfileRepository.getFollowing(testUserId, 25) }
+  }
+
+  // ==================== PAGINATION TESTS ====================
+
+  @Test
+  fun `hasMore flags reflect data availability correctly`() = runTest {
+    // Test case 1: hasMore is true when exactly PAGE_SIZE items returned
+    val manyFollowers = List(25) { index -> follower1.copy(uid = "follower$index") }
+    coEvery { mockProfileRepository.getProfile(testUserId) } returns testProfile
+    coEvery { mockProfileRepository.getFollowers(testUserId, any()) } returns manyFollowers
+
+    viewModel.initialize(testUserId)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertTrue(viewModel.hasMoreFollowers.value)
+    assertEquals(25, viewModel.followers.value.size)
+
+    // Test case 2: hasMore is false when fewer than PAGE_SIZE items returned
+    val anotherUserId = "another-user-id"
+    coEvery { mockProfileRepository.getProfile(anotherUserId) } returns testProfile
+    coEvery { mockProfileRepository.getFollowers(anotherUserId, any()) } returns
+        listOf(follower1, follower2)
+
+    viewModel.initialize(anotherUserId)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertFalse(viewModel.hasMoreFollowers.value)
+    assertEquals(2, viewModel.followers.value.size)
+  }
+
+  @Test
+  fun `loadMore fetches next page for both tabs`() = runTest {
+    // Test case 1: Load more followers
+    val followersPage1 = List(25) { index -> follower1.copy(uid = "follower$index") }
+    val followersPage2 = List(50) { index -> follower1.copy(uid = "follower$index") }
+
+    coEvery { mockProfileRepository.getProfile(testUserId) } returns testProfile
+    coEvery { mockProfileRepository.getFollowers(testUserId, 25) } returns followersPage1
+    coEvery { mockProfileRepository.getFollowers(testUserId, 50) } returns followersPage2
+
+    viewModel.initialize(testUserId)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertEquals(25, viewModel.followers.value.size)
+    assertTrue(viewModel.hasMoreFollowers.value)
+    assertFalse(viewModel.isLoadingMore.value)
+
+    viewModel.loadMore()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertEquals(50, viewModel.followers.value.size)
+    assertTrue(viewModel.hasMoreFollowers.value)
+    assertFalse(viewModel.isLoadingMore.value)
+    coVerify { mockProfileRepository.getFollowers(testUserId, 25) }
+    coVerify { mockProfileRepository.getFollowers(testUserId, 50) }
+
+    // Test case 2: Load more following
+    val followingPage1 = List(25) { index -> following1.copy(uid = "following$index") }
+    val followingPage2 = List(50) { index -> following1.copy(uid = "following$index") }
+
+    coEvery { mockProfileRepository.getFollowing(testUserId, 25) } returns followingPage1
+    coEvery { mockProfileRepository.getFollowing(testUserId, 50) } returns followingPage2
+
+    viewModel.selectTab(FollowTab.FOLLOWING)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertEquals(25, viewModel.following.value.size)
+    assertTrue(viewModel.hasMoreFollowing.value)
+
+    viewModel.loadMore()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertEquals(50, viewModel.following.value.size)
+    assertTrue(viewModel.hasMoreFollowing.value)
+    coVerify { mockProfileRepository.getFollowing(testUserId, 25) }
     coVerify { mockProfileRepository.getFollowing(testUserId, 50) }
+  }
+
+  @Test
+  fun `loadMore respects guard conditions and loading state`() = runTest {
+    // Test case 1: Does nothing when hasMore is false
+    coEvery { mockProfileRepository.getProfile(testUserId) } returns testProfile
+    coEvery { mockProfileRepository.getFollowers(testUserId, any()) } returns
+        listOf(follower1, follower2)
+
+    viewModel.initialize(testUserId)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertFalse(viewModel.hasMoreFollowers.value)
+    val initialSize = viewModel.followers.value.size
+
+    viewModel.loadMore()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertEquals(initialSize, viewModel.followers.value.size)
+    coVerify(exactly = 1) { mockProfileRepository.getFollowers(any(), any()) }
+
+    // Test case 2: Prevents concurrent loads
+    val anotherUserId = "another-user-id"
+    val firstPage = List(25) { index -> follower1.copy(uid = "follower$index") }
+    coEvery { mockProfileRepository.getProfile(anotherUserId) } returns testProfile
+    coEvery { mockProfileRepository.getFollowers(anotherUserId, 25) } returns firstPage
+    coEvery { mockProfileRepository.getFollowers(anotherUserId, 50) } coAnswers
+        {
+          // Verify isLoadingMore is true during fetch
+          assertTrue(viewModel.isLoadingMore.value)
+          kotlinx.coroutines.delay(1000)
+          firstPage
+        }
+
+    viewModel.initialize(anotherUserId)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertTrue(viewModel.hasMoreFollowers.value)
+    assertFalse(viewModel.isLoadingMore.value)
+
+    // Call loadMore twice quickly
+    viewModel.loadMore()
+    viewModel.loadMore()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    // Should only load once
+    assertFalse(viewModel.isLoadingMore.value)
+    coVerify(exactly = 1) { mockProfileRepository.getFollowers(anotherUserId, 50) }
+  }
+
+  @Test
+  fun `loadMore handles errors and reverts page increment`() = runTest {
+    val firstPage = List(25) { index -> follower1.copy(uid = "follower$index") }
+
+    coEvery { mockProfileRepository.getProfile(testUserId) } returns testProfile
+    coEvery { mockProfileRepository.getFollowers(testUserId, 25) } returns firstPage
+    coEvery { mockProfileRepository.getFollowers(testUserId, 50) } throws Exception("Network error")
+
+    viewModel.initialize(testUserId)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertEquals(25, viewModel.followers.value.size)
+    assertTrue(viewModel.hasMoreFollowers.value)
+
+    viewModel.loadMore()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    // Should have error and data should remain unchanged
+    assertNotNull(viewModel.error.value)
+    assertTrue(viewModel.error.value!!.contains("Failed to load more followers"))
+    assertEquals(25, viewModel.followers.value.size)
+    assertFalse(viewModel.isLoadingMore.value)
+  }
+
+  @Test
+  fun `pagination state resets on refresh and user switch`() = runTest {
+    val firstPage = List(25) { index -> follower1.copy(uid = "follower$index") }
+    val secondPage = List(50) { index -> follower1.copy(uid = "follower$index") }
+    val refreshedPage = List(25) { index -> follower2.copy(uid = "new$index") }
+
+    coEvery { mockProfileRepository.getProfile(any()) } returns testProfile
+    coEvery { mockProfileRepository.getFollowers(testUserId, 25) } returns
+        firstPage andThen
+        refreshedPage
+    coEvery { mockProfileRepository.getFollowers(testUserId, 50) } returns secondPage
+
+    viewModel.initialize(testUserId)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    viewModel.loadMore()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertEquals(50, viewModel.followers.value.size)
+
+    // Test case 1: Refresh resets to first page
+    viewModel.refresh()
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertEquals(25, viewModel.followers.value.size)
+    assertEquals("new0", viewModel.followers.value[0].uid)
+
+    // Load more again to set up for user switch test
+    coEvery { mockProfileRepository.getFollowers(testUserId, 50) } returns secondPage
+    viewModel.loadMore()
+    testDispatcher.scheduler.advanceUntilIdle()
+    assertEquals(50, viewModel.followers.value.size)
+
+    // Test case 2: Switching users resets pagination
+    val anotherUserId = "another-user-id"
+    val anotherUserPage = List(10) { index -> follower1.copy(uid = "another$index") }
+    coEvery { mockProfileRepository.getFollowers(anotherUserId, 25) } returns anotherUserPage
+
+    viewModel.initialize(anotherUserId)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertEquals(10, viewModel.followers.value.size)
+    assertFalse(viewModel.hasMoreFollowers.value)
   }
 }
