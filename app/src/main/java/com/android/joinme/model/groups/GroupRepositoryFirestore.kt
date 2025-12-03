@@ -23,7 +23,7 @@ private const val F_PHOTO_URL = "photoUrl"
  */
 class GroupRepositoryFirestore(
     private val db: FirebaseFirestore,
-    private val storage: FirebaseStorage,
+    private val storage: FirebaseStorage = FirebaseStorage.getInstance(),
     private val imageProcessorFactory: (Context) -> ImageProcessor = { ImageProcessor(it) }
 ) : GroupRepository {
 
@@ -143,26 +143,33 @@ class GroupRepositoryFirestore(
    * Returns the download URL of the uploaded photo.
    */
   override suspend fun uploadGroupPhoto(context: Context, groupId: String, imageUri: Uri): String {
+    // Step 1: Process the image (compress, fix orientation)
+    val processedBytes = imageProcessorFactory(context).processImage(imageUri)
+
+    // Step 2: Upload to Firebase Storage
+    val storageRef =
+        storage.reference.child(GROUPS_STORAGE_PATH).child(groupId).child(GROUP_PHOTO_NAME)
+
     try {
-      // Step 1: Process the image (compress, fix orientation)
-      val processedBytes = imageProcessorFactory(context).processImage(imageUri)
-
-      // Step 2: Upload to Firebase Storage
-      val storageRef =
-          storage.reference.child(GROUPS_STORAGE_PATH).child(groupId).child(GROUP_PHOTO_NAME)
-
       storageRef.putBytes(processedBytes).await()
 
       // Step 3: Get the download URL
       val downloadUrl = storageRef.downloadUrl.await().toString()
 
-      // Step 4: Update Firestore group with new photoUrl
-      val group = getGroup(groupId)
-      val updatedGroup = group.copy(photoUrl = downloadUrl)
-      editGroup(groupId, updatedGroup)
+      // Step 4: Update only the photoUrl field in Firestore (atomic update)
+      db.collection(GROUPS_COLLECTION_PATH)
+          .document(groupId)
+          .update(F_PHOTO_URL, downloadUrl)
+          .await()
 
       return downloadUrl
     } catch (e: Exception) {
+      // Clean up orphaned file in Storage if Firestore update failed
+      try {
+        storageRef.delete().await()
+      } catch (cleanupError: Exception) {
+        Log.w(TAG, "Failed to clean up orphaned photo after upload failure", cleanupError)
+      }
       Log.e(TAG, "Error uploading group photo for group $groupId", e)
       throw Exception("Failed to upload group photo: ${e.message}", e)
     }
@@ -185,10 +192,8 @@ class GroupRepositoryFirestore(
         Log.w(TAG, "Photo file not found in Storage, continuing to clear Firestore field", e)
       }
 
-      // Step 2: Clear photoUrl in Firestore
-      val group = getGroup(groupId)
-      val updatedGroup = group.copy(photoUrl = null)
-      editGroup(groupId, updatedGroup)
+      // Step 2: Clear only the photoUrl field in Firestore (atomic update)
+      db.collection(GROUPS_COLLECTION_PATH).document(groupId).update(F_PHOTO_URL, null).await()
     } catch (e: Exception) {
       Log.e(TAG, "Error deleting group photo for group $groupId", e)
       throw Exception("Failed to delete group photo: ${e.message}", e)
