@@ -55,8 +55,8 @@ class MainActivityTest {
                 name = "Test Group Chat 789",
                 description = "Test group for notifications",
                 category = com.android.joinme.model.event.EventType.SPORTS,
-                ownerId = "owner-id",
-                memberIds = listOf("owner-id", "user-2")))
+                ownerId = "test-user-id",
+                memberIds = listOf("test-user-id", "user-2")))
 
         // Groups for join flow tests - no members except owner
         groupRepository.addGroup(
@@ -94,6 +94,16 @@ class MainActivityTest {
                 category = com.android.joinme.model.event.EventType.SPORTS,
                 ownerId = "owner-id",
                 memberIds = listOf("owner-id")))
+
+        // Group for group chat notification test with authenticated user
+        groupRepository.addGroup(
+            Group(
+                id = "notification-group-123",
+                name = "Notification Test Group",
+                description = "Test group for notification navigation",
+                category = com.android.joinme.model.event.EventType.SPORTS,
+                ownerId = "test-user-id",
+                memberIds = listOf("test-user-id", "user-2", "user-3")))
       }
     }
   }
@@ -1344,56 +1354,31 @@ class MainActivityTest {
         // Tests: if (notificationType == "group_chat_message" && conversationId != null &&
         // chatName != null && currentUser != null) { try { getGroup() navigateTo(Chat) } }
 
-        val currentUser = FirebaseAuth.getInstance().currentUser
-
-        // Skip test if user is not authenticated
-        if (currentUser == null) {
-          return@runBlocking
-        }
-
-        val groupRepository = GroupRepositoryProvider.repository
+        // Note: FirebaseAuth is mocked in @Before to return test-user-id
         val testGroupId = "notification-group-123"
 
-        // Create a test group
-        val testGroup =
-            Group(
-                id = testGroupId,
-                name = "Notification Test Group",
-                description = "Test group for notification navigation",
-                category = com.android.joinme.model.event.EventType.SPORTS,
-                ownerId = currentUser.uid,
-                memberIds = listOf(currentUser.uid, "user-2", "user-3"))
-        groupRepository.addGroup(testGroup)
-
-        try {
-          val context = ApplicationProvider.getApplicationContext<Context>()
-          val intent =
-              Intent(context, MainActivity::class.java).apply {
-                putExtra("notificationType", "group_chat_message")
-                putExtra("groupId", testGroupId)
-                putExtra("conversationId", "test-conversation-notif")
-                putExtra("chatName", "Notification Test Group")
-              }
-
-          val scenario = ActivityScenario.launch<MainActivity>(intent)
-
-          // Wait for navigation to complete
-          Thread.sleep(3000)
-
-          scenario.use {
-            it.onActivity { activity ->
-              // Verify activity is still running (navigation succeeded)
-              assert(!activity.isFinishing)
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val intent =
+            Intent(context, MainActivity::class.java).apply {
+              putExtra("notificationType", "group_chat_message")
+              putExtra("groupId", testGroupId)
+              putExtra("conversationId", "test-conversation-notif")
+              putExtra("chatName", "Notification Test Group")
             }
-          }
 
-          scenario.close()
-        } finally {
-          // Cleanup
-          try {
-            groupRepository.deleteGroup(testGroupId, currentUser.uid)
-          } catch (_: Exception) {}
+        val scenario = ActivityScenario.launch<MainActivity>(intent)
+
+        // Wait for navigation to complete
+        Thread.sleep(3000)
+
+        scenario.use {
+          it.onActivity { activity ->
+            // Verify activity is still running (navigation succeeded)
+            assert(!activity.isFinishing)
+          }
         }
+
+        scenario.close()
       }
 
   @Test
@@ -1402,12 +1387,7 @@ class MainActivityTest {
     // Tests: try { getGroup() } catch (e: Exception) { Toast.makeText("Failed to access group")
     // }
 
-    val currentUser = FirebaseAuth.getInstance().currentUser
-
-    // Skip test if user is not authenticated
-    if (currentUser == null) {
-      return@runBlocking
-    }
+    // Note: FirebaseAuth is mocked in @Before to return test-user-id
 
     val context = ApplicationProvider.getApplicationContext<Context>()
     val intent =

@@ -146,12 +146,15 @@ class MainActivity : ComponentActivity() {
     setContent {
       JoinMeTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
+          // Use test user ID when running in test mode
+          val testUserId = if (System.getProperty("IS_TEST_ENV") == "true") "test-user-id" else null
           JoinMe(
               initialEventId = initialEventId,
               initialGroupId = initialGroupId,
               notificationType = notificationType,
               chatName = chatName,
-              conversationId = conversationId)
+              conversationId = conversationId,
+              testUserId = testUserId)
         }
       }
     }
