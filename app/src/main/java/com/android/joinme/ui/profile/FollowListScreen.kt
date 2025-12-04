@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -33,7 +34,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -98,6 +101,9 @@ fun FollowListScreen(
   val followers by viewModel.followers.collectAsState()
   val following by viewModel.following.collectAsState()
   val isLoading by viewModel.isLoading.collectAsState()
+  val isLoadingMore by viewModel.isLoadingMore.collectAsState()
+  val hasMoreFollowers by viewModel.hasMoreFollowers.collectAsState()
+  val hasMoreFollowing by viewModel.hasMoreFollowing.collectAsState()
   val error by viewModel.error.collectAsState()
 
   // Initialize the screen with the userId and initial tab
@@ -190,12 +196,23 @@ fun FollowListScreen(
                           FollowTab.FOLLOWING -> following
                         }
 
+                    val hasMore =
+                        when (selectedTab) {
+                          FollowTab.FOLLOWERS -> hasMoreFollowers
+                          FollowTab.FOLLOWING -> hasMoreFollowing
+                        }
+
                     if (currentList.isEmpty()) {
                       // Empty state
                       EmptyListMessage(selectedTab)
                     } else {
                       // Profile list
-                      ProfileList(profiles = currentList, onProfileClick = onProfileClick)
+                      ProfileList(
+                          profiles = currentList,
+                          isLoadingMore = isLoadingMore,
+                          hasMore = hasMore,
+                          onProfileClick = onProfileClick,
+                          onLoadMore = { viewModel.loadMore() })
                     }
                   }
                 }
@@ -231,17 +248,60 @@ private fun EmptyListMessage(tab: FollowTab) {
  * Displays a scrollable list of user profiles.
  *
  * @param profiles The list of profiles to display
+ * @param isLoadingMore Whether more profiles are currently being loaded
+ * @param hasMore Whether there are more profiles to load
  * @param onProfileClick Callback invoked when a profile is tapped
+ * @param onLoadMore Callback invoked when the user scrolls near the end of the list
  */
 @Composable
-private fun ProfileList(profiles: List<Profile>, onProfileClick: (String) -> Unit) {
+private fun ProfileList(
+    profiles: List<Profile>,
+    isLoadingMore: Boolean,
+    hasMore: Boolean,
+    onProfileClick: (String) -> Unit,
+    onLoadMore: () -> Unit
+) {
+  val listState = rememberLazyListState()
+
+  // Detect when we're near the end of the list
+  val shouldLoadMore = remember {
+    derivedStateOf {
+      val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()
+      val totalItems = listState.layoutInfo.totalItemsCount
+      lastVisibleItem != null &&
+          lastVisibleItem.index >= totalItems - 5 &&
+          !isLoadingMore &&
+          hasMore
+    }
+  }
+
+  // Trigger load more when scrolling near the end
+  LaunchedEffect(shouldLoadMore.value) {
+    if (shouldLoadMore.value) {
+      onLoadMore()
+    }
+  }
+
   LazyColumn(
+      state = listState,
       modifier = Modifier.fillMaxSize().testTag(FollowListScreenTestTags.LIST),
       verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
         item { Spacer(modifier = Modifier.height(Dimens.Spacing.small)) }
 
         items(profiles, key = { it.uid }) { profile ->
           ProfileListItem(profile = profile, onClick = { onProfileClick(profile.uid) })
+        }
+
+        // Pagination loading indicator
+        if (isLoadingMore) {
+          item {
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.medium),
+                contentAlignment = Alignment.Center) {
+                  CircularProgressIndicator(
+                      modifier = Modifier.size(Dimens.LoadingIndicator.medium))
+                }
+          }
         }
 
         item { Spacer(modifier = Modifier.height(Dimens.Spacing.small)) }
