@@ -371,7 +371,7 @@ private fun RowScope.DayCell(
     onDayClick: () -> Unit
 ) {
   Box(
-      modifier = Modifier.weight(1f).aspectRatio(1f).then(getDayCellModifier(day, onDayClick)),
+      modifier = Modifier.weight(1f).aspectRatio(1f).dayCellModifier(day, onDayClick),
       contentAlignment = Alignment.Center) {
         if (day != null) {
           DayCellBackground(isSelected = isSelected, isToday = isToday)
@@ -382,16 +382,16 @@ private fun RowScope.DayCell(
 }
 
 /**
- * Gets the modifier for a day cell.
+ * Applies day cell-specific modifiers (clickable and test tag).
  *
  * @param day The day number, or null for empty cells
  * @param onDayClick Click callback
  */
-private fun getDayCellModifier(day: Int?, onDayClick: () -> Unit): Modifier {
+private fun Modifier.dayCellModifier(day: Int?, onDayClick: () -> Unit): Modifier {
   return if (day != null) {
-    Modifier.clickable { onDayClick() }.testTag(CalendarScreenTestTags.dayCell(day))
+    this.clickable { onDayClick() }.testTag(CalendarScreenTestTags.dayCell(day))
   } else {
-    Modifier
+    this
   }
 }
 
