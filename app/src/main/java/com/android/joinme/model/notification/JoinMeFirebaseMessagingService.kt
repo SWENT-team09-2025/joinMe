@@ -64,7 +64,8 @@ class JoinMeFirebaseMessagingService : FirebaseMessagingService() {
     val followerId = data["followerId"]
 
     // Display the notification
-    showNotification(title, body, eventId, groupId, notificationType, chatName, conversationId, followerId)
+    showNotification(
+        title, body, eventId, groupId, notificationType, chatName, conversationId, followerId)
   }
 
   /**
