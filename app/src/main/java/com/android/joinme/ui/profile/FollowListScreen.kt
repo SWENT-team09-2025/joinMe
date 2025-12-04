@@ -165,61 +165,101 @@ fun FollowListScreen(
                   }
 
               // Content based on loading/error/data state
-              Box(modifier = Modifier.fillMaxSize()) {
-                when {
-                  isLoading -> {
-                    // Loading state
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                      CircularProgressIndicator(
-                          modifier =
-                              Modifier.size(Dimens.LoadingIndicator.large)
-                                  .testTag(FollowListScreenTestTags.LOADING_INDICATOR))
-                    }
-                  }
-                  error != null -> {
-                    // Error state
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                      Text(
-                          text = error ?: stringResource(R.string.unknown_error),
-                          modifier =
-                              Modifier.padding(Dimens.Padding.large)
-                                  .testTag(FollowListScreenTestTags.ERROR_MESSAGE),
-                          style = MaterialTheme.typography.bodyLarge,
-                          color = MaterialTheme.colorScheme.error,
-                          textAlign = TextAlign.Center)
-                    }
-                  }
-                  else -> {
-                    // Content state - show the appropriate list
-                    val currentList =
-                        when (selectedTab) {
-                          FollowTab.FOLLOWERS -> followers
-                          FollowTab.FOLLOWING -> following
-                        }
-
-                    val hasMore =
-                        when (selectedTab) {
-                          FollowTab.FOLLOWERS -> hasMoreFollowers
-                          FollowTab.FOLLOWING -> hasMoreFollowing
-                        }
-
-                    if (currentList.isEmpty()) {
-                      // Empty state
-                      EmptyListMessage(selectedTab)
-                    } else {
-                      // Profile list
-                      ProfileList(
-                          profiles = currentList,
-                          isLoadingMore = isLoadingMore,
-                          hasMore = hasMore,
-                          onProfileClick = onProfileClick,
-                          onLoadMore = { viewModel.loadMore() })
-                    }
-                  }
-                }
-              }
+              FollowListContent(
+                  isLoading = isLoading,
+                  error = error,
+                  selectedTab = selectedTab,
+                  followers = followers,
+                  following = following,
+                  hasMoreFollowers = hasMoreFollowers,
+                  hasMoreFollowing = hasMoreFollowing,
+                  isLoadingMore = isLoadingMore,
+                  onProfileClick = onProfileClick,
+                  onLoadMore = { viewModel.loadMore() })
             }
       }
+}
+
+/**
+ * Displays the main content area with loading, error, or data states.
+ *
+ * @param isLoading Whether the initial data is loading
+ * @param error Error message if loading failed
+ * @param selectedTab The currently selected tab
+ * @param followers List of followers
+ * @param following List of following
+ * @param hasMoreFollowers Whether there are more followers to load
+ * @param hasMoreFollowing Whether there are more following to load
+ * @param isLoadingMore Whether pagination is in progress
+ * @param onProfileClick Callback when a profile is clicked
+ * @param onLoadMore Callback to load more data
+ */
+@Composable
+private fun FollowListContent(
+    isLoading: Boolean,
+    error: String?,
+    selectedTab: FollowTab,
+    followers: List<Profile>,
+    following: List<Profile>,
+    hasMoreFollowers: Boolean,
+    hasMoreFollowing: Boolean,
+    isLoadingMore: Boolean,
+    onProfileClick: (String) -> Unit,
+    onLoadMore: () -> Unit
+) {
+  Box(modifier = Modifier.fillMaxSize()) {
+    when {
+      isLoading -> {
+        // Loading state
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+          CircularProgressIndicator(
+              modifier =
+                  Modifier.size(Dimens.LoadingIndicator.large)
+                      .testTag(FollowListScreenTestTags.LOADING_INDICATOR))
+        }
+      }
+      error != null -> {
+        // Error state
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+          Text(
+              text = error,
+              modifier =
+                  Modifier.padding(Dimens.Padding.large)
+                      .testTag(FollowListScreenTestTags.ERROR_MESSAGE),
+              style = MaterialTheme.typography.bodyLarge,
+              color = MaterialTheme.colorScheme.error,
+              textAlign = TextAlign.Center)
+        }
+      }
+      else -> {
+        // Content state - show the appropriate list
+        val currentList =
+            when (selectedTab) {
+              FollowTab.FOLLOWERS -> followers
+              FollowTab.FOLLOWING -> following
+            }
+
+        val hasMore =
+            when (selectedTab) {
+              FollowTab.FOLLOWERS -> hasMoreFollowers
+              FollowTab.FOLLOWING -> hasMoreFollowing
+            }
+
+        if (currentList.isEmpty()) {
+          // Empty state
+          EmptyListMessage(selectedTab)
+        } else {
+          // Profile list
+          ProfileList(
+              profiles = currentList,
+              isLoadingMore = isLoadingMore,
+              hasMore = hasMore,
+              onProfileClick = onProfileClick,
+              onLoadMore = onLoadMore)
+        }
+      }
+    }
+  }
 }
 
 /**
