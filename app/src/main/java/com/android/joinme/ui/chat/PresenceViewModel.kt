@@ -102,19 +102,4 @@ class PresenceViewModel(private val presenceRepository: PresenceRepository) : Vi
           }
     }
   }
-
-  /**
-   * Gets the formatted online status text.
-   *
-   * @return A human-readable string describing the online status.
-   */
-  fun getOnlineStatusText(): String {
-    val count = _presenceState.value.onlineUsersCount
-    return when {
-      _presenceState.value.isLoading -> ""
-      count == 0 -> ""
-      count == 1 -> "1 online"
-      else -> "$count online"
-    }
-  }
 }

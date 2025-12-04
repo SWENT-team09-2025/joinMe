@@ -20,7 +20,7 @@ import org.junit.Test
 /**
  * Tests for PresenceViewModel.
  *
- * Verifies initialization, state updates from repository, and status text formatting.
+ * Verifies initialization and state updates from repository.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PresenceViewModelTest {
@@ -138,27 +138,4 @@ class PresenceViewModelTest {
     assertFalse(viewModel.presenceState.value.onlineUserIds.contains(currentUserId))
   }
 
-  // ============ Status Text ============
-
-  @Test
-  fun getOnlineStatusText_returnsCorrectFormat() = runTest {
-    // Loading state
-    viewModel.initialize(testContextId, currentUserId)
-    assertEquals("", viewModel.getOnlineStatusText())
-
-    advanceUntilIdle()
-
-    // Zero users
-    assertEquals("", viewModel.getOnlineStatusText())
-
-    // One user
-    repository.setUserOnline("user1", listOf(testContextId))
-    advanceUntilIdle()
-    assertEquals("1 online", viewModel.getOnlineStatusText())
-
-    // Multiple users
-    repository.setUserOnline("user2", listOf(testContextId))
-    advanceUntilIdle()
-    assertEquals("2 online", viewModel.getOnlineStatusText())
-  }
 }
