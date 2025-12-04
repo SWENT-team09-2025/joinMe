@@ -1,21 +1,37 @@
 // Implemented with help of Claude AI
 package com.android.joinme.model.groups
 
+import android.content.Context
+import android.net.Uri
 import android.util.Log
 import com.android.joinme.model.event.EventType
+import com.android.joinme.model.utils.ImageProcessor
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
 
 const val GROUPS_COLLECTION_PATH = "groups"
+
+private const val F_PHOTO_URL = "photoUrl"
 
 /**
  * Firestore-backed implementation of [GroupRepository]. Manages CRUD operations for [Group]
  * objects.
  */
-class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupRepository {
+class GroupRepositoryFirestore(
+    private val db: FirebaseFirestore,
+    private val storage: FirebaseStorage = FirebaseStorage.getInstance(),
+    private val imageProcessorFactory: (Context) -> ImageProcessor = { ImageProcessor(it) }
+) : GroupRepository {
+
+  companion object {
+    private const val TAG = "GroupRepositoryFirestore"
+    private const val GROUPS_STORAGE_PATH = "groups"
+    private const val GROUP_PHOTO_NAME = "group.jpg"
+  }
 
   override fun getNewGroupId(): String {
     return db.collection(GROUPS_COLLECTION_PATH).document().id
@@ -122,6 +138,69 @@ class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupReposit
   }
 
   /**
+   * Uploads a group photo for the given group ID to Firebase Storage, processes the image
+   * (compression, orientation), and updates the group document in Firestore with the new photo URL.
+   * Returns the download URL of the uploaded photo.
+   */
+  override suspend fun uploadGroupPhoto(context: Context, groupId: String, imageUri: Uri): String {
+    // Step 1: Process the image (compress, fix orientation)
+    val processedBytes = imageProcessorFactory(context).processImage(imageUri)
+
+    // Step 2: Upload to Firebase Storage
+    val storageRef =
+        storage.reference.child(GROUPS_STORAGE_PATH).child(groupId).child(GROUP_PHOTO_NAME)
+
+    try {
+      storageRef.putBytes(processedBytes).await()
+
+      // Step 3: Get the download URL
+      val downloadUrl = storageRef.downloadUrl.await().toString()
+
+      // Step 4: Update only the photoUrl field in Firestore (atomic update)
+      db.collection(GROUPS_COLLECTION_PATH)
+          .document(groupId)
+          .update(F_PHOTO_URL, downloadUrl)
+          .await()
+
+      return downloadUrl
+    } catch (e: Exception) {
+      // Clean up orphaned file in Storage if Firestore update failed
+      try {
+        storageRef.delete().await()
+      } catch (cleanupError: Exception) {
+        Log.w(TAG, "Failed to clean up orphaned photo after upload failure", cleanupError)
+      }
+      Log.e(TAG, "Error uploading group photo for group $groupId", e)
+      throw Exception("Failed to upload group photo: ${e.message}", e)
+    }
+  }
+
+  /**
+   * Deletes the group photo for the given group ID from Firebase Storage and clears the photoUrl
+   * field in Firestore.
+   */
+  override suspend fun deleteGroupPhoto(groupId: String) {
+    try {
+      // Step 1: Delete from Storage
+      val storageRef =
+          storage.reference.child(GROUPS_STORAGE_PATH).child(groupId).child(GROUP_PHOTO_NAME)
+
+      try {
+        storageRef.delete().await()
+      } catch (e: Exception) {
+        // File might not exist, log but continue
+        Log.w(TAG, "Photo file not found in Storage, continuing to clear Firestore field", e)
+      }
+
+      // Step 2: Clear only the photoUrl field in Firestore (atomic update)
+      db.collection(GROUPS_COLLECTION_PATH).document(groupId).update(F_PHOTO_URL, null).await()
+    } catch (e: Exception) {
+      Log.e(TAG, "Error deleting group photo for group $groupId", e)
+      throw Exception("Failed to delete group photo: ${e.message}", e)
+    }
+  }
+
+  /**
    * Converts a Firestore document to a [Group] object.
    *
    * @param document The Firestore document to convert.
@@ -143,7 +222,7 @@ class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupReposit
       val memberIds = document.get("memberIds") as? List<String> ?: emptyList()
       val eventIds = document.get("eventIds") as? List<String> ?: emptyList()
       val serieIds = document.get("serieIds") as? List<String> ?: emptyList()
-      val photoUrl = document.getString("photoUrl")
+      val photoUrl = document.getString(F_PHOTO_URL)
 
       Group(
           id = id,
@@ -156,7 +235,7 @@ class GroupRepositoryFirestore(private val db: FirebaseFirestore) : GroupReposit
           serieIds = serieIds,
           photoUrl = photoUrl)
     } catch (e: Exception) {
-      Log.e("GroupRepositoryFirestore", "Error converting document to Group", e)
+      Log.e(TAG, "Error converting document to Group", e)
       null
     }
   }

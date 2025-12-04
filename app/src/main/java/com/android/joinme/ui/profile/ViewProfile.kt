@@ -39,7 +39,12 @@ object ViewProfileTestTags {
   const val LOGOUT_CONFIRM_BUTTON = "viewProfileLogoutConfirmButton"
   const val LOGOUT_CANCEL_BUTTON = "viewProfileLogoutCancelButton"
   const val SCROLL_CONTAINER = "viewProfileScrollContainer"
+  const val STATS_ROW = "viewProfileStatsRow"
+  const val EVENTS_JOINED_STAT = "viewProfileEventsJoinedStat"
+  const val FOLLOWERS_STAT = "viewProfileFollowersStat"
+  const val FOLLOWING_STAT = "viewProfileFollowingStat"
   const val PROFILE_PICTURE = "viewProfilePicture"
+  const val EVENT_STREAKS_SECTION = "viewProfileEventStreaksSection"
   const val USERNAME_FIELD = "viewProfileUsernameField"
   const val EMAIL_FIELD = "viewProfileEmailField"
   const val DATE_OF_BIRTH_FIELD = "viewProfileDateOfBirthField"
@@ -167,17 +172,22 @@ private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
                   }
             }
 
-        // Profile Picture - Now displays actual photo if available
+        // Profile Stats and Picture
+        ProfileHeader(
+            profile = profile,
+            statsRowTestTag = ViewProfileTestTags.STATS_ROW,
+            eventsJoinedTestTag = ViewProfileTestTags.EVENTS_JOINED_STAT,
+            followersTestTag = ViewProfileTestTags.FOLLOWERS_STAT,
+            followingTestTag = ViewProfileTestTags.FOLLOWING_STAT,
+            profilePhotoTestTag = ViewProfileTestTags.PROFILE_PICTURE)
+
+        // Event Streaks
         Box(
             modifier =
                 Modifier.fillMaxWidth()
-                    .padding(vertical = Dimens.Padding.extraLarge)
-                    .testTag(ViewProfileTestTags.PROFILE_PICTURE),
-            contentAlignment = Alignment.Center) {
-              ProfilePhotoImage(
-                  photoUrl = profile.photoUrl,
-                  contentDescription = "Profile Picture",
-                  size = Dimens.Profile.photoExtraLarge)
+                    .padding(horizontal = Dimens.Padding.large)
+                    .padding(bottom = Dimens.Padding.extraLarge)) {
+              EventStreaksSection(testTag = ViewProfileTestTags.EVENT_STREAKS_SECTION)
             }
 
         // Form Fields (Read-only)
