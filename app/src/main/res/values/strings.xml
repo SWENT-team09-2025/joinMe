@@ -72,4 +72,8 @@
 
     <!-- Events/Series Details Screens -->
     <string name="group_name">Group: %1$s</string>
+
+    <!-- Notification Types -->
+    <string name="notification_type_event_chat_message">event_chat_message</string>
+    <string name="notification_type_group_chat_message">group_chat_message</string>
 </resources>

@@ -242,6 +242,10 @@ fun JoinMe(
   // Get current user ID with test mode support
   val currentUserId = remember(currentUser) { getCurrentUserId(currentUser) }
 
+  // Get notification type strings
+  val eventChatMessageType = context.getString(R.string.notification_type_event_chat_message)
+  val groupChatMessageType = context.getString(R.string.notification_type_group_chat_message)
+
   val initialDestination =
       startDestination ?: if (currentUser == null) Screen.Auth.name else Screen.Overview.route
 
@@ -253,10 +257,10 @@ fun JoinMe(
   }
 
   // Navigate to event or event chat if opened from notification
-  LaunchedEffect(initialEventId, notificationType) {
+  LaunchedEffect(initialEventId, notificationType, currentUserId) {
     if (initialEventId != null && currentUserId.isNotEmpty()) {
       // Check if this is an event chat notification
-      if (notificationType == "event_chat_message" && conversationId != null && chatName != null) {
+      if (notificationType == eventChatMessageType && conversationId != null && chatName != null) {
         // Navigate directly to the event chat
         coroutineScope.launch {
           try {
@@ -281,10 +285,10 @@ fun JoinMe(
   }
 
   // Join group if opened from invitation link or navigate to group chat from notification
-  LaunchedEffect(initialGroupId, notificationType) {
+  LaunchedEffect(initialGroupId, notificationType, currentUserId) {
     if (initialGroupId != null) {
       // Check if this is a group chat notification
-      if (notificationType == "group_chat_message" &&
+      if (notificationType == groupChatMessageType &&
           conversationId != null &&
           chatName != null &&
           currentUserId.isNotEmpty()) {

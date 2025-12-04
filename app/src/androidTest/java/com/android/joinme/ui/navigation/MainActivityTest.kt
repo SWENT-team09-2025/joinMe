@@ -690,7 +690,7 @@ class MainActivityTest {
           }
 
       val scenario = ActivityScenario.launch<MainActivity>(intent)
-      Thread.sleep(3000) // Wait for LaunchedEffect to complete
+      composeTestRule.waitForIdle()
 
       scenario.use { it.onActivity { activity -> assert(!activity.isFinishing) } }
 
@@ -732,7 +732,7 @@ class MainActivityTest {
         }
 
     val scenario = ActivityScenario.launch<MainActivity>(intent)
-    Thread.sleep(3000) // Wait for LaunchedEffect to complete
+    composeTestRule.waitForIdle()
 
     scenario.use {
       it.onActivity { activity ->
@@ -765,7 +765,7 @@ class MainActivityTest {
         }
 
     val scenario = ActivityScenario.launch<MainActivity>(intent)
-    Thread.sleep(2000) // Wait for LaunchedEffect to complete
+    composeTestRule.waitForIdle()
 
     scenario.use {
       it.onActivity { activity ->
@@ -787,7 +787,7 @@ class MainActivityTest {
     // No deep link data
 
     val scenario = ActivityScenario.launch<MainActivity>(intent)
-    Thread.sleep(1000)
+    composeTestRule.waitForIdle()
 
     scenario.use {
       it.onActivity { activity ->
@@ -866,7 +866,7 @@ class MainActivityTest {
         }
 
     val scenario = ActivityScenario.launch<MainActivity>(intent)
-    Thread.sleep(1000)
+    composeTestRule.waitForIdle()
 
     scenario.use {
       it.onActivity { activity ->
@@ -900,7 +900,7 @@ class MainActivityTest {
       }
     }
     // Note: This will trigger group join flow and show toast - this is expected behavior
-    Thread.sleep(2000) // Wait for async operations to complete
+    composeTestRule.waitForIdle()
     scenario.close()
   }
 
@@ -919,7 +919,7 @@ class MainActivityTest {
         }
 
     val scenario = ActivityScenario.launch<MainActivity>(intent)
-    Thread.sleep(2000)
+    composeTestRule.waitForIdle()
 
     scenario.use {
       it.onActivity { activity ->
@@ -943,7 +943,7 @@ class MainActivityTest {
         }
 
     val scenario = ActivityScenario.launch<MainActivity>(intent)
-    Thread.sleep(2000)
+    composeTestRule.waitForIdle()
 
     scenario.use {
       it.onActivity { activity ->
@@ -969,7 +969,7 @@ class MainActivityTest {
 
     val scenario = ActivityScenario.launch<MainActivity>(intent)
     // This will trigger group join and show toast - expected behavior
-    Thread.sleep(2000)
+    composeTestRule.waitForIdle()
 
     scenario.use {
       it.onActivity { activity ->
@@ -994,7 +994,7 @@ class MainActivityTest {
 
     val scenario = ActivityScenario.launch<MainActivity>(intent)
     // This will trigger group join and show toast - expected behavior
-    Thread.sleep(2000)
+    composeTestRule.waitForIdle()
 
     scenario.use {
       it.onActivity { activity ->
@@ -1068,7 +1068,7 @@ class MainActivityTest {
         }
 
     val scenario = ActivityScenario.launch<MainActivity>(intent)
-    Thread.sleep(1000)
+    composeTestRule.waitForIdle()
 
     scenario.use {
       it.onActivity { activity ->
@@ -1172,7 +1172,7 @@ class MainActivityTest {
               }
 
           val scenario = ActivityScenario.launch<MainActivity>(intent)
-          Thread.sleep(3000) // Wait for LaunchedEffect and navigation to complete
+          composeTestRule.waitForIdle()
 
           scenario.use {
             it.onActivity { activity ->
@@ -1234,7 +1234,7 @@ class MainActivityTest {
               }
 
           val scenario = ActivityScenario.launch<MainActivity>(intent)
-          Thread.sleep(3000) // Wait for LaunchedEffect and navigation to complete
+          composeTestRule.waitForIdle()
 
           scenario.use {
             it.onActivity { activity ->
@@ -1279,7 +1279,7 @@ class MainActivityTest {
             }
 
         val scenario = ActivityScenario.launch<MainActivity>(intent)
-        Thread.sleep(3000) // Wait for LaunchedEffect, getEvent failure, and fallback navigation
+        composeTestRule.waitForIdle()
 
         scenario.use {
           it.onActivity { activity ->
@@ -1312,7 +1312,7 @@ class MainActivityTest {
         }
 
     val scenario = ActivityScenario.launch<MainActivity>(intent)
-    Thread.sleep(1000)
+    composeTestRule.waitForIdle()
 
     scenario.use {
       it.onActivity { activity ->
@@ -1335,7 +1335,7 @@ class MainActivityTest {
     // No eventId provided
 
     val scenario = ActivityScenario.launch<MainActivity>(intent)
-    Thread.sleep(1000)
+    composeTestRule.waitForIdle()
 
     scenario.use {
       it.onActivity { activity ->
@@ -1369,7 +1369,7 @@ class MainActivityTest {
         val scenario = ActivityScenario.launch<MainActivity>(intent)
 
         // Wait for navigation to complete
-        Thread.sleep(3000)
+        composeTestRule.waitForIdle()
 
         scenario.use {
           it.onActivity { activity ->
@@ -1401,7 +1401,7 @@ class MainActivityTest {
     val scenario = ActivityScenario.launch<MainActivity>(intent)
 
     // Wait for async operations and toast to display
-    Thread.sleep(3000)
+    composeTestRule.waitForIdle()
 
     scenario.use {
       it.onActivity { activity ->

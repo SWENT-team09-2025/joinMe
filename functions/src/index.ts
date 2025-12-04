@@ -19,6 +19,10 @@ const TIME_ZONE = "UTC";
 const SERIES = "series";
 const EVENTS = "events";
 
+// Notification type constants
+const NOTIFICATION_TYPE_EVENT_CHAT_MESSAGE = "event_chat_message";
+const NOTIFICATION_TYPE_GROUP_CHAT_MESSAGE = "group_chat_message";
+
 /**
  * Helper function to send FCM notification to a user
  * @param {string} userId - The ID of the user to send notification to
@@ -473,7 +477,7 @@ export const onChatMessageCreated = functions.database
 
           // Build notification payload
           const notificationData: {[key: string]: string} = {
-            type: isEventChat ? "event_chat_message" : "group_chat_message",
+            type: isEventChat ? NOTIFICATION_TYPE_EVENT_CHAT_MESSAGE : NOTIFICATION_TYPE_GROUP_CHAT_MESSAGE,
             conversationId: conversationId,
             messageId: messageId,
             senderId: senderId,
