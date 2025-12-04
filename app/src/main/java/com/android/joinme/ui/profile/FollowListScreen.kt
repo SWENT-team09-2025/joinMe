@@ -64,6 +64,7 @@ object FollowListScreenTestTags {
   const val FOLLOWING_TAB = "followListFollowingTab"
   const val LIST = "followListList"
   const val LOADING_INDICATOR = "followListLoadingIndicator"
+  const val PAGINATION_LOADING_INDICATOR = "followListPaginationLoadingIndicator"
   const val ERROR_MESSAGE = "followListErrorMessage"
   const val EMPTY_MESSAGE = "followListEmptyMessage"
 
@@ -296,7 +297,10 @@ private fun ProfileList(
         if (isLoadingMore) {
           item {
             Box(
-                modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.medium),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .padding(Dimens.Padding.medium)
+                        .testTag(FollowListScreenTestTags.PAGINATION_LOADING_INDICATOR),
                 contentAlignment = Alignment.Center) {
                   CircularProgressIndicator(
                       modifier = Modifier.size(Dimens.LoadingIndicator.medium))
