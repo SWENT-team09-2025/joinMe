@@ -4,6 +4,7 @@ package com.android.joinme.model.chat
 
 import android.content.Context
 import android.net.Uri
+import com.android.joinme.model.map.Location
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -133,6 +134,7 @@ class ChatRepositoryRealtimeDatabaseTest {
     } returns emptyList()
     every { mockMessageSnapshot1.child("isPinned").getValue(Boolean::class.java) } returns false
     every { mockMessageSnapshot1.child("isEdited").getValue(Boolean::class.java) } returns false
+    every { mockMessageSnapshot1.child("location").exists() } returns false
 
     // Setup message 2
     every { mockMessageSnapshot2.key } returns "msg2"
@@ -146,6 +148,7 @@ class ChatRepositoryRealtimeDatabaseTest {
     } returns emptyList()
     every { mockMessageSnapshot2.child("isPinned").getValue(Boolean::class.java) } returns false
     every { mockMessageSnapshot2.child("isEdited").getValue(Boolean::class.java) } returns false
+    every { mockMessageSnapshot2.child("location").exists() } returns false
 
     every { mockSnapshot.children } returns listOf(mockMessageSnapshot1, mockMessageSnapshot2)
 
@@ -237,6 +240,7 @@ class ChatRepositoryRealtimeDatabaseTest {
     } returns emptyList()
     every { mockValidMessage.child("isPinned").getValue(Boolean::class.java) } returns false
     every { mockValidMessage.child("isEdited").getValue(Boolean::class.java) } returns false
+    every { mockValidMessage.child("location").exists() } returns false
 
     // Invalid message (missing senderId)
     every { mockInvalidMessage.key } returns "msg2"
@@ -478,5 +482,105 @@ class ChatRepositoryRealtimeDatabaseTest {
     } finally {
       unmockkConstructor(com.android.joinme.model.utils.ImageProcessor::class)
     }
+  }
+
+  // ============================================================================
+  // Location Messages Tests
+  // ============================================================================
+
+  @Test
+  fun observeMessagesForConversation_deserializesLocationMessageCorrectly() = runTest {
+    // Given
+    val mockQuery = mockk<Query>(relaxed = true)
+    val mockSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockLocationMessage = mockk<DataSnapshot>(relaxed = true)
+    val mockLocationSnapshot = mockk<DataSnapshot>(relaxed = true)
+
+    // Setup location message with location data
+    every { mockLocationMessage.key } returns "msg-loc1"
+    every { mockLocationMessage.child("senderId").getValue(String::class.java) } returns "user1"
+    every { mockLocationMessage.child("senderName").getValue(String::class.java) } returns "Alice"
+    every { mockLocationMessage.child("content").getValue(String::class.java) } returns
+        "https://maps.googleapis.com/maps/api/staticmap?..."
+    every { mockLocationMessage.child("timestamp").getValue(Long::class.java) } returns 3000L
+    every { mockLocationMessage.child("type").getValue(String::class.java) } returns "LOCATION"
+    every {
+      mockLocationMessage.child("readBy").getValue(any<GenericTypeIndicator<List<String>>>())
+    } returns emptyList()
+    every { mockLocationMessage.child("isPinned").getValue(Boolean::class.java) } returns false
+    every { mockLocationMessage.child("isEdited").getValue(Boolean::class.java) } returns false
+
+    // Setup location field
+    every { mockLocationMessage.child("location") } returns mockLocationSnapshot
+    every { mockLocationSnapshot.exists() } returns true
+
+    val mockLatitudeSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockLongitudeSnapshot = mockk<DataSnapshot>(relaxed = true)
+    every { mockLocationSnapshot.child("latitude") } returns mockLatitudeSnapshot
+    every { mockLatitudeSnapshot.value } returns 46.5197
+    every { mockLocationSnapshot.child("longitude") } returns mockLongitudeSnapshot
+    every { mockLongitudeSnapshot.value } returns 6.6323
+    every { mockLocationSnapshot.child("name").getValue(String::class.java) } returns
+        "EPFL, Lausanne"
+
+    every { mockSnapshot.children } returns listOf(mockLocationMessage)
+    every { mockMessagesRef.orderByChild("timestamp") } returns mockQuery
+    every { mockQuery.addValueEventListener(any()) } answers
+        {
+          val listener = firstArg<ValueEventListener>()
+          listener.onDataChange(mockSnapshot)
+          mockk(relaxed = true)
+        }
+
+    // When
+    val flow = repository.observeMessagesForConversation(testConversationId)
+    val messages = withTimeout(1000) { flow.first() }
+
+    // Then
+    assertNotNull(messages)
+    assertEquals(1, messages.size)
+
+    val locationMessage = messages[0]
+    assertEquals("msg-loc1", locationMessage.id)
+    assertEquals(MessageType.LOCATION, locationMessage.type)
+    assertNotNull(locationMessage.location)
+    assertEquals(46.5197, locationMessage.location!!.latitude, 0.0001)
+    assertEquals(6.6323, locationMessage.location!!.longitude, 0.0001)
+    assertEquals("EPFL, Lausanne", locationMessage.location!!.name)
+    assertEquals("https://maps.googleapis.com/maps/api/staticmap?...", locationMessage.content)
+  }
+
+  @Test
+  fun addMessage_withLocation_savesLocationFieldCorrectly() = runTest {
+    // Given
+    val location = Location(latitude = 47.3769, longitude = 8.5417, name = "Zurich HB")
+    val locationMessage =
+        Message(
+            id = testMessageId,
+            conversationId = testConversationId,
+            senderId = "user1",
+            senderName = "Alice",
+            content = "https://maps.googleapis.com/maps/api/staticmap?...",
+            timestamp = System.currentTimeMillis(),
+            type = MessageType.LOCATION,
+            location = location)
+
+    val capturedData = slot<Map<String, Any?>>()
+    val mockTask = Tasks.forResult<Void>(null)
+    every { mockMessageRef.setValue(capture(capturedData)) } returns mockTask
+
+    // When
+    repository.addMessage(locationMessage)
+
+    // Then
+    verify { mockMessageRef.setValue(any()) }
+
+    // Verify location field is properly nested in the saved data
+    assertTrue(capturedData.captured.containsKey("location"))
+    val locationMap = capturedData.captured["location"] as Map<*, *>
+    assertEquals(47.3769, locationMap["latitude"])
+    assertEquals(8.5417, locationMap["longitude"])
+    assertEquals("Zurich HB", locationMap["name"])
+    assertEquals("LOCATION", capturedData.captured["type"])
   }
 }

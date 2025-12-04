@@ -3,6 +3,8 @@ package com.android.joinme.ui.overview
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.*
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
@@ -54,7 +56,8 @@ class ShowEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent(maxParticipants = 1)
     runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     composeTestRule.setContent {
       ShowEventScreen(
@@ -74,7 +77,8 @@ class ShowEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     composeTestRule.setContent {
       ShowEventScreen(
@@ -112,7 +116,8 @@ class ShowEventScreenTest {
       val mockProfile = Profile(uid = "owner123", username = "JohnDoe", email = "john@example.com")
       whenever(profileRepo.getProfile("owner123")).thenReturn(mockProfile)
     }
-    val viewModel = ShowEventViewModel(repo, profileRepo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, profileRepo, groupRepo)
 
     composeTestRule.setContent {
       ShowEventScreen(
@@ -141,7 +146,8 @@ class ShowEventScreenTest {
       repo.addEvent(event)
       whenever(profileRepo.getProfile("unknown-owner")).thenReturn(null)
     }
-    val viewModel = ShowEventViewModel(repo, profileRepo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, profileRepo, groupRepo)
 
     composeTestRule.setContent {
       ShowEventScreen(
@@ -167,7 +173,8 @@ class ShowEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent(ownerId = "owner123")
     runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     composeTestRule.setContent {
       ShowEventScreen(
@@ -192,7 +199,8 @@ class ShowEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent(ownerId = "owner123")
     runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     var editEventCalled = false
     var editEventId = ""
@@ -226,7 +234,8 @@ class ShowEventScreenTest {
     val event = createTestEvent(ownerId = "owner123")
     runBlocking { repo.addEvent(event) }
     val serieId = "test-serie-123"
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     var editEventForSerieCalled = false
     var capturedSerieId = ""
@@ -265,7 +274,8 @@ class ShowEventScreenTest {
     val event =
         createTestEvent(ownerId = "owner123", participants = listOf("user1", "user2", "owner123"))
     runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     composeTestRule.setContent {
       ShowEventScreen(
@@ -300,7 +310,8 @@ class ShowEventScreenTest {
         Profile(uid = "user1", username = "User1", email = "user1@test.com", eventsJoinedCount = 5)
     runBlocking { whenever(profileRepository.getProfile("user1")).thenReturn(user1Profile) }
 
-    val viewModel = ShowEventViewModel(repo, profileRepository)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, profileRepository, groupRepo)
 
     composeTestRule.setContent {
       ShowEventScreen(
@@ -342,7 +353,8 @@ class ShowEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent(ownerId = "owner123", participants = listOf("owner123"))
     runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     composeTestRule.setContent {
       ShowEventScreen(
@@ -377,7 +389,8 @@ class ShowEventScreenTest {
         Profile(uid = "user3", username = "User3", email = "user3@test.com", eventsJoinedCount = 0)
     runBlocking { whenever(profileRepository.getProfile("user3")).thenReturn(user3Profile) }
 
-    val viewModel = ShowEventViewModel(repo, profileRepository)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, profileRepository, groupRepo)
 
     composeTestRule.setContent {
       ShowEventScreen(
@@ -419,7 +432,8 @@ class ShowEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent(ownerId = "owner123")
     runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     composeTestRule.setContent {
       ShowEventScreen(
@@ -451,7 +465,8 @@ class ShowEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent(ownerId = "owner123")
     runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     var goBackCalled = false
 
@@ -486,7 +501,8 @@ class ShowEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent(ownerId = "owner123")
     runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     composeTestRule.setContent {
       ShowEventScreen(
@@ -519,7 +535,8 @@ class ShowEventScreenTest {
     // Create an event that happened 7 days ago
     val pastEvent = createTestEvent(ownerId = "owner123", daysFromNow = -7)
     runBlocking { repo.addEvent(pastEvent) }
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     // Test for owner view
     composeTestRule.setContent {
@@ -546,7 +563,8 @@ class ShowEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent()
     runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     var goBackCalled = false
 
@@ -575,7 +593,8 @@ class ShowEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent().copy(type = EventType.SOCIAL)
     runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     composeTestRule.setContent {
       ShowEventScreen(
@@ -598,7 +617,8 @@ class ShowEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent().copy(type = EventType.ACTIVITY)
     runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     composeTestRule.setContent {
       ShowEventScreen(
@@ -622,7 +642,8 @@ class ShowEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent().copy(visibility = EventVisibility.PRIVATE)
     runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     composeTestRule.setContent {
       ShowEventScreen(
@@ -642,6 +663,69 @@ class ShowEventScreenTest {
         .assertTextContains("PRIVATE")
   }
 
+  /** --- GROUP TESTS --- */
+  @Test
+  fun eventWithGroup_displaysGroupName() {
+    val repo = EventsRepositoryLocal()
+    val profileRepo = mock(ProfileRepository::class.java)
+    val groupRepo = mock(GroupRepository::class.java)
+
+    val group = Group(id = "group-123", name = "Basketball Club", category = EventType.SPORTS)
+    val event = createTestEvent().copy(groupId = "group-123")
+
+    runBlocking {
+      repo.addEvent(event)
+      whenever(profileRepo.getProfile("owner123"))
+          .thenReturn(Profile(uid = "owner123", username = "Owner", email = "owner@test.com"))
+      whenever(groupRepo.getGroup("group-123")).thenReturn(group)
+    }
+
+    val viewModel = ShowEventViewModel(repo, profileRepo, groupRepo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          currentUserId = "user1",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_GROUP).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(ShowEventScreenTestTags.EVENT_GROUP)
+        .assertTextContains("Group: Basketball Club")
+  }
+
+  @Test
+  fun eventWithoutGroup_doesNotDisplayGroupSection() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent().copy(groupId = null)
+    runBlocking { repo.addEvent(event) }
+
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          currentUserId = "user1",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_GROUP).assertDoesNotExist()
+  }
+
   /** --- SERIE ID TESTS --- */
   @Test
   fun ownerSeesEditButton_withSerieId() {
@@ -649,7 +733,8 @@ class ShowEventScreenTest {
     val event = createTestEvent(ownerId = "owner123")
     runBlocking { repo.addEvent(event) }
     val serieId = "test-serie-456"
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     composeTestRule.setContent {
       ShowEventScreen(
@@ -676,7 +761,8 @@ class ShowEventScreenTest {
     val event = createTestEvent(ownerId = "owner123")
     runBlocking { repo.addEvent(event) }
     val serieId = "test-serie-789"
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     var editEventCalled = false
 
@@ -706,7 +792,8 @@ class ShowEventScreenTest {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent(ownerId = "owner123")
     runBlocking { repo.addEvent(event) }
-    val viewModel = ShowEventViewModel(repo)
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
 
     // Test without serieId - should call onEditEvent
     var editEventCalled = false

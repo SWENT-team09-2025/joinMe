@@ -196,6 +196,40 @@ private fun MapUserInteractionDetector(
 }
 
 /**
+ * Handles permission requests and location service initialization.
+ *
+ * @param context The Android context
+ * @param viewModel The MapViewModel to initialize location service
+ * @return Permission state for use in map properties
+ */
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+private fun rememberMapPermissions(
+    context: android.content.Context,
+    viewModel: MapViewModel
+): com.google.accompanist.permissions.MultiplePermissionsState {
+  val locationPermissionsState =
+      rememberMultiplePermissionsState(
+          listOf(
+              android.Manifest.permission.ACCESS_FINE_LOCATION,
+              android.Manifest.permission.ACCESS_COARSE_LOCATION))
+
+  LaunchedEffect(Unit) {
+    if (!locationPermissionsState.allPermissionsGranted) {
+      locationPermissionsState.launchMultiplePermissionRequest()
+    }
+  }
+
+  LaunchedEffect(locationPermissionsState.allPermissionsGranted) {
+    if (locationPermissionsState.allPermissionsGranted) {
+      viewModel.initLocationService(LocationServiceImpl(context))
+    }
+  }
+
+  return locationPermissionsState
+}
+
+/**
  * Renders event and series markers on the map.
  *
  * @param events List of events to display as markers
@@ -280,31 +314,13 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
     }
   }
 
-  // --- Permissions management---
-  val locationPermissionsState =
-      rememberMultiplePermissionsState(
-          listOf(
-              android.Manifest.permission.ACCESS_FINE_LOCATION,
-              android.Manifest.permission.ACCESS_COARSE_LOCATION,
-          ))
+  // --- Permissions management ---
+  val locationPermissionsState = rememberMapPermissions(context, viewModel)
 
-  LaunchedEffect(Unit) {
-    if (!locationPermissionsState.allPermissionsGranted) {
-      locationPermissionsState.launchMultiplePermissionRequest()
-    }
-  }
   val lifecycleOwner = LocalLifecycleOwner.current
   LaunchedEffect(lifecycleOwner) {
     lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
       viewModel.fetchLocalizableEvents()
-    }
-  }
-
-  // --- Reinitialize location service when permissions are granted ---
-  LaunchedEffect(locationPermissionsState.allPermissionsGranted) {
-    if (locationPermissionsState.allPermissionsGranted) {
-      // Reinitialize service to ensure it starts with proper permissions
-      viewModel.initLocationService(LocationServiceImpl(context))
     }
   }
 
