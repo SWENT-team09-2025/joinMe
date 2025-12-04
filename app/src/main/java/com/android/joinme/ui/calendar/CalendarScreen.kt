@@ -310,7 +310,8 @@ private fun CalendarDaysGrid(
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
       for (dayOfWeek in 0..6) {
         val shouldShowDay = week > 0 || dayOfWeek >= calendarData.firstDayOfWeek
-        val day = if (shouldShowDay && dayCounter <= calendarData.daysInMonth) dayCounter++ else null
+        val day =
+            if (shouldShowDay && dayCounter <= calendarData.daysInMonth) dayCounter++ else null
 
         DayCell(
             day = day,
@@ -370,10 +371,7 @@ private fun RowScope.DayCell(
     onDayClick: () -> Unit
 ) {
   Box(
-      modifier =
-          Modifier.weight(1f)
-              .aspectRatio(1f)
-              .then(getDayCellModifier(day, onDayClick)),
+      modifier = Modifier.weight(1f).aspectRatio(1f).then(getDayCellModifier(day, onDayClick)),
       contentAlignment = Alignment.Center) {
         if (day != null) {
           DayCellBackground(isSelected = isSelected, isToday = isToday)
