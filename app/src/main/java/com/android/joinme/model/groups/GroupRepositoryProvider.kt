@@ -2,6 +2,7 @@ package com.android.joinme.model.groups
 
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
+import com.google.firebase.storage.storage
 
 /**
  * Provides a singleton instance of the GroupRepository for dependency injection. Uses a local
@@ -15,7 +16,7 @@ object GroupRepositoryProvider {
 
   // Firestore-backed repository
   private val firestoreRepo: GroupRepository by lazy {
-    GroupRepositoryFirestore(Firebase.firestore)
+    GroupRepositoryFirestore(Firebase.firestore, Firebase.storage)
   }
 
   // For backward compatibility and explicit test injection

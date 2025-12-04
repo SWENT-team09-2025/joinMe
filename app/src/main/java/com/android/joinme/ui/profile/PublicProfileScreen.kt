@@ -4,7 +4,6 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -234,6 +233,11 @@ private fun ProfileContent(
       verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium)) {
         ProfileHeader(
             profile = profile,
+            statsRowTestTag = PublicProfileScreenTestTags.STATS_ROW,
+            eventsJoinedTestTag = PublicProfileScreenTestTags.EVENTS_JOINED_STAT,
+            followersTestTag = PublicProfileScreenTestTags.FOLLOWERS_STAT,
+            followingTestTag = PublicProfileScreenTestTags.FOLLOWING_STAT,
+            profilePhotoTestTag = PublicProfileScreenTestTags.PROFILE_PHOTO,
             onFollowersClick = onFollowersClick,
             onFollowingClick = onFollowingClick)
         BioSection(
@@ -242,49 +246,12 @@ private fun ProfileContent(
             isFollowLoading = isFollowLoading,
             onFollowClick = onFollowClick)
         InterestsSection(profile = profile)
-        EventStreaksSection()
+        EventStreaksSection(testTag = PublicProfileScreenTestTags.EVENT_STREAKS_SECTION)
         CommonEventsAndGroupsSection(
             commonEvents = commonEvents,
             commonGroups = commonGroups,
             onEventClick = onEventClick,
             onGroupClick = onGroupClick)
-      }
-}
-
-@Composable
-private fun ProfileHeader(
-    profile: Profile,
-    onFollowersClick: () -> Unit,
-    onFollowingClick: () -> Unit
-) {
-  Row(
-      modifier =
-          Modifier.fillMaxWidth()
-              .padding(vertical = Dimens.Spacing.medium)
-              .testTag(PublicProfileScreenTestTags.STATS_ROW),
-      horizontalArrangement = Arrangement.SpaceBetween,
-      verticalAlignment = Alignment.CenterVertically) {
-        Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.SpaceEvenly) {
-          StatItem(
-              value = profile.eventsJoinedCount.toString(),
-              label = stringResource(R.string.events_joined),
-              testTag = PublicProfileScreenTestTags.EVENTS_JOINED_STAT)
-          StatItem(
-              value = formatCount(profile.followersCount),
-              label = stringResource(R.string.followers),
-              testTag = PublicProfileScreenTestTags.FOLLOWERS_STAT,
-              onClick = onFollowersClick)
-          StatItem(
-              value = profile.followingCount.toString(),
-              label = stringResource(R.string.following),
-              testTag = PublicProfileScreenTestTags.FOLLOWING_STAT,
-              onClick = onFollowingClick)
-        }
-        ProfilePhotoImage(
-            photoUrl = profile.photoUrl,
-            contentDescription = stringResource(R.string.profile_photo),
-            size = Dimens.PublicProfile.photoSize,
-            modifier = Modifier.testTag(PublicProfileScreenTestTags.PROFILE_PHOTO))
       }
 }
 
@@ -391,26 +358,6 @@ private fun MessageButton() {
 }
 
 @Composable
-private fun EventStreaksSection() {
-  Column(
-      modifier =
-          Modifier.fillMaxWidth().testTag(PublicProfileScreenTestTags.EVENT_STREAKS_SECTION)) {
-        Text(
-            text = stringResource(R.string.event_streaks),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
-        Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Text(text = "🔥", style = MaterialTheme.typography.titleMedium)
-          Spacer(modifier = Modifier.width(Dimens.Spacing.small))
-          Text(
-              text = stringResource(R.string.zero_days),
-              style = MaterialTheme.typography.bodyMedium)
-        }
-      }
-}
-
-@Composable
 private fun CommonEventsAndGroupsSection(
     commonEvents: List<Event>,
     commonGroups: List<Group>,
@@ -502,44 +449,4 @@ private fun EmptyCard(message: String, testTag: String) {
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
-}
-
-@Composable
-private fun StatItem(
-    value: String,
-    label: String,
-    testTag: String = "",
-    onClick: (() -> Unit)? = null
-) {
-  Column(
-      horizontalAlignment = Alignment.CenterHorizontally,
-      modifier =
-          Modifier.testTag(testTag).let { modifier ->
-            if (onClick != null) modifier.clickable(onClick = onClick) else modifier
-          }) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground)
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
-      }
-}
-
-/**
- * Formats large numbers into abbreviated form (e.g., 28800000 -> "28.8m")
- *
- * @param count The count to format
- * @return Formatted string with appropriate suffix (k, m, b)
- */
-private fun formatCount(count: Int): String {
-  return when {
-    count >= 1_000_000_000 -> "%.1fb".format(count / 1_000_000_000.0)
-    count >= 1_000_000 -> "%.1fm".format(count / 1_000_000.0)
-    count >= 1_000 -> "%.1fk".format(count / 1_000.0)
-    else -> count.toString()
-  }
 }

@@ -86,6 +86,15 @@ private class FakeGroupDetailRepository : GroupRepository {
       userIds.all { userId -> group.memberIds.contains(userId) }
     }
   }
+
+  override suspend fun uploadGroupPhoto(context: Context, groupId: String, imageUri: Uri): String {
+    // Not needed for these tests
+    return "http://fakeurl.com/photo.jpg"
+  }
+
+  override suspend fun deleteGroupPhoto(groupId: String) {
+    // Not needed for these tests
+  }
 }
 
 /** Fake ProfileRepository for testing GroupDetailScreen. */

@@ -110,6 +110,27 @@ private suspend fun handleGroupJoin(
 }
 
 /**
+ * Checks if the current environment is a test environment.
+ *
+ * @return true if running in a test environment, false otherwise
+ */
+private fun isTestEnvironment(): Boolean {
+  return android.os.Build.FINGERPRINT == "robolectric" ||
+      android.os.Debug.isDebuggerConnected() ||
+      System.getProperty("IS_TEST_ENV") == "true"
+}
+
+/**
+ * Gets the current user ID, with support for test environments.
+ *
+ * @param currentUser The current Firebase user
+ * @return The user ID (test ID in test environments, Firebase UID otherwise)
+ */
+private fun getCurrentUserId(currentUser: com.google.firebase.auth.FirebaseUser?): String {
+  return if (isTestEnvironment()) "test-user-id" else (currentUser?.uid ?: "")
+}
+
+/**
  * MainActivity is the single activity for the JoinMe application.
  *
  * This activity follows the single-activity architecture pattern, hosting all navigation and
@@ -194,25 +215,13 @@ fun JoinMe(
   }
 
   // Get current user ID with test mode support
-  val currentUserId =
-      remember(currentUser) {
-        val isTestEnv =
-            android.os.Build.FINGERPRINT == "robolectric" ||
-                android.os.Debug.isDebuggerConnected() ||
-                System.getProperty("IS_TEST_ENV") == "true"
-
-        if (isTestEnv) "test-user-id" else (currentUser?.uid ?: "")
-      }
+  val currentUserId = remember(currentUser) { getCurrentUserId(currentUser) }
 
   val initialDestination =
       startDestination ?: if (currentUser == null) Screen.Auth.name else Screen.Overview.route
 
   // Initialize FCM token when user is logged in
-  LaunchedEffect(Unit) {
-    if (currentUser != null) {
-      FCMTokenManager.initializeFCMToken(context)
-    }
-  }
+  LaunchedEffect(currentUser) { currentUser?.let { FCMTokenManager.initializeFCMToken(context) } }
 
   // Navigate to event if opened from notification
   LaunchedEffect(initialEventId, currentUser) {
