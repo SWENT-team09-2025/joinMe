@@ -15,9 +15,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.R
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.eventItem.EventItem
 import com.android.joinme.model.serie.Serie
@@ -75,12 +78,14 @@ fun CalendarScreen(
       modifier = Modifier.fillMaxSize().testTag(CalendarScreenTestTags.SCREEN),
       topBar = {
         TopAppBar(
-            title = { Text("Calendar") },
+            title = { Text(stringResource(R.string.calendar)) },
             navigationIcon = {
               IconButton(
                   onClick = onGoBack,
                   modifier = Modifier.testTag(CalendarScreenTestTags.BACK_BUTTON)) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.back))
                   }
             },
             modifier = Modifier.testTag(CalendarScreenTestTags.TOP_BAR))
@@ -111,7 +116,7 @@ fun CalendarScreen(
 
               // Upcoming events section
               Text(
-                  text = "Upcoming events",
+                  text = stringResource(R.string.upcoming_events),
                   style = MaterialTheme.typography.titleLarge,
                   fontWeight = FontWeight.Bold,
                   modifier = Modifier.testTag(CalendarScreenTestTags.UPCOMING_EVENTS_SECTION))
@@ -150,20 +155,7 @@ private fun MonthYearHeader(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit
 ) {
-  val monthNames =
-      listOf(
-          "January",
-          "February",
-          "March",
-          "April",
-          "May",
-          "June",
-          "July",
-          "August",
-          "September",
-          "October",
-          "November",
-          "December")
+  val monthNames = stringArrayResource(R.array.month_names)
 
   Row(
       modifier = Modifier.fillMaxWidth().padding(vertical = Dimens.Spacing.small),
@@ -172,7 +164,9 @@ private fun MonthYearHeader(
         IconButton(
             onClick = onPreviousMonth,
             modifier = Modifier.testTag(CalendarScreenTestTags.PREVIOUS_MONTH_BUTTON)) {
-              Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous month")
+              Icon(
+                  Icons.AutoMirrored.Filled.ArrowBack,
+                  contentDescription = stringResource(R.string.previous_month))
             }
 
         Text(
@@ -184,7 +178,9 @@ private fun MonthYearHeader(
         IconButton(
             onClick = onNextMonth,
             modifier = Modifier.testTag(CalendarScreenTestTags.NEXT_MONTH_BUTTON)) {
-              Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next month")
+              Icon(
+                  Icons.AutoMirrored.Filled.ArrowForward,
+                  contentDescription = stringResource(R.string.next_month))
             }
       }
 }
@@ -229,7 +225,7 @@ private fun CalendarGrid(
   Column(modifier = Modifier.fillMaxWidth().testTag(CalendarScreenTestTags.CALENDAR_GRID)) {
     // Week day headers
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-      listOf("m", "t", "w", "t", "f", "s", "s").forEach { day ->
+      stringArrayResource(R.array.weekday_abbreviations).forEach { day ->
         Text(
             text = day,
             modifier = Modifier.weight(1f),
@@ -347,7 +343,7 @@ private fun RowScope.DayCell(
 private fun EmptyStateMessage() {
   Box(modifier = Modifier.fillMaxWidth().padding(vertical = Dimens.Spacing.extraLarge)) {
     Text(
-        text = "You have no events\non this date.",
+        text = stringResource(R.string.no_events_on_date),
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
