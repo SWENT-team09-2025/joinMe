@@ -391,20 +391,6 @@ class MainActivityNavigationTest {
   }
 
   @Test
-  fun canNavigateToCalendarScreenFromOverview() {
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
-    // Click Calendar button to navigate
-    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CALENDAR_BUTTON).performClick()
-    composeTestRule.waitForIdle()
-
-    // Verify we're on Calendar screen
-    composeTestRule.onNodeWithText("Calendar").assertExists()
-  }
-
-  @Test
   fun history_goBackButtonNavigatesToOverview() {
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -452,6 +438,7 @@ class MainActivityNavigationTest {
     // Navigate to Calendar
     composeTestRule.onNodeWithTag(OverviewScreenTestTags.CALENDAR_BUTTON).performClick()
     composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Calendar").assertExists()
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
