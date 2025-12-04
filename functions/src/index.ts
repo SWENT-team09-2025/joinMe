@@ -381,6 +381,69 @@ export const cleanupOldEventsAndSeries = functions.pubsub
   });
 
 /**
+ * Triggered when a new follow relationship is created.
+ * Sends a push notification to the user being followed.
+ */
+export const onUserFollowed = functions.firestore
+  .document("follows/{followId}")
+  .onCreate(async (snap, context) => {
+    try {
+      const followData = snap.data();
+      const followerId = followData.followerId;
+      const followedId = followData.followedId;
+
+      console.log(`User ${followerId} followed user ${followedId}`);
+
+      // Get the follower's username
+      const followerUsername = await getUsername(followerId);
+
+      // Get user's FCM token from their profile
+      const userDoc = await db.collection("profiles").doc(followedId).get();
+
+      if (!userDoc.exists) {
+        console.log(`User ${followedId} not found`);
+        return null;
+      }
+
+      const userData = userDoc.data();
+      const fcmToken = userData?.fcmToken;
+
+      if (!fcmToken) {
+        console.log(`User ${followedId} does not have an FCM token`);
+        return null;
+      }
+
+      // Send notification with follower info
+      const message: admin.messaging.Message = {
+        token: fcmToken,
+        notification: {
+          title: "New follower",
+          body: `${followerUsername} started following you`,
+        },
+        data: {
+          type: "new_follower",
+          followerId: followerId,
+          followerUsername: followerUsername,
+        },
+        android: {
+          priority: "high",
+          notification: {
+            channelId: "joinme_notifications",
+            priority: "high",
+          },
+        },
+      };
+
+      await admin.messaging().send(message);
+      console.log(`Follow notification sent to user ${followedId}`);
+      return null;
+    } catch (error) {
+      console.error("Error in onUserFollowed:", error);
+      return null;
+    }
+  });
+
+/**
  * Triggered when a new message is created in a group or event chat.
  * Sends push notifications to all members/participants except the sender.
  */
