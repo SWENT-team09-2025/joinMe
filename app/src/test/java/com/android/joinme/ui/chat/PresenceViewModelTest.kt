@@ -137,5 +137,4 @@ class PresenceViewModelTest {
     assertEquals(1, viewModel.presenceState.value.onlineUsersCount)
     assertFalse(viewModel.presenceState.value.onlineUserIds.contains(currentUserId))
   }
-
 }

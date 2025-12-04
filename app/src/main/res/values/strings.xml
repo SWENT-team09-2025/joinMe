@@ -15,7 +15,15 @@
     <string name="gallery">Gallery</string>
     <string name="location">Location</string>
     <string name="poll">Poll</string>
+    <string name="photo">Photo</string>
+    <string name="camera">Camera</string>
+    <string name="choose_photo_source">Choose photo source</string>
+    <string name="image_message">Image message</string>
+    <string name="image_sent_success">Image sent successfully</string>
     <string name="not_yet_implemented">Not yet implemented</string>
+
+    <!-- Event/Group -->
+    <string name="group_name">Group: %1$s</string>
 
     <!-- Public Profile Screen -->
     <string name="back">Back</string>
