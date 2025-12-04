@@ -1,6 +1,7 @@
 package com.android.joinme.ui.profile
 
 import android.content.Context
+import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.Event
@@ -181,6 +182,19 @@ class PublicProfileScreenTest {
     override suspend fun leaveGroup(groupId: String, userId: String) {}
 
     override suspend fun joinGroup(groupId: String, userId: String) {}
+
+    override suspend fun uploadGroupPhoto(
+        context: Context,
+        groupId: String,
+        imageUri: Uri
+    ): String {
+      // Not needed for these tests
+      return "http://fakeurl.com/photo.jpg"
+    }
+
+    override suspend fun deleteGroupPhoto(groupId: String) {
+      // Not needed for these tests
+    }
   }
 
   // ==================== LOADING AND ERROR STATES ====================
