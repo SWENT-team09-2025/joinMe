@@ -108,8 +108,8 @@ class ChatScreenTest {
     composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_LIST).assertExists()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_INPUT).assertIsDisplayed()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).assertIsDisplayed()
-    // Mic button is shown when text field is empty (send button appears when typing)
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.MIC_BUTTON).assertIsDisplayed()
+    // Send button is always shown (disabled when text field is empty)
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsDisplayed()
   }
 
   // ============================================================================
@@ -199,14 +199,13 @@ class ChatScreenTest {
   // ============================================================================
 
   @Test
-  fun messageInput_sendButtonAppearsAndIsEnabled_whenTextEntered() {
+  fun messageInput_sendButtonIsEnabledWhenTextEntered() {
     setupChatScreen()
 
-    // Initially mic button is shown, not send button
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.MIC_BUTTON).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertDoesNotExist()
+    // Initially send button is shown but disabled
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsDisplayed()
 
-    // When input has text, send button appears and is enabled
+    // When input has text, send button becomes enabled
     composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_INPUT).performTextInput("Hello!")
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsDisplayed()
@@ -288,28 +287,26 @@ class ChatScreenTest {
   }
 
   // ============================================================================
-  // Mic/Send Button Toggle Tests
+  // Send Button State Tests
   // ============================================================================
 
   @Test
-  fun buttonToggle_switchesBetweenMicAndSend_basedOnTextInput() {
+  fun sendButton_togglesEnabledState_basedOnTextInput() {
     setupChatScreen()
 
-    // Initially mic button is shown when text is empty
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.MIC_BUTTON).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertDoesNotExist()
+    // Initially send button is shown but disabled when text is empty
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsDisplayed()
 
-    // Type some text - should switch to send button
+    // Type some text - send button should become enabled
     composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_INPUT).performTextInput("Hello")
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.MIC_BUTTON).assertDoesNotExist()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsEnabled()
 
-    // Clear the text - should switch back to mic button
+    // Clear the text - send button should become disabled again
     composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_INPUT).performTextClearance()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.MIC_BUTTON).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertDoesNotExist()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsDisplayed()
   }
 
   // ============================================================================
@@ -378,23 +375,23 @@ class ChatScreenTest {
   }
 
   @Test
-  fun sendMessage_clearsInputAndShowsMicButton() {
+  fun sendMessage_clearsInputAndDisablesSendButton() {
     setupChatScreen()
 
     // Type a message
     composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_INPUT).performTextInput("Test message")
     composeTestRule.waitForIdle()
 
-    // Verify send button is shown
+    // Verify send button is shown and enabled
     composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsEnabled()
 
     // Send the message
     composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).performClick()
     composeTestRule.waitForIdle()
 
-    // Input should be cleared and mic button should reappear
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.MIC_BUTTON).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertDoesNotExist()
+    // Input should be cleared and send button should still be visible (but disabled)
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsDisplayed()
   }
 
   // ============================================================================
