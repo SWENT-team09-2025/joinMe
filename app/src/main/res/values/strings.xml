@@ -109,4 +109,7 @@
         <item>s</item>
         <item>s</item>
     </string-array>
+    <!-- Notification Types -->
+    <string name="notification_type_event_chat_message">event_chat_message</string>
+    <string name="notification_type_group_chat_message">group_chat_message</string>
 </resources>
