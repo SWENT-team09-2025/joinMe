@@ -76,6 +76,39 @@
     <!-- Events/Series Details Screens -->
     <string name="group_name">Group: %1$s</string>
 
+    <!-- Calendar Screen -->
+    <string name="calendar">Calendar</string>
+    <string name="previous_month">Previous month</string>
+    <string name="next_month">Next month</string>
+    <string name="upcoming_events">Upcoming events</string>
+    <string name="no_events_on_date">You have no events\non this date.</string>
+
+    <!-- Month Names Array -->
+    <string-array name="month_names">
+        <item>January</item>
+        <item>February</item>
+        <item>March</item>
+        <item>April</item>
+        <item>May</item>
+        <item>June</item>
+        <item>July</item>
+        <item>August</item>
+        <item>September</item>
+        <item>October</item>
+        <item>November</item>
+        <item>December</item>
+    </string-array>
+
+    <!-- Weekday Abbreviations Array (Monday through Sunday) -->
+    <string-array name="weekday_abbreviations">
+        <item>Mon</item>
+        <item>Tue</item>
+        <item>Wed</item>
+        <item>Thu</item>
+        <item>Fri</item>
+        <item>Sat</item>
+        <item>Sun</item>
+    </string-array>
     <!-- Notification Types -->
     <string name="notification_type_event_chat_message">event_chat_message</string>
     <string name="notification_type_group_chat_message">group_chat_message</string>
