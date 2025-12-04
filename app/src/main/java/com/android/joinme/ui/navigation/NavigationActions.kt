@@ -1,6 +1,7 @@
 package com.android.joinme.ui.navigation
 
 import androidx.navigation.NavHostController
+import com.android.joinme.ui.profile.FollowTab
 
 /**
  * Sealed class representing all navigation destinations in the JoinMe application.
@@ -149,6 +150,19 @@ sealed class Screen(
       Screen(route = "public_profile/${userId}", name = "Public Profile") {
     companion object {
       const val route = "public_profile/{userId}"
+    }
+  }
+
+  /**
+   * Screen for viewing a user's followers/following lists with tab switching
+   *
+   * @param userId The ID of the user whose followers/following to display
+   * @param initialTab The tab to show initially (FollowTab enum name, defaults to FOLLOWERS)
+   */
+  data class FollowList(val userId: String, val initialTab: String = FollowTab.FOLLOWERS.name) :
+      Screen(route = "follow_list/${userId}?initialTab=${initialTab}", name = "Follow List") {
+    companion object {
+      const val route = "follow_list/{userId}?initialTab={initialTab}"
     }
   }
 

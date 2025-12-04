@@ -542,6 +542,35 @@ fun JoinMe(
               },
               onGroupClick = { group ->
                 navigationActions.navigateTo(Screen.GroupDetail(group.id))
+              },
+              onFollowersClick = { profileUserId ->
+                navigationActions.navigateTo(
+                    Screen.FollowList(
+                        profileUserId, com.android.joinme.ui.profile.FollowTab.FOLLOWERS.name))
+              },
+              onFollowingClick = { profileUserId ->
+                navigationActions.navigateTo(
+                    Screen.FollowList(
+                        profileUserId, com.android.joinme.ui.profile.FollowTab.FOLLOWING.name))
+              })
+        } ?: run { Toast.makeText(context, "UserId is null", Toast.LENGTH_SHORT).show() }
+      }
+      composable(Screen.FollowList.route) { navBackStackEntry ->
+        val userId = navBackStackEntry.arguments?.getString("userId")
+        val initialTabString =
+            navBackStackEntry.arguments?.getString("initialTab")
+                ?: com.android.joinme.ui.profile.FollowTab.FOLLOWERS.name
+
+        userId?.let {
+          com.android.joinme.ui.profile.FollowListScreen(
+              userId = userId,
+              initialTab =
+                  if (initialTabString == com.android.joinme.ui.profile.FollowTab.FOLLOWING.name)
+                      com.android.joinme.ui.profile.FollowTab.FOLLOWING
+                  else com.android.joinme.ui.profile.FollowTab.FOLLOWERS,
+              onBackClick = { navigationActions.goBack() },
+              onProfileClick = { profileUserId ->
+                navigationActions.navigateTo(Screen.PublicProfile(profileUserId))
               })
         } ?: run { Toast.makeText(context, "UserId is null", Toast.LENGTH_SHORT).show() }
       }

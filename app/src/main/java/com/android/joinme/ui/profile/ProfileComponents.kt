@@ -2,6 +2,7 @@ package com.android.joinme.ui.profile
 
 // AI-assisted implementation — reviewed and adapted for project standards.
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,6 +35,8 @@ import com.android.joinme.ui.theme.Dimens
  * @param followersTestTag Test tag for the followers statistic
  * @param followingTestTag Test tag for the following statistic
  * @param profilePhotoTestTag Test tag for the profile photo
+ * @param onFollowersClick Optional callback when followers stat is clicked
+ * @param onFollowingClick Optional callback when following stat is clicked
  */
 @Composable
 fun ProfileHeader(
@@ -42,7 +45,9 @@ fun ProfileHeader(
     eventsJoinedTestTag: String = "",
     followersTestTag: String = "",
     followingTestTag: String = "",
-    profilePhotoTestTag: String = ""
+    profilePhotoTestTag: String = "",
+    onFollowersClick: (() -> Unit)? = null,
+    onFollowingClick: (() -> Unit)? = null
 ) {
   Row(
       modifier =
@@ -59,11 +64,13 @@ fun ProfileHeader(
           StatItem(
               value = formatCount(profile.followersCount),
               label = stringResource(R.string.followers),
-              testTag = followersTestTag)
+              testTag = followersTestTag,
+              onClick = onFollowersClick)
           StatItem(
               value = profile.followingCount.toString(),
               label = stringResource(R.string.following),
-              testTag = followingTestTag)
+              testTag = followingTestTag,
+              onClick = onFollowingClick)
         }
         Spacer(modifier = Modifier.width(Dimens.Spacing.medium))
         ProfilePhotoImage(
@@ -83,20 +90,26 @@ fun ProfileHeader(
  * @param value The numeric or formatted value to display (e.g., "42", "1.2k")
  * @param label The descriptive label for the statistic (e.g., "Followers")
  * @param testTag Optional test tag for UI testing
+ * @param onClick Optional click handler for interactive stats
  */
 @Composable
-fun StatItem(value: String, label: String, testTag: String = "") {
-  Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.testTag(testTag)) {
-    Text(
-        text = value,
-        style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onBackground)
-    Text(
-        text = label,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
-  }
+fun StatItem(value: String, label: String, testTag: String = "", onClick: (() -> Unit)? = null) {
+  Column(
+      horizontalAlignment = Alignment.CenterHorizontally,
+      modifier =
+          Modifier.testTag(testTag).let { modifier ->
+            if (onClick != null) modifier.clickable(onClick = onClick) else modifier
+          }) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
+      }
 }
 
 /**

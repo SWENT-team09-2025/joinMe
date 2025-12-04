@@ -852,4 +852,68 @@ class NavigationActionsTest {
     assert(activityGroupScreen.name == "Activity Group")
     assert(!activityGroupScreen.isTopLevelDestination)
   }
+
+  // ========== FollowList Navigation Tests ==========
+
+  @Test
+  fun `navigateTo FollowList with userId navigates to correct route with default tab`() {
+    val userId = "test-user-123"
+    every { navController.currentDestination?.route } returns Screen.Profile.route
+
+    actions.navigateTo(Screen.FollowList(userId))
+
+    verify {
+      navController.navigate(
+          eq("follow_list/$userId?initialTab=FOLLOWERS"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            // FollowList is not a top-level destination
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `navigateTo FollowList with userId and FOLLOWING tab navigates to correct route`() {
+    val userId = "test-user-456"
+    every { navController.currentDestination?.route } returns Screen.Profile.route
+
+    actions.navigateTo(Screen.FollowList(userId, "FOLLOWING"))
+
+    verify {
+      navController.navigate(
+          eq("follow_list/$userId?initialTab=FOLLOWING"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `FollowList route companion object matches pattern`() {
+    assertEquals("follow_list/{userId}?initialTab={initialTab}", Screen.FollowList.Companion.route)
+  }
+
+  @Test
+  fun `FollowList screen has correct name`() {
+    val screen = Screen.FollowList("test-id")
+    assertEquals("Follow List", screen.name)
+    assertFalse(screen.isTopLevelDestination)
+  }
+
+  @Test
+  fun `FollowList screen with special characters in userId`() {
+    val userId = "user-123-abc-xyz"
+    every { navController.currentDestination?.route } returns Screen.Profile.route
+
+    actions.navigateTo(Screen.FollowList(userId))
+
+    verify {
+      navController.navigate(
+          eq("follow_list/$userId?initialTab=FOLLOWERS"), any<NavOptionsBuilder.() -> Unit>())
+    }
+  }
 }

@@ -109,6 +109,8 @@ object PublicProfileScreenTestTags {
  * @param onBackClick Callback invoked when the user taps the back button
  * @param onEventClick Callback invoked when the user taps on an event card
  * @param onGroupClick Callback invoked when the user taps on a group card
+ * @param onFollowersClick Callback invoked when the user taps on the followers count
+ * @param onFollowingClick Callback invoked when the user taps on the following count
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,7 +119,9 @@ fun PublicProfileScreen(
     viewModel: PublicProfileViewModel = viewModel(),
     onBackClick: () -> Unit = {},
     onEventClick: (Event) -> Unit = {},
-    onGroupClick: (Group) -> Unit = {}
+    onGroupClick: (Group) -> Unit = {},
+    onFollowersClick: (String) -> Unit = {},
+    onFollowingClick: (String) -> Unit = {}
 ) {
   val profile by viewModel.profile.collectAsState()
   val commonEvents by viewModel.commonEvents.collectAsState()
@@ -202,7 +206,9 @@ fun PublicProfileScreen(
                       commonEvents = commonEvents,
                       commonGroups = commonGroups,
                       onEventClick = onEventClick,
-                      onGroupClick = onGroupClick)
+                      onGroupClick = onGroupClick,
+                      onFollowersClick = { onFollowersClick(userId) },
+                      onFollowingClick = { onFollowingClick(userId) })
                 }
               }
             }
@@ -218,7 +224,9 @@ private fun ProfileContent(
     commonEvents: List<Event>,
     commonGroups: List<Group>,
     onEventClick: (Event) -> Unit,
-    onGroupClick: (Group) -> Unit
+    onGroupClick: (Group) -> Unit,
+    onFollowersClick: () -> Unit,
+    onFollowingClick: () -> Unit
 ) {
   Column(
       modifier = Modifier.fillMaxSize().padding(Dimens.Padding.medium),
@@ -229,7 +237,9 @@ private fun ProfileContent(
             eventsJoinedTestTag = PublicProfileScreenTestTags.EVENTS_JOINED_STAT,
             followersTestTag = PublicProfileScreenTestTags.FOLLOWERS_STAT,
             followingTestTag = PublicProfileScreenTestTags.FOLLOWING_STAT,
-            profilePhotoTestTag = PublicProfileScreenTestTags.PROFILE_PHOTO)
+            profilePhotoTestTag = PublicProfileScreenTestTags.PROFILE_PHOTO,
+            onFollowersClick = onFollowersClick,
+            onFollowingClick = onFollowingClick)
         BioSection(
             profile = profile,
             isFollowing = isFollowing,
