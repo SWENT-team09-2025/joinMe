@@ -61,9 +61,11 @@ class JoinMeFirebaseMessagingService : FirebaseMessagingService() {
     val notificationType = data["type"]
     val chatName = data["chatName"]
     val conversationId = data["conversationId"]
+    val followerId = data["followerId"]
 
     // Display the notification
-    showNotification(title, body, eventId, groupId, notificationType, chatName, conversationId)
+    showNotification(
+        title, body, eventId, groupId, notificationType, chatName, conversationId, followerId)
   }
 
   /**
@@ -91,9 +93,10 @@ class JoinMeFirebaseMessagingService : FirebaseMessagingService() {
    * @param eventId Optional event ID to open when the notification is tapped
    * @param groupId Optional group ID to open when the notification is tapped
    * @param notificationType The type of notification (e.g., "event_chat_message",
-   *   "group_chat_message")
+   *   "group_chat_message", "new_follower")
    * @param chatName The name of the chat (for chat notifications)
    * @param conversationId The conversation ID (for chat notifications)
+   * @param followerId The ID of the user who followed (for follower notifications)
    */
   private fun showNotification(
       title: String,
@@ -102,16 +105,18 @@ class JoinMeFirebaseMessagingService : FirebaseMessagingService() {
       groupId: String?,
       notificationType: String?,
       chatName: String?,
-      conversationId: String?
+      conversationId: String?,
+      followerId: String?
   ) {
     val intent =
         Intent(this, MainActivity::class.java).apply {
           flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
           eventId?.let { putExtra("eventId", it) }
           groupId?.let { putExtra("groupId", it) }
-          notificationType?.let { putExtra("notificationType", it) }
+          notificationType?.let { putExtra("type", it) }
           chatName?.let { putExtra("chatName", it) }
           conversationId?.let { putExtra("conversationId", it) }
+          followerId?.let { putExtra("followerId", it) }
         }
 
     val pendingIntent =

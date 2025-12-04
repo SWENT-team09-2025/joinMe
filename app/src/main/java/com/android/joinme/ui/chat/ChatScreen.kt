@@ -42,7 +42,6 @@ import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -897,8 +896,6 @@ private fun MessageInput(
     isUploadingImage: Boolean
 ) {
   var showAttachmentMenu by remember { mutableStateOf(false) }
-  val context = LocalContext.current
-  val notImplementedMsg = stringResource(R.string.not_yet_implemented)
 
   Column {
     // Upload progress indicator
@@ -941,23 +938,20 @@ private fun MessageInput(
                 colors = MaterialTheme.customColors.outlinedTextField(),
                 maxLines = 4)
 
-            // Dynamic send/mic button (right)
+            // Dynamic send button (right) - disabled appearance when no text
             if (text.isEmpty()) {
-              // Microphone button (placeholder for future audio recording)
-              // TODO(#364 and #367): Audio recording - Feature coming soon
+              // Disabled send button appearance when no text
               IconButton(
-                  onClick = {
-                    Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show()
-                  },
-                  enabled = !isUploadingImage,
+                  onClick = {},
+                  enabled = false,
                   modifier =
                       Modifier.size(Dimens.TouchTarget.minimum)
                           .background(
                               color = MaterialTheme.colorScheme.surfaceVariant, shape = CircleShape)
-                          .testTag(ChatScreenTestTags.MIC_BUTTON)) {
+                          .testTag(ChatScreenTestTags.SEND_BUTTON)) {
                     Icon(
-                        imageVector = Icons.Default.Mic,
-                        contentDescription = stringResource(R.string.record_audio),
+                        imageVector = Icons.AutoMirrored.Filled.Send,
+                        contentDescription = stringResource(R.string.send_message),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
                   }
             } else {

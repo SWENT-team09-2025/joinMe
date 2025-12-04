@@ -31,6 +31,7 @@ import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.notification.FCMTokenManager
 import com.android.joinme.model.profile.ProfileRepositoryProvider
+import com.android.joinme.ui.calendar.CalendarScreen
 import com.android.joinme.ui.chat.ChatScreen
 import com.android.joinme.ui.chat.ChatViewModel
 import com.android.joinme.ui.groups.ActivityGroupScreen
@@ -147,9 +148,10 @@ class MainActivity : ComponentActivity() {
     createNotificationChannel()
 
     val deepLinkData = intent?.data
-    val notificationType = intent?.getStringExtra("notificationType")
+    val notificationType = intent?.getStringExtra("type")
     val chatName = intent?.getStringExtra("chatName")
     val conversationId = intent?.getStringExtra("conversationId")
+    val followerId = intent?.getStringExtra("followerId")
 
     val initialEventId =
         intent?.getStringExtra("eventId")
@@ -175,6 +177,7 @@ class MainActivity : ComponentActivity() {
               notificationType = notificationType,
               chatName = chatName,
               conversationId = conversationId,
+              followerId = followerId,
               testUserId = testUserId)
         }
       }
@@ -222,6 +225,7 @@ fun JoinMe(
     notificationType: String? = null,
     chatName: String? = null,
     conversationId: String? = null,
+    followerId: String? = null,
     enableNotificationPermissionRequest: Boolean = true,
     testUserId: String? = null,
 ) {
@@ -316,6 +320,14 @@ fun JoinMe(
     }
   }
 
+  // Navigate to follower's profile if opened from follower notification
+  LaunchedEffect(followerId, notificationType, currentUserId) {
+    if (followerId != null && notificationType == "new_follower" && currentUserId.isNotEmpty()) {
+      // Navigate to the follower's public profile
+      navigationActions.navigateTo(Screen.PublicProfile(followerId))
+    }
+  }
+
   NavHost(navController = navController, startDestination = initialDestination) {
     // ============================================================================
     // Authentication
@@ -349,6 +361,7 @@ fun JoinMe(
             onAddSerie = { navigationActions.navigateTo(Screen.CreateSerie) },
             onSelectedSerie = { navigationActions.navigateTo(Screen.SerieDetails(it.serieId)) },
             onGoToHistory = { navigationActions.navigateTo(Screen.History) },
+            onGoToCalendar = { navigationActions.navigateTo(Screen.Calendar) },
             navigationActions = navigationActions,
             enableNotificationPermissionRequest = enableNotificationPermissionRequest)
       }
@@ -386,6 +399,12 @@ fun JoinMe(
       }
       composable(Screen.History.route) {
         HistoryScreen(
+            onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
+            onSelectSerie = { navigationActions.navigateTo(Screen.SerieDetails(it.serieId)) },
+            onGoBack = { navigationActions.goBack() })
+      }
+      composable(Screen.Calendar.route) {
+        CalendarScreen(
             onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
             onSelectSerie = { navigationActions.navigateTo(Screen.SerieDetails(it.serieId)) },
             onGoBack = { navigationActions.goBack() })
@@ -523,6 +542,35 @@ fun JoinMe(
               },
               onGroupClick = { group ->
                 navigationActions.navigateTo(Screen.GroupDetail(group.id))
+              },
+              onFollowersClick = { profileUserId ->
+                navigationActions.navigateTo(
+                    Screen.FollowList(
+                        profileUserId, com.android.joinme.ui.profile.FollowTab.FOLLOWERS.name))
+              },
+              onFollowingClick = { profileUserId ->
+                navigationActions.navigateTo(
+                    Screen.FollowList(
+                        profileUserId, com.android.joinme.ui.profile.FollowTab.FOLLOWING.name))
+              })
+        } ?: run { Toast.makeText(context, "UserId is null", Toast.LENGTH_SHORT).show() }
+      }
+      composable(Screen.FollowList.route) { navBackStackEntry ->
+        val userId = navBackStackEntry.arguments?.getString("userId")
+        val initialTabString =
+            navBackStackEntry.arguments?.getString("initialTab")
+                ?: com.android.joinme.ui.profile.FollowTab.FOLLOWERS.name
+
+        userId?.let {
+          com.android.joinme.ui.profile.FollowListScreen(
+              userId = userId,
+              initialTab =
+                  if (initialTabString == com.android.joinme.ui.profile.FollowTab.FOLLOWING.name)
+                      com.android.joinme.ui.profile.FollowTab.FOLLOWING
+                  else com.android.joinme.ui.profile.FollowTab.FOLLOWERS,
+              onBackClick = { navigationActions.goBack() },
+              onProfileClick = { profileUserId ->
+                navigationActions.navigateTo(Screen.PublicProfile(profileUserId))
               })
         } ?: run { Toast.makeText(context, "UserId is null", Toast.LENGTH_SHORT).show() }
       }
