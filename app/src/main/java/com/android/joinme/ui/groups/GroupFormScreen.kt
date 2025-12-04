@@ -1,6 +1,5 @@
 package com.android.joinme.ui.groups
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -18,9 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import com.android.joinme.R
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.displayString
 import com.android.joinme.ui.theme.Dimens
@@ -245,11 +242,11 @@ private fun GroupPictureSection(
                       // Tint scrim for a frosted glass look
                       Box(modifier = Modifier.matchParentSize().background(TransparentColor)) {}
 
-                      // TODO: Replace with actual GroupPhotoImage component when available
-                      Image(
-                          painter = painterResource(id = R.drawable.group_default_picture),
+                      GroupPhotoImage(
+                          photoUrl = groupPictureUrl,
                           contentDescription = "Group picture",
-                          modifier = Modifier.matchParentSize().clip(CircleShape))
+                          size = Dimens.Group.pictureLarge,
+                          showLoadingIndicator = false)
                     }
 
                 // Edit button overlay
