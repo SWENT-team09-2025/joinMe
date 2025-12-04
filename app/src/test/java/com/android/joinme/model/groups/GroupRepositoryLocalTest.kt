@@ -1,12 +1,22 @@
 package com.android.joinme.model.groups
 
+import android.content.ContentResolver
+import android.content.Context
+import android.net.Uri
 import com.android.joinme.model.event.EventType
+import java.io.ByteArrayInputStream
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
 
 class GroupRepositoryLocalTest {
+
+  @get:Rule val tempFolder = TemporaryFolder()
 
   private lateinit var repo: GroupRepositoryLocal
   private lateinit var sampleGroup: Group
@@ -244,6 +254,111 @@ class GroupRepositoryLocalTest {
 
       Assert.assertEquals(1, result.size)
       Assert.assertEquals("1", result[0].id)
+    }
+  }
+
+  // ---------------- GROUP PHOTO TESTS ----------------
+
+  @Test
+  fun uploadGroupPhoto_updatesPhotoUrl() {
+    runBlocking {
+      // Setup
+      repo.addGroup(sampleGroup)
+      val mockContext = mock(Context::class.java)
+      val mockContentResolver = mock(ContentResolver::class.java)
+      val mockUri = mock(Uri::class.java)
+      val filesDir = tempFolder.newFolder("files")
+      val testBytes = "test image data".toByteArray()
+
+      `when`(mockContext.filesDir).thenReturn(filesDir)
+      `when`(mockContext.contentResolver).thenReturn(mockContentResolver)
+      `when`(mockContentResolver.openInputStream(mockUri))
+          .thenReturn(ByteArrayInputStream(testBytes))
+
+      // Execute
+      val result = repo.uploadGroupPhoto(mockContext, "1", mockUri)
+
+      // Verify
+      Assert.assertNotNull(result)
+      Assert.assertTrue(result.startsWith("file:"))
+      val group = repo.getGroup("1")
+      Assert.assertEquals(result, group.photoUrl)
+    }
+  }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun uploadGroupPhoto_groupNotFound_throwsException() {
+    runBlocking {
+      val mockContext = mock(Context::class.java)
+      val mockUri = mock(Uri::class.java)
+      repo.uploadGroupPhoto(mockContext, "nonexistent", mockUri)
+    }
+  }
+
+  @Test
+  fun deleteGroupPhoto_clearsPhotoUrl() {
+    runBlocking {
+      // Setup: add group with photo
+      val groupWithPhoto = sampleGroup.copy(photoUrl = "file:///some/path/photo.jpg")
+      repo.addGroup(groupWithPhoto)
+
+      // Execute
+      repo.deleteGroupPhoto("1")
+
+      // Verify
+      val group = repo.getGroup("1")
+      Assert.assertNull(group.photoUrl)
+    }
+  }
+
+  @Test
+  fun deleteGroupPhoto_groupNotFound_doesNotThrow() {
+    runBlocking {
+      // Should not throw, just return silently
+      repo.deleteGroupPhoto("nonexistent")
+    }
+  }
+
+  @Test
+  fun deleteGroupPhoto_noExistingPhoto_doesNotThrow() {
+    runBlocking {
+      // Setup: group without photo
+      repo.addGroup(sampleGroup)
+
+      // Execute - should not throw
+      repo.deleteGroupPhoto("1")
+
+      // Verify
+      val group = repo.getGroup("1")
+      Assert.assertNull(group.photoUrl)
+    }
+  }
+
+  @Test
+  fun uploadGroupPhoto_replacesExistingPhoto() {
+    runBlocking {
+      // Setup
+      val groupWithPhoto = sampleGroup.copy(photoUrl = "file:///old/photo.jpg")
+      repo.addGroup(groupWithPhoto)
+
+      val mockContext = mock(Context::class.java)
+      val mockContentResolver = mock(ContentResolver::class.java)
+      val mockUri = mock(Uri::class.java)
+      val filesDir = tempFolder.newFolder("files2")
+      val testBytes = "new image data".toByteArray()
+
+      `when`(mockContext.filesDir).thenReturn(filesDir)
+      `when`(mockContext.contentResolver).thenReturn(mockContentResolver)
+      `when`(mockContentResolver.openInputStream(mockUri))
+          .thenReturn(ByteArrayInputStream(testBytes))
+
+      // Execute
+      val newUrl = repo.uploadGroupPhoto(mockContext, "1", mockUri)
+
+      // Verify
+      val group = repo.getGroup("1")
+      Assert.assertEquals(newUrl, group.photoUrl)
+      Assert.assertNotEquals("file:///old/photo.jpg", group.photoUrl)
     }
   }
 }

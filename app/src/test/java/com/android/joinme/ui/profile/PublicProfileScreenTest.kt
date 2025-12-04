@@ -1,6 +1,7 @@
 package com.android.joinme.ui.profile
 
 import android.content.Context
+import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.android.joinme.model.event.Event
@@ -123,6 +124,20 @@ class PublicProfileScreenTest {
     override suspend fun deleteProfilePhoto(uid: String) {}
 
     override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? = null
+
+    // Stub implementations for follow methods - not used in PublicProfileScreen tests
+    override suspend fun followUser(followerId: String, followedId: String) {}
+
+    override suspend fun unfollowUser(followerId: String, followedId: String) {}
+
+    override suspend fun isFollowing(followerId: String, followedId: String): Boolean = false
+
+    override suspend fun getFollowing(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getFollowers(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getMutualFollowing(userId1: String, userId2: String): List<Profile> =
+        emptyList()
   }
 
   private class FakeEventsRepository(private val events: List<Event> = emptyList()) :
@@ -167,6 +182,19 @@ class PublicProfileScreenTest {
     override suspend fun leaveGroup(groupId: String, userId: String) {}
 
     override suspend fun joinGroup(groupId: String, userId: String) {}
+
+    override suspend fun uploadGroupPhoto(
+        context: Context,
+        groupId: String,
+        imageUri: Uri
+    ): String {
+      // Not needed for these tests
+      return "http://fakeurl.com/photo.jpg"
+    }
+
+    override suspend fun deleteGroupPhoto(groupId: String) {
+      // Not needed for these tests
+    }
   }
 
   // ==================== LOADING AND ERROR STATES ====================

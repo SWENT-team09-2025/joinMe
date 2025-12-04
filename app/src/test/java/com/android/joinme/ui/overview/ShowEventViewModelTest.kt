@@ -6,10 +6,17 @@ import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryLocal
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.groups.streaks.StreakService
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import com.google.firebase.Timestamp
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import java.util.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,6 +37,7 @@ class ShowEventViewModelTest {
 
   private lateinit var repository: EventsRepositoryLocal
   private lateinit var profileRepository: ProfileRepository
+  private lateinit var groupRepository: GroupRepository
   private lateinit var viewModel: ShowEventViewModel
   private val testDispatcher = StandardTestDispatcher()
 
@@ -104,7 +112,8 @@ class ShowEventViewModelTest {
     Dispatchers.setMain(testDispatcher)
     repository = EventsRepositoryLocal()
     profileRepository = mock(ProfileRepository::class.java)
-    viewModel = ShowEventViewModel(repository, profileRepository)
+    groupRepository = mock(GroupRepository::class.java)
+    viewModel = ShowEventViewModel(repository, profileRepository, groupRepository)
   }
 
   @After
@@ -139,6 +148,8 @@ class ShowEventViewModelTest {
     assertEquals(listOf("user1", "user2", "owner123"), state.participants)
     assertFalse(state.isPastEvent)
     assertNull(state.serieId)
+    assertNull(state.groupId)
+    assertNull(state.groupName)
     assertNull(state.errorMsg)
   }
 
@@ -253,6 +264,77 @@ class ShowEventViewModelTest {
 
     val state = viewModel.uiState.first()
     assertEquals("Created by UNKNOWN", state.ownerName)
+  }
+
+  /** --- GROUP TESTS --- */
+  @Test
+  fun loadEvent_withGroupId_loadsGroupName() = runTest {
+    val group = Group(id = "group-123", name = "Basketball Club", category = EventType.SPORTS)
+    val event = createTestEvent().copy(groupId = "group-123")
+    repository.addEvent(event)
+
+    whenever(profileRepository.getProfile("owner123"))
+        .thenReturn(Profile(uid = "owner123", username = "TestUser", email = "test@example.com"))
+    whenever(groupRepository.getGroup("group-123")).thenReturn(group)
+
+    viewModel.loadEvent(event.eventId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("group-123", state.groupId)
+    assertEquals("Basketball Club", state.groupName)
+    assertNull(state.errorMsg)
+  }
+
+  @Test
+  fun loadEvent_withGroupId_repositoryError_setsGroupNameToNull() = runTest {
+    val event = createTestEvent().copy(groupId = "error-group")
+    repository.addEvent(event)
+
+    whenever(profileRepository.getProfile("owner123"))
+        .thenReturn(Profile(uid = "owner123", username = "TestUser", email = "test@example.com"))
+    whenever(groupRepository.getGroup("error-group")).thenThrow(RuntimeException("Network error"))
+
+    viewModel.loadEvent(event.eventId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("error-group", state.groupId)
+    assertNull(state.groupName)
+  }
+
+  @Test
+  fun loadEvent_withEmptyGroupId_callsRepositoryAndHandlesEmptyString() = runTest {
+    val event = createTestEvent().copy(groupId = "")
+    repository.addEvent(event)
+
+    whenever(profileRepository.getProfile("owner123"))
+        .thenReturn(Profile(uid = "owner123", username = "TestUser", email = "test@example.com"))
+    whenever(groupRepository.getGroup("")).thenReturn(null)
+
+    viewModel.loadEvent(event.eventId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("", state.groupId)
+    assertNull(state.groupName)
+  }
+
+  @Test
+  fun loadEvent_withNullGroupId_doesNotCallRepository() = runTest {
+    val event = createTestEvent().copy(groupId = null)
+    repository.addEvent(event)
+
+    whenever(profileRepository.getProfile("owner123"))
+        .thenReturn(Profile(uid = "owner123", username = "TestUser", email = "test@example.com"))
+
+    viewModel.loadEvent(event.eventId)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertNull(state.groupId)
+    assertNull(state.groupName)
+    verify(groupRepository, never()).getGroup(any())
   }
 
   /** --- CLEAR ERROR MESSAGE TESTS --- */
@@ -726,6 +808,8 @@ class ShowEventViewModelTest {
     assertTrue(state.participants.isEmpty())
     assertFalse(state.isPastEvent)
     assertNull(state.serieId)
+    assertNull(state.groupId)
+    assertNull(state.groupName)
     assertNull(state.errorMsg)
   }
 
@@ -746,9 +830,12 @@ class ShowEventViewModelTest {
             ownerName = "Created by CustomUser",
             participants = listOf("user1", "user2", "user3"),
             isPastEvent = true,
-            serieId = "custom-serie-123")
+            serieId = "custom-serie-123",
+            groupId = "custom-group-456",
+            groupName = "Custom Group")
 
-    val customViewModel = ShowEventViewModel(repository, profileRepository, customState)
+    val customViewModel =
+        ShowEventViewModel(repository, profileRepository, groupRepository, customState)
 
     val state = customViewModel.uiState.value
     assertEquals("SPORTS", state.type)
@@ -765,6 +852,8 @@ class ShowEventViewModelTest {
     assertEquals(listOf("user1", "user2", "user3"), state.participants)
     assertTrue(state.isPastEvent)
     assertEquals("custom-serie-123", state.serieId)
+    assertEquals("custom-group-456", state.groupId)
+    assertEquals("Custom Group", state.groupName)
   }
 
   /** --- DATE FORMATTING TESTS --- */
@@ -943,7 +1032,7 @@ class ShowEventViewModelTest {
     fakeRepo.addEvent(event)
     fakeRepo.shouldThrowOnEdit = true
 
-    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
 
     val userProfile =
         Profile(
@@ -972,7 +1061,7 @@ class ShowEventViewModelTest {
     fakeRepo.addEvent(event)
     fakeRepo.shouldThrowOnDelete = true
 
-    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
 
     val profile1 =
         Profile(
@@ -1017,7 +1106,7 @@ class ShowEventViewModelTest {
             ownerId = "owner123")
     fakeRepo.addEvent(event)
 
-    val vm = ShowEventViewModel(fakeRepo, profileRepository)
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
 
     vm.deleteEvent(event.eventId)
     advanceUntilIdle()
@@ -1030,5 +1119,192 @@ class ShowEventViewModelTest {
 
     // No profile updates should have happened
     verify(profileRepository, never()).createOrUpdateProfile(any())
+  }
+
+  /** --- TOGGLE PARTICIPATION STREAK TESTS --- */
+  @Test
+  fun toggleParticipation_joiningGroupEvent_callsStreakServiceOnActivityJoined() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityJoined(any(), any(), any()) } returns Unit
+
+    val fakeRepo = FakeEventsRepository()
+    val event = createTestEvent(participants = listOf("user1")).copy(groupId = "group123")
+    fakeRepo.addEvent(event)
+
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
+
+    val userProfile =
+        Profile(
+            uid = "user2", username = "NewUser", email = "new@example.com", eventsJoinedCount = 5)
+    whenever(profileRepository.getProfile("user2")).thenReturn(userProfile)
+
+    vm.toggleParticipation(event.eventId, "user2")
+    advanceUntilIdle()
+
+    coVerify { StreakService.onActivityJoined("group123", "user2", event.date) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun toggleParticipation_quittingGroupEvent_callsStreakServiceOnActivityLeft() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityLeft(any(), any(), any()) } returns Unit
+
+    val fakeRepo = FakeEventsRepository()
+    val event = createTestEvent(participants = listOf("user1", "user2")).copy(groupId = "group123")
+    fakeRepo.addEvent(event)
+
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
+
+    val userProfile =
+        Profile(
+            uid = "user2",
+            username = "ExistingUser",
+            email = "existing@example.com",
+            eventsJoinedCount = 10)
+    whenever(profileRepository.getProfile("user2")).thenReturn(userProfile)
+
+    vm.toggleParticipation(event.eventId, "user2")
+    advanceUntilIdle()
+
+    coVerify { StreakService.onActivityLeft("group123", "user2", event.date) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun toggleParticipation_nonGroupEvent_doesNotCallStreakService() = runTest {
+    mockkObject(StreakService)
+
+    val fakeRepo = FakeEventsRepository()
+    val event = createTestEvent(participants = listOf("user1"))
+    fakeRepo.addEvent(event)
+
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
+
+    val userProfile =
+        Profile(
+            uid = "user2", username = "NewUser", email = "new@example.com", eventsJoinedCount = 5)
+    whenever(profileRepository.getProfile("user2")).thenReturn(userProfile)
+
+    vm.toggleParticipation(event.eventId, "user2")
+    advanceUntilIdle()
+
+    coVerify(exactly = 0) { StreakService.onActivityJoined(any(), any(), any()) }
+    coVerify(exactly = 0) { StreakService.onActivityLeft(any(), any(), any()) }
+
+    unmockkObject(StreakService)
+  }
+
+  /** --- DELETE EVENT STREAK TESTS --- */
+  @Test
+  fun deleteEvent_upcomingGroupEvent_callsStreakServiceOnActivityDeleted() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityDeleted(any(), any(), any()) } returns Unit
+
+    val fakeRepo = FakeEventsRepository()
+    val event =
+        createTestEvent(participants = listOf("user1", "user2"), daysFromNow = 7)
+            .copy(groupId = "group123")
+    fakeRepo.addEvent(event)
+
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
+
+    val profile1 =
+        Profile(uid = "user1", username = "User1", email = "u1@example.com", eventsJoinedCount = 5)
+    val profile2 =
+        Profile(uid = "user2", username = "User2", email = "u2@example.com", eventsJoinedCount = 3)
+    whenever(profileRepository.getProfilesByIds(listOf("user1", "user2")))
+        .thenReturn(listOf(profile1, profile2))
+
+    vm.deleteEvent(event.eventId)
+    advanceUntilIdle()
+
+    coVerify { StreakService.onActivityDeleted("group123", listOf("user1", "user2"), event.date) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun deleteEvent_pastGroupEvent_doesNotCallStreakService() = runTest {
+    mockkObject(StreakService)
+
+    val fakeRepo = FakeEventsRepository()
+    val event =
+        createTestEvent(participants = listOf("user1", "user2"), daysFromNow = -7)
+            .copy(groupId = "group123")
+    fakeRepo.addEvent(event)
+
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
+
+    val profile1 =
+        Profile(uid = "user1", username = "User1", email = "u1@example.com", eventsJoinedCount = 5)
+    val profile2 =
+        Profile(uid = "user2", username = "User2", email = "u2@example.com", eventsJoinedCount = 3)
+    whenever(profileRepository.getProfilesByIds(listOf("user1", "user2")))
+        .thenReturn(listOf(profile1, profile2))
+
+    vm.deleteEvent(event.eventId)
+    advanceUntilIdle()
+
+    coVerify(exactly = 0) { StreakService.onActivityDeleted(any(), any(), any()) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun deleteEvent_nonGroupEvent_doesNotCallStreakService() = runTest {
+    mockkObject(StreakService)
+
+    val fakeRepo = FakeEventsRepository()
+    val event = createTestEvent(participants = listOf("user1", "user2"), daysFromNow = 7)
+    fakeRepo.addEvent(event)
+
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
+
+    val profile1 =
+        Profile(uid = "user1", username = "User1", email = "u1@example.com", eventsJoinedCount = 5)
+    val profile2 =
+        Profile(uid = "user2", username = "User2", email = "u2@example.com", eventsJoinedCount = 3)
+    whenever(profileRepository.getProfilesByIds(listOf("user1", "user2")))
+        .thenReturn(listOf(profile1, profile2))
+
+    vm.deleteEvent(event.eventId)
+    advanceUntilIdle()
+
+    coVerify(exactly = 0) { StreakService.onActivityDeleted(any(), any(), any()) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun deleteEvent_streakServiceThrows_doesNotBlockDeletion() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityDeleted(any(), any(), any()) } throws
+        RuntimeException("Streak error")
+
+    val fakeRepo = FakeEventsRepository()
+    val event =
+        createTestEvent(participants = listOf("user1", "user2"), daysFromNow = 7)
+            .copy(groupId = "group123")
+    fakeRepo.addEvent(event)
+
+    val vm = ShowEventViewModel(fakeRepo, profileRepository, groupRepository)
+
+    val profile1 =
+        Profile(uid = "user1", username = "User1", email = "u1@example.com", eventsJoinedCount = 5)
+    val profile2 =
+        Profile(uid = "user2", username = "User2", email = "u2@example.com", eventsJoinedCount = 3)
+    whenever(profileRepository.getProfilesByIds(listOf("user1", "user2")))
+        .thenReturn(listOf(profile1, profile2))
+
+    vm.deleteEvent(event.eventId)
+    advanceUntilIdle()
+
+    // Event should still be deleted despite streak error
+    assertTrue(fakeRepo.events.none { it.eventId == event.eventId })
+
+    unmockkObject(StreakService)
   }
 }

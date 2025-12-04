@@ -1,5 +1,6 @@
 package com.android.joinme.ui.profile
 /* This file was implemented with the help of Claude AI */
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,9 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -56,6 +55,8 @@ import com.android.joinme.ui.components.GroupCard
 import com.android.joinme.ui.theme.Dimens
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+
+private const val maxBioLines = 3
 
 /**
  * Contains test tags for UI elements in the PublicProfileScreen.
@@ -118,12 +119,13 @@ fun PublicProfileScreen(
     onEventClick: (Event) -> Unit = {},
     onGroupClick: (Group) -> Unit = {}
 ) {
-
   val profile by viewModel.profile.collectAsState()
   val commonEvents by viewModel.commonEvents.collectAsState()
   val commonGroups by viewModel.commonGroups.collectAsState()
   val isLoading by viewModel.isLoading.collectAsState()
   val error by viewModel.error.collectAsState()
+  val isFollowing by viewModel.isFollowing.collectAsState()
+  val isFollowLoading by viewModel.isFollowLoading.collectAsState()
 
   // Get current user ID
   val currentUserId = Firebase.auth.currentUser?.uid
@@ -191,6 +193,12 @@ fun PublicProfileScreen(
                   // Content state
                   ProfileContent(
                       profile = profile!!,
+                      isFollowing = isFollowing,
+                      isFollowLoading = isFollowLoading,
+                      onFollowClick = {
+                        currentUserId?.let { viewModel.toggleFollow(it, userId) }
+                            ?: Log.e("PublicProfileScreen", "Cannot follow: currentUserId is null")
+                      },
                       commonEvents = commonEvents,
                       commonGroups = commonGroups,
                       onEventClick = onEventClick,
@@ -204,239 +212,277 @@ fun PublicProfileScreen(
 @Composable
 private fun ProfileContent(
     profile: Profile,
+    isFollowing: Boolean,
+    isFollowLoading: Boolean,
+    onFollowClick: () -> Unit,
     commonEvents: List<Event>,
     commonGroups: List<Group>,
     onEventClick: (Event) -> Unit,
     onGroupClick: (Group) -> Unit
 ) {
-  val context = LocalContext.current
   Column(
-      modifier =
-          Modifier.fillMaxSize()
-              .verticalScroll(rememberScrollState())
-              .padding(Dimens.Padding.medium),
+      modifier = Modifier.fillMaxSize().padding(Dimens.Padding.medium),
       verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium)) {
-        // Row 1: Stats (Events Joined, Followers, Following) and Profile Photo
-        Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(vertical = Dimens.Spacing.medium)
-                    .testTag(PublicProfileScreenTestTags.STATS_ROW),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically) {
-              Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.SpaceEvenly) {
-                StatItem(
-                    value = profile.eventsJoinedCount.toString(),
-                    label = stringResource(R.string.events_joined),
-                    testTag = PublicProfileScreenTestTags.EVENTS_JOINED_STAT)
-                StatItem(
-                    value = formatCount(profile.followersCount),
-                    label = stringResource(R.string.followers),
-                    testTag = PublicProfileScreenTestTags.FOLLOWERS_STAT)
-                StatItem(
-                    value = profile.followingCount.toString(),
-                    label = stringResource(R.string.following),
-                    testTag = PublicProfileScreenTestTags.FOLLOWING_STAT)
-              }
-              ProfilePhotoImage(
-                  photoUrl = profile.photoUrl,
-                  contentDescription = stringResource(R.string.profile_photo),
-                  size = Dimens.PublicProfile.photoSize,
-                  modifier = Modifier.testTag(PublicProfileScreenTestTags.PROFILE_PHOTO))
-            }
+        ProfileHeader(profile = profile)
+        BioSection(
+            profile = profile,
+            isFollowing = isFollowing,
+            isFollowLoading = isFollowLoading,
+            onFollowClick = onFollowClick)
+        InterestsSection(profile = profile)
+        EventStreaksSection()
+        CommonEventsAndGroupsSection(
+            commonEvents = commonEvents,
+            commonGroups = commonGroups,
+            onEventClick = onEventClick,
+            onGroupClick = onGroupClick)
+      }
+}
 
-        // Row 2: Bio and Follow Button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium),
-            verticalAlignment = Alignment.Top) {
-              // Bio on the left
-              Column(modifier = Modifier.weight(1f).testTag(PublicProfileScreenTestTags.BIO)) {
-                Text(
-                    text = stringResource(R.string.bio),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
-                Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
-                Text(
-                    text =
-                        if (profile.bio?.isNotBlank() == true) profile.bio
-                        else stringResource(R.string.no_bio_available),
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 3)
-              }
-              // Follow Button on the right
-              Button(
-                  onClick = { /* TODO: Implement follow functionality */
-                    Toast.makeText(context, "Follow functionality coming soon!", Toast.LENGTH_SHORT)
-                        .show()
-                  },
-                  modifier =
-                      Modifier.height(Dimens.Button.minHeight)
-                          .testTag(PublicProfileScreenTestTags.FOLLOW_BUTTON)
-                          .width(Dimens.PublicProfile.buttonWidth),
-                  colors =
-                      ButtonDefaults.buttonColors(
-                          containerColor = MaterialTheme.colorScheme.primary),
-                  shape = RoundedCornerShape(Dimens.CornerRadius.circle)) {
-                    Text(
-                        stringResource(R.string.follow),
-                        color = MaterialTheme.colorScheme.onPrimary)
-                  }
-            }
+@Composable
+private fun ProfileHeader(profile: Profile) {
+  Row(
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(vertical = Dimens.Spacing.medium)
+              .testTag(PublicProfileScreenTestTags.STATS_ROW),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.SpaceEvenly) {
+          StatItem(
+              value = profile.eventsJoinedCount.toString(),
+              label = stringResource(R.string.events_joined),
+              testTag = PublicProfileScreenTestTags.EVENTS_JOINED_STAT)
+          StatItem(
+              value = formatCount(profile.followersCount),
+              label = stringResource(R.string.followers),
+              testTag = PublicProfileScreenTestTags.FOLLOWERS_STAT)
+          StatItem(
+              value = profile.followingCount.toString(),
+              label = stringResource(R.string.following),
+              testTag = PublicProfileScreenTestTags.FOLLOWING_STAT)
+        }
+        ProfilePhotoImage(
+            photoUrl = profile.photoUrl,
+            contentDescription = stringResource(R.string.profile_photo),
+            size = Dimens.PublicProfile.photoSize,
+            modifier = Modifier.testTag(PublicProfileScreenTestTags.PROFILE_PHOTO))
+      }
+}
 
-        // Row 3: Interests and Message Button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium),
-            verticalAlignment = Alignment.Top) {
-              // Interests on the left
-              Column(
-                  modifier =
-                      Modifier.weight(1f).testTag(PublicProfileScreenTestTags.INTERESTS_SECTION)) {
-                    Text(
-                        text = stringResource(R.string.interests),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
-                    Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
-                    Text(
-                        text =
-                            if (profile.interests.isNotEmpty()) profile.interests.joinToString(", ")
-                            else stringResource(R.string.no_interests_available),
-                        style = MaterialTheme.typography.bodyMedium)
-                  }
-              // Message Button on the right
-              Button(
-                  onClick = { /* TODO: Implement message functionality */
-                    Toast.makeText(
-                            context, "Message functionality coming soon!", Toast.LENGTH_SHORT)
-                        .show()
-                  },
-                  modifier =
-                      Modifier.height(Dimens.Button.minHeight)
-                          .width(Dimens.PublicProfile.buttonWidth)
-                          .testTag(PublicProfileScreenTestTags.MESSAGE_BUTTON),
-                  colors =
-                      ButtonDefaults.buttonColors(
-                          containerColor = MaterialTheme.colorScheme.secondary),
-                  shape = RoundedCornerShape(Dimens.CornerRadius.circle)) {
-                    Text(
-                        stringResource(R.string.message),
-                        color = MaterialTheme.colorScheme.onSecondary)
-                  }
-            }
+@Composable
+private fun BioSection(
+    profile: Profile,
+    isFollowing: Boolean,
+    isFollowLoading: Boolean,
+    onFollowClick: () -> Unit
+) {
 
-        // Event Streaks (set to 0 for now)
+  Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium),
+      verticalAlignment = Alignment.Top) {
+        Column(modifier = Modifier.weight(1f).testTag(PublicProfileScreenTestTags.BIO)) {
+          Text(
+              text = stringResource(R.string.bio),
+              style = MaterialTheme.typography.labelMedium,
+              color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
+          Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
+          Text(
+              text =
+                  if (profile.bio?.isNotBlank() == true) profile.bio
+                  else stringResource(R.string.no_bio_available),
+              style = MaterialTheme.typography.bodyMedium,
+              maxLines = maxBioLines)
+        }
+        FollowButton(
+            isFollowing = isFollowing, isFollowLoading = isFollowLoading, onClick = onFollowClick)
+      }
+}
+
+@Composable
+private fun FollowButton(isFollowing: Boolean, isFollowLoading: Boolean, onClick: () -> Unit) {
+  Button(
+      onClick = onClick,
+      enabled = !isFollowLoading,
+      modifier =
+          Modifier.height(Dimens.Button.minHeight)
+              .testTag(PublicProfileScreenTestTags.FOLLOW_BUTTON)
+              .width(Dimens.PublicProfile.buttonWidth),
+      colors =
+          ButtonDefaults.buttonColors(
+              containerColor =
+                  if (isFollowing) MaterialTheme.colorScheme.surfaceVariant
+                  else MaterialTheme.colorScheme.primary),
+      shape = RoundedCornerShape(Dimens.CornerRadius.circle)) {
+        if (isFollowLoading) {
+          CircularProgressIndicator(
+              modifier = Modifier.size(Dimens.LoadingIndicator.small),
+              strokeWidth = Dimens.BorderWidth.thin,
+              color =
+                  if (isFollowing) MaterialTheme.colorScheme.onSurfaceVariant
+                  else MaterialTheme.colorScheme.onPrimary)
+        } else {
+          Text(
+              text = stringResource(if (isFollowing) R.string.following else R.string.follow),
+              color =
+                  if (isFollowing) MaterialTheme.colorScheme.onSurfaceVariant
+                  else MaterialTheme.colorScheme.onPrimary)
+        }
+      }
+}
+
+@Composable
+private fun InterestsSection(profile: Profile) {
+  Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium),
+      verticalAlignment = Alignment.Top) {
         Column(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .testTag(PublicProfileScreenTestTags.EVENT_STREAKS_SECTION)) {
+            modifier = Modifier.weight(1f).testTag(PublicProfileScreenTestTags.INTERESTS_SECTION)) {
               Text(
-                  text = stringResource(R.string.event_streaks),
+                  text = stringResource(R.string.interests),
                   style = MaterialTheme.typography.labelMedium,
                   color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
               Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
-              Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "🔥", style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.width(Dimens.Spacing.small))
-                Text(
-                    text = stringResource(R.string.zero_days),
-                    style = MaterialTheme.typography.bodyMedium)
-              }
+              Text(
+                  text =
+                      if (profile.interests.isNotEmpty()) profile.interests.joinToString(", ")
+                      else stringResource(R.string.no_interests_available),
+                  style = MaterialTheme.typography.bodyMedium)
             }
+        MessageButton()
+      }
+}
 
-        // Common Events Section
+@Composable
+private fun MessageButton() {
+  val context = LocalContext.current
+  Button(
+      onClick = {
+        Toast.makeText(context, "Message functionality coming soon!", Toast.LENGTH_SHORT).show()
+      },
+      modifier =
+          Modifier.height(Dimens.Button.minHeight)
+              .width(Dimens.PublicProfile.buttonWidth)
+              .testTag(PublicProfileScreenTestTags.MESSAGE_BUTTON),
+      colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+      shape = RoundedCornerShape(Dimens.CornerRadius.circle)) {
+        Text(stringResource(R.string.message), color = MaterialTheme.colorScheme.onSecondary)
+      }
+}
+
+@Composable
+private fun EventStreaksSection() {
+  Column(
+      modifier =
+          Modifier.fillMaxWidth().testTag(PublicProfileScreenTestTags.EVENT_STREAKS_SECTION)) {
         Text(
-            text = stringResource(R.string.common_events),
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(top = Dimens.Spacing.medium)
-                    .testTag(PublicProfileScreenTestTags.COMMON_EVENTS_TITLE),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold)
-
-        if (commonEvents.isEmpty()) {
-          Card(
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .padding(vertical = Dimens.Spacing.small)
-                      .testTag(PublicProfileScreenTestTags.EMPTY_EVENTS_MESSAGE),
-              colors =
-                  CardDefaults.cardColors(
-                      containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                Text(
-                    text = stringResource(R.string.no_common_events),
-                    modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.medium),
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-              }
-        } else {
-          LazyColumn(
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .weight(1f)
-                      .border(
-                          width = Dimens.BorderWidth.thin,
-                          color = MaterialTheme.colorScheme.primary,
-                          shape = RoundedCornerShape(Dimens.CornerRadius.medium))
-                      .padding(Dimens.Padding.small)
-                      .testTag(PublicProfileScreenTestTags.COMMON_EVENTS_LIST),
-              verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
-                items(commonEvents) { event ->
-                  EventCard(
-                      event = event,
-                      onClick = { onEventClick(event) },
-                      testTag = PublicProfileScreenTestTags.eventCardTag(event.eventId))
-                }
-              }
+            text = stringResource(R.string.event_streaks),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
+        Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text(text = "🔥", style = MaterialTheme.typography.titleMedium)
+          Spacer(modifier = Modifier.width(Dimens.Spacing.small))
+          Text(
+              text = stringResource(R.string.zero_days),
+              style = MaterialTheme.typography.bodyMedium)
         }
+      }
+}
 
-        // Common Groups Section
+@Composable
+private fun CommonEventsAndGroupsSection(
+    commonEvents: List<Event>,
+    commonGroups: List<Group>,
+    onEventClick: (Event) -> Unit,
+    onGroupClick: (Group) -> Unit
+) {
+  Column(modifier = Modifier.fillMaxWidth()) {
+    // Common Events Section
+    Text(
+        text = stringResource(R.string.common_events),
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(top = Dimens.Spacing.medium)
+                .testTag(PublicProfileScreenTestTags.COMMON_EVENTS_TITLE),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold)
+
+    if (commonEvents.isEmpty()) {
+      EmptyCard(
+          message = stringResource(R.string.no_common_events),
+          testTag = PublicProfileScreenTestTags.EMPTY_EVENTS_MESSAGE)
+    } else {
+      LazyColumn(
+          modifier =
+              Modifier.fillMaxWidth()
+                  .weight(1f)
+                  .border(
+                      width = Dimens.BorderWidth.thin,
+                      color = MaterialTheme.colorScheme.primary,
+                      shape = RoundedCornerShape(Dimens.CornerRadius.medium))
+                  .padding(Dimens.Padding.small)
+                  .testTag(PublicProfileScreenTestTags.COMMON_EVENTS_LIST),
+          verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
+            items(commonEvents) { event ->
+              EventCard(
+                  event = event,
+                  onClick = { onEventClick(event) },
+                  testTag = PublicProfileScreenTestTags.eventCardTag(event.eventId))
+            }
+          }
+    }
+
+    // Common Groups Section
+    Text(
+        text = stringResource(R.string.common_groups),
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(top = Dimens.Spacing.medium)
+                .testTag(PublicProfileScreenTestTags.COMMON_GROUPS_TITLE),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold)
+
+    if (commonGroups.isEmpty()) {
+      EmptyCard(
+          message = stringResource(R.string.no_common_groups),
+          testTag = PublicProfileScreenTestTags.EMPTY_GROUPS_MESSAGE)
+    } else {
+      LazyColumn(
+          modifier =
+              Modifier.fillMaxWidth()
+                  .weight(1f)
+                  .border(
+                      width = Dimens.BorderWidth.thin,
+                      color = MaterialTheme.colorScheme.primary,
+                      shape = RoundedCornerShape(Dimens.CornerRadius.medium))
+                  .padding(Dimens.Padding.small)
+                  .testTag(PublicProfileScreenTestTags.COMMON_GROUPS_LIST),
+          verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
+            items(commonGroups) { group ->
+              GroupCard(
+                  group = group,
+                  onClick = { onGroupClick(group) },
+                  testTag = PublicProfileScreenTestTags.groupCardTag(group.id))
+            }
+          }
+    }
+  }
+}
+
+@Composable
+private fun EmptyCard(message: String, testTag: String) {
+  Card(
+      modifier = Modifier.fillMaxWidth().padding(vertical = Dimens.Spacing.small).testTag(testTag),
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
         Text(
-            text = stringResource(R.string.common_groups),
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(top = Dimens.Spacing.medium)
-                    .testTag(PublicProfileScreenTestTags.COMMON_GROUPS_TITLE),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold)
-
-        if (commonGroups.isEmpty()) {
-          Card(
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .padding(vertical = Dimens.Spacing.small)
-                      .testTag(PublicProfileScreenTestTags.EMPTY_GROUPS_MESSAGE),
-              colors =
-                  CardDefaults.cardColors(
-                      containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                Text(
-                    text = stringResource(R.string.no_common_groups),
-                    modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.medium),
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-              }
-        } else {
-          LazyColumn(
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .weight(1f)
-                      .border(
-                          width = Dimens.BorderWidth.thin,
-                          color = MaterialTheme.colorScheme.primary,
-                          shape = RoundedCornerShape(Dimens.CornerRadius.medium))
-                      .padding(Dimens.Padding.small)
-                      .testTag(PublicProfileScreenTestTags.COMMON_GROUPS_LIST),
-              verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
-                items(commonGroups) { group ->
-                  GroupCard(
-                      group = group,
-                      onClick = { onGroupClick(group) },
-                      testTag = PublicProfileScreenTestTags.groupCardTag(group.id))
-                }
-              }
-        }
+            text = message,
+            modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.medium),
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
 }
 

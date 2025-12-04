@@ -15,11 +15,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.viewinterop.AndroidView
+import com.android.joinme.model.groups.Group
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
 import com.android.joinme.ui.theme.outlinedTextField
 import java.util.*
+
+/** Note: This file was co-written with AI (Claude). */
 
 /** Data class representing the test tags for serie form fields. */
 data class SerieFormTestTags(
@@ -115,6 +118,10 @@ fun createSerieFormState(uiState: EditSerieUIState): SerieFormState {
  * @param title The title to display in the top bar
  * @param formState The current state of the form
  * @param testTags Test tags for UI testing
+ * @param selectedGroupId The ID of the selected group (null for standalone series)
+ * @param availableGroups List of available groups to select from
+ * @param groupTestTag Test tag for the group dropdown
+ * @param onGroupChange Callback when group selection changes (null for no group)
  * @param onTitleChange Callback when title changes
  * @param onDescriptionChange Callback when description changes
  * @param onMaxParticipantsChange Callback when max participants changes
@@ -132,6 +139,10 @@ fun SerieFormScreen(
     title: String,
     formState: SerieFormState,
     testTags: SerieFormTestTags,
+    selectedGroupId: String? = null,
+    availableGroups: List<Group> = emptyList(),
+    groupTestTag: String = "",
+    onGroupChange: ((String?) -> Unit)? = null,
     onTitleChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onMaxParticipantsChange: (String) -> Unit,
@@ -142,297 +153,492 @@ fun SerieFormScreen(
     onGoBack: () -> Unit,
     saveButtonText: String = "NEXT"
 ) {
-  Scaffold(
-      topBar = {
-        Column {
-          CenterAlignedTopAppBar(
-              title = { Text(title, style = MaterialTheme.typography.titleLarge) },
-              navigationIcon = {
-                IconButton(onClick = onGoBack) {
-                  Icon(
-                      imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                      contentDescription = "Back")
-                }
-              })
-          HorizontalDivider(
-              thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
+  Scaffold(topBar = { SerieFormTopBar(title = title, onGoBack = onGoBack) }) { paddingValues ->
+    SerieFormContent(
+        paddingValues = paddingValues,
+        formState = formState,
+        testTags = testTags,
+        selectedGroupId = selectedGroupId,
+        availableGroups = availableGroups,
+        groupTestTag = groupTestTag,
+        onGroupChange = onGroupChange,
+        onTitleChange = onTitleChange,
+        onDescriptionChange = onDescriptionChange,
+        onMaxParticipantsChange = onMaxParticipantsChange,
+        onDateChange = onDateChange,
+        onTimeChange = onTimeChange,
+        onVisibilityChange = onVisibilityChange,
+        onSave = onSave,
+        saveButtonText = saveButtonText)
+  }
+}
+
+/** Top bar for serie form screen. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SerieFormTopBar(title: String, onGoBack: () -> Unit) {
+  Column {
+    CenterAlignedTopAppBar(
+        title = { Text(title, style = MaterialTheme.typography.titleLarge) },
+        navigationIcon = {
+          IconButton(onClick = onGoBack) {
+            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+          }
+        })
+    HorizontalDivider(
+        thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
+  }
+}
+
+/** Form content composable. */
+@Composable
+private fun SerieFormContent(
+    paddingValues: PaddingValues,
+    formState: SerieFormState,
+    testTags: SerieFormTestTags,
+    selectedGroupId: String?,
+    availableGroups: List<Group>,
+    groupTestTag: String,
+    onGroupChange: ((String?) -> Unit)?,
+    onTitleChange: (String) -> Unit,
+    onDescriptionChange: (String) -> Unit,
+    onMaxParticipantsChange: (String) -> Unit,
+    onDateChange: (String) -> Unit,
+    onTimeChange: (String) -> Unit,
+    onVisibilityChange: (String) -> Unit,
+    onSave: () -> Boolean,
+    saveButtonText: String
+) {
+  Column(
+      modifier =
+          Modifier.fillMaxSize()
+              .padding(paddingValues)
+              .padding(horizontal = Dimens.Padding.medium)
+              .verticalScroll(rememberScrollState()),
+      verticalArrangement = Arrangement.spacedBy(Dimens.Padding.medium)) {
+        Spacer(modifier = Modifier.height(Dimens.Padding.small))
+
+        onGroupChange?.let {
+          GroupDropdownField(
+              selectedGroupId = selectedGroupId,
+              availableGroups = availableGroups,
+              groupTestTag = groupTestTag,
+              onGroupChange = it)
         }
-      }) { paddingValues ->
-        Column(
-            modifier =
-                Modifier.fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = Dimens.Padding.medium)
-                    .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(Dimens.Padding.medium)) {
-              Spacer(modifier = Modifier.height(Dimens.Padding.small))
 
-              // Title field
-              OutlinedTextField(
-                  value = formState.title,
-                  onValueChange = onTitleChange,
-                  label = { Text("Title") },
-                  modifier = Modifier.fillMaxWidth().testTag(testTags.inputSerieTitle),
-                  isError = formState.invalidTitleMsg != null,
-                  supportingText = {
-                    if (formState.invalidTitleMsg != null) {
-                      Text(
-                          text = formState.invalidTitleMsg,
-                          color = MaterialTheme.colorScheme.error,
-                          modifier = Modifier.testTag(testTags.errorMessage))
-                    }
+        TitleField(formState = formState, testTags = testTags, onTitleChange = onTitleChange)
+
+        DescriptionField(
+            formState = formState, testTags = testTags, onDescriptionChange = onDescriptionChange)
+
+        MaxParticipantsField(
+            formState = formState,
+            testTags = testTags,
+            onMaxParticipantsChange = onMaxParticipantsChange)
+
+        DateTimePickerRow(
+            formState = formState,
+            testTags = testTags,
+            onDateChange = onDateChange,
+            onTimeChange = onTimeChange)
+
+        if (selectedGroupId == null) {
+          VisibilityDropdownField(
+              formState = formState, testTags = testTags, onVisibilityChange = onVisibilityChange)
+        }
+
+        Spacer(modifier = Modifier.height(Dimens.Padding.medium))
+
+        SaveButton(
+            formState = formState,
+            testTags = testTags,
+            saveButtonText = saveButtonText,
+            onSave = onSave)
+
+        Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
+      }
+}
+
+/** Group dropdown field composable. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GroupDropdownField(
+    selectedGroupId: String?,
+    availableGroups: List<Group>,
+    groupTestTag: String,
+    onGroupChange: (String?) -> Unit
+) {
+  var expandedGroup by remember { mutableStateOf(false) }
+  val selectedGroupName =
+      if (selectedGroupId == null) "None (Standalone)"
+      else availableGroups.find { it.id == selectedGroupId }?.name ?: "Unknown Group"
+
+  ExposedDropdownMenuBox(
+      expanded = expandedGroup, onExpandedChange = { expandedGroup = !expandedGroup }) {
+        OutlinedTextField(
+            value = selectedGroupName,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Group (Optional)") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedGroup) },
+            modifier = Modifier.fillMaxWidth().menuAnchor().testTag(groupTestTag),
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors())
+
+        ExposedDropdownMenu(
+            expanded = expandedGroup,
+            onDismissRequest = { expandedGroup = false },
+            modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
+              // "None" option for standalone series
+              DropdownMenuItem(
+                  text = {
+                    Text(
+                        text = "None (Standalone)",
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        style = MaterialTheme.typography.headlineSmall)
                   },
-                  singleLine = true)
-
-              // Description field
-              OutlinedTextField(
-                  value = formState.description,
-                  onValueChange = onDescriptionChange,
-                  label = { Text("Description") },
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .height(Dimens.SerieForm.descriptionField)
-                          .testTag(testTags.inputSerieDescription),
-                  isError = formState.invalidDescriptionMsg != null,
-                  supportingText = {
-                    if (formState.invalidDescriptionMsg != null) {
-                      Text(
-                          text = formState.invalidDescriptionMsg,
-                          color = MaterialTheme.colorScheme.error,
-                          modifier = Modifier.testTag(testTags.errorMessage))
-                    }
+                  onClick = {
+                    onGroupChange(null)
+                    expandedGroup = false
                   },
-                  maxLines = 4)
+                  colors = MaterialTheme.customColors.dropdownMenu)
 
-              // Max Participants field with NumberPicker
-              var showMaxParticipantsPicker by remember { mutableStateOf(false) }
-              var tempParticipants by remember {
-                mutableIntStateOf(formState.maxParticipants.toIntOrNull() ?: 10)
+              // Group options (only show divider and groups if groups exist)
+              if (availableGroups.isNotEmpty()) {
+                HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+
+                availableGroups.forEachIndexed { index, group ->
+                  DropdownMenuItem(
+                      text = {
+                        Text(
+                            text = group.name,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            style = MaterialTheme.typography.headlineSmall)
+                      },
+                      onClick = {
+                        onGroupChange(group.id)
+                        expandedGroup = false
+                      },
+                      colors = MaterialTheme.customColors.dropdownMenu)
+                  if (index < availableGroups.lastIndex) {
+                    HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                  }
+                }
               }
-
-              Box(
-                  modifier =
-                      Modifier.width(Dimens.SerieForm.maxParticipantsField).clickable {
-                        showMaxParticipantsPicker = true
-                      }) {
-                    OutlinedTextField(
-                        value = formState.maxParticipants,
-                        onValueChange = {},
-                        readOnly = true,
-                        enabled = false,
-                        label = { Text("Max Participants") },
-                        placeholder = { Text("Select number") },
-                        modifier =
-                            Modifier.fillMaxWidth().testTag(testTags.inputSerieMaxParticipants),
-                        isError = formState.invalidMaxParticipantsMsg != null,
-                        supportingText = {
-                          if (formState.invalidMaxParticipantsMsg != null) {
-                            Text(
-                                text = formState.invalidMaxParticipantsMsg,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.testTag(testTags.errorMessage))
-                          }
-                        },
-                        colors = MaterialTheme.customColors.outlinedTextField(),
-                        singleLine = true)
-                  }
-
-              if (showMaxParticipantsPicker) {
-                AlertDialog(
-                    onDismissRequest = { showMaxParticipantsPicker = false },
-                    title = { Text("Select Max Participants") },
-                    text = {
-                      AndroidView(
-                          factory = { context ->
-                            NumberPicker(context).apply {
-                              minValue = 1
-                              maxValue = 100
-                              value = tempParticipants
-                              wrapSelectorWheel = true
-                              setOnValueChangedListener { _, _, newVal ->
-                                tempParticipants = newVal
-                              }
-                            }
-                          },
-                          update = { picker -> picker.value = tempParticipants },
-                          modifier = Modifier.fillMaxWidth())
-                    },
-                    confirmButton = {
-                      TextButton(
-                          onClick = {
-                            onMaxParticipantsChange(tempParticipants.toString())
-                            showMaxParticipantsPicker = false
-                          }) {
-                            Text("OK")
-                          }
-                    },
-                    dismissButton = {
-                      TextButton(onClick = { showMaxParticipantsPicker = false }) { Text("Cancel") }
-                    })
-              }
-
-              // Date and Time row
-              Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.spacedBy(Dimens.Padding.medium)) {
-                    val context = LocalContext.current
-                    val calendar = remember { Calendar.getInstance() }
-                    val (year, month, day) =
-                        listOf(
-                            calendar.get(Calendar.YEAR),
-                            calendar.get(Calendar.MONTH),
-                            calendar.get(Calendar.DAY_OF_MONTH))
-                    val (hour, minute) =
-                        listOf(calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE))
-
-                    val datePickerDialog = remember {
-                      android.app.DatePickerDialog(
-                          context,
-                          { _, selectedYear, selectedMonth, selectedDay ->
-                            val newDate =
-                                String.format(
-                                    "%02d/%02d/%04d", selectedDay, selectedMonth + 1, selectedYear)
-                            onDateChange(newDate)
-                          },
-                          year,
-                          month,
-                          day)
-                    }
-
-                    // Date field
-                    Box(modifier = Modifier.weight(1f).clickable { datePickerDialog.show() }) {
-                      OutlinedTextField(
-                          value = formState.date,
-                          onValueChange = {},
-                          readOnly = true,
-                          enabled = false,
-                          label = { Text("Date") },
-                          placeholder = { Text("Select date") },
-                          modifier = Modifier.fillMaxWidth().testTag(testTags.inputSerieDate),
-                          isError = formState.invalidDateMsg != null,
-                          supportingText = {
-                            if (formState.invalidDateMsg != null) {
-                              Text(
-                                  text = formState.invalidDateMsg,
-                                  color = MaterialTheme.colorScheme.error,
-                                  modifier = Modifier.testTag(testTags.errorMessage))
-                            }
-                          },
-                          colors = MaterialTheme.customColors.outlinedTextField(),
-                          singleLine = true)
-                    }
-
-                    val timePickerDialog = remember {
-                      android.app.TimePickerDialog(
-                          context,
-                          { _, selectedHour, selectedMinute ->
-                            val newTime = String.format("%02d:%02d", selectedHour, selectedMinute)
-                            onTimeChange(newTime)
-                          },
-                          hour,
-                          minute,
-                          true)
-                    }
-
-                    // Time field
-                    Box(modifier = Modifier.weight(1f).clickable { timePickerDialog.show() }) {
-                      OutlinedTextField(
-                          value = formState.time,
-                          onValueChange = {},
-                          readOnly = true,
-                          enabled = false,
-                          label = { Text("Time") },
-                          placeholder = { Text("Select time") },
-                          modifier = Modifier.fillMaxWidth().testTag(testTags.inputSerieTime),
-                          isError = formState.invalidTimeMsg != null,
-                          supportingText = {
-                            if (formState.invalidTimeMsg != null) {
-                              Text(
-                                  text = formState.invalidTimeMsg,
-                                  color = MaterialTheme.colorScheme.error,
-                                  modifier = Modifier.testTag(testTags.errorMessage))
-                            }
-                          },
-                          colors = MaterialTheme.customColors.outlinedTextField(),
-                          singleLine = true)
-                    }
-                  }
-
-              // Serie Visibility field with dropdown
-              val visibilityOptions = listOf("PUBLIC", "PRIVATE")
-              var expandedVisibility by remember { mutableStateOf(false) }
-
-              ExposedDropdownMenuBox(
-                  expanded = expandedVisibility,
-                  onExpandedChange = { expandedVisibility = !expandedVisibility }) {
-                    OutlinedTextField(
-                        value = formState.visibility,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Visibility") },
-                        trailingIcon = {
-                          ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedVisibility)
-                        },
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .menuAnchor()
-                                .testTag(testTags.inputSerieVisibility),
-                        isError = formState.invalidVisibilityMsg != null,
-                        supportingText = {
-                          if (formState.invalidVisibilityMsg != null) {
-                            Text(
-                                text = formState.invalidVisibilityMsg,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.testTag(testTags.errorMessage))
-                          }
-                        },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors())
-
-                    ExposedDropdownMenu(
-                        expanded = expandedVisibility,
-                        onDismissRequest = { expandedVisibility = false },
-                        modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
-                          visibilityOptions.forEachIndexed { index, option ->
-                            DropdownMenuItem(
-                                text = {
-                                  Text(
-                                      text = option,
-                                      color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                      style = MaterialTheme.typography.headlineSmall)
-                                },
-                                onClick = {
-                                  onVisibilityChange(option)
-                                  expandedVisibility = false
-                                },
-                                colors = MaterialTheme.customColors.dropdownMenu)
-                            if (index < visibilityOptions.lastIndex) {
-                              HorizontalDivider(thickness = Dimens.BorderWidth.thin)
-                            }
-                          }
-                        }
-                  }
-
-              Spacer(modifier = Modifier.height(Dimens.Padding.medium))
-
-              // Save button
-              Button(
-                  onClick = { onSave() },
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .height(Dimens.Button.standardHeight)
-                          .testTag(testTags.buttonSaveSerie),
-                  colors = MaterialTheme.customColors.buttonColors(),
-                  enabled = formState.isValid && !formState.isLoading) {
-                    if (formState.isLoading) {
-                      CircularProgressIndicator(
-                          modifier = Modifier.size(Dimens.IconSize.medium),
-                          color = MaterialTheme.colorScheme.onPrimary)
-                    } else {
-                      Text(saveButtonText)
-                    }
-                  }
-
-              Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
             }
       }
+}
+
+/** Title field composable. */
+@Composable
+private fun TitleField(
+    formState: SerieFormState,
+    testTags: SerieFormTestTags,
+    onTitleChange: (String) -> Unit
+) {
+  OutlinedTextField(
+      value = formState.title,
+      onValueChange = onTitleChange,
+      label = { Text("Title") },
+      modifier = Modifier.fillMaxWidth().testTag(testTags.inputSerieTitle),
+      isError = formState.invalidTitleMsg != null,
+      supportingText = {
+        ErrorText(errorMsg = formState.invalidTitleMsg, testTag = testTags.errorMessage)
+      },
+      singleLine = true)
+}
+
+/** Description field composable. */
+@Composable
+private fun DescriptionField(
+    formState: SerieFormState,
+    testTags: SerieFormTestTags,
+    onDescriptionChange: (String) -> Unit
+) {
+  OutlinedTextField(
+      value = formState.description,
+      onValueChange = onDescriptionChange,
+      label = { Text("Description") },
+      modifier =
+          Modifier.fillMaxWidth()
+              .height(Dimens.SerieForm.descriptionField)
+              .testTag(testTags.inputSerieDescription),
+      isError = formState.invalidDescriptionMsg != null,
+      supportingText = {
+        ErrorText(errorMsg = formState.invalidDescriptionMsg, testTag = testTags.errorMessage)
+      },
+      maxLines = 4)
+}
+
+/** Max Participants field with NumberPicker dialog. */
+@Composable
+private fun MaxParticipantsField(
+    formState: SerieFormState,
+    testTags: SerieFormTestTags,
+    onMaxParticipantsChange: (String) -> Unit
+) {
+  var showMaxParticipantsPicker by remember { mutableStateOf(false) }
+  var tempParticipants by remember {
+    mutableIntStateOf(formState.maxParticipants.toIntOrNull() ?: 10)
+  }
+
+  Box(
+      modifier =
+          Modifier.width(Dimens.SerieForm.maxParticipantsField).clickable {
+            showMaxParticipantsPicker = true
+          }) {
+        OutlinedTextField(
+            value = formState.maxParticipants,
+            onValueChange = {},
+            readOnly = true,
+            enabled = false,
+            label = { Text("Max Participants") },
+            placeholder = { Text("Select number") },
+            modifier = Modifier.fillMaxWidth().testTag(testTags.inputSerieMaxParticipants),
+            isError = formState.invalidMaxParticipantsMsg != null,
+            supportingText = {
+              ErrorText(
+                  errorMsg = formState.invalidMaxParticipantsMsg, testTag = testTags.errorMessage)
+            },
+            colors = MaterialTheme.customColors.outlinedTextField(),
+            singleLine = true)
+      }
+
+  if (showMaxParticipantsPicker) {
+    MaxParticipantsDialog(
+        tempParticipants = tempParticipants,
+        onTempParticipantsChange = { tempParticipants = it },
+        onConfirm = {
+          onMaxParticipantsChange(tempParticipants.toString())
+          showMaxParticipantsPicker = false
+        },
+        onDismiss = { showMaxParticipantsPicker = false })
+  }
+}
+
+/** Date and Time picker fields row. */
+@Composable
+private fun DateTimePickerRow(
+    formState: SerieFormState,
+    testTags: SerieFormTestTags,
+    onDateChange: (String) -> Unit,
+    onTimeChange: (String) -> Unit
+) {
+  Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.spacedBy(Dimens.Padding.medium)) {
+        DatePickerField(
+            date = formState.date,
+            invalidDateMsg = formState.invalidDateMsg,
+            testTag = testTags.inputSerieDate,
+            errorTestTag = testTags.errorMessage,
+            onDateChange = onDateChange,
+            modifier = Modifier.weight(1f))
+
+        TimePickerField(
+            time = formState.time,
+            invalidTimeMsg = formState.invalidTimeMsg,
+            testTag = testTags.inputSerieTime,
+            errorTestTag = testTags.errorMessage,
+            onTimeChange = onTimeChange,
+            modifier = Modifier.weight(1f))
+      }
+}
+
+/** Visibility dropdown field. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VisibilityDropdownField(
+    formState: SerieFormState,
+    testTags: SerieFormTestTags,
+    onVisibilityChange: (String) -> Unit
+) {
+  val visibilityOptions = listOf("PUBLIC", "PRIVATE")
+  var expandedVisibility by remember { mutableStateOf(false) }
+
+  ExposedDropdownMenuBox(
+      expanded = expandedVisibility,
+      onExpandedChange = { expandedVisibility = !expandedVisibility }) {
+        OutlinedTextField(
+            value = formState.visibility,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Visibility") },
+            trailingIcon = {
+              ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedVisibility)
+            },
+            modifier = Modifier.fillMaxWidth().menuAnchor().testTag(testTags.inputSerieVisibility),
+            isError = formState.invalidVisibilityMsg != null,
+            supportingText = {
+              ErrorText(errorMsg = formState.invalidVisibilityMsg, testTag = testTags.errorMessage)
+            },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors())
+
+        ExposedDropdownMenu(
+            expanded = expandedVisibility,
+            onDismissRequest = { expandedVisibility = false },
+            modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
+              visibilityOptions.forEachIndexed { index, option ->
+                DropdownMenuItem(
+                    text = {
+                      Text(
+                          text = option,
+                          color = MaterialTheme.colorScheme.onPrimaryContainer,
+                          style = MaterialTheme.typography.headlineSmall)
+                    },
+                    onClick = {
+                      onVisibilityChange(option)
+                      expandedVisibility = false
+                    },
+                    colors = MaterialTheme.customColors.dropdownMenu)
+                if (index < visibilityOptions.lastIndex) {
+                  HorizontalDivider(thickness = Dimens.BorderWidth.thin)
+                }
+              }
+            }
+      }
+}
+
+/** Save button composable. */
+@Composable
+private fun SaveButton(
+    formState: SerieFormState,
+    testTags: SerieFormTestTags,
+    saveButtonText: String,
+    onSave: () -> Boolean
+) {
+  Button(
+      onClick = { onSave() },
+      modifier =
+          Modifier.fillMaxWidth()
+              .height(Dimens.Button.standardHeight)
+              .testTag(testTags.buttonSaveSerie),
+      colors = MaterialTheme.customColors.buttonColors(),
+      enabled = formState.isValid && !formState.isLoading) {
+        if (formState.isLoading) {
+          CircularProgressIndicator(
+              modifier = Modifier.size(Dimens.IconSize.medium),
+              color = MaterialTheme.colorScheme.onPrimary)
+        } else {
+          Text(saveButtonText)
+        }
+      }
+}
+
+/** Error text composable to reduce duplication. */
+@Composable
+private fun ErrorText(errorMsg: String?, testTag: String) {
+  errorMsg?.let {
+    Text(text = it, color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag(testTag))
+  }
+}
+
+/** Max Participants picker dialog. */
+@Composable
+private fun MaxParticipantsDialog(
+    tempParticipants: Int,
+    onTempParticipantsChange: (Int) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      title = { Text("Select Max Participants") },
+      text = {
+        AndroidView(
+            factory = { context ->
+              NumberPicker(context).apply {
+                minValue = 1
+                maxValue = 100
+                value = tempParticipants
+                wrapSelectorWheel = true
+                setOnValueChangedListener { _, _, newVal -> onTempParticipantsChange(newVal) }
+              }
+            },
+            update = { picker -> picker.value = tempParticipants },
+            modifier = Modifier.fillMaxWidth())
+      },
+      confirmButton = { TextButton(onClick = onConfirm) { Text("OK") } },
+      dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+}
+
+/** Date picker field. */
+@SuppressLint("DefaultLocale")
+@Composable
+private fun DatePickerField(
+    date: String,
+    invalidDateMsg: String?,
+    testTag: String,
+    errorTestTag: String,
+    onDateChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+  val context = LocalContext.current
+  val calendar = remember { Calendar.getInstance() }
+  val datePickerDialog = remember {
+    android.app.DatePickerDialog(
+        context,
+        { _, selectedYear, selectedMonth, selectedDay ->
+          val newDate =
+              String.format("%02d/%02d/%04d", selectedDay, selectedMonth + 1, selectedYear)
+          onDateChange(newDate)
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH))
+  }
+
+  Box(modifier = modifier.clickable { datePickerDialog.show() }) {
+    OutlinedTextField(
+        value = date,
+        onValueChange = {},
+        readOnly = true,
+        enabled = false,
+        label = { Text("Date") },
+        placeholder = { Text("Select date") },
+        modifier = Modifier.fillMaxWidth().testTag(testTag),
+        isError = invalidDateMsg != null,
+        supportingText = { ErrorText(errorMsg = invalidDateMsg, testTag = errorTestTag) },
+        colors = MaterialTheme.customColors.outlinedTextField(),
+        singleLine = true)
+  }
+}
+
+/** Time picker field. */
+@Composable
+private fun TimePickerField(
+    time: String,
+    invalidTimeMsg: String?,
+    testTag: String,
+    errorTestTag: String,
+    onTimeChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+  val context = LocalContext.current
+  val calendar = remember { Calendar.getInstance() }
+  val timePickerDialog = remember {
+    android.app.TimePickerDialog(
+        context,
+        { _, selectedHour, selectedMinute ->
+          val newTime = String.format("%02d:%02d", selectedHour, selectedMinute)
+          onTimeChange(newTime)
+        },
+        calendar.get(Calendar.HOUR_OF_DAY),
+        calendar.get(Calendar.MINUTE),
+        true)
+  }
+
+  Box(modifier = modifier.clickable { timePickerDialog.show() }) {
+    OutlinedTextField(
+        value = time,
+        onValueChange = {},
+        readOnly = true,
+        enabled = false,
+        label = { Text("Time") },
+        placeholder = { Text("Select time") },
+        modifier = Modifier.fillMaxWidth().testTag(testTag),
+        isError = invalidTimeMsg != null,
+        supportingText = { ErrorText(errorMsg = invalidTimeMsg, testTag = errorTestTag) },
+        colors = MaterialTheme.customColors.outlinedTextField(),
+        singleLine = true)
+  }
 }

@@ -1,5 +1,7 @@
 package com.android.joinme.ui.overview
 
+import android.content.Context
+import android.net.Uri
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
@@ -38,6 +40,7 @@ class CreateSerieViewModelTest {
   // ---- Simple fake repo that records added series ----
   private class FakeSeriesRepository : SeriesRepository {
     val added = mutableListOf<Serie>()
+    private var idCounter = 1
 
     override suspend fun addSerie(serie: Serie) {
       added += serie
@@ -60,7 +63,7 @@ class CreateSerieViewModelTest {
       return added.filter { seriesIds.contains(it.serieId) }
     }
 
-    override fun getNewSerieId(): String = "fake-serie-id-1"
+    override fun getNewSerieId(): String = "fake-serie-id-${idCounter++}"
   }
 
   // ---- Simple fake group repo ----
@@ -97,6 +100,19 @@ class CreateSerieViewModelTest {
     override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
       if (userIds.isEmpty()) return emptyList()
       return groups.filter { group -> userIds.all { userId -> group.memberIds.contains(userId) } }
+    }
+
+    override suspend fun uploadGroupPhoto(
+        context: Context,
+        groupId: String,
+        imageUri: Uri
+    ): String {
+      // Not needed for these tests
+      return "http://fakeurl.com/photo.jpg"
+    }
+
+    override suspend fun deleteGroupPhoto(groupId: String) {
+      // Not needed for these tests
     }
   }
 
@@ -597,11 +613,10 @@ class CreateSerieViewModelTest {
     advanceUntilIdle()
 
     assertNotNull(serieId)
-    assertEquals("fake-serie-id-1", serieId)
     assertEquals(1, repo.added.size)
 
     val serie = repo.added.first()
-    assertEquals("fake-serie-id-1", serie.serieId)
+    assertEquals(serieId, serie.serieId)
     assertEquals("Volleyball League", serie.title)
     assertEquals("Monthly volleyball games on the beach", serie.description)
     assertEquals(12, serie.maxParticipants)
@@ -637,8 +652,7 @@ class CreateSerieViewModelTest {
     advanceUntilIdle()
 
     assertNotNull(firstSerieId)
-    assertEquals("fake-serie-id-1", firstSerieId)
-    assertEquals("fake-serie-id-1", vm.uiState.value.createdSerieId)
+    assertEquals(firstSerieId, vm.uiState.value.createdSerieId)
     assertEquals(1, repo.added.size)
 
     // Second call - should return the same ID without creating a duplicate
@@ -646,7 +660,6 @@ class CreateSerieViewModelTest {
     advanceUntilIdle()
 
     assertNotNull(secondSerieId)
-    assertEquals("fake-serie-id-1", secondSerieId)
     assertEquals(firstSerieId, secondSerieId)
     // Verify no duplicate was created
     assertEquals(1, repo.added.size)
@@ -678,7 +691,7 @@ class CreateSerieViewModelTest {
 
     // Verify createdSerieId is stored to prevent duplicate creation on re-navigation
     assertNotNull(serieId)
-    assertEquals("fake-serie-id-1", vm.uiState.value.createdSerieId)
+    assertEquals(serieId, vm.uiState.value.createdSerieId)
   }
 
   // ---------- Delete created serie on goBack tests ----------
@@ -772,20 +785,21 @@ class CreateSerieViewModelTest {
     assertEquals(2, vm.uiState.value.availableGroups.size)
     assertNull(vm.uiState.value.selectedGroupId)
 
-    // Test 1: Select group auto-fills fields
+    // Test 1: Select group auto-fills visibility only
     vm.setSelectedGroup("group-1")
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     val stateAfterSelection = vm.uiState.value
     assertEquals("group-1", stateAfterSelection.selectedGroupId)
-    assertEquals("300", stateAfterSelection.maxParticipants) // Default group max
+    assertEquals("", stateAfterSelection.maxParticipants) // Not auto-set anymore
     assertEquals("PRIVATE", stateAfterSelection.visibility)
-    assertNull(stateAfterSelection.invalidMaxParticipantsMsg)
     assertNull(stateAfterSelection.invalidVisibilityMsg)
 
-    // Test 2: Create serie with group
+    // Test 2: Create serie with group (need to set maxParticipants manually)
     vm.setTitle("Basketball Tournament")
     vm.setDescription("Weekly tournament series")
     vm.setDate("25/12/2025")
     vm.setTime("18:00")
+    vm.setMaxParticipants("300")
 
     assertTrue(vm.uiState.value.isValid)
 
@@ -800,18 +814,19 @@ class CreateSerieViewModelTest {
     assertEquals("group-1", createdSerie.groupId)
     assertEquals(300, createdSerie.maxParticipants)
     assertEquals(
-        listOf("test-user-id", "user-2", "user-3"), createdSerie.participants) // Group members
+        listOf("test-user-id"), createdSerie.participants) // Only owner, not all group members
 
     // Test 4: Verify group's serieIds updated
     val updatedGroup = groupRepo.groups.find { it.id == "group-1" }
     assertNotNull(updatedGroup)
     assertTrue(updatedGroup!!.serieIds.contains(serieId))
 
-    // Test 5: Deselect group clears fields
+    // Test 5: Deselect group clears visibility, retains maxParticipants
     vm.setSelectedGroup(null)
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     val stateAfterDeselection = vm.uiState.value
     assertNull(stateAfterDeselection.selectedGroupId)
-    assertEquals("", stateAfterDeselection.maxParticipants)
+    assertEquals("300", stateAfterDeselection.maxParticipants) // Retained from before
     assertEquals("", stateAfterDeselection.visibility)
   }
 
@@ -864,19 +879,22 @@ class CreateSerieViewModelTest {
 
     // Select first group
     vm.setSelectedGroup("group-1")
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     assertEquals("group-1", vm.uiState.value.selectedGroupId)
-    assertEquals("300", vm.uiState.value.maxParticipants)
+    assertEquals("", vm.uiState.value.maxParticipants) // Not auto-set anymore
 
     // Switch to second group
     vm.setSelectedGroup("group-2")
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     assertEquals("group-2", vm.uiState.value.selectedGroupId)
-    assertEquals("300", vm.uiState.value.maxParticipants) // Still auto-filled
+    assertEquals("", vm.uiState.value.maxParticipants) // Still not auto-set
 
     // Deselect (go standalone)
     vm.setSelectedGroup(null)
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     assertNull(vm.uiState.value.selectedGroupId)
-    assertEquals("", vm.uiState.value.maxParticipants) // Cleared
-    assertEquals("", vm.uiState.value.visibility) // Cleared
+    assertEquals("", vm.uiState.value.maxParticipants)
+    assertEquals("", vm.uiState.value.visibility)
   }
 
   @Test
@@ -905,6 +923,19 @@ class CreateSerieViewModelTest {
 
           override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
             return emptyList()
+          }
+
+          override suspend fun uploadGroupPhoto(
+              context: Context,
+              groupId: String,
+              imageUri: Uri
+          ): String {
+            // Not needed for these tests
+            return "http://fakeurl.com/photo.jpg"
+          }
+
+          override suspend fun deleteGroupPhoto(groupId: String) {
+            // Not needed for these tests
           }
         }
 
@@ -944,10 +975,12 @@ class CreateSerieViewModelTest {
     advanceUntilIdle()
 
     vmWithFailingGroup.setSelectedGroup("group-1")
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     vmWithFailingGroup.setTitle("Test Serie")
     vmWithFailingGroup.setDescription("Test description")
     vmWithFailingGroup.setDate("25/12/2025")
     vmWithFailingGroup.setTime("18:00")
+    vmWithFailingGroup.setMaxParticipants("50")
 
     val serieId1 = vmWithFailingGroup.createSerie()
     advanceUntilIdle()
@@ -995,6 +1028,7 @@ class CreateSerieViewModelTest {
     advanceUntilIdle()
 
     vmWithFailingSeries.setSelectedGroup("group-1")
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     vmWithFailingSeries.setTitle("Test Serie")
     vmWithFailingSeries.setDescription("Test description")
     vmWithFailingSeries.setDate("25/12/2025")
@@ -1029,10 +1063,12 @@ class CreateSerieViewModelTest {
     advanceUntilIdle()
 
     vmSuccess.setSelectedGroup("group-1")
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     vmSuccess.setTitle("Test Serie")
     vmSuccess.setDescription("Test description")
     vmSuccess.setDate("25/12/2025")
     vmSuccess.setTime("18:00")
+    vmSuccess.setMaxParticipants("50")
 
     val serieId3 = vmSuccess.createSerie()
     advanceUntilIdle()
@@ -1063,10 +1099,12 @@ class CreateSerieViewModelTest {
 
     // Test 1: With group - removes serie from group
     vm.setSelectedGroup("group-1")
+    advanceUntilIdle() // Wait for deleteCreatedSerieIfExists to complete
     vm.setTitle("Test Serie")
     vm.setDescription("Test description")
     vm.setDate("25/12/2025")
     vm.setTime("18:00")
+    vm.setMaxParticipants("50")
 
     val serieId1 = vm.createSerie()
     advanceUntilIdle()
@@ -1147,5 +1185,55 @@ class CreateSerieViewModelTest {
     vm.loadUserGroups()
     advanceUntilIdle()
     assertEquals(2, vm.uiState.value.availableGroups.size)
+  }
+
+  @Test
+  fun setSelectedGroup_deletesExistingSerieAndClearsCreatedSerieId() = runTest {
+    // Setup: Add a group
+    val group =
+        Group(
+            id = "group-1",
+            name = "Test Group",
+            category = EventType.SPORTS,
+            ownerId = "test-user-id",
+            memberIds = listOf("test-user-id"),
+            serieIds = emptyList())
+    groupRepo.groups.add(group)
+    vm.loadUserGroups()
+    advanceUntilIdle()
+
+    // Create a serie without a group
+    vm.setTitle("Test Serie")
+    vm.setDescription("Test description")
+    vm.setDate("25/12/2025")
+    vm.setTime("18:00")
+    vm.setMaxParticipants("10")
+    vm.setVisibility("PUBLIC")
+
+    val serieId1 = vm.createSerie()
+    advanceUntilIdle()
+
+    assertNotNull(serieId1)
+    assertNotNull(vm.uiState.value.createdSerieId)
+    assertNull(vm.uiState.value.selectedGroupId)
+    assertEquals(1, repo.added.size)
+
+    // Now select a group - should delete the old serie and clear createdSerieId
+    vm.setSelectedGroup("group-1")
+    advanceUntilIdle()
+
+    assertNull(vm.uiState.value.createdSerieId)
+    assertEquals("group-1", vm.uiState.value.selectedGroupId)
+    // The old serie should be deleted since it had no events
+    assertEquals(0, repo.added.size)
+
+    // Create another serie - should create a NEW serie with the group
+    val serieId2 = vm.createSerie()
+    advanceUntilIdle()
+
+    assertNotNull(serieId2)
+    assertNotEquals(serieId1, serieId2)
+    assertEquals(1, repo.added.size) // Only the new serie
+    assertEquals("group-1", repo.added.first().groupId)
   }
 }

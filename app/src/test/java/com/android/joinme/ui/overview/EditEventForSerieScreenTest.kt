@@ -1,5 +1,7 @@
 package com.android.joinme.ui.overview
 
+import android.content.Context
+import android.net.Uri
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
@@ -9,6 +11,8 @@ import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
+import com.android.joinme.model.groups.Group
+import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SerieFilter
@@ -110,6 +114,53 @@ class EditEventForSerieScreenTest {
 
     override suspend fun deleteSerie(serieId: String) {
       series.remove(serieId)
+    }
+  }
+
+  private class FakeGroupRepository : GroupRepository {
+    private val groups = mutableMapOf<String, Group>()
+
+    fun addTestGroup(group: Group) {
+      groups[group.id] = group
+    }
+
+    override suspend fun getGroup(groupId: String): Group {
+      return groups[groupId] ?: throw NoSuchElementException("Group not found")
+    }
+
+    override suspend fun getAllGroups(): List<Group> = groups.values.toList()
+
+    override suspend fun addGroup(group: Group) {
+      groups[group.id] = group
+    }
+
+    override suspend fun deleteGroup(groupId: String, userId: String) {
+      groups.remove(groupId)
+    }
+
+    override suspend fun leaveGroup(groupId: String, userId: String) {}
+
+    override suspend fun joinGroup(groupId: String, userId: String) {}
+
+    override suspend fun editGroup(groupId: String, group: Group) {
+      groups[groupId] = group
+    }
+
+    override suspend fun getCommonGroups(userIds: List<String>): List<Group> = emptyList()
+
+    override fun getNewGroupId(): String = "newGroupId"
+
+    override suspend fun uploadGroupPhoto(
+        context: Context,
+        groupId: String,
+        imageUri: Uri
+    ): String {
+      // Not needed for these tests
+      return "http://fakeurl.com/photo.jpg"
+    }
+
+    override suspend fun deleteGroupPhoto(groupId: String) {
+      // Not needed for these tests
     }
   }
 
@@ -439,5 +490,192 @@ class EditEventForSerieScreenTest {
 
     // Assert callback called
     assert(saveCalled)
+  }
+
+  /** --- GROUP SERIE EVENT EDITING TESTS --- */
+
+  // Helper to create test data and setup screen
+  private fun setupGroupSerieEventScreen(
+      eventType: EventType,
+      groupId: String,
+      serieId: String,
+      eventId: String
+  ): Triple<FakeEventsRepository, FakeSeriesRepository, FakeGroupRepository> {
+    val eventRepo = FakeEventsRepository()
+    val serieRepo = FakeSeriesRepository()
+    val groupRepo = FakeGroupRepository()
+
+    val calendar = Calendar.getInstance()
+    calendar.set(2025, Calendar.DECEMBER, 25, 14, 30, 0)
+
+    // Create group
+    val group =
+        Group(
+            id = groupId,
+            name = "${eventType.name} Group",
+            category = eventType,
+            description = "${eventType.name} group",
+            ownerId = "owner1",
+            memberIds = listOf("owner1", "user1"))
+    groupRepo.addTestGroup(group)
+
+    // Create serie with group
+    val serie =
+        Serie(
+            serieId = serieId,
+            title = "Group Serie",
+            description = "Serie for group",
+            date = Timestamp(calendar.time),
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf(eventId),
+            ownerId = "owner1",
+            groupId = groupId)
+    serieRepo.addTestSerie(serie)
+
+    // Create event
+    val event =
+        Event(
+            eventId = eventId,
+            ownerId = "owner1",
+            title = "Group Event",
+            type = eventType,
+            description = "Event in group serie",
+            location = Location(46.52, 6.63, "EPFL"),
+            date = Timestamp(calendar.time),
+            duration = 90,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            groupId = groupId)
+    eventRepo.addTestEvent(event)
+
+    val viewModel = EditEventForSerieViewModel(eventRepo, serieRepo, groupRepo)
+    composeTestRule.setContent {
+      EditEventForSerieScreen(
+          serieId = serieId, eventId = eventId, editEventForSerieViewModel = viewModel)
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    return Triple(eventRepo, serieRepo, groupRepo)
+  }
+
+  @Test
+  fun groupSerieEvent_typeFieldIsReadOnlyAndCanEditOtherFields() {
+    // Setup with SPORTS group
+    setupGroupSerieEventScreen(EventType.SPORTS, "group-1", "serie-1", "event-1")
+
+    // Verify type field shows as read-only text
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TYPE)
+        .assertTextContains("SPORTS")
+
+    // Verify dropdown doesn't open when clicked
+    composeTestRule.onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TYPE).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("ACTIVITY").assertDoesNotExist()
+    composeTestRule.onNodeWithText("SOCIAL").assertDoesNotExist()
+
+    // Verify other fields can be edited
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TITLE)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TITLE)
+        .performTextInput("Updated Title")
+
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextInput("Updated Description")
+
+    composeTestRule.waitForIdle()
+
+    // Verify edits persisted but type remains unchanged
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TITLE)
+        .assertTextContains("Updated Title")
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .assertTextContains("Updated Description")
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TYPE)
+        .assertTextContains("SPORTS")
+  }
+
+  @Test
+  fun standaloneSerieEvent_typeFieldIsEditableDropdown() {
+    val eventRepo = FakeEventsRepository()
+    val serieRepo = FakeSeriesRepository()
+    val groupRepo = FakeGroupRepository()
+
+    val calendar = Calendar.getInstance()
+    calendar.set(2025, Calendar.DECEMBER, 25, 14, 30, 0)
+
+    // Create serie WITHOUT a group
+    val serie =
+        Serie(
+            serieId = "serie-standalone",
+            title = "Standalone Serie",
+            description = "Serie without group",
+            date = Timestamp(calendar.time),
+            participants = listOf("user1"),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event-standalone"),
+            ownerId = "owner1",
+            groupId = null)
+    serieRepo.addTestSerie(serie)
+
+    val event =
+        Event(
+            eventId = "event-standalone",
+            ownerId = "owner1",
+            title = "Standalone Event",
+            type = EventType.ACTIVITY,
+            description = "Event in standalone serie",
+            location = Location(46.52, 6.63, "Park"),
+            date = Timestamp(calendar.time),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC)
+    eventRepo.addTestEvent(event)
+
+    val viewModel = EditEventForSerieViewModel(eventRepo, serieRepo, groupRepo)
+    composeTestRule.setContent {
+      EditEventForSerieScreen(
+          serieId = "serie-standalone",
+          eventId = "event-standalone",
+          editEventForSerieViewModel = viewModel)
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify type field is editable dropdown
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TYPE)
+        .assertTextContains("ACTIVITY")
+        .performClick()
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(500)
+    composeTestRule.waitForIdle()
+
+    // Verify dropdown options appear and can be selected
+    composeTestRule.onNodeWithText("SPORTS").assertExists().performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(EditEventForSerieScreenTestTags.INPUT_EVENT_TYPE)
+        .assertTextContains("SPORTS")
   }
 }

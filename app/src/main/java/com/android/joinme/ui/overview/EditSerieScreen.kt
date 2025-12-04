@@ -90,6 +90,7 @@ fun EditSerieScreen(
       title = "Edit Serie",
       formState = formState,
       testTags = testTags,
+      selectedGroupId = if (uiState.isGroupSerie) uiState.groupId else null,
       onTitleChange = { editSerieViewModel.setTitle(it) },
       onDescriptionChange = { editSerieViewModel.setDescription(it) },
       onMaxParticipantsChange = { editSerieViewModel.setMaxParticipants(it) },

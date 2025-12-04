@@ -611,6 +611,158 @@ class EditEventScreenTest {
         .assertTextContains("PRIVATE")
   }
 
+  /** --- GROUP EVENT TESTS --- */
+  private fun createTestGroupEvent(): Event {
+    val calendar = Calendar.getInstance()
+    calendar.set(2024, Calendar.DECEMBER, 25, 14, 30, 0)
+
+    return Event(
+        eventId = "test-group-event-1",
+        type = EventType.SPORTS,
+        title = "Group Basketball Game",
+        description = "Group event for basketball",
+        location = Location(46.5197, 6.6323, "EPFL"),
+        date = Timestamp(calendar.time),
+        duration = 90,
+        participants = listOf("user1", "user2"),
+        maxParticipants = 10,
+        visibility = EventVisibility.PUBLIC,
+        ownerId = "owner123",
+        groupId = "group-123")
+  }
+
+  @Test
+  fun groupAndStandaloneEvents_loadCorrectGroupIdAndIsGroupEventState() {
+    val repo = EventsRepositoryLocal()
+    val groupEvent = createTestGroupEvent()
+    val standaloneEvent = createTestEvent()
+    runBlocking {
+      repo.addEvent(groupEvent)
+      repo.addEvent(standaloneEvent)
+    }
+
+    // Test group event
+    val groupViewModel = EditEventViewModel(repo, MockLocationRepository())
+    groupViewModel.loadEvent(groupEvent.eventId)
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    assert(groupViewModel.uiState.value.groupId == "group-123")
+    assert(groupViewModel.uiState.value.isGroupEvent)
+
+    // Test standalone event
+    val standaloneViewModel = EditEventViewModel(repo, MockLocationRepository())
+    standaloneViewModel.loadEvent(standaloneEvent.eventId)
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    assert(standaloneViewModel.uiState.value.groupId == null)
+    assert(!standaloneViewModel.uiState.value.isGroupEvent)
+  }
+
+  @Test
+  fun groupEvent_hidesNonEditableFieldsAndShowsEditableFields() {
+    val repo = EventsRepositoryLocal()
+    val groupEvent = createTestGroupEvent()
+    runBlocking { repo.addEvent(groupEvent) }
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = groupEvent.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify non-editable fields are hidden (type and visibility)
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TYPE).assertDoesNotExist()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_VISIBILITY)
+        .assertDoesNotExist()
+
+    // Verify editable fields are shown (including maxParticipants)
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).assertExists()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION).assertExists()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_LOCATION).assertExists()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_MAX_PARTICIPANTS)
+        .assertExists()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DURATION).assertExists()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DATE).assertExists()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TIME).assertExists()
+  }
+
+  @Test
+  fun groupEvent_validationAndEditingBehavior() {
+    val repo = EventsRepositoryLocal()
+    val groupEvent = createTestGroupEvent()
+    runBlocking { repo.addEvent(groupEvent) }
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
+
+    viewModel.loadEvent(groupEvent.eventId)
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Verify initial state is valid and is a group event
+    assert(viewModel.uiState.value.isGroupEvent)
+    assert(viewModel.uiState.value.isValid)
+
+    // Edit fields and verify groupId is preserved
+    viewModel.setTitle("New Title")
+    viewModel.setDescription("New Description")
+
+    assert(viewModel.uiState.value.groupId == "group-123")
+    assert(viewModel.uiState.value.isGroupEvent)
+    assert(viewModel.uiState.value.isValid)
+  }
+
+  @Test
+  fun groupEvent_canEditFieldsAndSaveButtonRemainsEnabled() {
+    val repo = EventsRepositoryLocal()
+    val groupEvent = createTestGroupEvent()
+    runBlocking { repo.addEvent(groupEvent) }
+    val viewModel = EditEventViewModel(repo, MockLocationRepository())
+
+    composeTestRule.setContent {
+      EditEventScreen(eventId = groupEvent.eventId, editEventViewModel = viewModel, onDone = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Edit title and description
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
+        .performTextInput("Updated Group Event Title")
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextInput("Updated group description")
+
+    composeTestRule.waitForIdle()
+
+    // Save button should remain enabled
+    composeTestRule.waitUntil(timeoutMillis = 5_000) {
+      composeTestRule
+          .onAllNodesWithTag(EditEventScreenTestTags.EVENT_SAVE)
+          .fetchSemanticsNodes()
+          .firstOrNull()
+          ?.config
+          ?.getOrNull(SemanticsProperties.Disabled) == null
+    }
+
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsEnabled()
+  }
+
   /** --- ERROR MESSAGE DISPLAY TESTS --- */
   @Test
   fun invalidType_showsErrorMessage() {

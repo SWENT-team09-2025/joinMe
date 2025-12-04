@@ -9,7 +9,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Message
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
@@ -17,15 +16,165 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.R
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+
+/** Delete confirmation dialog for event deletion. */
+@Composable
+private fun DeleteEventDialog(showDialog: Boolean, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+  if (showDialog) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete Event") },
+        text = {
+          Text("Are you sure you want to delete this event? This action cannot be undone.")
+        },
+        confirmButton = {
+          TextButton(onClick = onConfirm) {
+            Text("Delete", color = MaterialTheme.colorScheme.error)
+          }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+  }
+}
+
+/** Floating action button for accessing event chat. */
+@Composable
+private fun ChatFloatingActionButton(
+    eventUIState: ShowEventUIState,
+    currentUserId: String,
+    onNavigateToChat: (String, String, Int) -> Unit,
+    eventId: String
+) {
+  if (eventUIState.isOwner(currentUserId) || eventUIState.isParticipant(currentUserId)) {
+    val bottomPadding =
+        if (eventUIState.isOwner(currentUserId)) {
+          Dimens.Button.standardHeight * 2 + Dimens.Spacing.medium * 2
+        } else {
+          Dimens.Button.standardHeight + Dimens.Spacing.medium
+        }
+
+    FloatingActionButton(
+        onClick = {
+          onNavigateToChat(
+              eventId, eventUIState.title.ifBlank { "Event Chat" }, eventUIState.participants.size)
+        },
+        modifier =
+            Modifier.testTag(ShowEventScreenTestTags.CHAT_FAB)
+                .padding(bottom = bottomPadding, end = Dimens.Padding.medium),
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary) {
+          Icon(
+              imageVector = Icons.AutoMirrored.Filled.Message,
+              contentDescription = "Open Chat",
+          )
+        }
+  }
+}
+
+/** Owner action buttons (Edit and Delete). */
+@Composable
+private fun OwnerActionButtons(
+    eventUIState: ShowEventUIState,
+    eventId: String,
+    onEditEvent: (String) -> Unit,
+    onEditEventForSerie: (String, String) -> Unit,
+    onShowDeleteDialog: () -> Unit
+) {
+  Button(
+      onClick = {
+        val currentSerieId = eventUIState.serieId
+        if (currentSerieId != null) {
+          onEditEventForSerie(currentSerieId, eventId)
+        } else {
+          onEditEvent(eventId)
+        }
+      },
+      modifier =
+          Modifier.fillMaxWidth()
+              .height(Dimens.Button.standardHeight)
+              .testTag(ShowEventScreenTestTags.EDIT_BUTTON),
+      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+      colors = MaterialTheme.customColors.buttonColors()) {
+        Text(
+            text = "EDIT EVENT",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Medium)
+      }
+
+  OutlinedButton(
+      onClick = onShowDeleteDialog,
+      modifier =
+          Modifier.fillMaxWidth()
+              .height(Dimens.Button.standardHeight)
+              .testTag(ShowEventScreenTestTags.DELETE_BUTTON),
+      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+      colors = MaterialTheme.customColors.buttonColors()) {
+        Icon(
+            imageVector = Icons.Default.Delete,
+            contentDescription = "Delete",
+            tint = MaterialTheme.customColors.deleteButton)
+        Spacer(modifier = Modifier.width(Dimens.Spacing.small))
+        Text(
+            text = "DELETE EVENT",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Medium)
+      }
+}
+
+/** Participant action buttons (Join/Quit or Full message). */
+@Composable
+private fun ParticipantActionButtons(
+    eventUIState: ShowEventUIState,
+    currentUserId: String,
+    eventId: String,
+    showEventViewModel: ShowEventViewModel,
+    coroutineScope: CoroutineScope
+) {
+  if (!eventUIState.partOfASerie) {
+    val participantCount = eventUIState.participantsCount.toIntOrNull() ?: 0
+    val maxParticipants = eventUIState.maxParticipants.toIntOrNull() ?: Int.MAX_VALUE
+    if ((participantCount < maxParticipants) || eventUIState.isParticipant(currentUserId)) {
+      Button(
+          onClick = {
+            coroutineScope.launch { showEventViewModel.toggleParticipation(eventId, currentUserId) }
+          },
+          modifier =
+              Modifier.fillMaxWidth()
+                  .height(Dimens.Button.standardHeight)
+                  .testTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON),
+          shape = RoundedCornerShape(Dimens.CornerRadius.medium),
+          colors = MaterialTheme.customColors.buttonColors()) {
+            Text(
+                text =
+                    if (eventUIState.isParticipant(currentUserId)) "QUIT EVENT" else "JOIN EVENT",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Medium)
+          }
+    } else {
+      Text(
+          modifier =
+              Modifier.fillMaxWidth()
+                  .padding(bottom = Dimens.Padding.extraLarge)
+                  .testTag(ShowEventScreenTestTags.FULL_EVENT_MESSAGE),
+          text = "Sorry this event is full",
+          style = MaterialTheme.typography.headlineSmall,
+          textAlign = TextAlign.Center,
+          color = MaterialTheme.colorScheme.error,
+          fontWeight = FontWeight.Bold)
+    }
+  }
+}
 
 /**
  * Test tags for the ShowEventScreen UI components.
@@ -44,6 +193,7 @@ object ShowEventScreenTestTags {
   const val EVENT_MEMBERS = "eventMembers"
   const val EVENT_DURATION = "eventDuration"
   const val EVENT_OWNER = "eventOwner"
+  const val EVENT_GROUP = "eventGroup"
   const val JOIN_QUIT_BUTTON = "joinQuitButton"
   const val EDIT_BUTTON = "editButton"
   const val DELETE_BUTTON = "deleteButton"
@@ -104,28 +254,16 @@ fun ShowEventScreen(
     }
   }
 
-  // Delete confirmation dialog
-  if (showDeleteDialog) {
-    AlertDialog(
-        onDismissRequest = { showDeleteDialog = false },
-        title = { Text("Delete Event") },
-        text = {
-          Text("Are you sure you want to delete this event? This action cannot be undone.")
-        },
-        confirmButton = {
-          TextButton(
-              onClick = {
-                coroutineScope.launch {
-                  showEventViewModel.deleteEvent(eventId)
-                  showDeleteDialog = false
-                  onGoBack()
-                }
-              }) {
-                Text("Delete", color = MaterialTheme.colorScheme.error)
-              }
-        },
-        dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } })
-  }
+  DeleteEventDialog(
+      showDialog = showDeleteDialog,
+      onDismiss = { showDeleteDialog = false },
+      onConfirm = {
+        coroutineScope.launch {
+          showEventViewModel.deleteEvent(eventId)
+          showDeleteDialog = false
+          onGoBack()
+        }
+      })
 
   Scaffold(
       modifier = Modifier.testTag(ShowEventScreenTestTags.SCREEN),
@@ -155,33 +293,11 @@ fun ShowEventScreen(
         }
       },
       floatingActionButton = {
-        // Show FAB only if user is owner or participant
-        if (eventUIState.isOwner(currentUserId) || eventUIState.isParticipant(currentUserId)) {
-          val bottomPadding =
-              if (eventUIState.isOwner(currentUserId)) {
-                Dimens.Button.standardHeight * 2 + Dimens.Spacing.medium * 2
-              } else {
-                Dimens.Button.standardHeight + Dimens.Spacing.medium
-              }
-
-          FloatingActionButton(
-              onClick = {
-                onNavigateToChat(
-                    eventId,
-                    eventUIState.title.ifBlank { "Event Chat" },
-                    eventUIState.participants.size)
-              },
-              modifier =
-                  Modifier.testTag(ShowEventScreenTestTags.CHAT_FAB)
-                      .padding(bottom = bottomPadding, end = Dimens.Padding.medium),
-              containerColor = MaterialTheme.colorScheme.primary,
-              contentColor = MaterialTheme.colorScheme.onPrimary) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Message,
-                    contentDescription = "Open Chat",
-                )
-              }
-        }
+        ChatFloatingActionButton(
+            eventUIState = eventUIState,
+            currentUserId = currentUserId,
+            onNavigateToChat = onNavigateToChat,
+            eventId = eventId)
       }) { paddingValues ->
         Column(
             modifier =
@@ -289,94 +405,38 @@ fun ShowEventScreen(
                           .padding(vertical = Dimens.Padding.small),
                   textAlign = TextAlign.Center)
 
+              // Group display (if event belongs to a group)
+              eventUIState.groupName?.let { groupName ->
+                Text(
+                    text = stringResource(R.string.group_name, groupName),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .testTag(ShowEventScreenTestTags.EVENT_GROUP)
+                            .padding(vertical = Dimens.Padding.small),
+                    textAlign = TextAlign.Center)
+              }
+
               Spacer(modifier = Modifier.weight(1f))
 
               // Conditional buttons based on ownership and event status
-              // Only show buttons if the event is not in the past
               if (!eventUIState.isPastEvent) {
                 if (eventUIState.isOwner(currentUserId)) {
-                  // Owner sees: Edit and Delete buttons
-                  Button(
-                      onClick = {
-                        val currentSerieId = eventUIState.serieId
-                        if (currentSerieId != null) {
-                          onEditEventForSerie(currentSerieId, eventId)
-                        } else {
-                          onEditEvent(eventId)
-                        }
-                      },
-                      modifier =
-                          Modifier.fillMaxWidth()
-                              .height(Dimens.Button.standardHeight)
-                              .testTag(ShowEventScreenTestTags.EDIT_BUTTON),
-                      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
-                      colors = MaterialTheme.customColors.buttonColors()) {
-                        Text(
-                            text = "EDIT EVENT",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Medium)
-                      }
-
-                  OutlinedButton(
-                      onClick = { showDeleteDialog = true },
-                      modifier =
-                          Modifier.fillMaxWidth()
-                              .height(Dimens.Button.standardHeight)
-                              .testTag(ShowEventScreenTestTags.DELETE_BUTTON),
-                      shape = RoundedCornerShape(Dimens.CornerRadius.medium),
-                      colors = MaterialTheme.customColors.buttonColors()) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = MaterialTheme.customColors.deleteButton)
-                        Spacer(modifier = Modifier.width(Dimens.Spacing.small))
-                        Text(
-                            text = "DELETE EVENT",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Medium)
-                      }
+                  OwnerActionButtons(
+                      eventUIState = eventUIState,
+                      eventId = eventId,
+                      onEditEvent = onEditEvent,
+                      onEditEventForSerie = onEditEventForSerie,
+                      onShowDeleteDialog = { showDeleteDialog = true })
                 } else {
-                  // if event is part of a serie, don't display join/quit button
-                  if (!eventUIState.partOfASerie) {
-                    // if event is full, don't display join button
-                    val participantCount = eventUIState.participantsCount.toIntOrNull() ?: 0
-                    val maxParticipants =
-                        eventUIState.maxParticipants.toIntOrNull() ?: Int.MAX_VALUE
-                    if ((participantCount < maxParticipants) ||
-                        eventUIState.isParticipant(currentUserId)) {
-                      // Non-owner sees: Join/Quit button
-                      Button(
-                          onClick = {
-                            coroutineScope.launch {
-                              showEventViewModel.toggleParticipation(eventId, currentUserId)
-                            }
-                          },
-                          modifier =
-                              Modifier.fillMaxWidth()
-                                  .height(Dimens.Button.standardHeight)
-                                  .testTag(ShowEventScreenTestTags.JOIN_QUIT_BUTTON),
-                          shape = RoundedCornerShape(Dimens.CornerRadius.medium),
-                          colors = MaterialTheme.customColors.buttonColors()) {
-                            Text(
-                                text =
-                                    if (eventUIState.isParticipant(currentUserId)) "QUIT EVENT"
-                                    else "JOIN EVENT",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Medium)
-                          }
-                    } else {
-                      Text(
-                          modifier =
-                              Modifier.fillMaxWidth()
-                                  .padding(bottom = Dimens.Padding.extraLarge)
-                                  .testTag(ShowEventScreenTestTags.FULL_EVENT_MESSAGE),
-                          text = "Sorry this event is full",
-                          style = MaterialTheme.typography.headlineSmall,
-                          textAlign = TextAlign.Center,
-                          color = MaterialTheme.colorScheme.error,
-                          fontWeight = FontWeight.Bold)
-                    }
-                  }
+                  ParticipantActionButtons(
+                      eventUIState = eventUIState,
+                      currentUserId = currentUserId,
+                      eventId = eventId,
+                      showEventViewModel = showEventViewModel,
+                      coroutineScope = coroutineScope)
                 }
               }
             }

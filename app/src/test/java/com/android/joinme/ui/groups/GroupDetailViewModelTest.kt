@@ -1,6 +1,8 @@
 // Implemented with help of Claude AI
 package com.android.joinme.ui.groups
 
+import android.content.Context
+import android.net.Uri
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
@@ -107,6 +109,19 @@ class GroupDetailViewModelTest {
         userIds.all { userId -> group.memberIds.contains(userId) }
       }
     }
+
+    override suspend fun uploadGroupPhoto(
+        context: Context,
+        groupId: String,
+        imageUri: Uri
+    ): String {
+      // Not needed for these tests
+      return "http://fakeurl.com/photo.jpg"
+    }
+
+    override suspend fun deleteGroupPhoto(groupId: String) {
+      // Not needed for these tests
+    }
   }
 
   private class FakeProfileRepository : ProfileRepository {
@@ -163,6 +178,20 @@ class GroupDetailViewModelTest {
     override suspend fun deleteProfilePhoto(uid: String) {
       // No-op for fake
     }
+
+    // Stub implementations for follow methods
+    override suspend fun followUser(followerId: String, followedId: String) {}
+
+    override suspend fun unfollowUser(followerId: String, followedId: String) {}
+
+    override suspend fun isFollowing(followerId: String, followedId: String): Boolean = false
+
+    override suspend fun getFollowing(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getFollowers(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getMutualFollowing(userId1: String, userId2: String): List<Profile> =
+        emptyList()
   }
 
   private lateinit var fakeGroupRepo: FakeGroupRepository

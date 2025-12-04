@@ -672,4 +672,344 @@ class SerieFormScreenTest {
 
     composeTestRule.onNodeWithTag(testTags.buttonSaveSerie).assertIsNotEnabled()
   }
+
+  /** --- GROUP SELECTION TESTS --- */
+  @Test
+  fun serieFormScreen_groupDropdownNotShownWhenOnGroupChangeIsNull() {
+    val formState = createValidFormState()
+    val testTags = createDefaultTestTags()
+
+    composeTestRule.setContent {
+      SerieFormScreen(
+          title = "Test Form",
+          formState = formState,
+          testTags = testTags,
+          onGroupChange = null, // No group selection
+          onTitleChange = {},
+          onDescriptionChange = {},
+          onMaxParticipantsChange = {},
+          onDateChange = {},
+          onTimeChange = {},
+          onVisibilityChange = {},
+          onSave = { true },
+          onGoBack = {})
+    }
+
+    // Group dropdown should not exist
+    composeTestRule.onNodeWithText("Group (Optional)").assertDoesNotExist()
+  }
+
+  @Test
+  fun serieFormScreen_groupDropdownShownWithEmptyGroupsList() {
+    val formState = createValidFormState()
+    val testTags = createDefaultTestTags()
+
+    composeTestRule.setContent {
+      SerieFormScreen(
+          title = "Test Form",
+          formState = formState,
+          testTags = testTags,
+          selectedGroupId = null,
+          availableGroups = emptyList(),
+          groupTestTag = "groupDropdown",
+          onGroupChange = {},
+          onTitleChange = {},
+          onDescriptionChange = {},
+          onMaxParticipantsChange = {},
+          onDateChange = {},
+          onTimeChange = {},
+          onVisibilityChange = {},
+          onSave = { true },
+          onGoBack = {})
+    }
+
+    // Dropdown should be displayed even with no groups
+    composeTestRule.onNodeWithTag("groupDropdown").assertIsDisplayed()
+    composeTestRule.onNodeWithText("None (Standalone)").assertIsDisplayed()
+
+    // Expand dropdown
+    composeTestRule.onNodeWithTag("groupDropdown").performClick()
+    composeTestRule.waitForIdle()
+
+    // Should only show "None (Standalone)" option (2 instances: field + menu)
+    composeTestRule.onAllNodesWithText("None (Standalone)").assertCountEquals(2)
+  }
+
+  @Test
+  fun serieFormScreen_groupDropdownWithMultipleGroups_showsAndExpandsCorrectly() {
+    val formState = createValidFormState()
+    val testTags = createDefaultTestTags()
+    val groups =
+        listOf(
+            com.android.joinme.model.groups.Group(
+                id = "group1",
+                name = "Basketball Club",
+                category = com.android.joinme.model.event.EventType.SPORTS,
+                ownerId = "owner1",
+                memberIds = listOf("owner1")),
+            com.android.joinme.model.groups.Group(
+                id = "group2",
+                name = "Movie Night",
+                category = com.android.joinme.model.event.EventType.SOCIAL,
+                ownerId = "owner2",
+                memberIds = listOf("owner2")))
+
+    composeTestRule.setContent {
+      SerieFormScreen(
+          title = "Test Form",
+          formState = formState,
+          testTags = testTags,
+          selectedGroupId = null,
+          availableGroups = groups,
+          groupTestTag = "groupDropdown",
+          onGroupChange = {},
+          onTitleChange = {},
+          onDescriptionChange = {},
+          onMaxParticipantsChange = {},
+          onDateChange = {},
+          onTimeChange = {},
+          onVisibilityChange = {},
+          onSave = { true },
+          onGoBack = {})
+    }
+
+    // Verify dropdown is displayed and shows default
+    composeTestRule.onNodeWithTag("groupDropdown").assertIsDisplayed()
+    composeTestRule.onNodeWithText("None (Standalone)").assertIsDisplayed()
+
+    // Expand dropdown
+    composeTestRule.onNodeWithTag("groupDropdown").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify all options are visible
+    composeTestRule.onAllNodesWithText("None (Standalone)").assertCountEquals(2)
+    composeTestRule.onNodeWithText("Basketball Club").assertExists()
+    composeTestRule.onNodeWithText("Movie Night").assertExists()
+  }
+
+  @Test
+  fun serieFormScreen_groupDropdownShowsSelectedGroupName() {
+    val formState = createValidFormState()
+    val testTags = createDefaultTestTags()
+    val groups =
+        listOf(
+            com.android.joinme.model.groups.Group(
+                id = "group1",
+                name = "Basketball Club",
+                category = com.android.joinme.model.event.EventType.SPORTS,
+                ownerId = "owner1",
+                memberIds = listOf("owner1")))
+
+    composeTestRule.setContent {
+      SerieFormScreen(
+          title = "Test Form",
+          formState = formState,
+          testTags = testTags,
+          selectedGroupId = "group1",
+          availableGroups = groups,
+          groupTestTag = "groupDropdown",
+          onGroupChange = {},
+          onTitleChange = {},
+          onDescriptionChange = {},
+          onMaxParticipantsChange = {},
+          onDateChange = {},
+          onTimeChange = {},
+          onVisibilityChange = {},
+          onSave = { true },
+          onGoBack = {})
+    }
+
+    // Should show the selected group name
+    composeTestRule.onNodeWithText("Basketball Club").assertIsDisplayed()
+  }
+
+  @Test
+  fun serieFormScreen_groupDropdownHandlesUnknownGroupId() {
+    val formState = createValidFormState()
+    val testTags = createDefaultTestTags()
+    val groups =
+        listOf(
+            com.android.joinme.model.groups.Group(
+                id = "group1",
+                name = "Basketball Club",
+                category = com.android.joinme.model.event.EventType.SPORTS,
+                ownerId = "owner1",
+                memberIds = listOf("owner1")))
+
+    composeTestRule.setContent {
+      SerieFormScreen(
+          title = "Test Form",
+          formState = formState,
+          testTags = testTags,
+          selectedGroupId = "unknown-id",
+          availableGroups = groups,
+          groupTestTag = "groupDropdown",
+          onGroupChange = {},
+          onTitleChange = {},
+          onDescriptionChange = {},
+          onMaxParticipantsChange = {},
+          onDateChange = {},
+          onTimeChange = {},
+          onVisibilityChange = {},
+          onSave = { true },
+          onGoBack = {})
+    }
+
+    // Should display "Unknown Group" for invalid ID
+    composeTestRule.onNodeWithText("Unknown Group").assertIsDisplayed()
+  }
+
+  @Test
+  fun serieFormScreen_groupDropdownSelectsGroup() {
+    val formState = createValidFormState()
+    val testTags = createDefaultTestTags()
+    val groups =
+        listOf(
+            com.android.joinme.model.groups.Group(
+                id = "group1",
+                name = "Basketball Club",
+                category = com.android.joinme.model.event.EventType.SPORTS,
+                ownerId = "owner1",
+                memberIds = listOf("owner1")))
+    var selectedGroupId: String? = null
+
+    composeTestRule.setContent {
+      SerieFormScreen(
+          title = "Test Form",
+          formState = formState,
+          testTags = testTags,
+          selectedGroupId = null,
+          availableGroups = groups,
+          groupTestTag = "groupDropdown",
+          onGroupChange = { selectedGroupId = it },
+          onTitleChange = {},
+          onDescriptionChange = {},
+          onMaxParticipantsChange = {},
+          onDateChange = {},
+          onTimeChange = {},
+          onVisibilityChange = {},
+          onSave = { true },
+          onGoBack = {})
+    }
+
+    composeTestRule.onNodeWithTag("groupDropdown").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Basketball Club").performClick()
+
+    assert(selectedGroupId == "group1")
+  }
+
+  @Test
+  fun serieFormScreen_groupDropdownSelectsNone() {
+    val formState = createValidFormState()
+    val testTags = createDefaultTestTags()
+    val groups =
+        listOf(
+            com.android.joinme.model.groups.Group(
+                id = "group1",
+                name = "Basketball Club",
+                category = com.android.joinme.model.event.EventType.SPORTS,
+                ownerId = "owner1",
+                memberIds = listOf("owner1")))
+    var selectedGroupId: String? = "group1"
+
+    composeTestRule.setContent {
+      SerieFormScreen(
+          title = "Test Form",
+          formState = formState,
+          testTags = testTags,
+          selectedGroupId = "group1",
+          availableGroups = groups,
+          groupTestTag = "groupDropdown",
+          onGroupChange = { selectedGroupId = it },
+          onTitleChange = {},
+          onDescriptionChange = {},
+          onMaxParticipantsChange = {},
+          onDateChange = {},
+          onTimeChange = {},
+          onVisibilityChange = {},
+          onSave = { true },
+          onGoBack = {})
+    }
+
+    composeTestRule.onNodeWithTag("groupDropdown").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("None (Standalone)").performClick()
+
+    assert(selectedGroupId == null)
+  }
+
+  @Test
+  fun serieFormScreen_hidesVisibilityButShowsMaxParticipantsWhenGroupSelected() {
+    val formState = createValidFormState()
+    val testTags = createDefaultTestTags()
+    val groups =
+        listOf(
+            com.android.joinme.model.groups.Group(
+                id = "group1",
+                name = "Basketball Club",
+                category = com.android.joinme.model.event.EventType.SPORTS,
+                ownerId = "owner1",
+                memberIds = listOf("owner1")))
+
+    composeTestRule.setContent {
+      SerieFormScreen(
+          title = "Test Form",
+          formState = formState,
+          testTags = testTags,
+          selectedGroupId = "group1",
+          availableGroups = groups,
+          groupTestTag = "groupDropdown",
+          onGroupChange = {},
+          onTitleChange = {},
+          onDescriptionChange = {},
+          onMaxParticipantsChange = {},
+          onDateChange = {},
+          onTimeChange = {},
+          onVisibilityChange = {},
+          onSave = { true },
+          onGoBack = {})
+    }
+
+    // MaxParticipants is now always visible
+    composeTestRule.onNodeWithTag(testTags.inputSerieMaxParticipants).assertIsDisplayed()
+    // Visibility is still hidden for group series
+    composeTestRule.onNodeWithTag(testTags.inputSerieVisibility).assertDoesNotExist()
+  }
+
+  @Test
+  fun serieFormScreen_showsMaxParticipantsAndVisibilityWhenNoGroup() {
+    val formState = createValidFormState()
+    val testTags = createDefaultTestTags()
+    val groups =
+        listOf(
+            com.android.joinme.model.groups.Group(
+                id = "group1",
+                name = "Basketball Club",
+                category = com.android.joinme.model.event.EventType.SPORTS,
+                ownerId = "owner1",
+                memberIds = listOf("owner1")))
+
+    composeTestRule.setContent {
+      SerieFormScreen(
+          title = "Test Form",
+          formState = formState,
+          testTags = testTags,
+          selectedGroupId = null,
+          availableGroups = groups,
+          groupTestTag = "groupDropdown",
+          onGroupChange = {},
+          onTitleChange = {},
+          onDescriptionChange = {},
+          onMaxParticipantsChange = {},
+          onDateChange = {},
+          onTimeChange = {},
+          onVisibilityChange = {},
+          onSave = { true },
+          onGoBack = {})
+    }
+
+    composeTestRule.onNodeWithTag(testTags.inputSerieMaxParticipants).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(testTags.inputSerieVisibility).assertExists()
+  }
 }
