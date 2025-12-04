@@ -94,6 +94,7 @@ class MainActivityNavigationTest {
   fun setup() {
     // Setup repository with test data
     System.setProperty("IS_TEST_ENV", "true")
+
     val repoEvents = EventsRepositoryProvider.getRepository(isOnline = false)
     val repoSerie = SeriesRepositoryProvider.repository
     val repoGroups = GroupRepositoryProvider.repository
@@ -180,7 +181,10 @@ class MainActivityNavigationTest {
     }
 
     composeTestRule.setContent {
-      JoinMe(startDestination = Screen.Overview.route, enableNotificationPermissionRequest = false)
+      JoinMe(
+          startDestination = Screen.Overview.route,
+          enableNotificationPermissionRequest = false,
+          testUserId = "test-user-id")
     }
   }
 
@@ -1158,7 +1162,6 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
 
     // Wait for events to load
-    Thread.sleep(2000)
     composeTestRule.waitForIdle()
 
     // Verify SerieDetails loaded the serie correctly
@@ -1209,8 +1212,7 @@ class MainActivityNavigationTest {
     // Verify we're on SerieDetails screen
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.SCREEN).assertExists()
 
-    // Wait for events to load - coroutines need real time, not just fake clock
-    Thread.sleep(3000)
+    // Wait for events to load
     composeTestRule.waitForIdle()
 
     // Click on event card to trigger onEventCardClick callback with serieId
@@ -1290,7 +1292,6 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
 
     // Wait for events to load
-    Thread.sleep(2000)
     composeTestRule.waitForIdle()
 
     // Click on event card to navigate to ShowEvent
@@ -1345,7 +1346,6 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
 
     // Wait for events to load
-    Thread.sleep(2000)
     composeTestRule.waitForIdle()
 
     // Click on event card to navigate to ShowEvent
@@ -1527,6 +1527,9 @@ class MainActivityNavigationTest {
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(1000)
     composeTestRule.waitForIdle()
+
+    // Wait for profile to load and username field to appear
+    waitUntilExists(EditProfileTestTags.USERNAME_FIELD)
 
     // Step 3: Modify profile name
     composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performClick()
