@@ -31,8 +31,8 @@ import kotlinx.coroutines.launch
  */
 data class CalendarUIState(
     val selectedDate: Long = System.currentTimeMillis(),
-    val currentMonth: Int = Calendar.getInstance().get(Calendar.MONTH),
-    val currentYear: Int = Calendar.getInstance().get(Calendar.YEAR),
+    val currentMonth: Int = Calendar.getInstance()[Calendar.MONTH],
+    val currentYear: Int = Calendar.getInstance()[Calendar.YEAR],
     val itemsForDate: List<EventItem> = emptyList(),
     val daysWithItems: Set<Int> = emptySet(),
     val isLoading: Boolean = false,

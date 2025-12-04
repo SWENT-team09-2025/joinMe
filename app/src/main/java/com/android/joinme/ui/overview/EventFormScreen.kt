@@ -521,14 +521,11 @@ fun EventFormScreen(
               Row(
                   modifier = Modifier.fillMaxWidth(),
                   horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium)) {
-                    // Max Participants (hidden for group events)
-                    if (!isGroupEvent) {
-                      MaxParticipantsField(
-                          formState = formState,
-                          testTags = testTags,
-                          onMaxParticipantsChange = onMaxParticipantsChange,
-                          modifier = Modifier.weight(1f))
-                    }
+                    MaxParticipantsField(
+                        formState = formState,
+                        testTags = testTags,
+                        onMaxParticipantsChange = onMaxParticipantsChange,
+                        modifier = Modifier.weight(1f))
 
                     DurationField(
                         formState = formState,

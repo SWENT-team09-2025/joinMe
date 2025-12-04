@@ -1,5 +1,7 @@
 package com.android.joinme.ui.overview
 
+import android.content.Context
+import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.core.app.ApplicationProvider
@@ -119,6 +121,19 @@ class CreateEventScreenTest {
       return groups.values.filter { group ->
         userIds.all { userId -> group.memberIds.contains(userId) }
       }
+    }
+
+    override suspend fun uploadGroupPhoto(
+        context: Context,
+        groupId: String,
+        imageUri: Uri
+    ): String {
+      // Not needed for these tests
+      return "http://fakeurl.com/photo.jpg"
+    }
+
+    override suspend fun deleteGroupPhoto(groupId: String) {
+      // Not needed for these tests
     }
   }
 
@@ -367,7 +382,7 @@ class CreateEventScreenTest {
   }
 
   @Test
-  fun whenGroupSelected_typeMaxParticipantsAndVisibilityFieldsAreHidden() {
+  fun whenGroupSelected_typeAndVisibilityFieldsAreHiddenButMaxParticipantsIsVisible() {
     composeTestRule.setContent { CreateEventScreen(onDone = {}) }
 
     // Initially all fields should be visible for standalone

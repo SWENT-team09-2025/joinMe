@@ -12,10 +12,18 @@
     <string name="message_placeholder">Type your message here…</string>
     <string name="record_audio">Record audio</string>
     <string name="send_message">Send message</string>
+    <string name="photo">Photo</string>
     <string name="gallery">Gallery</string>
+    <string name="camera">Camera</string>
     <string name="location">Location</string>
     <string name="poll">Poll</string>
     <string name="not_yet_implemented">Not yet implemented</string>
+    <string name="current_location">Current Location</string>
+    <string name="failed_to_send_location">Failed to send location: %1$s</string>
+    <string name="invalid_location_coordinates">Invalid location coordinates</string>
+    <string name="image_sent_success">Image sent successfully</string>
+    <string name="image_message">Image</string>
+    <string name="choose_photo_source">Choose photo source</string>
 
     <!-- Public Profile Screen -->
     <string name="back">Back</string>
@@ -23,6 +31,8 @@
     <string name="events_joined">Events Joined</string>
     <string name="followers">Followers</string>
     <string name="following">Following</string>
+    <string name="no_followers_yet">No followers yet</string>
+    <string name="not_following_anyone_yet">Not following anyone yet</string>
     <string name="profile_photo">Profile photo</string>
     <string name="bio">Bio</string>
     <string name="no_bio_available">No bio available</string>
@@ -62,4 +72,7 @@
     <string name="copy">Copy</string>
     <string name="edit">Edit</string>
     <string name="see_who_read">See who read</string>
+
+    <!-- Events/Series Details Screens -->
+    <string name="group_name">Group: %1$s</string>
 </resources>
