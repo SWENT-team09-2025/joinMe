@@ -147,9 +147,10 @@ class MainActivity : ComponentActivity() {
     createNotificationChannel()
 
     val deepLinkData = intent?.data
-    val notificationType = intent?.getStringExtra("notificationType")
+    val notificationType = intent?.getStringExtra("type")
     val chatName = intent?.getStringExtra("chatName")
     val conversationId = intent?.getStringExtra("conversationId")
+    val followerId = intent?.getStringExtra("followerId")
 
     val initialEventId =
         intent?.getStringExtra("eventId")
@@ -175,6 +176,7 @@ class MainActivity : ComponentActivity() {
               notificationType = notificationType,
               chatName = chatName,
               conversationId = conversationId,
+              followerId = followerId,
               testUserId = testUserId)
         }
       }
@@ -222,6 +224,7 @@ fun JoinMe(
     notificationType: String? = null,
     chatName: String? = null,
     conversationId: String? = null,
+    followerId: String? = null,
     enableNotificationPermissionRequest: Boolean = true,
     testUserId: String? = null,
 ) {
@@ -313,6 +316,14 @@ fun JoinMe(
         // Invitation link flow
         handleGroupJoin(initialGroupId, effectiveUserId, context, navigationActions)
       }
+    }
+  }
+
+  // Navigate to follower's profile if opened from follower notification
+  LaunchedEffect(followerId, notificationType, currentUserId) {
+    if (followerId != null && notificationType == "new_follower" && currentUserId.isNotEmpty()) {
+      // Navigate to the follower's public profile
+      navigationActions.navigateTo(Screen.PublicProfile(followerId))
     }
   }
 
