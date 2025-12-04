@@ -1,7 +1,6 @@
 package com.android.joinme.ui.groups
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,12 +17,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.android.joinme.R
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.displayString
 import com.android.joinme.model.event.getColor
@@ -109,6 +105,7 @@ fun GroupDetailScreen(
                   groupCategory = uiState.group!!.category,
                   groupName = uiState.group!!.name,
                   groupDescription = uiState.group!!.description,
+                  groupPhotoUrl = uiState.group!!.photoUrl,
                   members = uiState.members,
                   membersCount = uiState.group!!.membersCount,
                   onGroupEventsClick = onActivityGroupClick,
@@ -127,6 +124,7 @@ private fun GroupContent(
     groupCategory: EventType,
     groupName: String,
     groupDescription: String,
+    groupPhotoUrl: String?,
     members: List<Profile>,
     membersCount: Int,
     onGroupEventsClick: () -> Unit,
@@ -141,11 +139,10 @@ private fun GroupContent(
                   .clip(CircleShape)
                   .background(MaterialTheme.colorScheme.surface),
           contentAlignment = Alignment.Center) {
-            Image(
-                painter = painterResource(id = R.drawable.group_default_picture),
+            GroupPhotoImage(
+                photoUrl = groupPhotoUrl,
                 contentDescription = "Group picture",
-                modifier = Modifier.size(Dimens.GroupDetail.pictureImageSize),
-                contentScale = ContentScale.Fit)
+                size = Dimens.GroupDetail.pictureImageSize)
           }
 
       Spacer(modifier = Modifier.height(Dimens.Spacing.large))
