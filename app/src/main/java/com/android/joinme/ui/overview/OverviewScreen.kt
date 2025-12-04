@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
@@ -24,6 +25,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -65,6 +67,7 @@ import com.android.joinme.ui.theme.Dimens
 object OverviewScreenTestTags {
   const val CREATE_EVENT_BUTTON = "createEventFab"
   const val HISTORY_BUTTON = "historyButton"
+  const val CALENDAR_BUTTON = "calendarButton"
   const val EMPTY_EVENT_LIST_MSG = "emptyEventList"
   const val EVENT_LIST = "eventList"
   const val ONGOING_EVENTS_TITLE = "ongoingEventsTitle"
@@ -225,6 +228,7 @@ private fun LoadingIndicator() {
  * @param onAddEvent Callback invoked when the create event FAB is clicked
  * @param onSelectedSerie Callback invoked when a serie is clicked
  * @param onGoToHistory Callback invoked when the history FAB is clicked
+ * @param onGoToCalendar Callback invoked when the calendar icon button is clicked
  * @param navigationActions Navigation controller for bottom navigation menu
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -235,6 +239,7 @@ fun OverviewScreen(
     onAddEvent: () -> Unit = {},
     onAddSerie: () -> Unit = {},
     onGoToHistory: () -> Unit = {},
+    onGoToCalendar: () -> Unit = {},
     onSelectedSerie: (Serie) -> Unit = {},
     navigationActions: NavigationActions? = null,
     enableNotificationPermissionRequest: Boolean = true,
@@ -290,6 +295,16 @@ fun OverviewScreen(
           CenterAlignedTopAppBar(
               modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
               title = { Text(text = "Overview", style = MaterialTheme.typography.titleLarge) },
+              actions = {
+                IconButton(
+                    onClick = onGoToCalendar,
+                    modifier = Modifier.testTag(OverviewScreenTestTags.CALENDAR_BUTTON)) {
+                      Icon(
+                          imageVector = Icons.Default.CalendarToday,
+                          contentDescription = "Calendar",
+                          tint = MaterialTheme.colorScheme.onSurface)
+                    }
+              },
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))

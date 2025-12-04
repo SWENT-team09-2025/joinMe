@@ -430,6 +430,61 @@ class MainActivityNavigationTest {
   }
 
   @Test
+  fun calendar_goBackButtonNavigatesToOverview() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Navigate to Calendar
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CALENDAR_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Calendar").assertExists()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Wait for Calendar screen to fully render
+    Thread.sleep(1000)
+    composeTestRule.waitForIdle()
+
+    // Click back button using correct content description
+    composeTestRule.onNodeWithContentDescription("Back").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're back on Overview
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
+  }
+
+  @Test
+  fun canNavigateBackToOverviewFromCalendar() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Start at Overview
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
+
+    // Navigate to Calendar
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CALENDAR_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Wait for Calendar screen to fully render
+    Thread.sleep(1000)
+    composeTestRule.waitForIdle()
+
+    // Verify we're on Calendar screen
+    composeTestRule.onNodeWithText("Calendar").assertExists()
+
+    // Go back using content description "Back" (not "Go back")
+    composeTestRule.onNodeWithContentDescription("Back").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify we're back at Overview
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON).assertExists()
+  }
+
+  @Test
   fun showEventScreen_asNonOwner_doesNotShowEditButton() {
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
@@ -572,6 +627,21 @@ class MainActivityNavigationTest {
 
     // Verify History screen is displayed (onSelectSerie callback is configured in MainActivity)
     composeTestRule.onNodeWithText("History").assertExists()
+  }
+
+  @Test
+  fun calendarScreenHasEventAndSerieCallbacks() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Navigate to Calendar
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.CALENDAR_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify Calendar screen is displayed (onSelectEvent and onSelectSerie callbacks are configured
+    // in MainActivity)
+    composeTestRule.onNodeWithText("Calendar").assertExists()
   }
 
   @Test
@@ -756,6 +826,7 @@ class MainActivityNavigationTest {
             Screen.EditEvent.Companion.route,
             Screen.ShowEventScreen.Companion.route,
             Screen.History.route,
+            Screen.Calendar.route,
             Screen.Groups.route,
             Screen.CreateGroup.route,
             Screen.EditGroup.Companion.route,
