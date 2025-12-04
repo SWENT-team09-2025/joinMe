@@ -18,6 +18,9 @@
     <string name="location">Location</string>
     <string name="poll">Poll</string>
     <string name="not_yet_implemented">Not yet implemented</string>
+    <string name="current_location">Current Location</string>
+    <string name="failed_to_send_location">Failed to send location: %1$s</string>
+    <string name="invalid_location_coordinates">Invalid location coordinates</string>
     <string name="image_sent_success">Image sent successfully</string>
     <string name="image_message">Image</string>
     <string name="choose_photo_source">Choose photo source</string>

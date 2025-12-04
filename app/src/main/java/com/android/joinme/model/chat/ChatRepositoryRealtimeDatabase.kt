@@ -5,6 +5,7 @@ package com.android.joinme.model.chat
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.android.joinme.model.map.Location
 import com.android.joinme.model.utils.ImageProcessor
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -34,6 +35,10 @@ import kotlinx.coroutines.tasks.await
  *         readBy: ["userId1", "userId2"]
  *         isPinned: false
  *         isEdited: false
+ *         location: (optional)
+ *           latitude: 46.5197
+ *           longitude: 6.6323
+ *           name: "EPFL, Lausanne"
  * ```
  *
  * This provides real-time synchronization where all clients receive updates instantly when messages
@@ -63,6 +68,12 @@ class ChatRepositoryRealtimeDatabase(
     private const val FIELD_READ_BY = "readBy"
     private const val FIELD_IS_PINNED = "isPinned"
     private const val FIELD_IS_EDITED = "isEdited"
+    private const val FIELD_LOCATION = "location"
+
+    // Location field names (nested under FIELD_LOCATION)
+    private const val FIELD_LOCATION_LATITUDE = "latitude"
+    private const val FIELD_LOCATION_LONGITUDE = "longitude"
+    private const val FIELD_LOCATION_NAME = "name"
 
     // Default values
     private const val DEFAULT_MESSAGE_TYPE = "TEXT"
@@ -187,15 +198,27 @@ class ChatRepositoryRealtimeDatabase(
    * @return Map of field names to values
    */
   private fun messageToMap(message: Message): Map<String, Any?> {
-    return mapOf(
-        FIELD_SENDER_ID to message.senderId,
-        FIELD_SENDER_NAME to message.senderName,
-        FIELD_CONTENT to message.content,
-        FIELD_TIMESTAMP to message.timestamp,
-        FIELD_TYPE to message.type.name,
-        FIELD_READ_BY to message.readBy,
-        FIELD_IS_PINNED to message.isPinned,
-        FIELD_IS_EDITED to message.isEdited)
+    val map =
+        mutableMapOf(
+            FIELD_SENDER_ID to message.senderId,
+            FIELD_SENDER_NAME to message.senderName,
+            FIELD_CONTENT to message.content,
+            FIELD_TIMESTAMP to message.timestamp,
+            FIELD_TYPE to message.type.name,
+            FIELD_READ_BY to message.readBy,
+            FIELD_IS_PINNED to message.isPinned,
+            FIELD_IS_EDITED to message.isEdited)
+
+    // Add location if present
+    message.location?.let { location ->
+      map[FIELD_LOCATION] =
+          mapOf(
+              FIELD_LOCATION_LATITUDE to location.latitude,
+              FIELD_LOCATION_LONGITUDE to location.longitude,
+              FIELD_LOCATION_NAME to location.name)
+    }
+
+    return map
   }
 
   /**
@@ -226,6 +249,26 @@ class ChatRepositoryRealtimeDatabase(
       val isPinned = snapshot.child(FIELD_IS_PINNED).getValue(Boolean::class.java) ?: false
       val isEdited = snapshot.child(FIELD_IS_EDITED).getValue(Boolean::class.java) ?: false
 
+      // Parse location if present
+      val location =
+          snapshot.child(FIELD_LOCATION).let { locationSnapshot ->
+            if (locationSnapshot.exists()) {
+              val latitude =
+                  (locationSnapshot.child(FIELD_LOCATION_LATITUDE).value as? Number?)?.toDouble()
+              val longitude =
+                  (locationSnapshot.child(FIELD_LOCATION_LONGITUDE).value as? Number?)?.toDouble()
+              val name = locationSnapshot.child(FIELD_LOCATION_NAME).getValue(String::class.java)
+
+              if (latitude != null && longitude != null && name != null) {
+                Location(latitude = latitude, longitude = longitude, name = name)
+              } else {
+                null
+              }
+            } else {
+              null
+            }
+          }
+
       Message(
           id = id,
           conversationId = conversationId,
@@ -236,7 +279,8 @@ class ChatRepositoryRealtimeDatabase(
           type = type,
           readBy = readBy,
           isPinned = isPinned,
-          isEdited = isEdited)
+          isEdited = isEdited,
+          location = location)
     } catch (e: Exception) {
       Log.e(TAG, "Error converting snapshot to Message", e)
       null
