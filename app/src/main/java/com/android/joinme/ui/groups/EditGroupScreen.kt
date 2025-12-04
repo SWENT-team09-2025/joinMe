@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.ui.profile.rememberPhotoPickerLauncher
 
 object EditGroupScreenTags {
   const val SCREEN = "edit_group_screen"
@@ -22,6 +23,7 @@ object EditGroupScreenTags {
   const val CATEGORY_OPTION_PREFIX = "category_option_"
   const val DELETE_PHOTO_BUTTON = "delete_photo_button"
   const val CATEGORY_DROPDOWN_TOUCHABLE_AREA = "category_dropdown_touchable_area"
+  const val PHOTO_UPLOADING_INDICATOR = "edit_group_photo_uploading_indicator"
 }
 
 /**
@@ -31,7 +33,7 @@ object EditGroupScreenTags {
  * - Group name (required, 3-30 characters)
  * - Category (Social/Activity/Sports)
  * - Description (optional, max 300 characters)
- * - Group photo (not yet implemented)
+ * - Group photo (upload/delete)
  *
  * @param groupId The ID of the group to edit
  * @param viewModel The ViewModel managing the edit group state
@@ -48,6 +50,21 @@ fun EditGroupScreen(
   val uiState by viewModel.uiState.collectAsState()
   val context = LocalContext.current
 
+  // Set up the photo picker
+  val photoPicker =
+      rememberPhotoPickerLauncher(
+          onPhotoPicked = { uri ->
+            viewModel.uploadGroupPhoto(
+                context = context,
+                groupId = groupId,
+                imageUri = uri,
+                onSuccess = {
+                  Toast.makeText(context, "Photo uploaded successfully", Toast.LENGTH_SHORT).show()
+                },
+                onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
+          },
+          onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
+
   LaunchedEffect(groupId) { viewModel.loadGroup(groupId) }
 
   // Handle success navigation
@@ -63,6 +80,14 @@ fun EditGroupScreen(
     uiState.errorMsg?.let { error ->
       Toast.makeText(context, error, Toast.LENGTH_LONG).show()
       viewModel.clearErrorMsg()
+    }
+  }
+
+  // Handle photo errors
+  LaunchedEffect(uiState.photoError) {
+    uiState.photoError?.let { error ->
+      Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+      viewModel.clearPhotoError()
     }
   }
 
@@ -106,7 +131,13 @@ fun EditGroupScreen(
       onSave = { viewModel.updateGroup(groupId) },
       onGoBack = onBackClick,
       saveButtonText = "Save Changes",
-      onPictureEditClick = {
-        Toast.makeText(context, "Not yet implemented", Toast.LENGTH_SHORT).show()
-      })
+      onPictureEditClick = { photoPicker.launch() },
+      onPictureDeleteClick = {
+        viewModel.deleteGroupPhoto(
+            groupId = groupId,
+            onSuccess = { Toast.makeText(context, "Photo deleted", Toast.LENGTH_SHORT).show() },
+            onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
+      },
+      groupPictureUrl = uiState.photoUrl,
+      isUploadingPicture = uiState.isUploadingPhoto)
 }
