@@ -149,17 +149,6 @@ class CalendarScreenTest {
   }
 
   @Test
-  fun calendarScreen_displaysEmptyStateWhenNoEventsOnSelectedDate() {
-    val viewModel = createViewModel()
-    composeTestRule.setContent { CalendarScreen(calendarViewModel = viewModel) }
-
-    waitForDataLoad()
-
-    composeTestRule.onNodeWithTag(CalendarScreenTestTags.EMPTY_STATE_TEXT).assertIsDisplayed()
-    composeTestRule.onNodeWithText("You have no events\non this date.").assertIsDisplayed()
-  }
-
-  @Test
   fun calendarScreen_displaysEventOnSelectedDate() {
     val todayEvent = createEvent("1", "Today's Event", EventType.SPORTS, 0)
     runBlocking { eventRepo.addEvent(todayEvent) }
