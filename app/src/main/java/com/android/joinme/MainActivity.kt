@@ -30,14 +30,10 @@ import com.android.joinme.model.chat.ChatRepositoryProvider
 import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.notification.FCMTokenManager
-import com.android.joinme.model.presence.JoinMeContextIdProvider
-import com.android.joinme.model.presence.PresenceManager
-import com.android.joinme.model.presence.PresenceRepositoryProvider
 import com.android.joinme.model.profile.ProfileRepositoryProvider
 import com.android.joinme.ui.calendar.CalendarScreen
 import com.android.joinme.ui.chat.ChatScreen
 import com.android.joinme.ui.chat.ChatViewModel
-import com.android.joinme.ui.chat.PresenceViewModel
 import com.android.joinme.ui.groups.ActivityGroupScreen
 import com.android.joinme.ui.groups.CreateGroupScreen
 import com.android.joinme.ui.groups.EditGroupScreen
@@ -257,15 +253,10 @@ fun JoinMe(
   val initialDestination =
       startDestination ?: if (currentUser == null) Screen.Auth.name else Screen.Overview.route
 
-  // Initialize FCM token and presence tracking when user is logged in
-  LaunchedEffect(currentUserId) {
-    if (currentUserId.isNotEmpty()) {
+  // Initialize FCM token when user is logged in
+  LaunchedEffect(Unit) {
+    if (currentUser != null) {
       FCMTokenManager.initializeFCMToken(context)
-      // Start presence tracking for online user counter
-      val application = context.applicationContext as? android.app.Application
-      application?.let {
-        PresenceManager.getInstance().startTracking(it, currentUserId, JoinMeContextIdProvider())
-      }
     }
   }
 
@@ -534,9 +525,8 @@ fun JoinMe(
             onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
             onSignOutComplete = {
-              // Clear FCM token and stop presence tracking on sign-out
+              // Clear FCM token on sign-out
               FCMTokenManager.clearFCMToken()
-              PresenceManager.getInstance().stopTracking()
               navigationActions.navigateTo(Screen.Auth)
             })
       }
@@ -720,19 +710,6 @@ fun JoinMe(
                         }
                       })
 
-          // Create PresenceViewModel for online user tracking
-          val presenceViewModel: PresenceViewModel =
-              viewModel(
-                  factory =
-                      object : androidx.lifecycle.ViewModelProvider.Factory {
-                        override fun <T : androidx.lifecycle.ViewModel> create(
-                            modelClass: Class<T>
-                        ): T {
-                          @Suppress("UNCHECKED_CAST")
-                          return PresenceViewModel(PresenceRepositoryProvider.repository) as T
-                        }
-                      })
-
           val currentUserName = currentUser?.displayName ?: "Unknown User"
 
           ChatScreen(
@@ -742,7 +719,6 @@ fun JoinMe(
               currentUserName = currentUserName,
               viewModel = chatViewModel,
               totalParticipants = totalParticipants,
-              presenceViewModel = presenceViewModel,
               onLeaveClick = { navigationActions.goBack() })
         } else {
           Toast.makeText(context, "Chat ID or title is null", Toast.LENGTH_SHORT).show()
