@@ -264,8 +264,7 @@ fun JoinMe(
       // Start presence tracking for online user counter
       val application = context.applicationContext as? android.app.Application
       application?.let {
-        PresenceManager.getInstance()
-            .startTracking(it, currentUserId, JoinMeContextIdProvider())
+        PresenceManager.getInstance().startTracking(it, currentUserId, JoinMeContextIdProvider())
       }
     }
   }
