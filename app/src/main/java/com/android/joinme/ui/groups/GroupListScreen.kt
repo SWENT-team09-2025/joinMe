@@ -45,21 +45,21 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.getColor
 import com.android.joinme.model.event.getOnContainerColor
@@ -509,16 +509,17 @@ private fun GroupCardMenuOverlay(
                   text = "SHARE GROUP",
                   icon = Icons.Default.Share,
                   onClick = {
-                    android.util.Log.d("GroupListScreen", "SHARE GROUP clicked - groupId: ${group.id}, currentUserId: $currentUserId")
+                    android.util.Log.d(
+                        "GroupListScreen",
+                        "SHARE GROUP clicked - groupId: ${group.id}, currentUserId: $currentUserId")
                     scope.launch {
                       shareInvitation(
                           invitationType = InvitationType.INVITATION_TO_GROUP,
                           targetId = group.id,
                           createdBy = currentUserId ?: "",
                           expiresInDays = 7,
-                          context = context
-                      )
-                        onDismiss()
+                          context = context)
+                      onDismiss()
                     }
                   },
                   testTag = GroupListScreenTestTags.SHARE_GROUP_BUBBLE)
