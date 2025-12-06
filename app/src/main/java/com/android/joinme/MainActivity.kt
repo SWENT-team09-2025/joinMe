@@ -29,6 +29,9 @@ import androidx.navigation.navigation
 import com.android.joinme.model.chat.ChatRepositoryProvider
 import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.groups.GroupRepositoryProvider
+import com.android.joinme.model.invitation.InvitationRepositoryFirestore
+import com.android.joinme.model.invitation.InvitationType
+import com.android.joinme.model.invitation.deepLink.DeepLinkService
 import com.android.joinme.model.notification.FCMTokenManager
 import com.android.joinme.model.profile.ProfileRepositoryProvider
 import com.android.joinme.ui.calendar.CalendarScreen
@@ -142,6 +145,8 @@ private fun getCurrentUserId(currentUser: com.google.firebase.auth.FirebaseUser?
  * with the JoinMe composable, which handles all navigation and UI logic.
  */
 class MainActivity : ComponentActivity() {
+  // State to hold new invitation tokens when app receives deep link while running
+  private val newInvitationToken = mutableStateOf<String?>(null)
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -153,40 +158,44 @@ class MainActivity : ComponentActivity() {
     val conversationId = intent?.getStringExtra("conversationId")
     val followerId = intent?.getStringExtra("followerId")
 
+    // Parse invitations from deep links
+    val invitationToken = DeepLinkService.parseInvitationLink(intent)
+
+    // for notifications from events and groups
     val initialEventId =
         intent?.getStringExtra("eventId")
             ?: (if (deepLinkData?.host == "event") deepLinkData.lastPathSegment else null)
     val initialGroupId =
         intent?.getStringExtra("groupId")
-            ?: when {
-              deepLinkData?.host == "group" -> deepLinkData.lastPathSegment
-              deepLinkData?.host == "joinme.app" &&
-                  deepLinkData.pathSegments?.firstOrNull() == "group" ->
-                  deepLinkData.pathSegments?.getOrNull(1)
-              else -> null
-            }
+            ?: (if (deepLinkData?.host == "group") deepLinkData.lastPathSegment else null)
 
     setContent {
       JoinMeTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
-          // Use test user ID when running in test mode
-          val testUserId = if (System.getProperty("IS_TEST_ENV") == "true") "test-user-id" else null
+          val dynamicInvitationToken by newInvitationToken
           JoinMe(
               initialEventId = initialEventId,
               initialGroupId = initialGroupId,
               notificationType = notificationType,
               chatName = chatName,
               conversationId = conversationId,
-              followerId = followerId,
-              testUserId = testUserId)
+              invitationToken = invitationToken,
+              newInvitationToken = dynamicInvitationToken,
+              onInvitationProcessed = { newInvitationToken.value = null },
+              followerId = followerId)
         }
       }
     }
   }
 
-  override fun onNewIntent(intent: Intent) {
-    super.onNewIntent(intent)
-    setIntent(intent)
+  override fun onNewIntent(newIntent: Intent) {
+    super.onNewIntent(newIntent)
+    setIntent(newIntent)
+    // Check if this is an invitation link and update state to trigger recomposition
+    val token = DeepLinkService.parseInvitationLink(newIntent)
+    if (token != null) {
+      newInvitationToken.value = token
+    }
   }
 
   private fun createNotificationChannel() {
@@ -226,15 +235,17 @@ fun JoinMe(
     chatName: String? = null,
     conversationId: String? = null,
     followerId: String? = null,
-    enableNotificationPermissionRequest: Boolean = true,
-    testUserId: String? = null,
+    invitationToken: String? = null,
+    newInvitationToken: String? = null,
+    onInvitationProcessed: () -> Unit = {},
+    enableNotificationPermissionRequest: Boolean = true
 ) {
   val navController = rememberNavController()
   val navigationActions = NavigationActions(navController)
   val coroutineScope = rememberCoroutineScope()
 
   var currentUser by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
-  val effectiveUserId = testUserId ?: currentUser?.uid
+  var pendingInvitationToken by remember { mutableStateOf<String?>(null) }
 
   // Listen for auth state changes
   LaunchedEffect(Unit) {
@@ -281,9 +292,6 @@ fun JoinMe(
                 Screen.Chat(chatId = conversationId, chatTitle = chatName, totalParticipants = 1))
           }
         }
-      } else {
-        // Regular event notification, navigate to event detail screen
-        navigationActions.navigateTo(Screen.ShowEventScreen(initialEventId))
       }
     }
   }
@@ -313,9 +321,6 @@ fun JoinMe(
             }
           }
         }
-      } else {
-        // Invitation link flow
-        handleGroupJoin(initialGroupId, effectiveUserId, context, navigationActions)
       }
     }
   }
@@ -325,6 +330,114 @@ fun JoinMe(
     if (followerId != null && notificationType == "new_follower" && currentUserId.isNotEmpty()) {
       // Navigate to the follower's public profile
       navigationActions.navigateTo(Screen.PublicProfile(followerId))
+    }
+  }
+
+  // Handle invitation link token (and check for authentification)
+  LaunchedEffect(invitationToken, newInvitationToken, currentUserId) {
+    val tokenToProcess = newInvitationToken ?: invitationToken
+    if (tokenToProcess != null) {
+      if (currentUserId.isEmpty()) {
+        pendingInvitationToken = tokenToProcess
+      } else {
+        coroutineScope.launch {
+          try {
+            val invitationRepository = InvitationRepositoryFirestore()
+            val result = invitationRepository.resolveInvitation(tokenToProcess)
+
+            result
+                .onSuccess { invitation ->
+                  if (invitation != null && invitation.isValid()) {
+                    when (invitation.type) {
+                      InvitationType.INVITATION_TO_GROUP ->
+                          handleGroupJoin(
+                              invitation.targetId, currentUserId, context, navigationActions)
+                      InvitationType.INVITATION_TO_EVENT ->
+                          navigationActions.navigateTo(Screen.ShowEventScreen(invitation.targetId))
+                      InvitationType.INVITATION_TO_SERIES ->
+                          navigationActions.navigateTo(Screen.SerieDetails(invitation.targetId))
+                    }
+                  } else {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                      Toast.makeText(
+                              context, "Invalid or expired invitation link", Toast.LENGTH_LONG)
+                          .show()
+                    }
+                  }
+                }
+                .onFailure { e ->
+                  kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    Toast.makeText(
+                            context,
+                            "Failed to process invitation: ${e.message}",
+                            Toast.LENGTH_LONG)
+                        .show()
+                  }
+                }
+          } catch (e: Exception) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+              Toast.makeText(
+                      context, "Failed to process invitation: ${e.message}", Toast.LENGTH_LONG)
+                  .show()
+            }
+          } finally {
+            // Reset the new invitation token after processing
+            if (newInvitationToken != null) {
+              onInvitationProcessed()
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Process pending invitation after user signs in
+  LaunchedEffect(pendingInvitationToken, currentUserId) {
+    if (pendingInvitationToken != null && currentUserId.isNotEmpty()) {
+      coroutineScope.launch {
+        try {
+          val invitationRepository = InvitationRepositoryFirestore()
+          val result = invitationRepository.resolveInvitation(pendingInvitationToken!!)
+
+          result
+              .onSuccess { invitation ->
+                if (invitation != null && invitation.isValid()) {
+                  when (invitation.type) {
+                    InvitationType.INVITATION_TO_GROUP -> {
+                      handleGroupJoin(
+                          invitation.targetId, currentUserId, context, navigationActions)
+                    }
+                    InvitationType.INVITATION_TO_EVENT -> {
+                      navigationActions.navigateTo(Screen.ShowEventScreen(invitation.targetId))
+                    }
+                    InvitationType.INVITATION_TO_SERIES -> {
+                      navigationActions.navigateTo(Screen.SerieDetails(invitation.targetId))
+                    }
+                  }
+                } else {
+                  kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    Toast.makeText(context, "Invalid or expired invitation link", Toast.LENGTH_LONG)
+                        .show()
+                  }
+                }
+              }
+              .onFailure { e ->
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                  Toast.makeText(
+                          context, "Failed to process invitation: ${e.message}", Toast.LENGTH_LONG)
+                      .show()
+                }
+              }
+
+          pendingInvitationToken = null
+        } catch (e: Exception) {
+          kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+            Toast.makeText(context, "Failed to process invitation: ${e.message}", Toast.LENGTH_LONG)
+                .show()
+          }
+          pendingInvitationToken = null
+        }
+      }
     }
   }
 
@@ -591,15 +704,6 @@ fun JoinMe(
 
         GroupListScreen(
             viewModel = groupListViewModel,
-            onJoinWithLink = { groupId ->
-              groupListViewModel.joinGroup(
-                  groupId = groupId,
-                  onSuccess = {
-                    Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT)
-                        .show()
-                  },
-                  onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
-            },
             onCreateGroup = { navigationActions.navigateTo(Screen.CreateGroup) },
             onGroup = { group ->
               // Navigate to group details

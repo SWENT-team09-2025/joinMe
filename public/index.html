@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JoinMe - Join Event/Group</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 400px;
+        }
+        h1 {
+            font-size: 2em;
+            margin-bottom: 0.5em;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .message {
+            font-size: 1.1em;
+            margin-top: 20px;
+        }
+        .store-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+    </style>
+    <script>
+        window.onload = function() {
+            // Extract token from URL path (e.g., /invite/abc123)
+            const pathParts = window.location.pathname.split('/').filter(p => p);
+
+            if (pathParts.length >= 2 && pathParts[0] === 'invite') {
+                const token = pathParts[1];
+
+                // Try to open the app
+                const appLink = `joinme://invite/${token}`;
+                window.location.href = appLink;
+
+                // If app doesn't open after 2 seconds, show download message
+                setTimeout(function() {
+                    document.getElementById('message').innerHTML =
+                        'App not installed?<br><a href="https://play.google.com/store" class="store-link">Download JoinMe</a>';
+                }, 2000);
+            } else {
+                document.getElementById('message').innerHTML =
+                    'Invalid invitation link. Please check the URL.';
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Opening JoinMe...</h1>
+        <div class="spinner"></div>
+        <p id="message" class="message">If the app doesn't open automatically, make sure JoinMe is installed on your device.</p>
+    </div>
+</body>
+</html>
