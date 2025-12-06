@@ -145,6 +145,8 @@ private fun getCurrentUserId(currentUser: com.google.firebase.auth.FirebaseUser?
  * with the JoinMe composable, which handles all navigation and UI logic.
  */
 class MainActivity : ComponentActivity() {
+  // State to hold new invitation tokens when app receives deep link while running
+  private val newInvitationToken = mutableStateOf<String?>(null)
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -170,6 +172,7 @@ class MainActivity : ComponentActivity() {
     setContent {
       JoinMeTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
+          val dynamicInvitationToken by newInvitationToken
           JoinMe(
               initialEventId = initialEventId,
               initialGroupId = initialGroupId,
@@ -177,15 +180,22 @@ class MainActivity : ComponentActivity() {
               chatName = chatName,
               conversationId = conversationId,
               invitationToken = invitationToken,
+              newInvitationToken = dynamicInvitationToken,
+              onInvitationProcessed = { newInvitationToken.value = null },
               followerId = followerId)
         }
       }
     }
   }
 
-  override fun onNewIntent(intent: Intent) {
-    super.onNewIntent(intent)
-    setIntent(intent)
+  override fun onNewIntent(newIntent: Intent) {
+    super.onNewIntent(newIntent)
+    setIntent(newIntent)
+    // Check if this is an invitation link and update state to trigger recomposition
+    val token = DeepLinkService.parseInvitationLink(newIntent)
+    if (token != null) {
+      newInvitationToken.value = token
+    }
   }
 
   private fun createNotificationChannel() {
@@ -226,6 +236,8 @@ fun JoinMe(
     conversationId: String? = null,
     followerId: String? = null,
     invitationToken: String? = null,
+    newInvitationToken: String? = null,
+    onInvitationProcessed: () -> Unit = {},
     enableNotificationPermissionRequest: Boolean = true
 ) {
   val navController = rememberNavController()
@@ -322,15 +334,16 @@ fun JoinMe(
   }
 
   // Handle invitation link token (and check for authentification)
-  LaunchedEffect(invitationToken, currentUserId) {
-    if (invitationToken != null) {
+  LaunchedEffect(invitationToken, newInvitationToken, currentUserId) {
+    val tokenToProcess = newInvitationToken ?: invitationToken
+    if (tokenToProcess != null) {
       if (currentUserId.isEmpty()) {
-        pendingInvitationToken = invitationToken
+        pendingInvitationToken = tokenToProcess
       } else {
         coroutineScope.launch {
           try {
             val invitationRepository = InvitationRepositoryFirestore()
-            val result = invitationRepository.resolveInvitation(invitationToken)
+            val result = invitationRepository.resolveInvitation(tokenToProcess)
 
             result
                 .onSuccess { invitation ->
@@ -366,6 +379,11 @@ fun JoinMe(
               Toast.makeText(
                       context, "Failed to process invitation: ${e.message}", Toast.LENGTH_LONG)
                   .show()
+            }
+          } finally {
+            // Reset the new invitation token after processing
+            if (newInvitationToken != null) {
+              onInvitationProcessed()
             }
           }
         }
@@ -686,15 +704,6 @@ fun JoinMe(
 
         GroupListScreen(
             viewModel = groupListViewModel,
-            onJoinWithLink = { groupId ->
-              groupListViewModel.joinGroup(
-                  groupId = groupId,
-                  onSuccess = {
-                    Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT)
-                        .show()
-                  },
-                  onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
-            },
             onCreateGroup = { navigationActions.navigateTo(Screen.CreateGroup) },
             onGroup = { group ->
               // Navigate to group details

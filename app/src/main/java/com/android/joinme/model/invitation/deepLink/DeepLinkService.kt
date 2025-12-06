@@ -5,7 +5,7 @@ import android.net.Uri
 
 /** Service for handling deep links in the application. */
 object DeepLinkService {
-  private const val BASE_URL = "https://joinme.app"
+  private const val BASE_URL = "https://joinme-aa9e8.web.app"
   private const val INVITATION_PATH = "invite"
 
   /**
