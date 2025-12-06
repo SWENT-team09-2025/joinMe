@@ -53,6 +53,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -61,6 +62,7 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.R
 import com.android.joinme.model.event.getColor
 import com.android.joinme.model.event.getOnContainerColor
 import com.android.joinme.model.groups.Group
@@ -261,11 +263,15 @@ private fun GroupListFab(onClick: () -> Unit) {
       icon = {
         Icon(
             Icons.Default.Add,
-            contentDescription = "CREATE A GROUP",
+            contentDescription = stringResource(R.string.create_group_button),
             tint = MaterialTheme.colorScheme.onPrimary)
       },
       shape = RoundedCornerShape(Dimens.CornerRadius.pill),
-      text = { Text("CREATE A GROUP", color = MaterialTheme.colorScheme.onPrimary) },
+      text = {
+        Text(
+            stringResource(R.string.create_group_button),
+            color = MaterialTheme.colorScheme.onPrimary)
+      },
       containerColor = MaterialTheme.colorScheme.primary)
 }
 
@@ -308,11 +314,11 @@ private fun GroupListContent(
           contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
               Text(
-                  text = "You are currently not",
+                  text = stringResource(R.string.currently_not),
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
               Text(
-                  text = "assigned to a group…",
+                  text = stringResource(R.string.assigned_to_group),
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
             }
@@ -331,9 +337,9 @@ private fun GroupListDialogs(
   screenState.groupToLeave?.let { group ->
     CustomConfirmationDialog(
         modifier = Modifier.testTag(GroupListScreenTestTags.LEAVE_GROUP_DIALOG),
-        title = "Are you sure you want to leave\nthis group?",
-        confirmText = "Yes",
-        cancelText = "No",
+        title = stringResource(R.string.message_group_leaving),
+        confirmText = stringResource(R.string.confirmation_group_button),
+        cancelText = stringResource(R.string.negation_group_button),
         onConfirm = {
           onLeaveGroup(group)
           screenState.groupToLeave = null
@@ -346,10 +352,10 @@ private fun GroupListDialogs(
   screenState.groupToDelete?.let { group ->
     CustomConfirmationDialog(
         modifier = Modifier.testTag(GroupListScreenTestTags.DELETE_GROUP_DIALOG),
-        title = "Are you sure you want to delete\nthis group?",
-        message = "The group will be permanently deleted\nThis action is irreversible",
-        confirmText = "Yes",
-        cancelText = "No",
+        title = stringResource(R.string.message_group_deletion),
+        message = stringResource(R.string.advertisment_group_deletion),
+        confirmText = stringResource(R.string.confirmation_group_button),
+        cancelText = stringResource(R.string.negation_group_button),
         onConfirm = {
           onDeleteGroup(group)
           screenState.groupToDelete = null
@@ -418,7 +424,7 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: (Float) 
                           }) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "More options",
+                        contentDescription = stringResource(R.string.more_options),
                         tint = groupOnColor)
                   }
             }
@@ -496,7 +502,7 @@ private fun GroupCardMenuOverlay(
             horizontalAlignment = Alignment.End) {
               if (!isOwner) {
                 MenuBubble(
-                    text = "LEAVE GROUP",
+                    text = stringResource(R.string.leave_group_button),
                     icon = Icons.AutoMirrored.Filled.ExitToApp,
                     onClick = {
                       onDismiss()
@@ -506,12 +512,9 @@ private fun GroupCardMenuOverlay(
               }
 
               MenuBubble(
-                  text = "SHARE GROUP",
+                  text = stringResource(R.string.share_group_button),
                   icon = Icons.Default.Share,
                   onClick = {
-                    android.util.Log.d(
-                        "GroupListScreen",
-                        "SHARE GROUP clicked - groupId: ${group.id}, currentUserId: $currentUserId")
                     scope.launch {
                       shareInvitation(
                           invitationType = InvitationType.INVITATION_TO_GROUP,
@@ -526,7 +529,7 @@ private fun GroupCardMenuOverlay(
 
               if (isOwner) {
                 MenuBubble(
-                    text = "EDIT GROUP",
+                    text = stringResource(R.string.edit_group_button),
                     icon = Icons.Default.Edit,
                     onClick = {
                       onEditGroup(group)
@@ -537,7 +540,7 @@ private fun GroupCardMenuOverlay(
 
               if (isOwner) {
                 MenuBubble(
-                    text = "DELETE GROUP",
+                    text = stringResource(R.string.delete_group_button),
                     icon = Icons.Default.Delete,
                     onClick = {
                       onDismiss()

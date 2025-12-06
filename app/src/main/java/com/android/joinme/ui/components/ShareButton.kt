@@ -13,14 +13,22 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.android.joinme.R
 import com.android.joinme.model.invitation.InvitationRepositoryFirestore
 import com.android.joinme.model.invitation.InvitationType
 import com.android.joinme.model.invitation.deepLink.DeepLinkService
+import com.android.joinme.ui.theme.Dimens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+const val SHARE_SHEET_TYPE = "text/plain"
+
+/** Test tags for ShareButton UI elements. */
+object ShareButtonTestTags {
+  const val SHARE_BUTTON = "shareButton"
+}
 /**
  * IconButton that creates an invitation link and opens Android Share Sheet. Use this in TopAppBar
  * for Event/Serie screens.
@@ -50,11 +58,11 @@ fun ShareButton(
           shareInvitation(invitationType, targetId, createdBy, expiresInDays, context, onError)
         }
       },
-      modifier = modifier.testTag("shareButton")) {
+      modifier = modifier.testTag(ShareButtonTestTags.SHARE_BUTTON)) {
         Icon(
             imageVector = Icons.Default.Share,
-            contentDescription = "Share invitation link",
-            modifier = Modifier.size(24.dp))
+            contentDescription = stringResource(R.string.share_invitation_link),
+            modifier = Modifier.size(Dimens.IconSize.medium))
       }
 }
 /**
@@ -117,11 +125,13 @@ private fun openShareSheet(context: Context, link: String, type: InvitationType)
   val shareIntent =
       Intent().apply {
         action = Intent.ACTION_SEND
-        setType("text/plain")
-        val message = "Join my ${type.toDisplayString()} on JoinMe: \n$link"
+        setType(SHARE_SHEET_TYPE)
+        val message =
+            context.getString(R.string.message_invitation_link, type.toDisplayString(), link)
         putExtra(Intent.EXTRA_TEXT, message)
       }
 
-  val chooserIntent = Intent.createChooser(shareIntent, "Share invitation link")
+  val chooserIntent =
+      Intent.createChooser(shareIntent, context.getString(R.string.share_invitation_link))
   context.startActivity(chooserIntent)
 }
