@@ -86,13 +86,24 @@ import androidx.compose.ui.text.style.TextAlign
 import com.android.joinme.R
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
+import com.android.joinme.model.map.Location
+import com.android.joinme.model.map.UserLocation
 import com.android.joinme.model.profile.Profile
+import com.android.joinme.ui.map.userLocation.LocationServiceImpl
 import com.android.joinme.ui.profile.ProfilePhotoImage
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
 import com.android.joinme.ui.theme.getUserColor
 import com.android.joinme.ui.theme.outlinedTextField
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -112,7 +123,6 @@ object ChatScreenTestTags {
   const val MESSAGE_LIST = "messageList"
   const val MESSAGE_INPUT = "messageInput"
   const val SEND_BUTTON = "sendButton"
-  const val MIC_BUTTON = "micButton"
   const val ATTACHMENT_BUTTON = "attachmentButton"
   const val ATTACHMENT_MENU = "attachmentMenu"
   const val ATTACHMENT_PHOTO = "attachmentPhoto"
@@ -147,6 +157,11 @@ object ChatScreenTestTags {
   const val EDIT_MESSAGE_DIALOG = "editMessageDialog"
   const val EDIT_MESSAGE_INPUT = "editMessageInput"
   const val EDIT_MESSAGE_SAVE_BUTTON = "editMessageSaveButton"
+  const val LOCATION_PREVIEW_DIALOG = "locationPreviewDialog"
+  const val LOCATION_PREVIEW_MAP = "locationPreviewMap"
+  const val LOCATION_PREVIEW_SEND_BUTTON = "locationPreviewSendButton"
+  const val LOCATION_PREVIEW_CANCEL_BUTTON = "locationPreviewCancelButton"
+  const val LOCATION_MESSAGE_PREVIEW = "locationMessagePreview"
 }
 
 /**
@@ -169,6 +184,9 @@ object ChatScreenTestTags {
  *   Defaults to chatDefault if not provided
  * @param onChatColor Optional color for text/icons on chat-colored elements. Defaults to
  *   onChatDefault if not provided. Must provide proper contrast with chatColor
+ * @param totalParticipants Total number of participants in the event/group
+ * @param presenceViewModel Optional presence view model for online tracking
+ * @param onNavigateToMap Callback invoked when user clicks on a location message to view on map
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -182,7 +200,9 @@ fun ChatScreen(
     chatColor: Color? = null,
     onChatColor: Color? = null,
     totalParticipants: Int = 1, // Total number of participants in the event/group
-    presenceViewModel: PresenceViewModel? = null // Optional presence view model for online tracking
+    presenceViewModel: PresenceViewModel? =
+        null, // Optional presence view model for online tracking
+    onNavigateToMap: (Location) -> Unit = {} // Callback when user clicks on location message
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val snackbarHostState = remember { SnackbarHostState() }
@@ -245,7 +265,8 @@ fun ChatScreen(
               chatColor = effectiveChatColor,
               onChatColor = effectiveOnChatColor,
               viewModel = viewModel,
-              totalParticipants = totalParticipants)
+              totalParticipants = totalParticipants,
+              onNavigateToMap = onNavigateToMap)
         }
       }
 }
@@ -349,6 +370,9 @@ private fun ChatTopBar(
  * @param paddingValues Padding from the Scaffold
  * @param chatColor The chat color for message bubbles and send button
  * @param onChatColor The color for text on chat-colored elements (must provide proper contrast)
+ * @param viewModel ChatViewModel for managing chat state
+ * @param totalParticipants Total number of participants in the chat
+ * @param onNavigateToMap Callback to navigate to map screen with a location
  */
 @Composable
 private fun ChatContent(
@@ -361,7 +385,8 @@ private fun ChatContent(
     chatColor: Color,
     onChatColor: Color,
     viewModel: ChatViewModel,
-    totalParticipants: Int
+    totalParticipants: Int,
+    onNavigateToMap: (Location) -> Unit
 ) {
   val uiState by viewModel.uiState.collectAsState()
   var messageText by remember { mutableStateOf("") }
@@ -403,12 +428,14 @@ private fun ChatContent(
               onMessageLongPress = { message ->
                 // Only show context menu if there are items to display
                 val isCurrentUser = message.senderId == currentUserId
+                // Location and Image messages: only delete and see who read
                 val hasMenuItems = message.type == MessageType.TEXT || isCurrentUser
                 if (hasMenuItems) {
                   selectedMessage = message
                 }
               },
               onImageClick = { imageUrl -> fullScreenImageUrl = imageUrl },
+              onLocationClick = { location -> onNavigateToMap(location) },
               modifier = Modifier.weight(1f))
 
           // Message input
@@ -475,6 +502,7 @@ private fun ChatContent(
  * @param listState LazyListState for controlling scroll
  * @param onMessageLongPress Callback when a message is long-pressed
  * @param onImageClick Callback when an image message is clicked
+ * @param onLocationClick Callback when a location message is clicked
  * @param modifier Modifier for the LazyColumn
  */
 @Composable
@@ -486,6 +514,7 @@ private fun MessageList(
     listState: androidx.compose.foundation.lazy.LazyListState,
     onMessageLongPress: (Message) -> Unit,
     onImageClick: (String) -> Unit,
+    onLocationClick: (Location) -> Unit,
     modifier: Modifier = Modifier
 ) {
   LazyColumn(
@@ -517,7 +546,8 @@ private fun MessageList(
                 onBubbleColor = userColors.second,
                 totalUsersInChat = totalParticipants,
                 onLongPress = { onMessageLongPress(message) },
-                onImageClick = onImageClick)
+                onImageClick = onImageClick,
+                onLocationClick = onLocationClick)
           }
         }
       }
@@ -650,6 +680,9 @@ private fun getMessageBubbleShape(isCurrentUser: Boolean): RoundedCornerShape {
  * @param message The message to display
  * @param isCurrentUser Whether the message was sent by the current user
  * @param onBubbleColor Color for text on the bubble
+ * @param bubbleColor Color for the bubble background
+ * @param onImageClick Callback when an image message is clicked
+ * @param onLocationClick Callback when a location message is clicked, with the location
  */
 @Composable
 private fun MessageContent(
@@ -657,7 +690,8 @@ private fun MessageContent(
     isCurrentUser: Boolean,
     onBubbleColor: Color,
     bubbleColor: Color,
-    onImageClick: (String) -> Unit
+    onImageClick: (String) -> Unit,
+    onLocationClick: (Location) -> Unit = {},
 ) {
   if (message.type == MessageType.SYSTEM) {
     Text(
@@ -683,6 +717,16 @@ private fun MessageContent(
             imageUrl = message.content,
             bubbleColor = bubbleColor,
             onClick = { onImageClick(message.content) })
+      }
+      MessageType.LOCATION -> {
+        // Display location message
+        message.location?.let { location ->
+          ChatLocationMessage(
+              location = location,
+              staticMapUrl = message.content,
+              bubbleColor = bubbleColor,
+              onClick = { onLocationClick(location) })
+        }
       }
       else -> {
         // Display text message
@@ -767,6 +811,7 @@ private fun ReadReceiptIcon(message: Message, onBubbleColor: Color, totalUsersIn
  * @param totalUsersInChat Total number of users in the chat (for read receipts)
  * @param onLongPress Callback invoked when the message is long-pressed
  * @param onImageClick Callback invoked when an image message is clicked for full-screen view
+ * @param onLocationClick Callback invoked when a location message is clicked
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -779,7 +824,8 @@ private fun MessageItem(
     onBubbleColor: Color,
     totalUsersInChat: Int = 0,
     onLongPress: () -> Unit = {},
-    onImageClick: (String) -> Unit = {}
+    onImageClick: (String) -> Unit = {},
+    onLocationClick: (Location) -> Unit = {}
 ) {
   val horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
 
@@ -806,7 +852,13 @@ private fun MessageItem(
             color = bubbleColor,
             shadowElevation = Dimens.Elevation.small) {
               Column(modifier = Modifier.padding(Dimens.Padding.small)) {
-                MessageContent(message, isCurrentUser, onBubbleColor, bubbleColor, onImageClick)
+                MessageContent(
+                    message,
+                    isCurrentUser,
+                    onBubbleColor,
+                    bubbleColor,
+                    onImageClick,
+                    onLocationClick)
                 if (message.type != MessageType.SYSTEM) {
                   MessageMetadata(message, isCurrentUser, onBubbleColor, totalUsersInChat)
                 }
@@ -843,6 +895,81 @@ private fun UserAvatar(photoUrl: String?, userName: String, modifier: Modifier =
       shape = CircleShape,
       showLoadingIndicator = false // Don't show spinner for small avatars in chat
       )
+}
+
+/**
+ * Displays a location message in the chat with a Google Maps preview.
+ *
+ * This composable handles:
+ * - Displaying an interactive map preview of the location
+ * - Showing the location name
+ * - Click to view on full map screen
+ *
+ * @param location The Location object containing coordinates and name
+ * @param staticMapUrl Unused (kept for compatibility with backend)
+ * @param bubbleColor The color for the bubble background
+ * @param onClick Callback when the location is clicked
+ */
+@Composable
+private fun ChatLocationMessage(
+    location: Location,
+    staticMapUrl: String,
+    bubbleColor: Color,
+    onClick: () -> Unit = {}
+) {
+  val locationLatLng = LatLng(location.latitude, location.longitude)
+  val cameraPositionState = rememberCameraPositionState {
+    position = CameraPosition.fromLatLngZoom(locationLatLng, 15f)
+  }
+
+  Column(
+      modifier =
+          Modifier.fillMaxWidth()
+              .clickable(onClick = { onClick() })
+              .testTag(ChatScreenTestTags.LOCATION_MESSAGE_PREVIEW)) {
+        // Google Map preview
+        Box(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .height(Dimens.Chat.messageBubbleMaxWidth * 0.55f)
+                    .clip(RoundedCornerShape(Dimens.CornerRadius.small))) {
+              GoogleMap(
+                  modifier = Modifier.fillMaxSize(),
+                  cameraPositionState = cameraPositionState,
+                  properties = MapProperties(),
+                  uiSettings =
+                      MapUiSettings(
+                          zoomControlsEnabled = false,
+                          scrollGesturesEnabled = false,
+                          zoomGesturesEnabled = false,
+                          tiltGesturesEnabled = false,
+                          rotationGesturesEnabled = false,
+                          mapToolbarEnabled = false)) {
+                    Marker(state = MarkerState(position = locationLatLng), title = location.name)
+                  }
+            }
+
+        // Location name
+        Spacer(modifier = Modifier.height(Dimens.Spacing.small))
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.Padding.extraSmall),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start) {
+              Icon(
+                  imageVector = Icons.Default.LocationOn,
+                  contentDescription = null,
+                  modifier = Modifier.size(Dimens.IconSize.small),
+                  tint = MaterialTheme.colorScheme.primary)
+              Spacer(modifier = Modifier.width(Dimens.Spacing.extraSmall))
+              Text(
+                  text = location.name,
+                  style = MaterialTheme.typography.bodySmall,
+                  fontWeight = FontWeight.Medium,
+                  color = MaterialTheme.colorScheme.onSurface)
+            }
+
+        Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
+      }
 }
 
 /**
@@ -1034,14 +1161,16 @@ private fun MessageInput(
  *
  * Displays three options in a horizontal row:
  * - Photo: For taking photos or selecting from gallery (opens dialog to choose)
- * - Location: For sharing location (not yet implemented)
+ * - Location: For sharing current location (shows preview before sending)
  * - Poll: For creating polls (not yet implemented)
  *
  * @param onDismiss Callback when the menu should be dismissed
- * @param viewModel ChatViewModel for handling image uploads
+ * @param viewModel ChatViewModel for handling image uploads and location messages
  * @param currentUserName The display name of the current user for image messages
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    com.google.accompanist.permissions.ExperimentalPermissionsApi::class)
 @Composable
 private fun AttachmentMenu(
     onDismiss: () -> Unit,
@@ -1051,12 +1180,24 @@ private fun AttachmentMenu(
   val sheetState = rememberModalBottomSheetState()
   val context = LocalContext.current
   val notImplementedMsg = stringResource(R.string.not_yet_implemented)
+  val coroutineScope = rememberCoroutineScope()
 
   // State to hold the camera image URI
   var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
 
   // State to show photo source selection dialog
   var showPhotoSourceDialog by remember { mutableStateOf(false) }
+
+  // State for location preview
+  var showLocationPreview by remember { mutableStateOf(false) }
+  var currentUserLocation by remember { mutableStateOf<UserLocation?>(null) }
+
+  // Location permissions
+  val locationPermissionsState =
+      com.google.accompanist.permissions.rememberMultiplePermissionsState(
+          listOf(
+              android.Manifest.permission.ACCESS_FINE_LOCATION,
+              android.Manifest.permission.ACCESS_COARSE_LOCATION))
 
   // Image picker launcher for gallery (untestable - extracted to ChatImageLaunchers.kt)
   val imagePickerLauncher =
@@ -1098,13 +1239,39 @@ private fun AttachmentMenu(
                 modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_PHOTO))
 
             // Location option
-            // TODO (#362): Implement location sharing
             AttachmentOption(
                 icon = Icons.Default.LocationOn,
                 label = stringResource(R.string.location),
                 onClick = {
-                  Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show()
-                  onDismiss()
+                  if (locationPermissionsState.allPermissionsGranted) {
+                    // Get current location
+                    coroutineScope.launch {
+                      try {
+                        val locationService = LocationServiceImpl(context)
+                        val location = locationService.getCurrentLocation()
+                        if (location != null) {
+                          currentUserLocation = location
+                          showLocationPreview = true
+                        } else {
+                          Toast.makeText(
+                                  context,
+                                  context.getString(
+                                      R.string.failed_to_send_location, "Location unavailable"),
+                                  Toast.LENGTH_SHORT)
+                              .show()
+                        }
+                      } catch (e: Exception) {
+                        Toast.makeText(
+                                context,
+                                context.getString(R.string.failed_to_send_location, e.message),
+                                Toast.LENGTH_SHORT)
+                            .show()
+                      }
+                    }
+                  } else {
+                    // Request permissions
+                    locationPermissionsState.launchMultiplePermissionRequest()
+                  }
                 },
                 modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_LOCATION))
 
@@ -1137,6 +1304,109 @@ private fun AttachmentMenu(
           cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
         })
   }
+
+  // Location preview dialog
+  if (showLocationPreview && currentUserLocation != null) {
+    LocationPreviewDialog(
+        userLocation = currentUserLocation!!,
+        onDismiss = {
+          showLocationPreview = false
+          currentUserLocation = null
+        },
+        onSendLocation = {
+          viewModel.sendCurrentLocation(
+              context = context,
+              userLocation = currentUserLocation!!,
+              senderName = currentUserName,
+              onSuccess = {
+                showLocationPreview = false
+                currentUserLocation = null
+                onDismiss()
+              },
+              onError = { error -> Toast.makeText(context, error, Toast.LENGTH_SHORT).show() })
+        },
+        context = context)
+  }
+}
+
+/**
+ * Dialog for previewing and sending current location.
+ *
+ * Displays a Google Maps preview of the user's current location with options to send or cancel.
+ *
+ * @param userLocation The current user location to preview
+ * @param onDismiss Callback when dialog is dismissed
+ * @param onSendLocation Callback when send button is clicked
+ * @param context Android context
+ */
+@Composable
+private fun LocationPreviewDialog(
+    userLocation: UserLocation,
+    onDismiss: () -> Unit,
+    onSendLocation: () -> Unit,
+    context: android.content.Context
+) {
+  val locationLatLng = LatLng(userLocation.latitude, userLocation.longitude)
+  val cameraPositionState = rememberCameraPositionState {
+    position = CameraPosition.fromLatLngZoom(locationLatLng, 15f)
+  }
+
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      modifier = Modifier.testTag(ChatScreenTestTags.LOCATION_PREVIEW_DIALOG),
+      title = { Text(stringResource(R.string.location_preview)) },
+      text = {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+              // Google Map preview
+              Box(
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .height(Dimens.Chat.messageBubbleMaxWidth * 0.67f)
+                          .clip(RoundedCornerShape(Dimens.CornerRadius.medium))
+                          .testTag(ChatScreenTestTags.LOCATION_PREVIEW_MAP)) {
+                    GoogleMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = cameraPositionState,
+                        properties = MapProperties(),
+                        uiSettings =
+                            MapUiSettings(
+                                zoomControlsEnabled = false,
+                                scrollGesturesEnabled = false,
+                                zoomGesturesEnabled = false,
+                                tiltGesturesEnabled = false,
+                                rotationGesturesEnabled = false)) {
+                          Marker(
+                              state = MarkerState(position = locationLatLng),
+                              title = stringResource(R.string.current_location))
+                        }
+                  }
+
+              Spacer(modifier = Modifier.height(Dimens.Spacing.small))
+
+              // Location coordinates
+              Text(
+                  text = "${userLocation.latitude}, ${userLocation.longitude}",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+      },
+      confirmButton = {
+        Button(
+            onClick = onSendLocation,
+            modifier = Modifier.testTag(ChatScreenTestTags.LOCATION_PREVIEW_SEND_BUTTON),
+            colors = MaterialTheme.customColors.buttonColors()) {
+              Text(stringResource(R.string.send_location))
+            }
+      },
+      dismissButton = {
+        TextButton(
+            onClick = onDismiss,
+            modifier = Modifier.testTag(ChatScreenTestTags.LOCATION_PREVIEW_CANCEL_BUTTON)) {
+              Text(stringResource(R.string.cancel))
+            }
+      })
 }
 
 /**

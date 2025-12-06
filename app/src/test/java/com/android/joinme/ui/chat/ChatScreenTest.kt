@@ -337,19 +337,14 @@ class ChatScreenTest {
     // Note: Gallery option does NOT close immediately (waits for image picker result)
     // This is by design to keep the launcher alive
 
-    // Test Location option closes menu
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_LOCATION).performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertDoesNotExist()
-
     // Test Poll option closes menu
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_POLL).performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertDoesNotExist()
+
+    // Note: Location option no longer closes menu immediately - it requests permissions first
   }
 
   @Test
@@ -362,7 +357,7 @@ class ChatScreenTest {
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertIsDisplayed()
 
     // Close by clicking an option (use Location, not Gallery which doesn't close immediately)
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_LOCATION).performClick()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_POLL).performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertDoesNotExist()
 
@@ -820,6 +815,151 @@ class ChatScreenTest {
 
     composeTestRule.onNodeWithText(copyText).assertDoesNotExist()
     composeTestRule.onNodeWithText(deleteText).assertDoesNotExist()
+  }
+
+  // ============================================================================
+  // Location Message Tests
+  // ============================================================================
+
+  @Test
+  fun chatScreen_locationMessage_rendersWithMapPreviewAndSenderName() {
+    val testLocation =
+        com.android.joinme.model.map.Location(
+            latitude = 46.5197, longitude = 6.6323, name = "EPFL Campus")
+    val messages =
+        listOf(
+            // Own location message
+            Message(
+                id = "loc1",
+                conversationId = "chat1",
+                senderId = "user1",
+                senderName = "Alice",
+                content = "static_map_url",
+                timestamp = System.currentTimeMillis() - 1000,
+                type = MessageType.LOCATION,
+                location = testLocation),
+            // Other user's location message (should show sender name)
+            Message(
+                id = "loc2",
+                conversationId = "chat1",
+                senderId = "user2",
+                senderName = "Bob",
+                content = "static_map_url",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.LOCATION,
+                location = testLocation.copy(name = "Meeting Point")))
+    fakeChatRepository.setMessages(messages)
+
+    setupChatScreen(currentUserId = "user1")
+
+    composeTestRule.waitForIdle()
+
+    // Verify both message containers exist
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("loc1")).assertExists()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("loc2")).assertExists()
+
+    // Verify location names are displayed
+    composeTestRule.onNodeWithText("EPFL Campus", useUnmergedTree = true).assertExists()
+    composeTestRule.onNodeWithText("Meeting Point", useUnmergedTree = true).assertExists()
+
+    // Verify sender name shown for other user (Bob), but not for own message
+    composeTestRule.onNodeWithText("Bob", useUnmergedTree = true).assertExists()
+  }
+
+  @Test
+  fun chatScreen_locationMessage_displaysCorrectlyForOwnAndOthersMessages() {
+    // Test that location messages render properly for both current user and others
+    // Note: Context menu interactions with location messages cannot be fully tested
+    // due to Maps component interfering with touch gestures in test environment
+    val testLocation =
+        com.android.joinme.model.map.Location(
+            latitude = 46.5197, longitude = 6.6323, name = "Test Location")
+    val messages =
+        listOf(
+            Message(
+                id = "loc1",
+                conversationId = "chat1",
+                senderId = "user1",
+                senderName = "Alice",
+                content = "static_map_url",
+                timestamp = System.currentTimeMillis() - 1000,
+                type = MessageType.LOCATION,
+                location = testLocation,
+                readBy = listOf("user1")),
+            Message(
+                id = "loc2",
+                conversationId = "chat1",
+                senderId = "user2",
+                senderName = "Bob",
+                content = "static_map_url",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.LOCATION,
+                location = testLocation.copy(name = "Bob's Location"),
+                readBy = listOf("user1", "user2")))
+    fakeChatRepository.setMessages(messages)
+
+    setupChatScreen(currentUserId = "user1")
+
+    composeTestRule.waitForIdle()
+
+    // Verify both location messages exist with their bubbles
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("loc1")).assertExists()
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.getTestTagForMessageBubble("loc1"))
+        .assertExists()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("loc2")).assertExists()
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.getTestTagForMessageBubble("loc2"))
+        .assertExists()
+
+    // Verify location names are displayed
+    composeTestRule.onNodeWithText("Test Location", useUnmergedTree = true).assertExists()
+    composeTestRule.onNodeWithText("Bob's Location", useUnmergedTree = true).assertExists()
+  }
+
+  @Test
+  fun chatScreen_mixedMessages_locationTextAndImageRenderCorrectly() {
+    // NOTE: Image messages must come FIRST in tests due to Coil/LazyColumn interaction
+    val testLocation =
+        com.android.joinme.model.map.Location(
+            latitude = 46.5197, longitude = 6.6323, name = "Shared Location")
+    val messages =
+        listOf(
+            Message(
+                id = "img1",
+                conversationId = "chat1",
+                senderId = "user2",
+                senderName = "Bob",
+                content = "https://example.com/photo.jpg",
+                timestamp = System.currentTimeMillis() - 3000,
+                type = MessageType.IMAGE),
+            Message(
+                id = "loc1",
+                conversationId = "chat1",
+                senderId = "user1",
+                senderName = "Alice",
+                content = "static_map_url",
+                timestamp = System.currentTimeMillis() - 2000,
+                type = MessageType.LOCATION,
+                location = testLocation),
+            createMessage(id = "txt1", content = "Check out this place!", timestampOffset = 1000),
+            createMessage(id = "txt2", content = "Looks great!", timestampOffset = 0))
+    fakeChatRepository.setMessages(messages)
+
+    setupChatScreen()
+
+    composeTestRule.waitForIdle()
+
+    // Verify all message types exist
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("img1")).assertExists()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("loc1")).assertExists()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("txt1")).assertExists()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("txt2")).assertExists()
+
+    // Verify location preview and text content
+    composeTestRule.onNodeWithText("Shared Location", useUnmergedTree = true).assertExists()
+    composeTestRule.onNodeWithText("Check out this place!", useUnmergedTree = true).assertExists()
+    composeTestRule.onNodeWithText("Looks great!", useUnmergedTree = true).assertExists()
   }
 
   // ============================================================================

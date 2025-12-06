@@ -502,12 +502,18 @@ fun JoinMe(
     // Map
     // ============================================================================
     navigation(
-        startDestination = Screen.Map.route,
-        route = Screen.Map.name,
+        startDestination = Screen.Map.defaultRoute,
+        route = Screen.Map().name,
     ) {
       composable(Screen.Map.route) { backStackEntry ->
         val mapViewModel: MapViewModel = viewModel(backStackEntry)
-        MapScreen(viewModel = mapViewModel, navigationActions = navigationActions)
+        val lat = backStackEntry.arguments?.getString("lat")?.toDoubleOrNull()
+        val lon = backStackEntry.arguments?.getString("lon")?.toDoubleOrNull()
+        MapScreen(
+            viewModel = mapViewModel,
+            navigationActions = navigationActions,
+            initialLatitude = lat,
+            initialLongitude = lon)
       }
     }
 
@@ -719,7 +725,13 @@ fun JoinMe(
               currentUserName = currentUserName,
               viewModel = chatViewModel,
               totalParticipants = totalParticipants,
-              onLeaveClick = { navigationActions.goBack() })
+              onLeaveClick = { navigationActions.goBack() },
+              onNavigateToMap = { location ->
+                // Navigate to map screen centered on the location
+                navigationActions.navigateTo(Screen.Map(location.latitude, location.longitude))
+                Toast.makeText(context, "Viewing location: ${location.name}", Toast.LENGTH_SHORT)
+                    .show()
+              })
         } else {
           Toast.makeText(context, "Chat ID or title is null", Toast.LENGTH_SHORT).show()
         }

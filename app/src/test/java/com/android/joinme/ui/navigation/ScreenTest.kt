@@ -14,7 +14,7 @@ class ScreenTest {
     assertTrue(Screen.Auth.route.isNotEmpty())
     assertTrue(Screen.Overview.route.isNotEmpty())
     assertTrue(Screen.Search.route.isNotEmpty())
-    assertTrue(Screen.Map.route.isNotEmpty())
+    assertTrue(Screen.Map().route.isNotEmpty())
     assertTrue(Screen.Profile.route.isNotEmpty())
     assertTrue(Screen.CreateEvent.route.isNotEmpty())
     assertTrue(Screen.CreateSerie.route.isNotEmpty())
@@ -30,7 +30,7 @@ class ScreenTest {
     assertTrue(Screen.Auth.name.isNotEmpty())
     assertTrue(Screen.Overview.name.isNotEmpty())
     assertTrue(Screen.Search.name.isNotEmpty())
-    assertTrue(Screen.Map.name.isNotEmpty())
+    assertTrue(Screen.Map().name.isNotEmpty())
     assertTrue(Screen.Profile.name.isNotEmpty())
     assertTrue(Screen.CreateEvent.name.isNotEmpty())
     assertTrue(Screen.CreateSerie.name.isNotEmpty())
@@ -45,7 +45,7 @@ class ScreenTest {
     // Verifies that top-level destinations (bottom nav items) are properly flagged
     assertTrue(Screen.Overview.isTopLevelDestination)
     assertTrue(Screen.Search.isTopLevelDestination)
-    assertTrue(Screen.Map.isTopLevelDestination)
+    assertTrue(Screen.Map().isTopLevelDestination)
     assertTrue(Screen.Profile.isTopLevelDestination)
   }
 
@@ -124,7 +124,7 @@ class ScreenTest {
     assertEquals("auth", Screen.Auth.route)
     assertEquals("overview", Screen.Overview.route)
     assertEquals("search", Screen.Search.route)
-    assertEquals("map", Screen.Map.route)
+    assertEquals("map", Screen.Map().route)
     assertEquals("profile", Screen.Profile.route)
     assertEquals("create_event", Screen.CreateEvent.route)
     assertEquals("create_serie", Screen.CreateSerie.route)
@@ -139,7 +139,7 @@ class ScreenTest {
     // Verifies specific name values for key screens
     assertEquals("Overview", Screen.Overview.name)
     assertEquals("Search", Screen.Search.name)
-    assertEquals("Map", Screen.Map.name)
+    assertEquals("Map", Screen.Map().name)
     assertEquals("Profile", Screen.Profile.name)
   }
 
@@ -151,7 +151,7 @@ class ScreenTest {
             Screen.Auth,
             Screen.Overview,
             Screen.Search,
-            Screen.Map,
+            Screen.Map(),
             Screen.Profile,
             Screen.CreateEvent,
             Screen.CreateSerie,
@@ -162,6 +162,44 @@ class ScreenTest {
 
     val topLevelCount = allScreens.count { it.isTopLevelDestination }
     assertEquals(4, topLevelCount)
+  }
+
+  // ========== Screen.Map with Location Parameters Tests ==========
+
+  @Test
+  fun map_behavesCorrectlyWithAndWithoutParameters() {
+    // Test without parameters (default route for bottom nav)
+    val mapDefault = Screen.Map()
+    assertEquals("map", mapDefault.route)
+    assertEquals("Map", mapDefault.name)
+    assertTrue(mapDefault.isTopLevelDestination)
+
+    // Test with parameters (for location sharing navigation)
+    val mapWithLocation = Screen.Map(latitude = 46.5197, longitude = 6.6323)
+    assertEquals("map?lat=46.5197&lon=6.6323", mapWithLocation.route)
+    assertEquals("Map", mapWithLocation.name)
+    assertTrue(mapWithLocation.isTopLevelDestination)
+
+    // Test companion route pattern and default route
+    assertEquals("map?lat={lat}&lon={lon}", Screen.Map.route)
+    assertEquals("map", Screen.Map.defaultRoute)
+  }
+
+  @Test
+  fun map_handlesNullAndEdgeCaseCoordinates() {
+    // Partial null should use default route
+    assertEquals("map", Screen.Map(latitude = null, longitude = 6.6323).route)
+    assertEquals("map", Screen.Map(latitude = 46.5197, longitude = null).route)
+    assertEquals("map", Screen.Map(latitude = null, longitude = null).route)
+
+    // Negative coordinates (Southern/Western hemispheres)
+    assertEquals(
+        "map?lat=-33.8688&lon=-151.2093",
+        Screen.Map(latitude = -33.8688, longitude = -151.2093).route)
+
+    // Zero coordinates and extreme values
+    assertEquals("map?lat=0.0&lon=0.0", Screen.Map(latitude = 0.0, longitude = 0.0).route)
+    assertEquals("map?lat=90.0&lon=180.0", Screen.Map(latitude = 90.0, longitude = 180.0).route)
   }
 
   // ========== ShowEventScreen with SerieId Tests ==========

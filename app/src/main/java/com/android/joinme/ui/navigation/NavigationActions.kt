@@ -129,8 +129,26 @@ sealed class Screen(
   // Map
   // ============================================================================
 
-  /** Map screen showing events geographically (Top-level destination) */
-  object Map : Screen(route = "map", name = "Map", isTopLevelDestination = true)
+  /**
+   * Map screen showing events geographically (Top-level destination)
+   *
+   * @param latitude Optional latitude to center the map on
+   * @param longitude Optional longitude to center the map on
+   */
+  data class Map(val latitude: Double? = null, val longitude: Double? = null) :
+      Screen(
+          route =
+              if (latitude != null && longitude != null) "map?lat=$latitude&lon=$longitude"
+              else "map",
+          name = "Map",
+          isTopLevelDestination = true) {
+    companion object {
+      // Route pattern for navigation graph (with parameter placeholders)
+      const val route = "map?lat={lat}&lon={lon}"
+      // Default route for bottom navigation (without parameters)
+      const val defaultRoute = "map"
+    }
+  }
 
   // ============================================================================
   // Calendar

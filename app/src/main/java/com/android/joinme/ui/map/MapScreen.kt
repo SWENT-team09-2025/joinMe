@@ -290,13 +290,21 @@ private fun MapMarkers(
  * - Requesting and managing location permissions.
  * - Displaying a Google Map centered on the user's location (if available).
  * - Rendering a bottom navigation menu and a filter button overlay.
+ * - Optionally centering on a specific location (e.g., from a chat message).
  *
  * @param viewModel The [MapViewModel] managing location and UI state.
  * @param navigationActions Optional navigation actions for switching tabs or screens.
+ * @param initialLatitude Optional latitude to center the map on initially.
+ * @param initialLongitude Optional longitude to center the map on initially.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
-fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: NavigationActions? = null) {
+fun MapScreen(
+    viewModel: MapViewModel = viewModel(),
+    navigationActions: NavigationActions? = null,
+    initialLatitude: Double? = null,
+    initialLongitude: Double? = null
+) {
   val context = LocalContext.current
 
   // --- Collect the current UI state from the ViewModel ---
@@ -339,6 +347,24 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
 
   // --- Mark map as initialized once the camera position state is ready ---
   LaunchedEffect(cameraPositionState) { isMapInitialized = true }
+
+  // --- Center map on specific location if provided (e.g., from chat location message) ---
+  LaunchedEffect(initialLatitude, initialLongitude) {
+    if (initialLatitude != null && initialLongitude != null) {
+      try {
+        isProgrammaticMove = true
+        viewModel.disableFollowingUser() // Don't follow user when viewing specific location
+        cameraPositionState.animate(
+            update =
+                CameraUpdateFactory.newLatLngZoom(LatLng(initialLatitude, initialLongitude), 16f),
+            durationMs = 1000)
+      } catch (e: Exception) {
+        // Animation was interrupted or failed
+      } finally {
+        isProgrammaticMove = false
+      }
+    }
+  }
 
   // --- Center the map when the user location changes (only if following is enabled) ---
   MapCameraEffects(

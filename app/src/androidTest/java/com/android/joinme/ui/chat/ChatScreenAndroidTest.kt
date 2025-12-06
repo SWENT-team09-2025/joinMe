@@ -467,4 +467,178 @@ class ChatScreenAndroidTest {
     composeTestRule.onNodeWithContentDescription("Close").assertExists()
     composeTestRule.waitForIdle()
   }
+
+  /**
+   * Tests that LOCATION type messages render correctly with Google Maps and that mixed message
+   * types (text, image, location) coexist properly in real Android environment. Covers the
+   * when(message.type) branch for MessageType.LOCATION and verifies all complex components (Coil
+   * for images, Maps for locations) work together.
+   */
+  @Test
+  fun chatScreen_locationAndMixedMessages_renderCorrectlyWithMaps() = runTest {
+    val repo = FakeChatRepository(uploadShouldSucceed = true)
+    val profileRepo = FakeProfileRepository()
+    val viewModel = ChatViewModel(repo, profileRepo)
+
+    val testLocation =
+        com.android.joinme.model.map.Location(
+            latitude = 46.5197, longitude = 6.6323, name = "EPFL Campus")
+
+    val messages =
+        listOf(
+            // Image message
+            Message(
+                id = "img1",
+                conversationId = testChatId,
+                senderId = "user2",
+                senderName = "Bob",
+                content = "https://picsum.photos/200/200",
+                timestamp = System.currentTimeMillis() - 3000,
+                type = MessageType.IMAGE),
+            // Location message from current user
+            Message(
+                id = "loc1",
+                conversationId = testChatId,
+                senderId = testUserId,
+                senderName = "Alice",
+                content = "static_map_url",
+                timestamp = System.currentTimeMillis() - 2000,
+                type = MessageType.LOCATION,
+                location = testLocation),
+            // Location message from other user
+            Message(
+                id = "loc2",
+                conversationId = testChatId,
+                senderId = "user2",
+                senderName = "Bob",
+                content = "static_map_url",
+                timestamp = System.currentTimeMillis() - 1500,
+                type = MessageType.LOCATION,
+                location = testLocation.copy(name = "Meeting Point")),
+            // Text messages
+            Message(
+                id = "txt1",
+                conversationId = testChatId,
+                senderId = testUserId,
+                senderName = "Alice",
+                content = "Check out this place!",
+                timestamp = System.currentTimeMillis() - 1000,
+                type = MessageType.TEXT),
+            Message(
+                id = "txt2",
+                conversationId = testChatId,
+                senderId = "user2",
+                senderName = "Bob",
+                content = "Looks great!",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.TEXT))
+
+    repo.setMessages(messages)
+
+    composeTestRule.setContent {
+      ChatScreen(
+          chatId = testChatId,
+          chatTitle = "Test Chat",
+          currentUserId = testUserId,
+          currentUserName = "Alice",
+          viewModel = viewModel)
+    }
+
+    composeTestRule.waitForIdle()
+    Thread.sleep(2000) // Wait for Coil and Maps to initialize
+
+    // Verify all message containers exist
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("img1")).assertExists()
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("loc1"))
+        .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("loc2"))
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("txt1")).assertExists()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("txt2")).assertExists()
+
+    // Verify location names are displayed
+    composeTestRule.onNodeWithText("EPFL Campus", useUnmergedTree = true).assertExists()
+    composeTestRule.onNodeWithText("Meeting Point", useUnmergedTree = true).assertExists()
+
+    // Verify text content
+    composeTestRule.onNodeWithText("Check out this place!", useUnmergedTree = true).assertExists()
+    composeTestRule.onNodeWithText("Looks great!", useUnmergedTree = true).assertExists()
+
+    // Verify location previews exist (there are 2 location messages)
+    composeTestRule
+        .onAllNodesWithTag(ChatScreenTestTags.LOCATION_MESSAGE_PREVIEW)
+        .assertCountEquals(2)
+
+    // Note: Don't assert on "Bob" text as it appears in multiple messages (image, location, text)
+  }
+
+  /**
+   * Tests that clicking on a location message triggers the navigation callback. This test covers
+   * the onClick behavior of location messages that couldn't be reliably tested in Robolectric.
+   */
+  @Test
+  fun chatScreen_locationMessage_clickTriggersNavigation() = runTest {
+    val repo = FakeChatRepository(uploadShouldSucceed = true)
+    val profileRepo = FakeProfileRepository()
+    val viewModel = ChatViewModel(repo, profileRepo)
+
+    var navigationCallbackInvoked = false
+    var navigatedLocation: com.android.joinme.model.map.Location? = null
+
+    val testLocation =
+        com.android.joinme.model.map.Location(
+            latitude = 46.5197, longitude = 6.6323, name = "Test Location")
+
+    val messages =
+        listOf(
+            Message(
+                id = "loc1",
+                conversationId = testChatId,
+                senderId = testUserId,
+                senderName = "Alice",
+                content = "static_map_url",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.LOCATION,
+                location = testLocation))
+
+    repo.setMessages(messages)
+
+    composeTestRule.setContent {
+      ChatScreen(
+          chatId = testChatId,
+          chatTitle = "Test Chat",
+          currentUserId = testUserId,
+          currentUserName = "Alice",
+          viewModel = viewModel,
+          onNavigateToMap = { location ->
+            navigationCallbackInvoked = true
+            navigatedLocation = location
+          })
+    }
+
+    composeTestRule.waitForIdle()
+    Thread.sleep(3000) // Wait longer for Maps to fully initialize and become interactive
+
+    // Verify exactly one location preview exists (only one location message in this test)
+    composeTestRule
+        .onAllNodesWithTag(ChatScreenTestTags.LOCATION_MESSAGE_PREVIEW)
+        .assertCountEquals(1)
+
+    // Verify location name is visible
+    composeTestRule.onNodeWithText("Test Location", useUnmergedTree = true).assertExists()
+
+    // Try clicking on the location name text (more reliable than clicking on Maps)
+    composeTestRule.onNodeWithText("Test Location", useUnmergedTree = true).performClick()
+
+    composeTestRule.waitForIdle()
+    Thread.sleep(1000) // Give more time for callback to execute
+
+    // Verify callback was invoked with correct location
+    assert(navigationCallbackInvoked) { "Navigation callback was not invoked" }
+    assert(navigatedLocation == testLocation) {
+      "Expected location $testLocation but got $navigatedLocation"
+    }
+  }
 }
