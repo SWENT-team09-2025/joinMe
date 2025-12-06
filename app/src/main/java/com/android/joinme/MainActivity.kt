@@ -261,52 +261,52 @@ fun JoinMe(
 
   // Navigate to event or event chat if opened from notification
   LaunchedEffect(initialEventId, notificationType, currentUserId) {
-    if (initialEventId != null && currentUserId.isNotEmpty()) {
-      // Check if this is an event chat notification
-      if (notificationType == eventChatMessageType && conversationId != null && chatName != null) {
-        // Navigate directly to the event chat
-        coroutineScope.launch {
-          try {
-            val eventRepository = EventsRepositoryProvider.getRepository(isOnline = true, context)
-            val event = eventRepository.getEvent(initialEventId)
-            navigationActions.navigateTo(
-                Screen.Chat(
-                    chatId = conversationId,
-                    chatTitle = chatName,
-                    totalParticipants = event.participants.size))
-          } catch (e: Exception) {
-            // If we can't get event details, navigate with defaults
-            navigationActions.navigateTo(
-                Screen.Chat(chatId = conversationId, chatTitle = chatName, totalParticipants = 1))
-          }
+    if (notificationType == eventChatMessageType &&
+        conversationId != null &&
+        chatName != null &&
+        initialEventId != null &&
+        currentUserId.isNotEmpty()) {
+      // Navigate directly to the event chat
+      coroutineScope.launch {
+        try {
+          val eventRepository = EventsRepositoryProvider.getRepository(isOnline = true, context)
+          val event = eventRepository.getEvent(initialEventId)
+          navigationActions.navigateTo(
+              Screen.Chat(
+                  chatId = conversationId,
+                  chatTitle = chatName,
+                  totalParticipants = event.participants.size))
+        } catch (e: Exception) {
+          // If we can't get event details, navigate with defaults
+          navigationActions.navigateTo(
+              Screen.Chat(chatId = conversationId, chatTitle = chatName, totalParticipants = 1))
         }
       }
     }
   }
 
-  // Join group if opened from invitation link or navigate to group chat from notification
+  //  navigate to group chat from notification
   LaunchedEffect(initialGroupId, notificationType, currentUserId) {
-    if (initialGroupId != null) {
-      // Check if this is a group chat notification
-      if (notificationType == groupChatMessageType &&
-          conversationId != null &&
-          chatName != null &&
-          currentUserId.isNotEmpty()) {
-        // Navigate directly to the group chat using notification data
-        coroutineScope.launch {
-          try {
-            val groupRepository = GroupRepositoryProvider.repository
-            val group = groupRepository.getGroup(initialGroupId)
-            navigationActions.navigateTo(
-                Screen.Chat(
-                    chatId = conversationId,
-                    chatTitle = chatName,
-                    totalParticipants = group.memberIds.size))
-          } catch (e: Exception) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-              Toast.makeText(context, "Failed to access group: ${e.message}", Toast.LENGTH_LONG)
-                  .show()
-            }
+    // Check if this is a group chat notification
+    if (notificationType == groupChatMessageType &&
+        conversationId != null &&
+        chatName != null &&
+        currentUserId.isNotEmpty() &&
+        initialGroupId != null) {
+      // Navigate directly to the group chat using notification data
+      coroutineScope.launch {
+        try {
+          val groupRepository = GroupRepositoryProvider.repository
+          val group = groupRepository.getGroup(initialGroupId)
+          navigationActions.navigateTo(
+              Screen.Chat(
+                  chatId = conversationId,
+                  chatTitle = chatName,
+                  totalParticipants = group.memberIds.size))
+        } catch (e: Exception) {
+          kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+            Toast.makeText(context, "Failed to access group: ${e.message}", Toast.LENGTH_LONG)
+                .show()
           }
         }
       }
