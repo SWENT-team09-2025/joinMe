@@ -128,6 +128,68 @@ internal fun createMarkerForColor(color: Color): BitmapDescriptor {
   }
 }
 
+/** Checks if the camera should follow the user location. */
+private fun shouldFollowUserLocation(
+    currentLat: Double?,
+    currentLng: Double?,
+    isFollowingUser: Boolean
+): Boolean = currentLat != null && currentLng != null && isFollowingUser
+
+/** Checks if user interaction should disable following mode. */
+private fun shouldDisableFollowing(
+    isMoving: Boolean,
+    isProgrammaticMove: Boolean,
+    isFollowingUser: Boolean,
+    isMapInitialized: Boolean
+): Boolean = isMoving && !isProgrammaticMove && isFollowingUser && isMapInitialized
+
+/** Handles the camera animation to follow user location. */
+private suspend fun animateCameraToLocation(
+    cameraPositionState: com.google.maps.android.compose.CameraPositionState,
+    latitude: Double,
+    longitude: Double,
+    onMoveStart: () -> Unit,
+    onMoveEnd: () -> Unit
+) {
+  try {
+    onMoveStart()
+    cameraPositionState.animate(
+        update = CameraUpdateFactory.newLatLngZoom(LatLng(latitude, longitude), 15f),
+        durationMs = 1000)
+  } catch (e: Exception) {
+    // Animation was interrupted or failed
+  } finally {
+    onMoveEnd()
+  }
+}
+
+/** Handles initial following user setup based on marker click state. */
+private fun handleInitialFollowing(viewModel: MapViewModel, isReturningFromMarkerClick: Boolean) {
+  if (isReturningFromMarkerClick) {
+    viewModel.clearMarkerClickFlag()
+  } else {
+    viewModel.enableFollowingUser()
+  }
+}
+
+/** Requests location permissions if not already granted. */
+private fun requestPermissionsIfNeeded(allPermissionsGranted: Boolean, launchRequest: () -> Unit) {
+  if (!allPermissionsGranted) {
+    launchRequest()
+  }
+}
+
+/** Initializes location service when permissions are granted. */
+private fun initLocationServiceIfGranted(
+    permissionsGranted: Boolean,
+    viewModel: MapViewModel,
+    context: android.content.Context
+) {
+  if (permissionsGranted) {
+    viewModel.initLocationService(LocationServiceImpl(context))
+  }
+}
+
 /**
  * Displays the main map screen of the application.
  *
@@ -152,13 +214,7 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
       }
 
   // --- Enable following user on screen entry (unless returning from marker double click) ---
-  LaunchedEffect(Unit) {
-    if (uiState.isReturningFromMarkerClick) {
-      viewModel.clearMarkerClickFlag()
-    } else {
-      viewModel.enableFollowingUser()
-    }
-  }
+  LaunchedEffect(Unit) { handleInitialFollowing(viewModel, uiState.isReturningFromMarkerClick) }
 
   // --- Permissions management---
   val locationPermissionsState =
@@ -169,7 +225,7 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
           ))
 
   LaunchedEffect(Unit) {
-    if (!locationPermissionsState.allPermissionsGranted) {
+    requestPermissionsIfNeeded(locationPermissionsState.allPermissionsGranted) {
       locationPermissionsState.launchMultiplePermissionRequest()
     }
     viewModel.fetchLocalizableEvents()
@@ -177,10 +233,7 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
 
   // --- Reinitialize location service when permissions are granted ---
   LaunchedEffect(locationPermissionsState.allPermissionsGranted) {
-    if (locationPermissionsState.allPermissionsGranted) {
-      // Reinitialize service to ensure it starts with proper permissions
-      viewModel.initLocationService(LocationServiceImpl(context))
-    }
+    initLocationServiceIfGranted(locationPermissionsState.allPermissionsGranted, viewModel, context)
   }
 
   // --- Initialize the map camera position ---
@@ -201,17 +254,13 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
 
   // --- Center the map when the user location changes (only if following is enabled) ---
   LaunchedEffect(currentLat, currentLng, isFollowingUser) {
-    if (currentLat != null && currentLng != null && isFollowingUser) {
-      try {
-        isProgrammaticMove = true
-        cameraPositionState.animate(
-            update = CameraUpdateFactory.newLatLngZoom(LatLng(currentLat, currentLng), 15f),
-            durationMs = 1000)
-      } catch (e: Exception) {
-        // Animation was interrupted or failed
-      } finally {
-        isProgrammaticMove = false
-      }
+    if (shouldFollowUserLocation(currentLat, currentLng, isFollowingUser)) {
+      animateCameraToLocation(
+          cameraPositionState = cameraPositionState,
+          latitude = currentLat!!,
+          longitude = currentLng!!,
+          onMoveStart = { isProgrammaticMove = true },
+          onMoveEnd = { isProgrammaticMove = false })
     }
   }
 
@@ -219,7 +268,8 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
   LaunchedEffect(cameraPositionState) {
     snapshotFlow { cameraPositionState.isMoving }
         .collect { isMoving ->
-          if (isMoving && !isProgrammaticMove && isFollowingUser && isMapInitialized) {
+          if (shouldDisableFollowing(
+              isMoving, isProgrammaticMove, isFollowingUser, isMapInitialized)) {
             viewModel.disableFollowingUser()
           }
         }
