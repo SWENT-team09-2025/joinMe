@@ -30,9 +30,10 @@ class JoinMeNavigationTest {
 
   @Test
   fun screen_Map_hasCorrectRoute() {
-    assertEquals("map", Screen.Map.route)
-    assertEquals("Map", Screen.Map.name)
-    assertTrue(Screen.Map.isTopLevelDestination)
+    val map = Screen.Map()
+    assertEquals("map", map.route)
+    assertEquals("Map", map.name)
+    assertTrue(map.isTopLevelDestination)
   }
 
   @Test
@@ -159,7 +160,7 @@ class JoinMeNavigationTest {
 
   @Test
   fun topLevelDestinations_areCorrectlyFlagged() {
-    val topLevelScreens = listOf(Screen.Overview, Screen.Search, Screen.Map, Screen.Profile)
+    val topLevelScreens = listOf(Screen.Overview, Screen.Search, Screen.Map(), Screen.Profile)
 
     topLevelScreens.forEach { screen ->
       assertTrue("${screen.name} should be a top-level destination", screen.isTopLevelDestination)
@@ -200,7 +201,7 @@ class JoinMeNavigationTest {
             Screen.Auth.route,
             Screen.Overview.route,
             Screen.Search.route,
-            Screen.Map.route,
+            Screen.Map().route,
             Screen.Profile.route,
             Screen.CreateEvent.route,
             Screen.CreateSerie.route,
@@ -229,7 +230,7 @@ class JoinMeNavigationTest {
             Screen.Auth,
             Screen.Overview,
             Screen.Search,
-            Screen.Map,
+            Screen.Map(),
             Screen.Profile,
             Screen.CreateEvent,
             Screen.History,
@@ -263,7 +264,7 @@ class JoinMeNavigationTest {
             Screen.Auth,
             Screen.Overview,
             Screen.Search,
-            Screen.Map,
+            Screen.Map(),
             Screen.Profile,
             Screen.CreateEvent,
             Screen.CreateSerie,

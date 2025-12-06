@@ -3,7 +3,6 @@ package com.android.joinme.ui.chat
 // Implemented with help of Claude AI, essentially rewritten for clarity, structure and
 // documentation
 import android.content.Context
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -68,9 +67,6 @@ class ChatViewModel(
   companion object {
     private const val TAG = "ChatViewModel"
     private const val IMAGE_UPLOAD_TIMEOUT_MS = 30000L // 30 seconds
-    private const val STATIC_MAPS_BASE_URL = "https://maps.googleapis.com/maps/api/staticmap"
-    private const val STATIC_MAPS_ZOOM = 15
-    private const val STATIC_MAPS_SIZE = "300x200"
   }
 
   /**
@@ -369,57 +365,6 @@ class ChatViewModel(
   }
 
   /**
-   * Retrieves the Google Maps API key from AndroidManifest metadata.
-   *
-   * @param context Android context for accessing package manager.
-   * @return The Maps API key, or empty string if not found.
-   */
-  private fun getMapsApiKey(context: Context): String {
-    return try {
-      val appInfo =
-          context.packageManager.getApplicationInfo(
-              context.packageName, PackageManager.GET_META_DATA)
-      appInfo.metaData?.getString("com.google.android.geo.API_KEY") ?: ""
-    } catch (e: Exception) {
-      Log.e(TAG, "Failed to retrieve Maps API key from manifest", e)
-      ""
-    }
-  }
-
-  /**
-   * Adds the API key to a Static Maps URL for display purposes.
-   *
-   * This should be called in the UI layer when displaying location messages. The stored URLs don't
-   * contain the API key for security reasons.
-   *
-   * @param context Android context for retrieving the API key.
-   * @param urlWithoutKey The base Static Maps URL without the API key parameter.
-   * @return The complete URL with API key appended.
-   */
-  fun addApiKeyToMapUrl(context: Context, urlWithoutKey: String): String {
-    val apiKey = getMapsApiKey(context)
-    return "$urlWithoutKey&key=$apiKey"
-  }
-
-  /**
-   * Generates a Google Static Maps URL for the given location WITHOUT the API key.
-   *
-   * The API key should be added only when displaying the image in the UI layer, not when storing
-   * the URL in the database (to avoid exposing the key).
-   *
-   * @param latitude The latitude of the location.
-   * @param longitude The longitude of the location.
-   * @return The Static Maps URL string without the API key.
-   */
-  private fun generateStaticMapUrlWithoutKey(latitude: Double, longitude: Double): String {
-    return "$STATIC_MAPS_BASE_URL?" +
-        "center=$latitude,$longitude&" +
-        "zoom=$STATIC_MAPS_ZOOM&" +
-        "size=$STATIC_MAPS_SIZE&" +
-        "markers=color:red%7C$latitude,$longitude"
-  }
-
-  /**
    * Validates that latitude and longitude coordinates are within valid ranges.
    *
    * @param latitude The latitude coordinate to validate (-90 to 90).
@@ -439,9 +384,8 @@ class ChatViewModel(
    * This method creates a LOCATION type message with:
    * 1. The user's GPS coordinates (latitude, longitude)
    * 2. A location name (user-provided or default from string resources)
-   * 3. A Static Maps preview URL in the content field
    *
-   * The Google Maps API key is securely retrieved from BuildConfig.
+   * The location is displayed using Google Maps composable in the chat.
    *
    * @param context Android context for accessing string resources.
    * @param userLocation The current GPS location of the user.
@@ -474,10 +418,6 @@ class ChatViewModel(
         // Use provided location name or default from string resources
         val finalLocationName = locationName ?: context.getString(R.string.current_location)
 
-        // Generate Static Maps URL for preview (without API key to avoid leaking in database)
-        val staticMapUrl =
-            generateStaticMapUrlWithoutKey(userLocation.latitude, userLocation.longitude)
-
         // Create Location object
         val location =
             Location(
@@ -486,13 +426,14 @@ class ChatViewModel(
                 name = finalLocationName)
 
         // Create and send the location message
+        // Note: content field contains coordinates as text for compatibility
         val message =
             Message(
                 id = messageId,
                 conversationId = currentConversationId,
                 senderId = _uiState.value.currentUserId,
                 senderName = senderName,
-                content = staticMapUrl, // Static Maps URL for preview
+                content = "${userLocation.latitude}, ${userLocation.longitude}",
                 timestamp = System.currentTimeMillis(),
                 type = MessageType.LOCATION,
                 location = location)
