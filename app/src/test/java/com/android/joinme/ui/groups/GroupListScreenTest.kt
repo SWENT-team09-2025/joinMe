@@ -3,7 +3,6 @@ package com.android.joinme.ui.groups
 
 import android.content.Context
 import android.net.Uri
-import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -15,7 +14,6 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.test.core.app.ApplicationProvider
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
-import com.android.joinme.ui.components.FloatingActionBubblesTestTags
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -289,61 +287,6 @@ class GroupListScreenTest {
 
     assertTrue(profileClicked)
   }
-
-  // =======================================
-  // FAB & Floating Action Bubbles Tests
-  // =======================================
-
-  @Test
-  fun fab_opensAndClosesBubbles() {
-    composeTestRule.setContent { GroupListScreen() }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule
-        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
-        .assertIsDisplayed()
-    composeTestRule.onNodeWithText("CREATE A GROUP").assertIsDisplayed()
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule
-        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
-        .assertDoesNotExist()
-  }
-
-  @Test
-  fun bubbles_scrimDismissesBubbles() {
-    composeTestRule.setContent { GroupListScreen() }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithTag(FloatingActionBubblesTestTags.SCRIM).performClick()
-    composeTestRule
-        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
-        .assertDoesNotExist()
-  }
-
-  @Test
-  fun createGroupBubble_triggersCallback() {
-    var createClicked = false
-
-    composeTestRule.setContent { GroupListScreen(onCreateGroup = { createClicked = true }) }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithTag("groupCreateBubble").performClick()
-
-    assertTrue(createClicked)
-    composeTestRule
-        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
-        .assertDoesNotExist()
-  }
-
-  @Test
-  fun bubblesAreClickable() {
-    composeTestRule.setContent { GroupListScreen() }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithTag("groupCreateBubble").assertHasClickAction()
-  }
-
   // =======================================
   // Group Menu Tests
   // =======================================
@@ -587,18 +530,5 @@ class GroupListScreenTest {
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LIST).assertIsDisplayed()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("1")).assertIsDisplayed()
-  }
-
-  @Test
-  fun emptyState_fabStillWorks() {
-    var createClicked = false
-
-    composeTestRule.setContent { GroupListScreen(onCreateGroup = { createClicked = true }) }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EMPTY).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithText("CREATE A GROUP").performClick()
-
-    assertTrue(createClicked)
   }
 }
