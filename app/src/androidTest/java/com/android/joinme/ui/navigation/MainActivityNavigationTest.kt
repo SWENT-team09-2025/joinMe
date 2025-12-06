@@ -244,10 +244,7 @@ class MainActivityNavigationTest {
     }
 
     composeTestRule.setContent {
-      JoinMe(
-          startDestination = Screen.Overview.route,
-          enableNotificationPermissionRequest = false,
-          testUserId = "test-user-id")
+      JoinMe(startDestination = Screen.Overview.route, enableNotificationPermissionRequest = false)
     }
   }
 
