@@ -16,7 +16,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowToast
 
 /**
@@ -30,7 +29,6 @@ import org.robolectric.shadows.ShadowToast
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28])
 class ShareButtonTest {
 
   @get:Rule val composeTestRule = createComposeRule()
@@ -66,7 +64,7 @@ class ShareButtonTest {
     composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertExists()
   }
 
-  /** Test 3: Covers shareInvitation failure path Lines covered: 103-109 (onFailure block) */
+  /** Test 2: Covers shareInvitation failure path Lines covered: 103-109 (onFailure block) */
   @Test
   fun shareInvitation_failure_callsOnError() = runTest {
     val context = ApplicationProvider.getApplicationContext<Context>()

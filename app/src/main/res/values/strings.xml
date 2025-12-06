@@ -126,12 +126,9 @@
     <string name="more_options">More options</string>
 
     <!-- Group confirmation dialog -->
-    <string name="message_group_deletion">Are you sure you want to delete
-this group?</string>
-    <string name="advertisment_group_deletion">The group will be permanently deleted
-This action is irreversible</string>
-    <string name="message_group_leaving">Are you sure you want to leave
-this group?</string>
+    <string name="message_group_deletion">Are you sure you want to delete\nthis group?</string>
+    <string name="advertisment_group_deletion">The group will be permanently deleted\nThis action is irreversible</string>
+    <string name="message_group_leaving">Are you sure you want to leave\nthis group?</string>
     <string name="confirmation_group_button">Yes</string>
     <string name="negation_group_button">No</string>
 
