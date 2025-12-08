@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -1425,7 +1427,7 @@ class MainActivityTest {
       return@runBlocking
     }
 
-    // Create a test event with chat for testing location navigation
+    // Create a test event with chat and location message
     val eventRepository =
         com.android.joinme.model.event.EventsRepositoryProvider.getRepository(
             isOnline = true, ApplicationProvider.getApplicationContext())
@@ -1445,29 +1447,47 @@ class MainActivityTest {
             ownerId = currentUser.uid)
     eventRepository.addEvent(testEvent)
 
+    // Add a location message to the chat
+    val chatRepository = com.android.joinme.model.chat.ChatRepositoryProvider.repository
+    val testLocation = com.android.joinme.model.map.Location(46.5196, 6.5680, "EPFL")
+    val locationMessage =
+        com.android.joinme.model.chat.Message(
+            id = chatRepository.getNewMessageId(),
+            conversationId = testEventId,
+            senderId = currentUser.uid,
+            senderName = currentUser.displayName ?: "Test User",
+            content = "Check this location",
+            timestamp = System.currentTimeMillis(),
+            type = com.android.joinme.model.chat.MessageType.LOCATION,
+            location = testLocation)
+    chatRepository.addMessage(locationMessage)
+
     try {
-      // Launch MainActivity with event chat notification to reach ChatScreen
+      // Launch MainActivity with event chat notification
       val context = ApplicationProvider.getApplicationContext<Context>()
       val intent =
           Intent(context, MainActivity::class.java).apply {
             putExtra("notificationType", "event_chat_message")
             putExtra("eventId", testEventId)
-            putExtra("conversationId", testEventId) // Use eventId as conversationId
+            putExtra("conversationId", testEventId)
             putExtra("chatName", "Test Event Chat")
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
           }
 
       val scenario = ActivityScenario.launch<MainActivity>(intent)
       composeTestRule.waitForIdle()
+      Thread.sleep(2000) // Wait for chat to load
+
+      // Find and click the location message
+      composeTestRule.onNodeWithText("EPFL", useUnmergedTree = true).assertExists().performClick()
+
+      composeTestRule.waitForIdle()
+      Thread.sleep(1000) // Wait for navigation and Toast
 
       scenario.use {
         it.onActivity { activity ->
-          // Verify activity loaded successfully
+          // Verify activity is still running (not crashed)
           assert(!activity.isFinishing)
-          // The onNavigateToMap callback exists and can be invoked when user clicks location
-          // The actual click simulation would require the ChatScreen to have location messages
-          // which is complex to setup in MainActivity test, so we verify the callback exists
-          assert(activity.intent.getStringExtra("eventId") == testEventId)
         }
       }
 
@@ -1476,6 +1496,7 @@ class MainActivityTest {
       // Cleanup
       try {
         eventRepository.deleteEvent(testEventId)
+        chatRepository.deleteMessage(testEventId, locationMessage.id)
       } catch (_: Exception) {}
     }
   }

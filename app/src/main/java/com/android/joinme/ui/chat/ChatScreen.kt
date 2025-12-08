@@ -89,7 +89,6 @@ import com.android.joinme.model.chat.MessageType
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.map.UserLocation
 import com.android.joinme.model.profile.Profile
-import com.android.joinme.ui.map.userLocation.LocationServiceImpl
 import com.android.joinme.ui.profile.ProfilePhotoImage
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
@@ -721,10 +720,7 @@ private fun MessageContent(
       MessageType.LOCATION -> {
         // Display location message
         message.location?.let { location ->
-          ChatLocationMessage(
-              location = location,
-              bubbleColor = bubbleColor,
-              onClick = { onLocationClick(location) })
+          ChatLocationMessage(location = location, onClick = { onLocationClick(location) })
         }
       }
       else -> {
@@ -905,11 +901,10 @@ private fun UserAvatar(photoUrl: String?, userName: String, modifier: Modifier =
  * - Click to view on full map screen
  *
  * @param location The Location object containing coordinates and name
- * @param bubbleColor The color for the bubble background
  * @param onClick Callback when the location is clicked
  */
 @Composable
-private fun ChatLocationMessage(location: Location, bubbleColor: Color, onClick: () -> Unit = {}) {
+private fun ChatLocationMessage(location: Location, onClick: () -> Unit = {}) {
   val locationLatLng = LatLng(location.latitude, location.longitude)
   val cameraPositionState = rememberCameraPositionState {
     position = CameraPosition.fromLatLngZoom(locationLatLng, 15f)
@@ -1150,55 +1145,6 @@ private fun MessageInput(
 }
 
 /**
- * Handles the location attachment click action.
- *
- * This function manages the entire location sharing flow:
- * - Checks if location permissions are granted
- * - Retrieves current location
- * - Shows location preview dialog or error messages
- *
- * @param context Android context for location service and toasts
- * @param locationPermissionsState State of location permissions
- * @param coroutineScope Coroutine scope for launching location requests
- * @param onLocationRetrieved Callback when location is successfully retrieved
- */
-@OptIn(com.google.accompanist.permissions.ExperimentalPermissionsApi::class)
-private fun handleLocationClick(
-    context: android.content.Context,
-    locationPermissionsState: com.google.accompanist.permissions.MultiplePermissionsState,
-    coroutineScope: kotlinx.coroutines.CoroutineScope,
-    onLocationRetrieved: (UserLocation) -> Unit
-) {
-  if (locationPermissionsState.allPermissionsGranted) {
-    // Get current location
-    coroutineScope.launch {
-      try {
-        val locationService = LocationServiceImpl(context)
-        val location = locationService.getCurrentLocation()
-        if (location != null) {
-          onLocationRetrieved(location)
-        } else {
-          Toast.makeText(
-                  context,
-                  context.getString(R.string.failed_to_send_location, "Location unavailable"),
-                  Toast.LENGTH_SHORT)
-              .show()
-        }
-      } catch (e: Exception) {
-        Toast.makeText(
-                context,
-                context.getString(R.string.failed_to_send_location, e.message),
-                Toast.LENGTH_SHORT)
-            .show()
-      }
-    }
-  } else {
-    // Request permissions
-    locationPermissionsState.launchMultiplePermissionRequest()
-  }
-}
-
-/**
  * Bottom sheet menu for attachment options.
  *
  * Displays three options in a horizontal row:
@@ -1210,9 +1156,7 @@ private fun handleLocationClick(
  * @param viewModel ChatViewModel for handling image uploads and location messages
  * @param currentUserName The display name of the current user for image messages
  */
-@OptIn(
-    ExperimentalMaterial3Api::class,
-    com.google.accompanist.permissions.ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AttachmentMenu(
     onDismiss: () -> Unit,
@@ -1222,7 +1166,6 @@ private fun AttachmentMenu(
   val sheetState = rememberModalBottomSheetState()
   val context = LocalContext.current
   val notImplementedMsg = stringResource(R.string.not_yet_implemented)
-  val coroutineScope = rememberCoroutineScope()
 
   // State to hold the camera image URI
   var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -1233,13 +1176,6 @@ private fun AttachmentMenu(
   // State for location preview
   var showLocationPreview by remember { mutableStateOf(false) }
   var currentUserLocation by remember { mutableStateOf<UserLocation?>(null) }
-
-  // Location permissions
-  val locationPermissionsState =
-      com.google.accompanist.permissions.rememberMultiplePermissionsState(
-          listOf(
-              android.Manifest.permission.ACCESS_FINE_LOCATION,
-              android.Manifest.permission.ACCESS_COARSE_LOCATION))
 
   // Image picker launcher for gallery (untestable - extracted to ChatImageLaunchers.kt)
   val imagePickerLauncher =
@@ -1264,6 +1200,14 @@ private fun AttachmentMenu(
             uri
           })
 
+  // Location permission launcher (untestable - extracted to ChatImageLaunchers.kt)
+  val locationPermissionsLauncher =
+      rememberLocationPermissionsLauncher(
+          onLocationRetrieved = { location ->
+            currentUserLocation = location
+            showLocationPreview = true
+          })
+
   ModalBottomSheet(
       onDismissRequest = onDismiss,
       sheetState = sheetState,
@@ -1285,14 +1229,10 @@ private fun AttachmentMenu(
                 icon = Icons.Default.LocationOn,
                 label = stringResource(R.string.location),
                 onClick = {
-                  handleLocationClick(
-                      context = context,
-                      locationPermissionsState = locationPermissionsState,
-                      coroutineScope = coroutineScope,
-                      onLocationRetrieved = { location ->
-                        currentUserLocation = location
-                        showLocationPreview = true
-                      })
+                  locationPermissionsLauncher.launch(
+                      arrayOf(
+                          android.Manifest.permission.ACCESS_FINE_LOCATION,
+                          android.Manifest.permission.ACCESS_COARSE_LOCATION))
                 },
                 modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_LOCATION))
 
@@ -1359,7 +1299,7 @@ private fun AttachmentMenu(
  * @param onSendLocation Callback when send button is clicked
  */
 @Composable
-private fun LocationPreviewDialog(
+internal fun LocationPreviewDialog(
     userLocation: UserLocation,
     onDismiss: () -> Unit,
     onSendLocation: () -> Unit

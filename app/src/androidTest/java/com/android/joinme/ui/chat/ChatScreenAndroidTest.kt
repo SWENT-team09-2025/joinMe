@@ -643,12 +643,14 @@ class ChatScreenAndroidTest {
   }
 
   /**
-   * Tests the AttachmentMenu location option and LocationPreviewDialog. This test covers: -
-   * Location option is displayed and clickable in AttachmentMenu - handleLocationClick function is
-   * accessible - LocationPreviewDialog test tags are properly defined
+   * Tests the AttachmentMenu location option displays correctly. Covers: - Location option is
+   * displayed and clickable in AttachmentMenu
+   *
+   * Note: Clicking the location option triggers rememberLocationPermissionsLauncher in
+   * ChatImageLaunchers.kt which is excluded from coverage (requires real location permissions).
    */
   @Test
-  fun chatScreen_attachmentMenu_locationHandlingAndPreviewDialog() = runTest {
+  fun chatScreen_attachmentMenu_locationOptionDisplayed() = runTest {
     val repo = FakeChatRepository(uploadShouldSucceed = true)
     val profileRepo = FakeProfileRepository()
     val viewModel = ChatViewModel(repo, profileRepo)
@@ -681,17 +683,99 @@ class ChatScreenAndroidTest {
         .assertExists()
         .assertHasClickAction()
     composeTestRule.onNodeWithContentDescription("Location").assertExists()
+  }
 
-    // Verify LocationPreviewDialog test tags are properly defined
-    assert(ChatScreenTestTags.LOCATION_PREVIEW_DIALOG.isNotEmpty())
-    assert(ChatScreenTestTags.LOCATION_PREVIEW_MAP.isNotEmpty())
-    assert(ChatScreenTestTags.LOCATION_PREVIEW_SEND_BUTTON.isNotEmpty())
-    assert(ChatScreenTestTags.LOCATION_PREVIEW_CANCEL_BUTTON.isNotEmpty())
+  /**
+   * Tests LocationPreviewDialog displays correctly with all UI elements. This test composes the
+   * dialog directly with test data to verify: - Dialog displays with correct structure and test
+   * tags - Map preview is shown - Location coordinates are displayed - Send and Cancel buttons are
+   * present
+   */
+  @Test
+  fun chatScreen_locationPreviewDialog_displaysCorrectly() = runTest {
+    val testLocation =
+        com.android.joinme.model.map.UserLocation(
+            latitude = 46.5197, longitude = 6.6323, accuracy = 10f)
 
-    // Note: Actually clicking location and testing the preview dialog would require:
-    // 1. Mocking location permissions (ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION)
-    // 2. Mocking LocationServiceImpl to return a test location
-    // 3. Complex setup that is beyond unit testing scope
-    // This test verifies the UI structure and handleLocationClick function is accessible
+    composeTestRule.setContent {
+      LocationPreviewDialog(userLocation = testLocation, onDismiss = {}, onSendLocation = {})
+    }
+
+    composeTestRule.waitForIdle()
+    Thread.sleep(1000) // Wait for Maps to initialize
+
+    // Verify dialog is displayed
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.LOCATION_PREVIEW_DIALOG).assertIsDisplayed()
+
+    // Verify title
+    composeTestRule.onNodeWithText("Location Preview").assertIsDisplayed()
+
+    // Verify location coordinates are displayed
+    composeTestRule.onNodeWithText("46.5197, 6.6323").assertIsDisplayed()
+
+    // Verify map preview exists
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.LOCATION_PREVIEW_MAP).assertExists()
+
+    // Verify buttons exist
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.LOCATION_PREVIEW_SEND_BUTTON)
+        .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.LOCATION_PREVIEW_CANCEL_BUTTON)
+        .assertIsDisplayed()
+
+    // Verify Send Location button text
+    composeTestRule.onNodeWithText("Send Location").assertIsDisplayed()
+
+    // Verify Cancel button text
+    composeTestRule.onNodeWithText("Cancel").assertIsDisplayed()
+  }
+
+  /** Tests LocationPreviewDialog cancel button dismisses the dialog. */
+  @Test
+  fun chatScreen_locationPreviewDialog_cancelButtonDismisses() = runTest {
+    var dialogDismissed = false
+
+    val testLocation =
+        com.android.joinme.model.map.UserLocation(
+            latitude = 46.5197, longitude = 6.6323, accuracy = 10f)
+
+    composeTestRule.setContent {
+      LocationPreviewDialog(
+          userLocation = testLocation, onDismiss = { dialogDismissed = true }, onSendLocation = {})
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Click cancel button
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.LOCATION_PREVIEW_CANCEL_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify dialog was dismissed
+    assert(dialogDismissed) { "Cancel button should dismiss the dialog" }
+  }
+
+  /** Tests LocationPreviewDialog send button triggers location send. */
+  @Test
+  fun chatScreen_locationPreviewDialog_sendButtonTriggersLocationSend() = runTest {
+    var locationSent = false
+
+    val testLocation =
+        com.android.joinme.model.map.UserLocation(
+            latitude = 46.5197, longitude = 6.6323, accuracy = 10f)
+
+    composeTestRule.setContent {
+      LocationPreviewDialog(
+          userLocation = testLocation, onDismiss = {}, onSendLocation = { locationSent = true })
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Click send button
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.LOCATION_PREVIEW_SEND_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify location send was triggered
+    assert(locationSent) { "Send button should trigger location send" }
   }
 }

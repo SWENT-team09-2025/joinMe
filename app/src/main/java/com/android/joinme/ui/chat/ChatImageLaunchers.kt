@@ -157,3 +157,52 @@ fun rememberCameraPermissionLauncher(
         }
       })
 }
+
+/**
+ * Creates a location permissions launcher for accessing user location.
+ *
+ * @param onLocationRetrieved Callback invoked when location is successfully retrieved
+ * @return ActivityResultLauncher for requesting multiple location permissions
+ */
+@Composable
+fun rememberLocationPermissionsLauncher(
+    onLocationRetrieved: (com.android.joinme.model.map.UserLocation) -> Unit
+): ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>> {
+  val context = LocalContext.current
+  val locationPermissionRequired = context.getString(R.string.location_permission_required)
+  val coroutineScope = rememberCoroutineScope()
+
+  return rememberLauncherForActivityResult(
+      contract = ActivityResultContracts.RequestMultiplePermissions(),
+      onResult = { permissions ->
+        val allGranted = permissions.values.all { it }
+        if (allGranted) {
+          // All location permissions granted, fetch location
+          coroutineScope.launch {
+            try {
+              val locationService =
+                  com.android.joinme.ui.map.userLocation.LocationServiceImpl(context)
+              val location = locationService.getCurrentLocation()
+              if (location != null) {
+                onLocationRetrieved(location)
+              } else {
+                Toast.makeText(
+                        context,
+                        context.getString(R.string.failed_to_send_location, "Location unavailable"),
+                        Toast.LENGTH_SHORT)
+                    .show()
+              }
+            } catch (e: Exception) {
+              Toast.makeText(
+                      context,
+                      context.getString(R.string.failed_to_send_location, e.message),
+                      Toast.LENGTH_SHORT)
+                  .show()
+            }
+          }
+        } else {
+          // Permissions denied
+          Toast.makeText(context, locationPermissionRequired, Toast.LENGTH_LONG).show()
+        }
+      })
+}

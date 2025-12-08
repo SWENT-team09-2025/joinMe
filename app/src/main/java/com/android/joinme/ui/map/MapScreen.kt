@@ -177,23 +177,6 @@ private fun shouldFollowUserLocation(
     isFollowingUser: Boolean
 ): Boolean = currentLat != null && currentLng != null && isFollowingUser
 
-/**
- * Handles camera positioning effects when user location changes.
- *
- * @param currentLat Current latitude
- * @param currentLng Current longitude
- * @param isFollowingUser Whether the map should follow user location
- * @param cameraPositionState Camera position state to animate
- * @param onProgrammaticMoveStart Callback when programmatic move starts
- * @param onProgrammaticMoveEnd Callback when programmatic move ends
- */
-@Composable
-private fun MapCameraEffects(
-    currentLat: Double?,
-    currentLng: Double?,
-    isFollowingUser: Boolean
-): Boolean = currentLat != null && currentLng != null && isFollowingUser
-
 /** Checks if user interaction should disable following mode. */
 private fun shouldDisableFollowing(
     isMoving: Boolean,
