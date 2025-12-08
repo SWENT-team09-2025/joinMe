@@ -115,7 +115,7 @@ class InvitationRepositoryTest {
     repository.createInvitation(
         type = InvitationType.INVITATION_TO_EVENT, targetId = "event1", createdBy = userId)
     repository.createInvitation(
-        type = InvitationType.INVITATION_TO_SERIES, targetId = "serie1", createdBy = "otherUser")
+        type = InvitationType.INVITATION_TO_SERIE, targetId = "serie1", createdBy = "otherUser")
 
     val result = repository.getInvitationsByUser(userId)
 

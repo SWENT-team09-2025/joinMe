@@ -68,6 +68,6 @@ class InvitationTest {
   fun `InvitationType toDisplayString returns correct string`() {
     assertEquals("group", InvitationType.INVITATION_TO_GROUP.toDisplayString())
     assertEquals("event", InvitationType.INVITATION_TO_EVENT.toDisplayString())
-    assertEquals("serie", InvitationType.INVITATION_TO_SERIES.toDisplayString())
+    assertEquals("serie", InvitationType.INVITATION_TO_SERIE.toDisplayString())
   }
 }

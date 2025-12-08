@@ -6,12 +6,12 @@ import com.google.firebase.Timestamp
 enum class InvitationType {
   INVITATION_TO_GROUP,
   INVITATION_TO_EVENT,
-  INVITATION_TO_SERIES;
+  INVITATION_TO_SERIE;
 
   /**
    * Converts a string representation of the invitation type to its corresponding enum value.
    *
-   * @param InvitationType The string representation of the invitation type.
+   * @param String The InvitationType of the string.
    */
   companion object {
     fun fromString(value: String): InvitationType? {
@@ -28,7 +28,7 @@ enum class InvitationType {
     return when (this) {
       INVITATION_TO_GROUP -> "group"
       INVITATION_TO_EVENT -> "event"
-      INVITATION_TO_SERIES -> "serie"
+      INVITATION_TO_SERIE -> "serie"
     }
   }
 }
