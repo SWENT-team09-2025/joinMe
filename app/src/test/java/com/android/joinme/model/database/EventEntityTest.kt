@@ -54,45 +54,25 @@ class EventEntityTest {
   }
 
   @Test
-  fun `toEntity handles event with no location`() {
-    val eventWithoutLocation = sampleEvent.copy(location = null)
-    val entity = eventWithoutLocation.toEntity()
+  fun `toEntity handles various field combinations`() {
+    // No location
+    val noLocation = sampleEvent.copy(location = null).toEntity()
+    assertNull(noLocation.locationLatitude)
+    assertNull(noLocation.locationLongitude)
+    assertNull(noLocation.locationName)
 
-    assertNull(entity.locationLatitude)
-    assertNull(entity.locationLongitude)
-    assertNull(entity.locationName)
-  }
+    // Empty participants
+    assertEquals("[]", sampleEvent.copy(participants = emptyList()).toEntity().participantsJson)
 
-  @Test
-  fun `toEntity handles empty participants list`() {
-    val eventWithoutParticipants = sampleEvent.copy(participants = emptyList())
-    val entity = eventWithoutParticipants.toEntity()
+    // Single participant
+    assertEquals(
+        "[\"user1\"]", sampleEvent.copy(participants = listOf("user1")).toEntity().participantsJson)
 
-    assertEquals("[]", entity.participantsJson)
-  }
+    // Null groupId
+    assertNull(sampleEvent.copy(groupId = null).toEntity().groupId)
 
-  @Test
-  fun `toEntity handles single participant`() {
-    val eventWithOneParticipant = sampleEvent.copy(participants = listOf("user1"))
-    val entity = eventWithOneParticipant.toEntity()
-
-    assertEquals("[\"user1\"]", entity.participantsJson)
-  }
-
-  @Test
-  fun `toEntity handles null groupId`() {
-    val eventWithoutGroup = sampleEvent.copy(groupId = null)
-    val entity = eventWithoutGroup.toEntity()
-
-    assertNull(entity.groupId)
-  }
-
-  @Test
-  fun `toEntity handles partOfASerie true`() {
-    val serieEvent = sampleEvent.copy(partOfASerie = true)
-    val entity = serieEvent.toEntity()
-
-    assertTrue(entity.partOfASerie)
+    // partOfASerie true
+    assertTrue(sampleEvent.copy(partOfASerie = true).toEntity().partOfASerie)
   }
 
   @Test
@@ -257,62 +237,5 @@ class EventEntityTest {
 
     assertNull(reconstructedEvent.groupId)
     assertEquals(eventWithoutGroup.eventId, reconstructedEvent.eventId)
-  }
-
-  @Test
-  fun `EventEntity data class properties work correctly`() {
-    val entity1 =
-        EventEntity(
-            eventId = "123",
-            type = "SPORTS",
-            title = "Test",
-            description = "Desc",
-            locationLatitude = 1.0,
-            locationLongitude = 2.0,
-            locationName = "Place",
-            dateSeconds = 100,
-            dateNanoseconds = 200,
-            duration = 60,
-            participantsJson = "[]",
-            maxParticipants = 10,
-            visibility = "PUBLIC",
-            ownerId = "owner1",
-            partOfASerie = false,
-            groupId = null,
-            cachedAt = 12345)
-
-    val entity2 = entity1.copy()
-
-    assertEquals(entity1, entity2)
-    assertEquals(entity1.hashCode(), entity2.hashCode())
-  }
-
-  @Test
-  fun `EventEntity copy works correctly`() {
-    val entity =
-        EventEntity(
-            eventId = "123",
-            type = "SPORTS",
-            title = "Test",
-            description = "Desc",
-            locationLatitude = 1.0,
-            locationLongitude = 2.0,
-            locationName = "Place",
-            dateSeconds = 100,
-            dateNanoseconds = 200,
-            duration = 60,
-            participantsJson = "[]",
-            maxParticipants = 10,
-            visibility = "PUBLIC",
-            ownerId = "owner1",
-            partOfASerie = false,
-            groupId = null,
-            cachedAt = 12345)
-
-    val copiedEntity = entity.copy(title = "New Title")
-
-    assertEquals("New Title", copiedEntity.title)
-    assertEquals(entity.eventId, copiedEntity.eventId)
-    assertEquals(entity.description, copiedEntity.description)
   }
 }

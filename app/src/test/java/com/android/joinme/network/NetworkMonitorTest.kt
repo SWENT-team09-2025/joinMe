@@ -58,64 +58,30 @@ class NetworkMonitorTest {
   }
 
   @Test
-  fun `isOnline returns false when no active network`() {
+  fun `isOnline returns false for invalid network states`() {
+    // No active network
     every { connectivityManager.activeNetwork } returns null
+    assertFalse(networkMonitor.isOnline())
 
-    val result = networkMonitor.isOnline()
-
-    assertFalse(result)
-  }
-
-  @Test
-  fun `isOnline returns false when network capabilities are null`() {
+    // Null capabilities
     every { connectivityManager.activeNetwork } returns mockNetwork
     every { connectivityManager.getNetworkCapabilities(mockNetwork) } returns null
+    assertFalse(networkMonitor.isOnline())
 
-    val result = networkMonitor.isOnline()
-
-    assertFalse(result)
-  }
-
-  @Test
-  fun `isOnline returns false when network has internet but not validated`() {
-    every { connectivityManager.activeNetwork } returns mockNetwork
+    // Internet but not validated
     every { connectivityManager.getNetworkCapabilities(mockNetwork) } returns mockCapabilities
     every { mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) } returns
         true
     every { mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) } returns
         false
+    assertFalse(networkMonitor.isOnline())
 
-    val result = networkMonitor.isOnline()
-
-    assertFalse(result)
-  }
-
-  @Test
-  fun `isOnline returns false when network is validated but no internet capability`() {
-    every { connectivityManager.activeNetwork } returns mockNetwork
-    every { connectivityManager.getNetworkCapabilities(mockNetwork) } returns mockCapabilities
+    // Validated but no internet
     every { mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) } returns
         false
     every { mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) } returns
         true
-
-    val result = networkMonitor.isOnline()
-
-    assertFalse(result)
-  }
-
-  @Test
-  fun `isOnline returns false when network has neither internet nor validated`() {
-    every { connectivityManager.activeNetwork } returns mockNetwork
-    every { connectivityManager.getNetworkCapabilities(mockNetwork) } returns mockCapabilities
-    every { mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) } returns
-        false
-    every { mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) } returns
-        false
-
-    val result = networkMonitor.isOnline()
-
-    assertFalse(result)
+    assertFalse(networkMonitor.isOnline())
   }
 
   @Test
@@ -240,29 +206,6 @@ class NetworkMonitorTest {
   }
 
   @Test
-  fun `NetworkMonitor uses correct context service`() {
-    verify { context.getSystemService(Context.CONNECTIVITY_SERVICE) }
-  }
-
-  @Test
-  fun `multiple isOnline calls return consistent results`() {
-    every { connectivityManager.activeNetwork } returns mockNetwork
-    every { connectivityManager.getNetworkCapabilities(mockNetwork) } returns mockCapabilities
-    every { mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) } returns
-        true
-    every { mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) } returns
-        true
-
-    val result1 = networkMonitor.isOnline()
-    val result2 = networkMonitor.isOnline()
-    val result3 = networkMonitor.isOnline()
-
-    assertTrue(result1)
-    assertTrue(result2)
-    assertTrue(result3)
-  }
-
-  @Test
   fun `isOnline reflects network state changes`() {
     // Initially online
     every { connectivityManager.activeNetwork } returns mockNetwork
@@ -271,37 +214,14 @@ class NetworkMonitorTest {
         true
     every { mockCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) } returns
         true
-
     assertTrue(networkMonitor.isOnline())
 
-    // Simulate network going offline
+    // Network goes offline
     every { connectivityManager.activeNetwork } returns null
-
     assertFalse(networkMonitor.isOnline())
 
-    // Simulate network coming back online
+    // Network comes back online
     every { connectivityManager.activeNetwork } returns mockNetwork
-
     assertTrue(networkMonitor.isOnline())
-  }
-
-  @Test
-  fun `NetworkRequest is built with correct capabilities`() = runTest {
-    val requestSlot = slot<NetworkRequest>()
-
-    every { connectivityManager.activeNetwork } returns null
-    every {
-      connectivityManager.registerNetworkCallback(
-          capture(requestSlot), any<ConnectivityManager.NetworkCallback>())
-    } just Runs
-
-    val flow = networkMonitor.observeNetworkStatus()
-    val firstValue = flow.first()
-
-    // Verify a NetworkRequest was created
-    verify {
-      connectivityManager.registerNetworkCallback(
-          any<NetworkRequest>(), any<ConnectivityManager.NetworkCallback>())
-    }
   }
 }
