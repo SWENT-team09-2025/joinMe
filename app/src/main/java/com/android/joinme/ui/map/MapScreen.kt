@@ -70,6 +70,8 @@ object MapScreenTestTags {
 const val SNIPPET_MESSAGE = "Tap to see more & join me"
 const val LOW_SATURATION_THRESHOLD = 0.1f
 const val LOW_VALUE_THRESHOLD = 0.1f
+const val ONE_SEC_IN_MS = 1000
+const val ZOOM_PROPORTION = 15f
 
 /**
  * Creates a marker icon for Google Maps based on the given color.
@@ -154,8 +156,8 @@ private suspend fun animateCameraToLocation(
   try {
     onMoveStart()
     cameraPositionState.animate(
-        update = CameraUpdateFactory.newLatLngZoom(LatLng(latitude, longitude), 15f),
-        durationMs = 1000)
+        update = CameraUpdateFactory.newLatLngZoom(LatLng(latitude, longitude), ZOOM_PROPORTION),
+        durationMs = ONE_SEC_IN_MS)
   } catch (e: Exception) {
     // Animation was interrupted or failed
   } finally {
