@@ -13,6 +13,7 @@ private const val TYPE = "type"
 private const val CREATED_BY = "createdBy"
 private const val CREATED_AT = "createdAt"
 private const val EXPIRES_AT = "expiresAt"
+private const val TOKEN = "token"
 private const val EMPTY_STRING = ""
 
 /** Represents an invitation to join a group, event, or serie. */
@@ -34,6 +35,7 @@ class InvitationRepositoryFirestore(db: FirebaseFirestore = FirebaseFirestore.ge
           }
       val invitation =
           hashMapOf(
+              TOKEN to token,
               TYPE to type.name,
               TARGET_ID to targetId,
               CREATED_BY to createdBy,
@@ -98,7 +100,7 @@ class InvitationRepositoryFirestore(db: FirebaseFirestore = FirebaseFirestore.ge
 
   private fun docToInvitation(doc: DocumentSnapshot, type: InvitationType): Invitation {
     return Invitation(
-        token = doc.id,
+        token = doc.getString(TOKEN) ?: EMPTY_STRING,
         type = type,
         targetId = doc.getString(TARGET_ID) ?: EMPTY_STRING,
         createdBy = doc.getString(CREATED_BY) ?: EMPTY_STRING,

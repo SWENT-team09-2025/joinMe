@@ -65,7 +65,7 @@ class InvitationRepositoryTest {
   fun createInvitation_returnsToken() = runTest {
     val result =
         repository.createInvitation(
-            type = InvitationType.INVITATION_TO_GROUP,
+            type = InvitationType.GROUP,
             targetId = "group123",
             createdBy = "user456",
             expiresInDays = 7)
@@ -78,7 +78,7 @@ class InvitationRepositoryTest {
   fun resolveInvitation_afterCreation_returnsInvitation() = runTest {
     val createResult =
         repository.createInvitation(
-            type = InvitationType.INVITATION_TO_EVENT,
+            type = InvitationType.EVENT,
             targetId = "event789",
             createdBy = "user456",
             expiresInDays = null)
@@ -90,14 +90,14 @@ class InvitationRepositoryTest {
     val invitation = resolveResult.getOrNull()
     assertNotNull(invitation)
     assertEquals("event789", invitation?.targetId)
-    assertEquals(InvitationType.INVITATION_TO_EVENT, invitation?.type)
+    assertEquals(InvitationType.EVENT, invitation?.type)
   }
 
   @Test
   fun revokeInvitation_removesInvitation() = runTest {
     val createResult =
         repository.createInvitation(
-            type = InvitationType.INVITATION_TO_GROUP, targetId = "group123", createdBy = "user456")
+            type = InvitationType.GROUP, targetId = "group123", createdBy = "user456")
     val token = createResult.getOrNull()!!
 
     val revokeResult = repository.revokeInvitation(token)
@@ -111,11 +111,11 @@ class InvitationRepositoryTest {
   fun getInvitationsByUser_returnsUserInvitations() = runTest {
     val userId = "user456"
     repository.createInvitation(
-        type = InvitationType.INVITATION_TO_GROUP, targetId = "group1", createdBy = userId)
+        type = InvitationType.GROUP, targetId = "group1", createdBy = userId)
     repository.createInvitation(
-        type = InvitationType.INVITATION_TO_EVENT, targetId = "event1", createdBy = userId)
+        type = InvitationType.EVENT, targetId = "event1", createdBy = userId)
     repository.createInvitation(
-        type = InvitationType.INVITATION_TO_SERIE, targetId = "serie1", createdBy = "otherUser")
+        type = InvitationType.SERIE, targetId = "serie1", createdBy = "otherUser")
 
     val result = repository.getInvitationsByUser(userId)
 

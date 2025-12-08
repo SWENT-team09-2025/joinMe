@@ -56,7 +56,7 @@ class InvitationRepositoryFirestoreTest {
 
     val result =
         repository.createInvitation(
-            type = InvitationType.INVITATION_TO_GROUP,
+            type = InvitationType.GROUP,
             targetId = testTargetId,
             createdBy = testCreatedBy,
             expiresInDays = 7)
@@ -73,7 +73,7 @@ class InvitationRepositoryFirestoreTest {
 
     val result =
         repository.createInvitation(
-            type = InvitationType.INVITATION_TO_EVENT,
+            type = InvitationType.EVENT,
             targetId = testTargetId,
             createdBy = testCreatedBy,
             expiresInDays = null)
@@ -89,9 +89,7 @@ class InvitationRepositoryFirestoreTest {
 
     val result =
         repository.createInvitation(
-            type = InvitationType.INVITATION_TO_GROUP,
-            targetId = testTargetId,
-            createdBy = testCreatedBy)
+            type = InvitationType.GROUP, targetId = testTargetId, createdBy = testCreatedBy)
 
     assertTrue(result.isFailure)
     assertEquals(exception, result.exceptionOrNull())
@@ -103,7 +101,7 @@ class InvitationRepositoryFirestoreTest {
     every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
     every { mockSnapshot.exists() } returns true
     every { mockSnapshot.getString("token") } returns testToken
-    every { mockSnapshot.getString("type") } returns "INVITATION_TO_GROUP"
+    every { mockSnapshot.getString("type") } returns "GROUP"
     every { mockSnapshot.getString("targetId") } returns testTargetId
     every { mockSnapshot.getString("createdBy") } returns testCreatedBy
     every { mockSnapshot.getTimestamp("createdAt") } returns Timestamp.now()
@@ -116,7 +114,7 @@ class InvitationRepositoryFirestoreTest {
     assertNotNull(invitation)
     assertEquals(testToken, invitation?.token)
     assertEquals(testTargetId, invitation?.targetId)
-    assertEquals(InvitationType.INVITATION_TO_GROUP, invitation?.type)
+    assertEquals(InvitationType.GROUP, invitation?.type)
   }
 
   @Test
@@ -148,7 +146,7 @@ class InvitationRepositoryFirestoreTest {
     every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
     every { mockSnapshot.exists() } returns true
     every { mockSnapshot.getString("token") } returns testToken
-    every { mockSnapshot.getString("type") } returns "INVITATION_TO_GROUP"
+    every { mockSnapshot.getString("type") } returns "GROUP"
     every { mockSnapshot.getString("targetId") } returns testTargetId
     every { mockSnapshot.getString("createdBy") } returns testCreatedBy
     every { mockSnapshot.getTimestamp("createdAt") } returns Timestamp.now()
@@ -185,7 +183,7 @@ class InvitationRepositoryFirestoreTest {
   fun getInvitationsByUser_success_returnsInvitations() = runTest {
     val mockDoc1 = mockk<DocumentSnapshot>(relaxed = true)
     every { mockDoc1.getString("token") } returns "token1"
-    every { mockDoc1.getString("type") } returns "INVITATION_TO_GROUP"
+    every { mockDoc1.getString("type") } returns "GROUP"
     every { mockDoc1.getString("targetId") } returns "target1"
     every { mockDoc1.getString("createdBy") } returns testCreatedBy
     every { mockDoc1.getTimestamp("createdAt") } returns Timestamp.now()
@@ -193,7 +191,7 @@ class InvitationRepositoryFirestoreTest {
 
     val mockDoc2 = mockk<DocumentSnapshot>(relaxed = true)
     every { mockDoc2.getString("token") } returns "token2"
-    every { mockDoc2.getString("type") } returns "INVITATION_TO_EVENT"
+    every { mockDoc2.getString("type") } returns "EVENT"
     every { mockDoc2.getString("targetId") } returns "target2"
     every { mockDoc2.getString("createdBy") } returns testCreatedBy
     every { mockDoc2.getTimestamp("createdAt") } returns Timestamp.now()

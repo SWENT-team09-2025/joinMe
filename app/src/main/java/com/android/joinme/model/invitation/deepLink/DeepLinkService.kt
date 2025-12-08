@@ -2,7 +2,6 @@ package com.android.joinme.model.invitation.deepLink
 
 import android.content.Intent
 import android.net.Uri
-import androidx.core.net.toUri
 
 /** Service for handling deep links in the application. */
 object DeepLinkService {
@@ -15,8 +14,7 @@ object DeepLinkService {
    * @param token The token to be included in the invitation link.
    * @return The generated invitation link.
    */
-  fun generateInvitationLink(token: String): String =
-      BASE_URL.toUri().buildUpon().appendPath(INVITATION_PATH).appendPath(token).toString()
+  fun generateInvitationLink(token: String): String = "$BASE_URL/$INVITATION_PATH/$token"
 
   /**
    * Parses the invitation link from the intent.
