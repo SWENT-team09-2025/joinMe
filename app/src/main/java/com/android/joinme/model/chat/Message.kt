@@ -12,6 +12,8 @@ enum class MessageType {
   SYSTEM,
   /** Image message */
   IMAGE,
+  /** Poll message - content contains the poll ID */
+  POLL,
   /** Location message with coordinates */
   LOCATION
   // VIDEO, Implement this later if possible
