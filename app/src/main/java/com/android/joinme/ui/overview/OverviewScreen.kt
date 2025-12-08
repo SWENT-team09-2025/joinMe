@@ -48,7 +48,6 @@ import com.android.joinme.model.event.Event
 import com.android.joinme.model.eventItem.EventItem
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.ui.components.BubbleAction
-import com.android.joinme.ui.components.OfflineBanner
 import com.android.joinme.ui.components.BubbleAlignment
 import com.android.joinme.ui.components.EventCard
 import com.android.joinme.ui.components.FloatingActionBubbles
@@ -330,9 +329,7 @@ fun OverviewScreen(
                   tint = MaterialTheme.colorScheme.onPrimary)
             }
       }) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize()) {
-          OfflineBanner()
-          Box(modifier = Modifier.fillMaxSize().padding(innerPadding).weight(1f)) {
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
           when {
             isLoading -> LoadingIndicator()
             ongoingItems.isEmpty() && upcomingItems.isEmpty() -> EmptyStateMessage()
@@ -357,7 +354,6 @@ fun OverviewScreen(
                     contentDescription = "View History",
                     tint = MaterialTheme.colorScheme.onPrimary)
               }
-          }
         }
 
         FloatingActionBubbles(
