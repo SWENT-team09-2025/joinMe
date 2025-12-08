@@ -31,11 +31,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
 import androidx.core.graphics.createBitmap
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
 import com.android.joinme.model.event.getColor
@@ -73,6 +70,8 @@ object MapScreenTestTags {
 const val SNIPPET_MESSAGE = "Tap to see more & join me"
 const val LOW_SATURATION_THRESHOLD = 0.1f
 const val LOW_VALUE_THRESHOLD = 0.1f
+const val ONE_S_IN_MS = 1000
+const val ZOOM_PROPORTION = 15f
 
 /**
  * Creates a marker icon for Google Maps based on the given color.
@@ -171,6 +170,13 @@ private fun MapInitialLocationEffect(
   }
 }
 
+/** Checks if the camera should follow the user location. */
+private fun shouldFollowUserLocation(
+    currentLat: Double?,
+    currentLng: Double?,
+    isFollowingUser: Boolean
+): Boolean = currentLat != null && currentLng != null && isFollowingUser
+
 /**
  * Handles camera positioning effects when user location changes.
  *
@@ -185,140 +191,61 @@ private fun MapInitialLocationEffect(
 private fun MapCameraEffects(
     currentLat: Double?,
     currentLng: Double?,
-    isFollowingUser: Boolean,
-    cameraPositionState: com.google.maps.android.compose.CameraPositionState,
-    onProgrammaticMoveStart: () -> Unit,
-    onProgrammaticMoveEnd: () -> Unit
-) {
-  LaunchedEffect(currentLat, currentLng, isFollowingUser) {
-    if (currentLat != null && currentLng != null && isFollowingUser) {
-      try {
-        onProgrammaticMoveStart()
-        cameraPositionState.animate(
-            update = CameraUpdateFactory.newLatLngZoom(LatLng(currentLat, currentLng), 15f),
-            durationMs = 1000)
-      } catch (e: Exception) {
-        // Animation was interrupted or failed
-      } finally {
-        onProgrammaticMoveEnd()
-      }
-    }
-  }
-}
+    isFollowingUser: Boolean
+): Boolean = currentLat != null && currentLng != null && isFollowingUser
 
-/**
- * Detects user interaction with the map to disable auto-following.
- *
- * @param cameraPositionState Camera position state to observe
- * @param isProgrammaticMove Whether the current move is programmatic
- * @param isFollowingUser Whether auto-follow is enabled
- * @param isMapInitialized Whether the map has finished initializing
- * @param onDisableFollowing Callback to disable following
- */
-@Composable
-private fun MapUserInteractionDetector(
-    cameraPositionState: com.google.maps.android.compose.CameraPositionState,
+/** Checks if user interaction should disable following mode. */
+private fun shouldDisableFollowing(
+    isMoving: Boolean,
     isProgrammaticMove: Boolean,
     isFollowingUser: Boolean,
-    isMapInitialized: Boolean,
-    onDisableFollowing: () -> Unit
+    isMapInitialized: Boolean
+): Boolean = isMoving && !isProgrammaticMove && isFollowingUser && isMapInitialized
+
+/** Handles the camera animation to follow user location. */
+private suspend fun animateCameraToLocation(
+    cameraPositionState: com.google.maps.android.compose.CameraPositionState,
+    latitude: Double,
+    longitude: Double,
+    onMoveStart: () -> Unit,
+    onMoveEnd: () -> Unit
 ) {
-  LaunchedEffect(cameraPositionState) {
-    snapshotFlow { cameraPositionState.isMoving }
-        .collect { isMoving ->
-          val shouldDisableFollowing =
-              isMoving && !isProgrammaticMove && isFollowingUser && isMapInitialized
-          if (shouldDisableFollowing) {
-            onDisableFollowing()
-          }
-        }
+  try {
+    onMoveStart()
+    cameraPositionState.animate(
+        update = CameraUpdateFactory.newLatLngZoom(LatLng(latitude, longitude), ZOOM_PROPORTION),
+        durationMs = ONE_S_IN_MS)
+  } catch (e: Exception) {
+    // Animation was interrupted or failed
+  } finally {
+    onMoveEnd()
   }
 }
 
-/**
- * Handles permission requests and location service initialization.
- *
- * @param context The Android context
- * @param viewModel The MapViewModel to initialize location service
- * @return Permission state for use in map properties
- */
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-private fun rememberMapPermissions(
-    context: android.content.Context,
-    viewModel: MapViewModel
-): com.google.accompanist.permissions.MultiplePermissionsState {
-  val locationPermissionsState =
-      rememberMultiplePermissionsState(
-          listOf(
-              android.Manifest.permission.ACCESS_FINE_LOCATION,
-              android.Manifest.permission.ACCESS_COARSE_LOCATION))
-
-  LaunchedEffect(Unit) {
-    if (!locationPermissionsState.allPermissionsGranted) {
-      locationPermissionsState.launchMultiplePermissionRequest()
-    }
+/** Handles initial following user setup based on marker click state. */
+private fun handleInitialFollowing(viewModel: MapViewModel, isReturningFromMarkerClick: Boolean) {
+  if (isReturningFromMarkerClick) {
+    viewModel.clearMarkerClickFlag()
+  } else {
+    viewModel.enableFollowingUser()
   }
-
-  LaunchedEffect(locationPermissionsState.allPermissionsGranted) {
-    if (locationPermissionsState.allPermissionsGranted) {
-      viewModel.initLocationService(LocationServiceImpl(context))
-    }
-  }
-
-  return locationPermissionsState
 }
 
-/**
- * Renders event and series markers on the map.
- *
- * @param events List of events to display as markers
- * @param series Map of locations to series to display as markers
- * @param seriePinColor Color for series markers
- * @param onMarkerClick Callback when a marker is clicked
- * @param onEventNavigate Callback to navigate to an event
- * @param onSerieNavigate Callback to navigate to a series
- */
-@Composable
-private fun MapMarkers(
-    events: List<com.android.joinme.model.event.Event>,
-    series: Map<com.android.joinme.model.map.Location, com.android.joinme.model.serie.Serie>,
-    seriePinColor: Color,
-    onMarkerClick: () -> Unit,
-    onEventNavigate: (String) -> Unit,
-    onSerieNavigate: (String) -> Unit
-) {
-  events.forEach { event ->
-    event.location?.let { location ->
-      val position = LatLng(location.latitude, location.longitude)
-      val markerIcon = createMarkerForColor(event.type.getColor())
-
-      Marker(
-          state = MarkerState(position = position),
-          icon = markerIcon,
-          tag = getTestTagForMarker(event.eventId),
-          title = event.title,
-          snippet = SNIPPET_MESSAGE,
-          onInfoWindowClick = {
-            onMarkerClick()
-            onEventNavigate(event.eventId)
-          })
-    }
+/** Requests location permissions if not already granted. */
+private fun requestPermissionsIfNeeded(allPermissionsGranted: Boolean, launchRequest: () -> Unit) {
+  if (!allPermissionsGranted) {
+    launchRequest()
   }
+}
 
-  series.forEach { (location, serie) ->
-    val position = LatLng(location.latitude, location.longitude)
-    val markerIcon = createMarkerForColor(seriePinColor)
-    Marker(
-        state = MarkerState(position = position),
-        icon = markerIcon,
-        tag = getTestTagForMarker(serie.serieId),
-        title = serie.title,
-        snippet = SNIPPET_MESSAGE,
-        onInfoWindowClick = {
-          onMarkerClick()
-          onSerieNavigate(serie.serieId)
-        })
+/** Initializes location service when permissions are granted. */
+private fun initLocationServiceIfGranted(
+    permissionsGranted: Boolean,
+    viewModel: MapViewModel,
+    context: android.content.Context
+) {
+  if (permissionsGranted) {
+    viewModel.initLocationService(LocationServiceImpl(context))
   }
 }
 
@@ -354,22 +281,26 @@ fun MapScreen(
       }
 
   // --- Enable following user on screen entry (unless returning from marker double click) ---
+  LaunchedEffect(Unit) { handleInitialFollowing(viewModel, uiState.isReturningFromMarkerClick) }
+
+  // --- Permissions management---
+  val locationPermissionsState =
+      rememberMultiplePermissionsState(
+          listOf(
+              android.Manifest.permission.ACCESS_FINE_LOCATION,
+              android.Manifest.permission.ACCESS_COARSE_LOCATION,
+          ))
+
   LaunchedEffect(Unit) {
-    if (uiState.isReturningFromMarkerClick) {
-      viewModel.clearMarkerClickFlag()
-    } else {
-      viewModel.enableFollowingUser()
+    requestPermissionsIfNeeded(locationPermissionsState.allPermissionsGranted) {
+      locationPermissionsState.launchMultiplePermissionRequest()
     }
+    viewModel.fetchLocalizableEvents()
   }
 
-  // --- Permissions management ---
-  val locationPermissionsState = rememberMapPermissions(context, viewModel)
-
-  val lifecycleOwner = LocalLifecycleOwner.current
-  LaunchedEffect(lifecycleOwner) {
-    lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-      viewModel.fetchLocalizableEvents()
-    }
+  // --- Reinitialize location service when permissions are granted ---
+  LaunchedEffect(locationPermissionsState.allPermissionsGranted) {
+    initLocationServiceIfGranted(locationPermissionsState.allPermissionsGranted, viewModel, context)
   }
 
   // --- Initialize the map camera position ---
@@ -398,21 +329,27 @@ fun MapScreen(
       onDisableFollowing = { viewModel.disableFollowingUser() })
 
   // --- Center the map when the user location changes (only if following is enabled) ---
-  MapCameraEffects(
-      currentLat = currentLat,
-      currentLng = currentLng,
-      isFollowingUser = isFollowingUser,
-      cameraPositionState = cameraPositionState,
-      onProgrammaticMoveStart = { isProgrammaticMove = true },
-      onProgrammaticMoveEnd = { isProgrammaticMove = false })
+  LaunchedEffect(currentLat, currentLng, isFollowingUser) {
+    if (shouldFollowUserLocation(currentLat, currentLng, isFollowingUser)) {
+      animateCameraToLocation(
+          cameraPositionState = cameraPositionState,
+          latitude = currentLat!!,
+          longitude = currentLng!!,
+          onMoveStart = { isProgrammaticMove = true },
+          onMoveEnd = { isProgrammaticMove = false })
+    }
+  }
 
   // --- Detect user interaction with the map to disable following ---
-  MapUserInteractionDetector(
-      cameraPositionState = cameraPositionState,
-      isProgrammaticMove = isProgrammaticMove,
-      isFollowingUser = isFollowingUser,
-      isMapInitialized = isMapInitialized,
-      onDisableFollowing = { viewModel.disableFollowingUser() })
+  LaunchedEffect(cameraPositionState) {
+    snapshotFlow { cameraPositionState.isMoving }
+        .collect { isMoving ->
+          if (shouldDisableFollowing(
+              isMoving, isProgrammaticMove, isFollowingUser, isMapInitialized)) {
+            viewModel.disableFollowingUser()
+          }
+        }
+  }
 
   // --- Map properties configuration ---
   val mapStyle =
@@ -446,17 +383,37 @@ fun MapScreen(
                   properties = mapProperties,
                   uiSettings =
                       MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = false)) {
-                    MapMarkers(
-                        events = uiState.events,
-                        series = uiState.series,
-                        seriePinColor = MaterialTheme.customColors.seriePinMark,
-                        onMarkerClick = { viewModel.onMarkerClick() },
-                        onEventNavigate = { eventId ->
-                          navigationActions?.navigateTo(Screen.ShowEventScreen(eventId))
-                        },
-                        onSerieNavigate = { serieId ->
-                          navigationActions?.navigateTo(Screen.SerieDetails(serieId))
-                        })
+                    uiState.events.forEach { event ->
+                      event.location?.let { location ->
+                        val position = LatLng(location.latitude, location.longitude)
+                        val markerIcon = createMarkerForColor(event.type.getColor())
+
+                        Marker(
+                            state = MarkerState(position = position),
+                            icon = markerIcon,
+                            tag = getTestTagForMarker(event.eventId),
+                            title = event.title,
+                            snippet = SNIPPET_MESSAGE,
+                            onInfoWindowClick = {
+                              viewModel.onMarkerClick()
+                              navigationActions?.navigateTo(Screen.ShowEventScreen(event.eventId))
+                            })
+                      }
+                    }
+                    uiState.series.forEach { (location, serie) ->
+                      val position = LatLng(location.latitude, location.longitude)
+                      val markerIcon = createMarkerForColor(MaterialTheme.customColors.seriePinMark)
+                      Marker(
+                          state = MarkerState(position = position),
+                          icon = markerIcon,
+                          tag = getTestTagForMarker(serie.serieId),
+                          title = serie.title,
+                          snippet = SNIPPET_MESSAGE,
+                          onInfoWindowClick = {
+                            viewModel.onMarkerClick()
+                            navigationActions?.navigateTo(Screen.SerieDetails(serie.serieId))
+                          })
+                    }
                   }
 
               IconButton(
