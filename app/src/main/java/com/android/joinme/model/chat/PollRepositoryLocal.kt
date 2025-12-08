@@ -72,9 +72,7 @@ class PollRepositoryLocal : PollRepository {
         throw Exception(POLL_CLOSED)
       }
 
-      if (poll.options.none { it.id == optionId }) {
-        throw IllegalArgumentException(INVALID_OPTION)
-      }
+      require(!(poll.options.none { it.id == optionId })) { INVALID_OPTION }
 
       // Build updated options
       val updatedOptions =
@@ -114,9 +112,7 @@ class PollRepositoryLocal : PollRepository {
         throw Exception(POLL_CLOSED)
       }
 
-      if (poll.options.none { it.id == optionId }) {
-        throw IllegalArgumentException(INVALID_OPTION)
-      }
+      require(!(poll.options.none { it.id == optionId })) { INVALID_OPTION }
 
       // Build updated options
       val updatedOptions =
