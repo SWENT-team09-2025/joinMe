@@ -1,29 +1,35 @@
 package com.android.joinme.model.event
 
 import android.content.Context
+import com.android.joinme.network.NetworkMonitor
 import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
 /**
- * Provides the correct [EventsRepository] implementation depending on connectivity. Uses Firestore
- * when online, local repository otherwise.
+ * Provides the correct [EventsRepository] implementation depending on the environment.
+ *
+ * - Test environment: Uses local (in-memory) repository
+ * - Production: Uses cached repository with offline support
  */
 object EventsRepositoryProvider {
 
-  // Local repository (in-memory)
+  // Local repository (in-memory, for testing only)
   private val localRepo: EventsRepository by lazy { EventsRepositoryLocal() }
 
   // Firestore repository (initialized lazily)
   private var firestoreRepo: EventsRepository? = null
 
+  // Cached repository (initialized lazily)
+  private var cachedRepo: EventsRepository? = null
+
   /**
-   * Returns the appropriate repository based on network availability.
+   * Returns the appropriate repository implementation.
    *
-   * @param isOnline whether the app is online
-   * @param context required for initializing Firebase if needed
+   * @param context Application context (required for production, optional for tests)
+   * @return EventsRepository implementation
    */
-  fun getRepository(isOnline: Boolean, context: Context? = null): EventsRepository {
+  fun getRepository(context: Context? = null): EventsRepository {
     val isTestEnv =
         android.os.Build.FINGERPRINT == "robolectric" ||
             android.os.Debug.isDebuggerConnected() ||
@@ -36,18 +42,72 @@ object EventsRepositoryProvider {
               false
             }
 
-    return if (isTestEnv || !isOnline) localRepo else getFirestoreRepo(context)
+    // Test environment: use local repository
+    if (isTestEnv) return localRepo
+
+    // Production: use cached repository with offline support
+    requireNotNull(context) { "Context is required for production repository" }
+    return getCachedRepo(context)
   }
 
-  private fun getFirestoreRepo(context: Context?): EventsRepository {
+  /**
+   * Legacy method for backward compatibility. Prefers to use context-based approach.
+   *
+   * @param isOnline Ignored - network state is handled internally by cached repo
+   * @param context Application context (if null, attempts to get from Firebase)
+   * @return EventsRepository implementation
+   */
+  @Deprecated(
+      "Use getRepository(context) instead. Network state is handled internally.",
+      ReplaceWith("getRepository(context)"))
+  fun getRepository(isOnline: Boolean, context: Context? = null): EventsRepository {
+    val isTestEnv =
+        android.os.Build.FINGERPRINT == "robolectric" ||
+            android.os.Debug.isDebuggerConnected() ||
+            System.getProperty("IS_TEST_ENV") == "true" ||
+            try {
+              Class.forName("androidx.test.runner.AndroidJUnitRunner")
+              true
+            } catch (e: ClassNotFoundException) {
+              false
+            }
+
+    if (isTestEnv) return localRepo
+
+    // Try to get context from Firebase if not provided
+    val ctx = context ?: try {
+      FirebaseApp.getInstance().applicationContext
+    } catch (e: Exception) {
+      null
+    }
+
+    return getRepository(ctx)
+  }
+
+  private fun getFirestoreRepo(context: Context): EventsRepository {
     if (firestoreRepo == null) {
-      val ctx = context ?: FirebaseApp.getInstance().applicationContext
-      val apps = FirebaseApp.getApps(ctx)
+      val apps = FirebaseApp.getApps(context)
       if (apps.isEmpty()) {
-        FirebaseApp.initializeApp(ctx)
+        FirebaseApp.initializeApp(context)
       }
-      firestoreRepo = EventsRepositoryFirestore(Firebase.firestore, ctx)
+      firestoreRepo = EventsRepositoryFirestore(Firebase.firestore, context)
     }
     return firestoreRepo!!
+  }
+
+  private fun getCachedRepo(context: Context): EventsRepository {
+    if (cachedRepo == null) {
+      val firestore = getFirestoreRepo(context)
+      val networkMonitor = NetworkMonitor(context)
+      cachedRepo = EventsRepositoryCached(context, firestore, networkMonitor)
+    }
+    return cachedRepo!!
+  }
+
+  /** For testing only - allows resetting the singleton state. */
+  @androidx.annotation.VisibleForTesting
+  fun resetForTesting() {
+    firestoreRepo = null
+    cachedRepo = null
   }
 }
