@@ -97,7 +97,8 @@ private suspend fun handleGroupJoin(
 ) {
   if (userId == null) {
     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-      Toast.makeText(context, "Please sign in to join the group", Toast.LENGTH_SHORT).show()
+      Toast.makeText(context, context.getString(R.string.sign_in_to_join_group), Toast.LENGTH_SHORT)
+          .show()
     }
     return
   }
@@ -106,12 +107,15 @@ private suspend fun handleGroupJoin(
     val groupRepository = GroupRepositoryProvider.repository
     groupRepository.joinGroup(groupId, userId)
     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-      Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT).show()
+      Toast.makeText(context, context.getString(R.string.success_joining_group), Toast.LENGTH_SHORT)
+          .show()
     }
     navigationActions.navigateTo(Screen.GroupDetail(groupId))
   } catch (e: Exception) {
     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-      Toast.makeText(context, "Failed to join group: ${e.message}", Toast.LENGTH_LONG).show()
+      Toast.makeText(
+              context, context.getString(R.string.fail_joining_group, e.message), Toast.LENGTH_LONG)
+          .show()
     }
   }
 }
@@ -147,20 +151,29 @@ private suspend fun processInvitation(
             }
           } else {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-              Toast.makeText(context, "Invalid or expired invitation link", Toast.LENGTH_LONG)
+              Toast.makeText(
+                      context,
+                      context.getString(R.string.invalid_invitation_link),
+                      Toast.LENGTH_LONG)
                   .show()
             }
           }
         }
         .onFailure { e ->
           kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-            Toast.makeText(context, "Failed to process invitation: ${e.message}", Toast.LENGTH_LONG)
+            Toast.makeText(
+                    context,
+                    context.getString(R.string.process_invitation_failed, e.message),
+                    Toast.LENGTH_LONG)
                 .show()
           }
         }
   } catch (e: Exception) {
     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-      Toast.makeText(context, "Failed to process invitation: ${e.message}", Toast.LENGTH_LONG)
+      Toast.makeText(
+              context,
+              context.getString(R.string.process_invitation_failed, e.message),
+              Toast.LENGTH_LONG)
           .show()
     }
   }
