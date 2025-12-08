@@ -8,7 +8,6 @@ import com.google.firebase.ktx.Firebase
 
 /**
  * Provides the correct [EventsRepository] implementation depending on the environment.
- *
  * - Test environment: Uses local (in-memory) repository
  * - Production: Uses cached repository with offline support
  */
@@ -75,11 +74,13 @@ object EventsRepositoryProvider {
     if (isTestEnv) return localRepo
 
     // Try to get context from Firebase if not provided
-    val ctx = context ?: try {
-      FirebaseApp.getInstance().applicationContext
-    } catch (e: Exception) {
-      null
-    }
+    val ctx =
+        context
+            ?: try {
+              FirebaseApp.getInstance().applicationContext
+            } catch (e: Exception) {
+              null
+            }
 
     return getRepository(ctx)
   }

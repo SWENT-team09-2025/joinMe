@@ -9,8 +9,8 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 
 /**
- * Cached implementation of EventsRepository. Implements offline-first read strategy and
- * online-only write strategy.
+ * Cached implementation of EventsRepository. Implements offline-first read strategy and online-only
+ * write strategy.
  *
  * Read strategy:
  * 1. Try to fetch from Firestore if online (and cache the result)
@@ -183,9 +183,10 @@ class EventsRepositoryCached(
 
     // Offline - filter cached events locally
     // This is a best-effort implementation - may not be perfectly accurate
-    return eventDao.getAllEvents().map { it.toEvent() }.filter { event ->
-      userIds.all { userId -> event.participants.contains(userId) }
-    }
+    return eventDao
+        .getAllEvents()
+        .map { it.toEvent() }
+        .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
   }
 
   /**

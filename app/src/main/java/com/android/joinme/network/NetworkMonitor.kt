@@ -54,16 +54,13 @@ class NetworkMonitor(private val context: Context) {
           ) {
             val isOnline =
                 networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                    networkCapabilities.hasCapability(
-                        NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                    networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
             trySend(isOnline)
           }
         }
 
     val request =
-        NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .build()
+        NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build()
 
     connectivityManager.registerNetworkCallback(request, callback)
 

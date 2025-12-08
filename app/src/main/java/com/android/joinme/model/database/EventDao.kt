@@ -8,7 +8,8 @@ import androidx.room.*
  */
 @Dao
 interface EventDao {
-  @Query("SELECT * FROM events WHERE eventId = :eventId") suspend fun getEventById(eventId: String): EventEntity?
+  @Query("SELECT * FROM events WHERE eventId = :eventId")
+  suspend fun getEventById(eventId: String): EventEntity?
 
   @Query("SELECT * FROM events") suspend fun getAllEvents(): List<EventEntity>
 
