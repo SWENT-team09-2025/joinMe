@@ -67,6 +67,9 @@ fun CalendarScreen(
   val context = LocalContext.current
   val uiState by calendarViewModel.uiState.collectAsState()
 
+  // Refresh calendar data when screen is recomposed
+  LaunchedEffect(Unit) { calendarViewModel.refreshItems() }
+
   LaunchedEffect(uiState.error) {
     uiState.error?.let { message ->
       Toast.makeText(context, message, Toast.LENGTH_SHORT).show()

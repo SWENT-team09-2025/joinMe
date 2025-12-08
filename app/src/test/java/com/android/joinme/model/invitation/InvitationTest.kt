@@ -15,7 +15,7 @@ class InvitationTest {
     val invitation =
         Invitation(
             token = "token123",
-            type = InvitationType.INVITATION_TO_GROUP,
+            type = InvitationType.GROUP,
             targetId = "target123",
             createdBy = "user123",
             expiresAt = null)
@@ -29,7 +29,7 @@ class InvitationTest {
     val invitation =
         Invitation(
             token = "token123",
-            type = InvitationType.INVITATION_TO_GROUP,
+            type = InvitationType.GROUP,
             targetId = "target123",
             createdBy = "user123",
             expiresAt = Timestamp(futureDate))
@@ -43,7 +43,7 @@ class InvitationTest {
     val invitation =
         Invitation(
             token = "token123",
-            type = InvitationType.INVITATION_TO_GROUP,
+            type = InvitationType.GROUP,
             targetId = "target123",
             createdBy = "user123",
             expiresAt = Timestamp(pastDate))
@@ -53,10 +53,8 @@ class InvitationTest {
 
   @Test
   fun `InvitationType fromString returns correct type for valid string`() {
-    assertEquals(
-        InvitationType.INVITATION_TO_GROUP, InvitationType.fromString("INVITATION_TO_GROUP"))
-    assertEquals(
-        InvitationType.INVITATION_TO_EVENT, InvitationType.fromString("invitation_to_event"))
+    assertEquals(InvitationType.GROUP, InvitationType.fromString("GROUP"))
+    assertEquals(InvitationType.EVENT, InvitationType.fromString("event"))
   }
 
   @Test
@@ -66,8 +64,8 @@ class InvitationTest {
 
   @Test
   fun `InvitationType toDisplayString returns correct string`() {
-    assertEquals("group", InvitationType.INVITATION_TO_GROUP.toDisplayString())
-    assertEquals("event", InvitationType.INVITATION_TO_EVENT.toDisplayString())
-    assertEquals("serie", InvitationType.INVITATION_TO_SERIES.toDisplayString())
+    assertEquals("Group", InvitationType.GROUP.toDisplayString())
+    assertEquals("Event", InvitationType.EVENT.toDisplayString())
+    assertEquals("Serie", InvitationType.SERIE.toDisplayString())
   }
 }

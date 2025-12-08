@@ -1,17 +1,19 @@
 package com.android.joinme.model.invitation
 
 import com.google.firebase.Timestamp
+import java.util.Locale
 
 /** Represents the type of invitation to join a group, event, or serie. */
+@Suppress("java:S115")
 enum class InvitationType {
-  INVITATION_TO_GROUP,
-  INVITATION_TO_EVENT,
-  INVITATION_TO_SERIES;
+  GROUP,
+  EVENT,
+  SERIE;
 
   /**
    * Converts a string representation of the invitation type to its corresponding enum value.
    *
-   * @param InvitationType The string representation of the invitation type.
+   * @param String The InvitationType of the string.
    */
   companion object {
     fun fromString(value: String): InvitationType? {
@@ -24,13 +26,10 @@ enum class InvitationType {
    *
    * @return A string representation of the invitation type.
    */
-  fun toDisplayString(): String {
-    return when (this) {
-      INVITATION_TO_GROUP -> "group"
-      INVITATION_TO_EVENT -> "event"
-      INVITATION_TO_SERIES -> "serie"
-    }
-  }
+  fun toDisplayString(): String =
+      name.lowercase(Locale.ROOT).replaceFirstChar {
+        if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+      }
 }
 
 /** Represents an invitation to join a group, event, or serie. */
