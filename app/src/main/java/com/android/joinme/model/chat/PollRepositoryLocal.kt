@@ -17,6 +17,9 @@ const val POLL_CLOSED = "PollRepositoryLocal: Cannot vote on closed poll"
 /** Exception message for when a non-owner tries to modify a poll. */
 const val NOT_POLL_OWNER = "PollRepositoryLocal: Only the poll owner can perform this action"
 
+/** Exception message for when an invalid option ID is provided. */
+const val INVALID_OPTION = "PollRepositoryLocal: Invalid option ID"
+
 /**
  * In-memory implementation of [PollRepository] for offline mode or testing.
  *
@@ -69,6 +72,10 @@ class PollRepositoryLocal : PollRepository {
         throw Exception(POLL_CLOSED)
       }
 
+      if (poll.options.none { it.id == optionId }) {
+        throw IllegalArgumentException(INVALID_OPTION)
+      }
+
       // Build updated options
       val updatedOptions =
           poll.options.map { option ->
@@ -105,6 +112,10 @@ class PollRepositoryLocal : PollRepository {
 
       if (poll.isClosed) {
         throw Exception(POLL_CLOSED)
+      }
+
+      if (poll.options.none { it.id == optionId }) {
+        throw IllegalArgumentException(INVALID_OPTION)
       }
 
       // Build updated options
@@ -177,7 +188,7 @@ class PollRepositoryLocal : PollRepository {
   }
 
   /** Clears all polls from the local repository. Useful for test setup/teardown. */
-  suspend fun clearAll() {
+  suspend fun clear() {
     mutex.withLock {
       polls.clear()
       pollsFlow.value = emptyList()

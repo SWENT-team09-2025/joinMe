@@ -55,30 +55,7 @@ class PollRepositoryLocalTest {
   // ============ Create & Get Poll ============
 
   @Test
-  fun createPoll_appearsInFlowAndCanBeRetrieved() = runTest {
-    repo.createPoll(samplePoll)
-
-    // Check via observe
-    val polls = repo.observePollsForConversation(testConversationId).first()
-    Assert.assertEquals(1, polls.size)
-    Assert.assertEquals(samplePoll.question, polls[0].question)
-
-    // Check via getPoll
-    val poll = repo.getPoll(testConversationId, "poll1")
-    Assert.assertNotNull(poll)
-    Assert.assertEquals("poll1", poll!!.id)
-  }
-
-  @Test
-  fun getPoll_returnsNullForNonExistentOrWrongConversation() = runTest {
-    repo.createPoll(samplePoll)
-
-    Assert.assertNull(repo.getPoll(testConversationId, "nonexistent"))
-    Assert.assertNull(repo.getPoll("wrongConversation", "poll1"))
-  }
-
-  @Test
-  fun createPoll_preservesAllProperties() = runTest {
+  fun createPoll_appearsInFlowPreservesPropertiesAndCanBeRetrieved() = runTest {
     val fullPoll =
         Poll(
             id = "poll1",
@@ -93,8 +70,10 @@ class PollRepositoryLocalTest {
             createdAt = 5000L)
     repo.createPoll(fullPoll)
 
-    val retrieved = repo.observePollsForConversation(testConversationId).first()[0]
-
+    // Check via observe and verify all properties preserved
+    val polls = repo.observePollsForConversation(testConversationId).first()
+    Assert.assertEquals(1, polls.size)
+    val retrieved = polls[0]
     Assert.assertEquals(fullPoll.id, retrieved.id)
     Assert.assertEquals(fullPoll.creatorId, retrieved.creatorId)
     Assert.assertEquals(fullPoll.creatorName, retrieved.creatorName)
@@ -102,6 +81,19 @@ class PollRepositoryLocalTest {
     Assert.assertEquals(fullPoll.isAnonymous, retrieved.isAnonymous)
     Assert.assertEquals(fullPoll.allowMultipleAnswers, retrieved.allowMultipleAnswers)
     Assert.assertEquals(fullPoll.createdAt, retrieved.createdAt)
+
+    // Check via getPoll
+    val poll = repo.getPoll(testConversationId, "poll1")
+    Assert.assertNotNull(poll)
+    Assert.assertEquals("poll1", poll!!.id)
+  }
+
+  @Test
+  fun getPoll_returnsNullForNonExistentOrWrongConversation() = runTest {
+    repo.createPoll(samplePoll)
+
+    Assert.assertNull(repo.getPoll(testConversationId, "nonexistent"))
+    Assert.assertNull(repo.getPoll("wrongConversation", "poll1"))
   }
 
   // ============ Observe Polls ============
@@ -239,17 +231,6 @@ class PollRepositoryLocalTest {
     }
   }
 
-  @Test(expected = Exception::class)
-  fun closePoll_nonOwner_throwsException() = runTest {
-    repo.createPoll(samplePoll)
-    repo.closePoll(testConversationId, "poll1", "notOwner")
-  }
-
-  @Test(expected = Exception::class)
-  fun closePoll_nonExistent_throwsException() = runTest {
-    repo.closePoll(testConversationId, "nonexistent", "creator1")
-  }
-
   // ============ Reopen Poll ============
 
   @Test
@@ -268,18 +249,6 @@ class PollRepositoryLocalTest {
     Assert.assertTrue(updatedPolls[0].hasUserVotedForOption("user1", 0))
   }
 
-  @Test(expected = Exception::class)
-  fun reopenPoll_nonOwner_throwsException() = runTest {
-    repo.createPoll(samplePoll)
-    repo.closePoll(testConversationId, "poll1", "creator1")
-    repo.reopenPoll(testConversationId, "poll1", "notOwner")
-  }
-
-  @Test(expected = Exception::class)
-  fun reopenPoll_nonExistent_throwsException() = runTest {
-    repo.reopenPoll(testConversationId, "nonexistent", "creator1")
-  }
-
   // ============ Delete Poll ============
 
   @Test
@@ -291,35 +260,80 @@ class PollRepositoryLocalTest {
     Assert.assertTrue(polls.isEmpty())
   }
 
-  @Test(expected = Exception::class)
-  fun deletePoll_nonOwner_throwsException() = runTest {
+  // ============ Owner-Only Operations - Error Cases ============
+
+  @Test
+  fun ownerOnlyOperations_nonOwner_throwsException() = runTest {
     repo.createPoll(samplePoll)
-    repo.deletePoll(testConversationId, "poll1", "notOwner")
+    repo.closePoll(testConversationId, "poll1", "creator1")
+
+    // Close poll - non-owner
+    try {
+      repo.createPoll(samplePoll.copy(id = "poll2"))
+      repo.closePoll(testConversationId, "poll2", "notOwner")
+      Assert.fail("Expected exception for non-owner closing poll")
+    } catch (e: Exception) {
+      Assert.assertTrue(e.message!!.contains("owner"))
+    }
+
+    // Reopen poll - non-owner
+    try {
+      repo.reopenPoll(testConversationId, "poll1", "notOwner")
+      Assert.fail("Expected exception for non-owner reopening poll")
+    } catch (e: Exception) {
+      Assert.assertTrue(e.message!!.contains("owner"))
+    }
+
+    // Delete poll - non-owner
+    try {
+      repo.deletePoll(testConversationId, "poll1", "notOwner")
+      Assert.fail("Expected exception for non-owner deleting poll")
+    } catch (e: Exception) {
+      Assert.assertTrue(e.message!!.contains("owner"))
+    }
   }
 
-  @Test(expected = Exception::class)
-  fun deletePoll_nonExistent_throwsException() = runTest {
-    repo.deletePoll(testConversationId, "nonexistent", "creator1")
+  @Test
+  fun ownerOnlyOperations_nonExistentPoll_throwsException() = runTest {
+    // Close poll - non-existent
+    try {
+      repo.closePoll(testConversationId, "nonexistent", "creator1")
+      Assert.fail("Expected exception for closing non-existent poll")
+    } catch (e: Exception) {
+      Assert.assertTrue(e.message!!.contains("not found"))
+    }
+
+    // Reopen poll - non-existent
+    try {
+      repo.reopenPoll(testConversationId, "nonexistent", "creator1")
+      Assert.fail("Expected exception for reopening non-existent poll")
+    } catch (e: Exception) {
+      Assert.assertTrue(e.message!!.contains("not found"))
+    }
+
+    // Delete poll - non-existent
+    try {
+      repo.deletePoll(testConversationId, "nonexistent", "creator1")
+      Assert.fail("Expected exception for deleting non-existent poll")
+    } catch (e: Exception) {
+      Assert.assertTrue(e.message!!.contains("not found"))
+    }
   }
 
   // ============ Utility Methods ============
 
   @Test
-  fun clearAll_removesAllPolls() = runTest {
-    repo.createPoll(samplePoll)
-    repo.createPoll(samplePoll.copy(id = "poll2"))
-    repo.clearAll()
-
-    val polls = repo.observePollsForConversation(testConversationId).first()
-    Assert.assertTrue(polls.isEmpty())
-  }
-
-  @Test
-  fun getAllPolls_returnsAllPolls() = runTest {
+  fun utilityMethods_clearAndGetAllPolls() = runTest {
     repo.createPoll(samplePoll.copy(id = "p1", conversationId = "conv1"))
     repo.createPoll(samplePoll.copy(id = "p2", conversationId = "conv2"))
 
+    // getAllPolls returns all polls across conversations
     val allPolls = repo.getAllPolls()
     Assert.assertEquals(2, allPolls.size)
+
+    // clear removes all polls
+    repo.clear()
+    val pollsAfterClear = repo.getAllPolls()
+    Assert.assertTrue(pollsAfterClear.isEmpty())
   }
 }
