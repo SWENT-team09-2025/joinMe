@@ -25,7 +25,6 @@ import com.google.firebase.ktx.Firebase
  * @param firestoreRepo The Firestore repository implementation to delegate online operations to
  * @param networkMonitor Network connectivity monitor
  */
-@Suppress("DELEGATED_MEMBER_HIDES_SUPERTYPE_OVERRIDE")
 class EventsRepositoryCached(
     private val context: Context,
     private val firestoreRepo: EventsRepository,
@@ -35,7 +34,9 @@ class EventsRepositoryCached(
   private val database = AppDatabase.getDatabase(context)
   private val eventDao = database.eventDao()
 
-  override fun getNewEventId(): String = firestoreRepo.getNewEventId()
+  // Cannot use interface delegation as only this method delegates; all others have custom caching
+  // logic
+  override fun getNewEventId(): String = firestoreRepo.getNewEventId() // NOSONAR
 
   override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
     // Try to fetch from Firestore if online
