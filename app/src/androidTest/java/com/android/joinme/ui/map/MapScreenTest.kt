@@ -280,4 +280,102 @@ class MapScreenTest {
     assert(!testViewModel.uiState.value.isReturningFromMarkerClick)
     assert(!testViewModel.uiState.value.isFollowingUser)
   }
+
+  @Test
+  fun mapScreen_centersOnInitialLocation_whenProvidedFromChatMessage() {
+    // This test covers the MapInitialLocationEffect composable
+    // Tests that map centers on specific location (e.g., from chat location message)
+    val testViewModel = MapViewModel()
+
+    // EPFL location coordinates
+    val initialLatitude = 46.5196
+    val initialLongitude = 6.5680
+
+    // Set initial user following to true
+    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
+    stateField.isAccessible = true
+    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
+    mutableState.value = MapUIState(isFollowingUser = true)
+
+    composeTestRule.setContent {
+      MapScreen(
+          viewModel = testViewModel,
+          navigationActions = null,
+          initialLatitude = initialLatitude,
+          initialLongitude = initialLongitude)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Verify that following user is disabled (MapInitialLocationEffect should disable it)
+    assert(!testViewModel.uiState.value.isFollowingUser)
+
+    // Verify the map screen is displayed
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_doesNotCenterOnLocation_whenInitialLocationIsNull() {
+    // This test verifies that MapInitialLocationEffect does not trigger when location is null
+    val testViewModel = MapViewModel()
+
+    // Set initial user following to true
+    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
+    stateField.isAccessible = true
+    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
+    mutableState.value = MapUIState(isFollowingUser = true)
+
+    composeTestRule.setContent {
+      MapScreen(
+          viewModel = testViewModel,
+          navigationActions = null,
+          initialLatitude = null, // No initial location
+          initialLongitude = null)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Verify that following user is still enabled (not affected by MapInitialLocationEffect)
+    assert(testViewModel.uiState.value.isFollowingUser)
+
+    // Verify the map screen is displayed
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_centersOnPartialInitialLocation_onlyWhenBothCoordinatesProvided() {
+    // This test verifies that MapInitialLocationEffect requires both coordinates
+    val testViewModel = MapViewModel()
+
+    // Set initial user following to true
+    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
+    stateField.isAccessible = true
+    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
+    mutableState.value = MapUIState(isFollowingUser = true)
+
+    composeTestRule.setContent {
+      MapScreen(
+          viewModel = testViewModel,
+          navigationActions = null,
+          initialLatitude = 46.5196, // Only latitude provided
+          initialLongitude = null) // Longitude missing
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Verify that following user is still enabled (MapInitialLocationEffect should not trigger)
+    assert(testViewModel.uiState.value.isFollowingUser)
+
+    // Verify the map screen is displayed
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
 }

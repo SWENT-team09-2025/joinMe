@@ -723,7 +723,6 @@ private fun MessageContent(
         message.location?.let { location ->
           ChatLocationMessage(
               location = location,
-              staticMapUrl = message.content,
               bubbleColor = bubbleColor,
               onClick = { onLocationClick(location) })
         }
@@ -906,17 +905,11 @@ private fun UserAvatar(photoUrl: String?, userName: String, modifier: Modifier =
  * - Click to view on full map screen
  *
  * @param location The Location object containing coordinates and name
- * @param staticMapUrl Unused (kept for compatibility with backend)
  * @param bubbleColor The color for the bubble background
  * @param onClick Callback when the location is clicked
  */
 @Composable
-private fun ChatLocationMessage(
-    location: Location,
-    staticMapUrl: String,
-    bubbleColor: Color,
-    onClick: () -> Unit = {}
-) {
+private fun ChatLocationMessage(location: Location, bubbleColor: Color, onClick: () -> Unit = {}) {
   val locationLatLng = LatLng(location.latitude, location.longitude)
   val cameraPositionState = rememberCameraPositionState {
     position = CameraPosition.fromLatLngZoom(locationLatLng, 15f)
@@ -1157,6 +1150,55 @@ private fun MessageInput(
 }
 
 /**
+ * Handles the location attachment click action.
+ *
+ * This function manages the entire location sharing flow:
+ * - Checks if location permissions are granted
+ * - Retrieves current location
+ * - Shows location preview dialog or error messages
+ *
+ * @param context Android context for location service and toasts
+ * @param locationPermissionsState State of location permissions
+ * @param coroutineScope Coroutine scope for launching location requests
+ * @param onLocationRetrieved Callback when location is successfully retrieved
+ */
+@OptIn(com.google.accompanist.permissions.ExperimentalPermissionsApi::class)
+private fun handleLocationClick(
+    context: android.content.Context,
+    locationPermissionsState: com.google.accompanist.permissions.MultiplePermissionsState,
+    coroutineScope: kotlinx.coroutines.CoroutineScope,
+    onLocationRetrieved: (UserLocation) -> Unit
+) {
+  if (locationPermissionsState.allPermissionsGranted) {
+    // Get current location
+    coroutineScope.launch {
+      try {
+        val locationService = LocationServiceImpl(context)
+        val location = locationService.getCurrentLocation()
+        if (location != null) {
+          onLocationRetrieved(location)
+        } else {
+          Toast.makeText(
+                  context,
+                  context.getString(R.string.failed_to_send_location, "Location unavailable"),
+                  Toast.LENGTH_SHORT)
+              .show()
+        }
+      } catch (e: Exception) {
+        Toast.makeText(
+                context,
+                context.getString(R.string.failed_to_send_location, e.message),
+                Toast.LENGTH_SHORT)
+            .show()
+      }
+    }
+  } else {
+    // Request permissions
+    locationPermissionsState.launchMultiplePermissionRequest()
+  }
+}
+
+/**
  * Bottom sheet menu for attachment options.
  *
  * Displays three options in a horizontal row:
@@ -1243,35 +1285,14 @@ private fun AttachmentMenu(
                 icon = Icons.Default.LocationOn,
                 label = stringResource(R.string.location),
                 onClick = {
-                  if (locationPermissionsState.allPermissionsGranted) {
-                    // Get current location
-                    coroutineScope.launch {
-                      try {
-                        val locationService = LocationServiceImpl(context)
-                        val location = locationService.getCurrentLocation()
-                        if (location != null) {
-                          currentUserLocation = location
-                          showLocationPreview = true
-                        } else {
-                          Toast.makeText(
-                                  context,
-                                  context.getString(
-                                      R.string.failed_to_send_location, "Location unavailable"),
-                                  Toast.LENGTH_SHORT)
-                              .show()
-                        }
-                      } catch (e: Exception) {
-                        Toast.makeText(
-                                context,
-                                context.getString(R.string.failed_to_send_location, e.message),
-                                Toast.LENGTH_SHORT)
-                            .show()
-                      }
-                    }
-                  } else {
-                    // Request permissions
-                    locationPermissionsState.launchMultiplePermissionRequest()
-                  }
+                  handleLocationClick(
+                      context = context,
+                      locationPermissionsState = locationPermissionsState,
+                      coroutineScope = coroutineScope,
+                      onLocationRetrieved = { location ->
+                        currentUserLocation = location
+                        showLocationPreview = true
+                      })
                 },
                 modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_LOCATION))
 
@@ -1324,8 +1345,7 @@ private fun AttachmentMenu(
                 onDismiss()
               },
               onError = { error -> Toast.makeText(context, error, Toast.LENGTH_SHORT).show() })
-        },
-        context = context)
+        })
   }
 }
 
@@ -1337,14 +1357,12 @@ private fun AttachmentMenu(
  * @param userLocation The current user location to preview
  * @param onDismiss Callback when dialog is dismissed
  * @param onSendLocation Callback when send button is clicked
- * @param context Android context
  */
 @Composable
 private fun LocationPreviewDialog(
     userLocation: UserLocation,
     onDismiss: () -> Unit,
-    onSendLocation: () -> Unit,
-    context: android.content.Context
+    onSendLocation: () -> Unit
 ) {
   val locationLatLng = LatLng(userLocation.latitude, userLocation.longitude)
   val cameraPositionState = rememberCameraPositionState {

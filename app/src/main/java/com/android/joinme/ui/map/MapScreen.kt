@@ -132,6 +132,46 @@ internal fun createMarkerForColor(color: Color): BitmapDescriptor {
 }
 
 /**
+ * Handles camera positioning when centering on a specific location.
+ *
+ * This is used when navigating to a specific location (e.g., from a chat location message). It
+ * centers the map on the provided coordinates and disables user following.
+ *
+ * @param initialLatitude Optional latitude to center on
+ * @param initialLongitude Optional longitude to center on
+ * @param cameraPositionState Camera position state to animate
+ * @param onProgrammaticMoveStart Callback when programmatic move starts
+ * @param onProgrammaticMoveEnd Callback when programmatic move ends
+ * @param onDisableFollowing Callback to disable user following
+ */
+@Composable
+private fun MapInitialLocationEffect(
+    initialLatitude: Double?,
+    initialLongitude: Double?,
+    cameraPositionState: com.google.maps.android.compose.CameraPositionState,
+    onProgrammaticMoveStart: () -> Unit,
+    onProgrammaticMoveEnd: () -> Unit,
+    onDisableFollowing: () -> Unit
+) {
+  LaunchedEffect(initialLatitude, initialLongitude) {
+    if (initialLatitude != null && initialLongitude != null) {
+      try {
+        onProgrammaticMoveStart()
+        onDisableFollowing() // Don't follow user when viewing specific location
+        cameraPositionState.animate(
+            update =
+                CameraUpdateFactory.newLatLngZoom(LatLng(initialLatitude, initialLongitude), 16f),
+            durationMs = 1000)
+      } catch (e: Exception) {
+        // Animation was interrupted or failed
+      } finally {
+        onProgrammaticMoveEnd()
+      }
+    }
+  }
+}
+
+/**
  * Handles camera positioning effects when user location changes.
  *
  * @param currentLat Current latitude
@@ -349,22 +389,13 @@ fun MapScreen(
   LaunchedEffect(cameraPositionState) { isMapInitialized = true }
 
   // --- Center map on specific location if provided (e.g., from chat location message) ---
-  LaunchedEffect(initialLatitude, initialLongitude) {
-    if (initialLatitude != null && initialLongitude != null) {
-      try {
-        isProgrammaticMove = true
-        viewModel.disableFollowingUser() // Don't follow user when viewing specific location
-        cameraPositionState.animate(
-            update =
-                CameraUpdateFactory.newLatLngZoom(LatLng(initialLatitude, initialLongitude), 16f),
-            durationMs = 1000)
-      } catch (e: Exception) {
-        // Animation was interrupted or failed
-      } finally {
-        isProgrammaticMove = false
-      }
-    }
-  }
+  MapInitialLocationEffect(
+      initialLatitude = initialLatitude,
+      initialLongitude = initialLongitude,
+      cameraPositionState = cameraPositionState,
+      onProgrammaticMoveStart = { isProgrammaticMove = true },
+      onProgrammaticMoveEnd = { isProgrammaticMove = false },
+      onDisableFollowing = { viewModel.disableFollowingUser() })
 
   // --- Center the map when the user location changes (only if following is enabled) ---
   MapCameraEffects(
