@@ -54,7 +54,7 @@ class ShareButtonTest {
   fun shareButton_rendersCorrectly_forGroupInvitation() {
     composeTestRule.setContent {
       ShareButton(
-          invitationType = InvitationType.INVITATION_TO_GROUP,
+          invitationType = InvitationType.GROUP,
           targetId = "test-id",
           createdBy = "user-123",
           expiresInDays = 7)
@@ -76,7 +76,7 @@ class ShareButtonTest {
     } returns Result.failure(Exception("Test error"))
 
     shareInvitation(
-        invitationType = InvitationType.INVITATION_TO_EVENT,
+        invitationType = InvitationType.EVENT,
         targetId = "id-2",
         createdBy = "user-2",
         expiresInDays = 3,
