@@ -29,7 +29,7 @@ import androidx.navigation.navigation
 import com.android.joinme.model.chat.ChatRepositoryProvider
 import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.groups.GroupRepositoryProvider
-import com.android.joinme.model.invitation.InvitationRepositoryFirestore
+import com.android.joinme.model.invitation.InvitationRepositoryProvider
 import com.android.joinme.model.invitation.InvitationType
 import com.android.joinme.model.invitation.deepLink.DeepLinkService
 import com.android.joinme.model.notification.FCMTokenManager
@@ -97,7 +97,8 @@ private suspend fun handleGroupJoin(
 ) {
   if (userId == null) {
     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-      Toast.makeText(context, "Please sign in to join the group", Toast.LENGTH_SHORT).show()
+      Toast.makeText(context, context.getString(R.string.sign_in_to_join_group), Toast.LENGTH_SHORT)
+          .show()
     }
     return
   }
@@ -106,12 +107,74 @@ private suspend fun handleGroupJoin(
     val groupRepository = GroupRepositoryProvider.repository
     groupRepository.joinGroup(groupId, userId)
     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-      Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT).show()
+      Toast.makeText(context, context.getString(R.string.success_joining_group), Toast.LENGTH_SHORT)
+          .show()
     }
     navigationActions.navigateTo(Screen.GroupDetail(groupId))
   } catch (e: Exception) {
     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-      Toast.makeText(context, "Failed to join group: ${e.message}", Toast.LENGTH_LONG).show()
+      Toast.makeText(
+              context, context.getString(R.string.fail_joining_group, e.message), Toast.LENGTH_LONG)
+          .show()
+    }
+  }
+}
+
+/**
+ * Processes an invitation by resolving it and navigating to the appropriate screen.
+ *
+ * @param token The invitation token to process
+ * @param userId The current user's ID
+ * @param context The context for showing toasts
+ * @param navigationActions Actions for navigation after successful processing
+ */
+private suspend fun processInvitation(
+    token: String,
+    userId: String,
+    context: Context,
+    navigationActions: NavigationActions
+) {
+  try {
+    val invitationRepository = InvitationRepositoryProvider.repository
+    val result = invitationRepository.resolveInvitation(token)
+
+    result
+        .onSuccess { invitation ->
+          if (invitation != null && invitation.isValid()) {
+            when (invitation.type) {
+              InvitationType.GROUP ->
+                  handleGroupJoin(invitation.targetId, userId, context, navigationActions)
+              InvitationType.EVENT ->
+                  navigationActions.navigateTo(Screen.ShowEventScreen(invitation.targetId))
+              InvitationType.SERIE ->
+                  navigationActions.navigateTo(Screen.SerieDetails(invitation.targetId))
+            }
+          } else {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+              Toast.makeText(
+                      context,
+                      context.getString(R.string.invalid_invitation_link),
+                      Toast.LENGTH_LONG)
+                  .show()
+            }
+          }
+        }
+        .onFailure { e ->
+          kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+            Toast.makeText(
+                    context,
+                    context.getString(R.string.process_invitation_failed, e.message),
+                    Toast.LENGTH_LONG)
+                .show()
+          }
+        }
+  } catch (e: Exception) {
+    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+      Toast.makeText(
+              context,
+              context.getString(R.string.process_invitation_failed, e.message),
+              Toast.LENGTH_LONG)
+          .show()
     }
   }
 }
@@ -273,52 +336,52 @@ fun JoinMe(
 
   // Navigate to event or event chat if opened from notification
   LaunchedEffect(initialEventId, notificationType, currentUserId) {
-    if (initialEventId != null && currentUserId.isNotEmpty()) {
-      // Check if this is an event chat notification
-      if (notificationType == eventChatMessageType && conversationId != null && chatName != null) {
-        // Navigate directly to the event chat
-        coroutineScope.launch {
-          try {
-            val eventRepository = EventsRepositoryProvider.getRepository(isOnline = true, context)
-            val event = eventRepository.getEvent(initialEventId)
-            navigationActions.navigateTo(
-                Screen.Chat(
-                    chatId = conversationId,
-                    chatTitle = chatName,
-                    totalParticipants = event.participants.size))
-          } catch (e: Exception) {
-            // If we can't get event details, navigate with defaults
-            navigationActions.navigateTo(
-                Screen.Chat(chatId = conversationId, chatTitle = chatName, totalParticipants = 1))
-          }
+    if (notificationType == eventChatMessageType &&
+        conversationId != null &&
+        chatName != null &&
+        initialEventId != null &&
+        currentUserId.isNotEmpty()) {
+      // Navigate directly to the event chat
+      coroutineScope.launch {
+        try {
+          val eventRepository = EventsRepositoryProvider.getRepository(isOnline = true, context)
+          val event = eventRepository.getEvent(initialEventId)
+          navigationActions.navigateTo(
+              Screen.Chat(
+                  chatId = conversationId,
+                  chatTitle = chatName,
+                  totalParticipants = event.participants.size))
+        } catch (e: Exception) {
+          // If we can't get event details, navigate with defaults
+          navigationActions.navigateTo(
+              Screen.Chat(chatId = conversationId, chatTitle = chatName, totalParticipants = 1))
         }
       }
     }
   }
 
-  // Join group if opened from invitation link or navigate to group chat from notification
+  //  navigate to group chat from notification
   LaunchedEffect(initialGroupId, notificationType, currentUserId) {
-    if (initialGroupId != null) {
-      // Check if this is a group chat notification
-      if (notificationType == groupChatMessageType &&
-          conversationId != null &&
-          chatName != null &&
-          currentUserId.isNotEmpty()) {
-        // Navigate directly to the group chat using notification data
-        coroutineScope.launch {
-          try {
-            val groupRepository = GroupRepositoryProvider.repository
-            val group = groupRepository.getGroup(initialGroupId)
-            navigationActions.navigateTo(
-                Screen.Chat(
-                    chatId = conversationId,
-                    chatTitle = chatName,
-                    totalParticipants = group.memberIds.size))
-          } catch (e: Exception) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-              Toast.makeText(context, "Failed to access group: ${e.message}", Toast.LENGTH_LONG)
-                  .show()
-            }
+    // Check if this is a group chat notification
+    if (notificationType == groupChatMessageType &&
+        conversationId != null &&
+        chatName != null &&
+        currentUserId.isNotEmpty() &&
+        initialGroupId != null) {
+      // Navigate directly to the group chat using notification data
+      coroutineScope.launch {
+        try {
+          val groupRepository = GroupRepositoryProvider.repository
+          val group = groupRepository.getGroup(initialGroupId)
+          navigationActions.navigateTo(
+              Screen.Chat(
+                  chatId = conversationId,
+                  chatTitle = chatName,
+                  totalParticipants = group.memberIds.size))
+        } catch (e: Exception) {
+          kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+            Toast.makeText(context, "Failed to access group: ${e.message}", Toast.LENGTH_LONG)
+                .show()
           }
         }
       }
@@ -341,51 +404,7 @@ fun JoinMe(
         pendingInvitationToken = tokenToProcess
       } else {
         coroutineScope.launch {
-          try {
-            val invitationRepository = InvitationRepositoryFirestore()
-            val result = invitationRepository.resolveInvitation(tokenToProcess)
-
-            result
-                .onSuccess { invitation ->
-                  if (invitation != null && invitation.isValid()) {
-                    when (invitation.type) {
-                      InvitationType.INVITATION_TO_GROUP ->
-                          handleGroupJoin(
-                              invitation.targetId, currentUserId, context, navigationActions)
-                      InvitationType.INVITATION_TO_EVENT ->
-                          navigationActions.navigateTo(Screen.ShowEventScreen(invitation.targetId))
-                      InvitationType.INVITATION_TO_SERIES ->
-                          navigationActions.navigateTo(Screen.SerieDetails(invitation.targetId))
-                    }
-                  } else {
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                      Toast.makeText(
-                              context, "Invalid or expired invitation link", Toast.LENGTH_LONG)
-                          .show()
-                    }
-                  }
-                }
-                .onFailure { e ->
-                  kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    Toast.makeText(
-                            context,
-                            "Failed to process invitation: ${e.message}",
-                            Toast.LENGTH_LONG)
-                        .show()
-                  }
-                }
-          } catch (e: Exception) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-              Toast.makeText(
-                      context, "Failed to process invitation: ${e.message}", Toast.LENGTH_LONG)
-                  .show()
-            }
-          } finally {
-            // Reset the new invitation token after processing
-            if (newInvitationToken != null) {
-              onInvitationProcessed()
-            }
-          }
+          processInvitation(invitationToken, currentUserId, context, navigationActions)
         }
       }
     }
@@ -395,48 +414,8 @@ fun JoinMe(
   LaunchedEffect(pendingInvitationToken, currentUserId) {
     if (pendingInvitationToken != null && currentUserId.isNotEmpty()) {
       coroutineScope.launch {
-        try {
-          val invitationRepository = InvitationRepositoryFirestore()
-          val result = invitationRepository.resolveInvitation(pendingInvitationToken!!)
-
-          result
-              .onSuccess { invitation ->
-                if (invitation != null && invitation.isValid()) {
-                  when (invitation.type) {
-                    InvitationType.INVITATION_TO_GROUP -> {
-                      handleGroupJoin(
-                          invitation.targetId, currentUserId, context, navigationActions)
-                    }
-                    InvitationType.INVITATION_TO_EVENT -> {
-                      navigationActions.navigateTo(Screen.ShowEventScreen(invitation.targetId))
-                    }
-                    InvitationType.INVITATION_TO_SERIES -> {
-                      navigationActions.navigateTo(Screen.SerieDetails(invitation.targetId))
-                    }
-                  }
-                } else {
-                  kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    Toast.makeText(context, "Invalid or expired invitation link", Toast.LENGTH_LONG)
-                        .show()
-                  }
-                }
-              }
-              .onFailure { e ->
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                  Toast.makeText(
-                          context, "Failed to process invitation: ${e.message}", Toast.LENGTH_LONG)
-                      .show()
-                }
-              }
-
-          pendingInvitationToken = null
-        } catch (e: Exception) {
-          kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-            Toast.makeText(context, "Failed to process invitation: ${e.message}", Toast.LENGTH_LONG)
-                .show()
-          }
-          pendingInvitationToken = null
-        }
+        processInvitation(pendingInvitationToken!!, currentUserId, context, navigationActions)
+        pendingInvitationToken = null
       }
     }
   }

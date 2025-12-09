@@ -121,6 +121,11 @@
     <!-- Invitation Types -->
     <string name="share_invitation_link">Share invitation link</string>
     <string name="message_invitation_link"> Join my %1$s on JoinMe:\n%2$s </string>
+    <string name="process_invitation_failed">Failed to process invitation: %1$s</string>
+    <string name="invalid_invitation_link">Invalid or expired invitation link</string>
+    <string name="fail_joining_group">Failed to join group: %1$s</string>
+    <string name="success_joining_group">Successfully joined the group!</string>
+    <string name="sign_in_to_join_group">Please sign in to join the group</string>
 
     <!-- Group button -->
     <string name="delete_group_button">DELETE GROUP</string>
