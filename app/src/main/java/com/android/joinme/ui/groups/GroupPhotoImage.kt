@@ -1,7 +1,5 @@
 package com.android.joinme.ui.groups
 
-// AI-assisted implementation — reviewed and adapted for project standards.
-
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -13,11 +11,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import coil.compose.SubcomposeAsyncImage
 import com.android.joinme.R
 import com.android.joinme.ui.theme.Dimens
+
+/** Test tags for GroupPhotoImage component. */
+object GroupPhotoImageTestTags {
+  const val GROUP_PHOTO = "group_photo_image"
+  const val GROUP_PHOTO_PLACEHOLDER = "group_photo_placeholder"
+}
 
 /**
  * Composable that displays a group photo with automatic placeholder handling.
@@ -26,7 +31,8 @@ import com.android.joinme.ui.theme.Dimens
  * the URL is null, empty, or fails to load, it displays the default group placeholder image. The
  * image is clipped to a circular shape by default.
  *
- * This component uses a drawable resource as the default group image.
+ * Unlike ProfilePhotoImage which uses a generated placeholder, this component uses a drawable
+ * resource as the default group image.
  *
  * @param photoUrl The URL of the group photo to display, or null/empty for placeholder
  * @param contentDescription Accessibility description for the image
@@ -48,7 +54,8 @@ fun GroupPhotoImage(
     SubcomposeAsyncImage(
         model = photoUrl,
         contentDescription = contentDescription,
-        modifier = modifier.size(size).clip(CircleShape),
+        modifier =
+            modifier.size(size).clip(CircleShape).testTag(GroupPhotoImageTestTags.GROUP_PHOTO),
         contentScale = ContentScale.Crop,
         loading = {
           if (showLoadingIndicator) {
@@ -79,6 +86,10 @@ private fun DefaultGroupPlaceholder(modifier: Modifier = Modifier, size: Dp) {
   Image(
       painter = painterResource(id = R.drawable.group_default_picture),
       contentDescription = "Default group picture",
-      modifier = modifier.size(size).clip(CircleShape),
+      modifier =
+          modifier
+              .size(size)
+              .clip(CircleShape)
+              .testTag(GroupPhotoImageTestTags.GROUP_PHOTO_PLACEHOLDER),
       contentScale = ContentScale.Crop)
 }
