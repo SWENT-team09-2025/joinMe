@@ -19,6 +19,10 @@ const TIME_ZONE = "UTC";
 const SERIES = "series";
 const EVENTS = "events";
 
+// Notification type constants
+const NOTIFICATION_TYPE_EVENT_CHAT_MESSAGE = "event_chat_message";
+const NOTIFICATION_TYPE_GROUP_CHAT_MESSAGE = "group_chat_message";
+
 /**
  * Helper function to send FCM notification to a user
  * @param {string} userId - The ID of the user to send notification to
@@ -377,8 +381,71 @@ export const cleanupOldEventsAndSeries = functions.pubsub
   });
 
 /**
- * Triggered when a new message is created in a group chat.
- * Sends push notifications to all group members except the sender.
+ * Triggered when a new follow relationship is created.
+ * Sends a push notification to the user being followed.
+ */
+export const onUserFollowed = functions.firestore
+  .document("follows/{followId}")
+  .onCreate(async (snap, context) => {
+    try {
+      const followData = snap.data();
+      const followerId = followData.followerId;
+      const followedId = followData.followedId;
+
+      console.log(`User ${followerId} followed user ${followedId}`);
+
+      // Get the follower's username
+      const followerUsername = await getUsername(followerId);
+
+      // Get user's FCM token from their profile
+      const userDoc = await db.collection("profiles").doc(followedId).get();
+
+      if (!userDoc.exists) {
+        console.log(`User ${followedId} not found`);
+        return null;
+      }
+
+      const userData = userDoc.data();
+      const fcmToken = userData?.fcmToken;
+
+      if (!fcmToken) {
+        console.log(`User ${followedId} does not have an FCM token`);
+        return null;
+      }
+
+      // Send notification with follower info
+      const message: admin.messaging.Message = {
+        token: fcmToken,
+        notification: {
+          title: "New follower",
+          body: `${followerUsername} started following you`,
+        },
+        data: {
+          type: "new_follower",
+          followerId: followerId,
+          followerUsername: followerUsername,
+        },
+        android: {
+          priority: "high",
+          notification: {
+            channelId: "joinme_notifications",
+            priority: "high",
+          },
+        },
+      };
+
+      await admin.messaging().send(message);
+      console.log(`Follow notification sent to user ${followedId}`);
+      return null;
+    } catch (error) {
+      console.error("Error in onUserFollowed:", error);
+      return null;
+    }
+  });
+
+/**
+ * Triggered when a new message is created in a group or event chat.
+ * Sends push notifications to all members/participants except the sender.
  */
 export const onChatMessageCreated = functions.database
   .ref("conversations/{conversationId}/messages/{messageId}")
@@ -402,23 +469,41 @@ export const onChatMessageCreated = functions.database
         return null;
       }
 
-      // STEP 1: Fetch group document (conversationId = groupId)
+      // STEP 1: Try to fetch as a group first
       const groupDoc = await db.collection("groups").doc(conversationId).get();
 
-      if (!groupDoc.exists) {
-        console.log(`Group not found: ${conversationId}`);
-        return null;
+      let memberIds: string[] = [];
+      let chatName = "Chat";
+      let isEventChat = false;
+
+      if (groupDoc.exists) {
+        // It's a group chat
+        const groupData = groupDoc.data();
+        if (!groupData) {
+          return null;
+        }
+        memberIds = groupData.memberIds || [];
+        chatName = groupData.name || "Group Chat";
+        console.log(`Group "${chatName}" has ${memberIds.length} members`);
+      } else {
+        // STEP 2: Try to fetch as an event
+        const eventDoc = await db.collection("events").doc(conversationId).get();
+
+        if (!eventDoc.exists) {
+          console.log(`Neither group nor event found: ${conversationId}`);
+          return null;
+        }
+
+        const eventData = eventDoc.data();
+        if (!eventData) {
+          return null;
+        }
+
+        isEventChat = true;
+        memberIds = eventData.participants || [];
+        chatName = eventData.title || "Event Chat";
+        console.log(`Event "${chatName}" has ${memberIds.length} participants`);
       }
-
-      const groupData = groupDoc.data();
-      if (!groupData) {
-        return null;
-      }
-
-      const memberIds: string[] = groupData.memberIds || [];
-      const groupName = groupData.name || "Group Chat";
-
-      console.log(`Group "${groupName}" has ${memberIds.length} members`);
 
       // STEP 2: Filter out the sender (don't notify yourself)
       const recipientIds = memberIds.filter((userId) => userId !== senderId);
@@ -454,21 +539,29 @@ export const onChatMessageCreated = functions.database
           }
 
           // Build notification payload
+          const notificationData: {[key: string]: string} = {
+            type: isEventChat ? NOTIFICATION_TYPE_EVENT_CHAT_MESSAGE : NOTIFICATION_TYPE_GROUP_CHAT_MESSAGE,
+            conversationId: conversationId,
+            messageId: messageId,
+            senderId: senderId,
+            senderName: senderName,
+            chatName: chatName,
+          };
+
+          // Add eventId or groupId based on chat type
+          if (isEventChat) {
+            notificationData.eventId = conversationId;
+          } else {
+            notificationData.groupId = conversationId;
+          }
+
           const message: admin.messaging.Message = {
             token: fcmToken,
             notification: {
-              title: `${groupName}: ${senderName}`,
+              title: `${chatName}: ${senderName}`,
               body: truncatedContent,
             },
-            data: {
-              type: "group_chat_message",
-              conversationId: conversationId,
-              groupId: conversationId,
-              messageId: messageId,
-              senderId: senderId,
-              senderName: senderName,
-              groupName: groupName,
-            },
+            data: notificationData,
             android: {
               priority: "high",
               notification: {

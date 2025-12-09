@@ -42,7 +42,6 @@ import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -182,11 +181,15 @@ fun ChatScreen(
     onLeaveClick: () -> Unit = {},
     chatColor: Color? = null,
     onChatColor: Color? = null,
-    totalParticipants: Int = 1 // Total number of participants in the event/group
+    totalParticipants: Int = 1, // Total number of participants in the event/group
+    presenceViewModel: PresenceViewModel? = null // Optional presence view model for online tracking
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val snackbarHostState = remember { SnackbarHostState() }
   val coroutineScope = rememberCoroutineScope()
+
+  // Collect presence state if available
+  val presenceState = presenceViewModel?.presenceState?.collectAsState()
 
   // Use chatDefault colors if no specific colors provided
   val effectiveChatColor = chatColor ?: MaterialTheme.customColors.chatDefault
@@ -194,6 +197,11 @@ fun ChatScreen(
 
   // Initialize chat when screen loads
   LaunchedEffect(chatId, currentUserId) { viewModel.initializeChat(chatId, currentUserId) }
+
+  // Initialize presence tracking when screen loads
+  LaunchedEffect(chatId, currentUserId, presenceViewModel) {
+    presenceViewModel?.initialize(chatId, currentUserId)
+  }
 
   // Show error messages in snackbar
   LaunchedEffect(uiState.errorMsg) {
@@ -212,7 +220,8 @@ fun ChatScreen(
             chatTitle = chatTitle,
             onLeaveClick = onLeaveClick, // Leave chat navigates back
             topBarColor = effectiveChatColor,
-            onTopBarColor = effectiveOnChatColor)
+            onTopBarColor = effectiveOnChatColor,
+            onlineUsersCount = presenceState?.value?.onlineUsersCount ?: 0)
       },
       snackbarHost = { SnackbarHost(snackbarHostState) },
       contentWindowInsets = WindowInsets.systemBars, // Only consume system bars, not IME
@@ -249,6 +258,7 @@ fun ChatScreen(
  * @param topBarColor Color for the top bar background
  * @param onTopBarColor Color for text/icons on the top bar (must provide proper contrast with
  *   topBarColor)
+ * @param onlineUsersCount Number of users currently online in the chat
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -256,8 +266,13 @@ private fun ChatTopBar(
     chatTitle: String,
     onLeaveClick: () -> Unit,
     topBarColor: Color,
-    onTopBarColor: Color
+    onTopBarColor: Color,
+    onlineUsersCount: Int = 0
 ) {
+  // Define colors for the online indicator dot
+  val onlineIndicatorColor = Color(0xFF4CAF50) // Green
+  val offlineIndicatorColor = Color(0xFFF44336) // Red
+
   Surface(
       modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.TOP_BAR),
       color = topBarColor,
@@ -267,14 +282,45 @@ private fun ChatTopBar(
                 Modifier.fillMaxWidth()
                     .padding(horizontal = Dimens.Padding.medium, vertical = Dimens.Padding.small),
             verticalAlignment = Alignment.CenterVertically) {
-              // Title
-              Text(
-                  text = chatTitle,
-                  style = MaterialTheme.typography.titleMedium,
-                  fontWeight = FontWeight.Bold,
-                  color = onTopBarColor,
-                  modifier = Modifier.weight(1f).testTag(ChatScreenTestTags.TITLE))
+              // Title and online status column
+              Column(modifier = Modifier.weight(1f)) {
+                // Title
+                Text(
+                    text = chatTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = onTopBarColor,
+                    modifier = Modifier.testTag(ChatScreenTestTags.TITLE))
 
+                // Online users count with indicator dot (always displayed)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.extraSmall),
+                    modifier = Modifier.testTag("onlineUsersRow")) {
+                      // Colored indicator dot
+                      Box(
+                          modifier =
+                              Modifier.size(Dimens.Spacing.small)
+                                  .background(
+                                      color =
+                                          if (onlineUsersCount > 0) onlineIndicatorColor
+                                          else offlineIndicatorColor,
+                                      shape = CircleShape)
+                                  .testTag("onlineIndicatorDot"))
+
+                      // Online users count text
+                      Text(
+                          text =
+                              when (onlineUsersCount) {
+                                0 -> stringResource(R.string.online_users_zero)
+                                1 -> stringResource(R.string.online_users_one)
+                                else -> stringResource(R.string.online_users_many, onlineUsersCount)
+                              },
+                          style = MaterialTheme.typography.bodySmall,
+                          color = onTopBarColor.copy(alpha = 0.8f),
+                          modifier = Modifier.testTag("onlineUsersCount"))
+                    }
+              }
               // Leave button - background color matches top bar
               IconButton(
                   onClick = onLeaveClick,
@@ -897,8 +943,6 @@ private fun MessageInput(
     isUploadingImage: Boolean
 ) {
   var showAttachmentMenu by remember { mutableStateOf(false) }
-  val context = LocalContext.current
-  val notImplementedMsg = stringResource(R.string.not_yet_implemented)
 
   Column {
     // Upload progress indicator
@@ -941,23 +985,20 @@ private fun MessageInput(
                 colors = MaterialTheme.customColors.outlinedTextField(),
                 maxLines = 4)
 
-            // Dynamic send/mic button (right)
+            // Dynamic send button (right) - disabled appearance when no text
             if (text.isEmpty()) {
-              // Microphone button (placeholder for future audio recording)
-              // TODO(#364 and #367): Audio recording - Feature coming soon
+              // Disabled send button appearance when no text
               IconButton(
-                  onClick = {
-                    Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show()
-                  },
-                  enabled = !isUploadingImage,
+                  onClick = {},
+                  enabled = false,
                   modifier =
                       Modifier.size(Dimens.TouchTarget.minimum)
                           .background(
                               color = MaterialTheme.colorScheme.surfaceVariant, shape = CircleShape)
-                          .testTag(ChatScreenTestTags.MIC_BUTTON)) {
+                          .testTag(ChatScreenTestTags.SEND_BUTTON)) {
                     Icon(
-                        imageVector = Icons.Default.Mic,
-                        contentDescription = stringResource(R.string.record_audio),
+                        imageVector = Icons.AutoMirrored.Filled.Send,
+                        contentDescription = stringResource(R.string.send_message),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
                   }
             } else {

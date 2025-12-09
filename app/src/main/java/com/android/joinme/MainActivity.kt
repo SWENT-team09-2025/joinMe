@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -26,9 +27,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
 import com.android.joinme.model.chat.ChatRepositoryProvider
+import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.notification.FCMTokenManager
 import com.android.joinme.model.profile.ProfileRepositoryProvider
+import com.android.joinme.ui.calendar.CalendarScreen
 import com.android.joinme.ui.chat.ChatScreen
 import com.android.joinme.ui.chat.ChatViewModel
 import com.android.joinme.ui.groups.ActivityGroupScreen
@@ -58,6 +61,7 @@ import com.android.joinme.ui.profile.ViewProfileScreen
 import com.android.joinme.ui.signIn.SignInScreen
 import com.android.joinme.ui.theme.JoinMeTheme
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
 /** Provides a singleton OkHttpClient instance for network operations. */
@@ -144,20 +148,37 @@ class MainActivity : ComponentActivity() {
     createNotificationChannel()
 
     val deepLinkData = intent?.data
-    val initialEventId = if (deepLinkData?.host == "event") deepLinkData.lastPathSegment else null
+    val notificationType = intent?.getStringExtra("type")
+    val chatName = intent?.getStringExtra("chatName")
+    val conversationId = intent?.getStringExtra("conversationId")
+    val followerId = intent?.getStringExtra("followerId")
+
+    val initialEventId =
+        intent?.getStringExtra("eventId")
+            ?: (if (deepLinkData?.host == "event") deepLinkData.lastPathSegment else null)
     val initialGroupId =
-        when {
-          deepLinkData?.host == "group" -> deepLinkData.lastPathSegment
-          deepLinkData?.host == "joinme.app" &&
-              deepLinkData.pathSegments?.firstOrNull() == "group" ->
-              deepLinkData.pathSegments?.getOrNull(1)
-          else -> null
-        }
+        intent?.getStringExtra("groupId")
+            ?: when {
+              deepLinkData?.host == "group" -> deepLinkData.lastPathSegment
+              deepLinkData?.host == "joinme.app" &&
+                  deepLinkData.pathSegments?.firstOrNull() == "group" ->
+                  deepLinkData.pathSegments?.getOrNull(1)
+              else -> null
+            }
 
     setContent {
       JoinMeTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
-          JoinMe(initialEventId = initialEventId, initialGroupId = initialGroupId)
+          // Use test user ID when running in test mode
+          val testUserId = if (System.getProperty("IS_TEST_ENV") == "true") "test-user-id" else null
+          JoinMe(
+              initialEventId = initialEventId,
+              initialGroupId = initialGroupId,
+              notificationType = notificationType,
+              chatName = chatName,
+              conversationId = conversationId,
+              followerId = followerId,
+              testUserId = testUserId)
         }
       }
     }
@@ -201,11 +222,19 @@ fun JoinMe(
     startDestination: String? = null,
     initialEventId: String? = null,
     initialGroupId: String? = null,
+    notificationType: String? = null,
+    chatName: String? = null,
+    conversationId: String? = null,
+    followerId: String? = null,
     enableNotificationPermissionRequest: Boolean = true,
+    testUserId: String? = null,
 ) {
   val navController = rememberNavController()
   val navigationActions = NavigationActions(navController)
+  val coroutineScope = rememberCoroutineScope()
+
   var currentUser by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
+  val effectiveUserId = testUserId ?: currentUser?.uid
 
   // Listen for auth state changes
   LaunchedEffect(Unit) {
@@ -217,23 +246,85 @@ fun JoinMe(
   // Get current user ID with test mode support
   val currentUserId = remember(currentUser) { getCurrentUserId(currentUser) }
 
+  // Get notification type strings
+  val eventChatMessageType = context.getString(R.string.notification_type_event_chat_message)
+  val groupChatMessageType = context.getString(R.string.notification_type_group_chat_message)
+
   val initialDestination =
       startDestination ?: if (currentUser == null) Screen.Auth.name else Screen.Overview.route
 
   // Initialize FCM token when user is logged in
-  LaunchedEffect(currentUser) { currentUser?.let { FCMTokenManager.initializeFCMToken(context) } }
-
-  // Navigate to event if opened from notification
-  LaunchedEffect(initialEventId, currentUser) {
-    if (initialEventId != null && currentUser != null) {
-      navigationActions.navigateTo(Screen.ShowEventScreen(initialEventId))
+  LaunchedEffect(Unit) {
+    if (currentUser != null) {
+      FCMTokenManager.initializeFCMToken(context)
     }
   }
 
-  // Join group if opened from invitation link
-  LaunchedEffect(initialGroupId, currentUser) {
-    initialGroupId?.let { groupId ->
-      handleGroupJoin(groupId, currentUser?.uid, context, navigationActions)
+  // Navigate to event or event chat if opened from notification
+  LaunchedEffect(initialEventId, notificationType, currentUserId) {
+    if (initialEventId != null && currentUserId.isNotEmpty()) {
+      // Check if this is an event chat notification
+      if (notificationType == eventChatMessageType && conversationId != null && chatName != null) {
+        // Navigate directly to the event chat
+        coroutineScope.launch {
+          try {
+            val eventRepository = EventsRepositoryProvider.getRepository(isOnline = true, context)
+            val event = eventRepository.getEvent(initialEventId)
+            navigationActions.navigateTo(
+                Screen.Chat(
+                    chatId = conversationId,
+                    chatTitle = chatName,
+                    totalParticipants = event.participants.size))
+          } catch (e: Exception) {
+            // If we can't get event details, navigate with defaults
+            navigationActions.navigateTo(
+                Screen.Chat(chatId = conversationId, chatTitle = chatName, totalParticipants = 1))
+          }
+        }
+      } else {
+        // Regular event notification, navigate to event detail screen
+        navigationActions.navigateTo(Screen.ShowEventScreen(initialEventId))
+      }
+    }
+  }
+
+  // Join group if opened from invitation link or navigate to group chat from notification
+  LaunchedEffect(initialGroupId, notificationType, currentUserId) {
+    if (initialGroupId != null) {
+      // Check if this is a group chat notification
+      if (notificationType == groupChatMessageType &&
+          conversationId != null &&
+          chatName != null &&
+          currentUserId.isNotEmpty()) {
+        // Navigate directly to the group chat using notification data
+        coroutineScope.launch {
+          try {
+            val groupRepository = GroupRepositoryProvider.repository
+            val group = groupRepository.getGroup(initialGroupId)
+            navigationActions.navigateTo(
+                Screen.Chat(
+                    chatId = conversationId,
+                    chatTitle = chatName,
+                    totalParticipants = group.memberIds.size))
+          } catch (e: Exception) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+              Toast.makeText(context, "Failed to access group: ${e.message}", Toast.LENGTH_LONG)
+                  .show()
+            }
+          }
+        }
+      } else {
+        // Invitation link flow
+        handleGroupJoin(initialGroupId, effectiveUserId, context, navigationActions)
+      }
+    }
+  }
+
+  // Navigate to follower's profile if opened from follower notification
+  LaunchedEffect(followerId, notificationType, currentUserId) {
+    if (followerId != null && notificationType == "new_follower" && currentUserId.isNotEmpty()) {
+      // Navigate to the follower's public profile
+      navigationActions.navigateTo(Screen.PublicProfile(followerId))
     }
   }
 
@@ -270,6 +361,7 @@ fun JoinMe(
             onAddSerie = { navigationActions.navigateTo(Screen.CreateSerie) },
             onSelectedSerie = { navigationActions.navigateTo(Screen.SerieDetails(it.serieId)) },
             onGoToHistory = { navigationActions.navigateTo(Screen.History) },
+            onGoToCalendar = { navigationActions.navigateTo(Screen.Calendar) },
             navigationActions = navigationActions,
             enableNotificationPermissionRequest = enableNotificationPermissionRequest)
       }
@@ -307,6 +399,12 @@ fun JoinMe(
       }
       composable(Screen.History.route) {
         HistoryScreen(
+            onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
+            onSelectSerie = { navigationActions.navigateTo(Screen.SerieDetails(it.serieId)) },
+            onGoBack = { navigationActions.goBack() })
+      }
+      composable(Screen.Calendar.route) {
+        CalendarScreen(
             onSelectEvent = { navigationActions.navigateTo(Screen.ShowEventScreen(it.eventId)) },
             onSelectSerie = { navigationActions.navigateTo(Screen.SerieDetails(it.serieId)) },
             onGoBack = { navigationActions.goBack() })
@@ -444,6 +542,35 @@ fun JoinMe(
               },
               onGroupClick = { group ->
                 navigationActions.navigateTo(Screen.GroupDetail(group.id))
+              },
+              onFollowersClick = { profileUserId ->
+                navigationActions.navigateTo(
+                    Screen.FollowList(
+                        profileUserId, com.android.joinme.ui.profile.FollowTab.FOLLOWERS.name))
+              },
+              onFollowingClick = { profileUserId ->
+                navigationActions.navigateTo(
+                    Screen.FollowList(
+                        profileUserId, com.android.joinme.ui.profile.FollowTab.FOLLOWING.name))
+              })
+        } ?: run { Toast.makeText(context, "UserId is null", Toast.LENGTH_SHORT).show() }
+      }
+      composable(Screen.FollowList.route) { navBackStackEntry ->
+        val userId = navBackStackEntry.arguments?.getString("userId")
+        val initialTabString =
+            navBackStackEntry.arguments?.getString("initialTab")
+                ?: com.android.joinme.ui.profile.FollowTab.FOLLOWERS.name
+
+        userId?.let {
+          com.android.joinme.ui.profile.FollowListScreen(
+              userId = userId,
+              initialTab =
+                  if (initialTabString == com.android.joinme.ui.profile.FollowTab.FOLLOWING.name)
+                      com.android.joinme.ui.profile.FollowTab.FOLLOWING
+                  else com.android.joinme.ui.profile.FollowTab.FOLLOWERS,
+              onBackClick = { navigationActions.goBack() },
+              onProfileClick = { profileUserId ->
+                navigationActions.navigateTo(Screen.PublicProfile(profileUserId))
               })
         } ?: run { Toast.makeText(context, "UserId is null", Toast.LENGTH_SHORT).show() }
       }

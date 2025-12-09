@@ -1,5 +1,7 @@
 package com.android.joinme.model.chat
 
+import com.android.joinme.model.map.Location
+
 // Implemented with help of Claude AI
 
 /** Enum representing the type of message. */
@@ -9,7 +11,11 @@ enum class MessageType {
   /** System-generated message (e.g., "User joined," "User left") */
   SYSTEM,
   /** Image message */
-  IMAGE
+  IMAGE,
+  /** Poll message - content contains the poll ID */
+  POLL,
+  /** Location message with coordinates */
+  LOCATION
   // VIDEO, Implement this later if possible
   // AUDIO, Implement this later if possible
 }
@@ -24,12 +30,13 @@ enum class MessageType {
  * @property conversationId ID of the conversation this message belongs to
  * @property senderId ID of the user who sent the message
  * @property senderName Display name of the sender
- * @property content Text content of the message
+ * @property content Text content of the message (for LOCATION type, contains Static Maps URL)
  * @property timestamp Unix timestamp (milliseconds) when the message was created
- * @property type Type of message (TEXT, SYSTEM, IMAGE)
+ * @property type Type of message (TEXT, SYSTEM, IMAGE, LOCATION)
  * @property readBy List of user IDs who have read this message
  * @property isPinned Whether this message is pinned in the conversation
  * @property isEdited Whether this message has been edited
+ * @property location Geographical location data (only for LOCATION type messages)
  */
 data class Message(
     val id: String = "",
@@ -41,5 +48,6 @@ data class Message(
     val type: MessageType = MessageType.TEXT,
     val readBy: List<String> = emptyList(),
     val isPinned: Boolean = false,
-    val isEdited: Boolean = false
+    val isEdited: Boolean = false,
+    val location: Location? = null
 )

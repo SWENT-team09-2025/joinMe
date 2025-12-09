@@ -2,6 +2,7 @@ package com.android.joinme.model.chat
 
 // Implemented with help of Claude AI
 
+import com.android.joinme.model.map.Location
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert
@@ -350,5 +351,86 @@ class ChatRepositoryLocalTest {
     Assert.assertTrue(url1.contains("conv1") && url1.contains("msg1"))
     Assert.assertTrue(url2.contains("conv1") && url2.contains("msg2"))
     Assert.assertTrue(url3.contains("conv2") && url3.contains("msg1"))
+  }
+
+  // ---------------- LOCATION MESSAGES ----------------
+
+  @Test
+  fun locationMessage_storesAndRetrievesCorrectly() = runTest {
+    val location = Location(latitude = 46.5197, longitude = 6.6323, name = "EPFL, Lausanne")
+    val locationMessage =
+        sampleMessage.copy(
+            id = "2",
+            conversationId = testConversationId,
+            type = MessageType.LOCATION,
+            content = "https://maps.googleapis.com/maps/api/staticmap?...",
+            location = location,
+            readBy = listOf("user1"),
+            isPinned = true)
+
+    repo.addMessage(locationMessage)
+
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    val retrieved = messages.find { it.id == "2" }!!
+
+    // Verify location data
+    Assert.assertEquals(MessageType.LOCATION, retrieved.type)
+    Assert.assertNotNull(retrieved.location)
+    Assert.assertEquals(46.5197, retrieved.location!!.latitude, 0.0001)
+    Assert.assertEquals(6.6323, retrieved.location!!.longitude, 0.0001)
+    Assert.assertEquals("EPFL, Lausanne", retrieved.location!!.name)
+
+    // Verify all other properties are preserved
+    Assert.assertEquals("https://maps.googleapis.com/maps/api/staticmap?...", retrieved.content)
+    Assert.assertTrue(retrieved.isPinned)
+    Assert.assertEquals(1, retrieved.readBy.size)
+  }
+
+  @Test
+  fun locationMessage_editAndMultipleLocations() = runTest {
+    // Add multiple location messages
+    val loc1 = Location(latitude = 46.5197, longitude = 6.6323, name = "EPFL")
+    val loc2 = Location(latitude = 47.3769, longitude = 8.5417, name = "Zurich")
+    val msg1 =
+        sampleMessage.copy(
+            id = "3",
+            conversationId = testConversationId,
+            type = MessageType.LOCATION,
+            location = loc1)
+    val msg2 =
+        sampleMessage.copy(
+            id = "4",
+            conversationId = testConversationId,
+            type = MessageType.LOCATION,
+            location = loc2)
+
+    repo.addMessage(msg1)
+    repo.addMessage(msg2)
+
+    // Edit first location message
+    val loc3 = Location(latitude = 46.2044, longitude = 6.1432, name = "Geneva")
+    val updatedMsg1 = msg1.copy(location = loc3, isEdited = true)
+    repo.editMessage(testConversationId, "3", updatedMsg1)
+
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    val locationMessages = messages.filter { it.type == MessageType.LOCATION }
+
+    // Verify both messages exist and first was edited
+    Assert.assertEquals(2, locationMessages.size)
+    Assert.assertEquals("Geneva", locationMessages[0].location?.name)
+    Assert.assertTrue(locationMessages[0].isEdited)
+    Assert.assertEquals("Zurich", locationMessages[1].location?.name)
+  }
+
+  @Test
+  fun textMessage_hasNullLocation() = runTest {
+    val textMessage = sampleMessage.copy(id = "5", type = MessageType.TEXT, location = null)
+    repo.addMessage(textMessage)
+
+    val messages = repo.observeMessagesForConversation(testConversationId).first()
+    val retrieved = messages.find { it.id == "5" }!!
+
+    Assert.assertEquals(MessageType.TEXT, retrieved.type)
+    Assert.assertNull(retrieved.location)
   }
 }

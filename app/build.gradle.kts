@@ -42,10 +42,14 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            buildConfigField("String", "DEEPLINK_BASE_URL", "\"https://joinme.app\"")
+            buildConfigField("String", "DEEPLINK_INVITATION_PATH", "\"invite\"")
         }
         debug {
             enableUnitTestCoverage = true
             enableAndroidTestCoverage = true
+            buildConfigField("String", "DEEPLINK_BASE_URL", "\"https://joinme.app\"")
+            buildConfigField("String", "DEEPLINK_INVITATION_PATH", "\"invite\"")
         }
     }
 
@@ -55,6 +59,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {

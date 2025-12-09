@@ -64,6 +64,13 @@ class JoinMeNavigationTest {
   }
 
   @Test
+  fun screen_Calendar_hasCorrectRoute() {
+    assertEquals("calendar", Screen.Calendar.route)
+    assertEquals("Calendar", Screen.Calendar.name)
+    assertFalse(Screen.Calendar.isTopLevelDestination)
+  }
+
+  @Test
   fun screen_EditEvent_hasCorrectRoutePattern() {
     assertEquals("edit_event/{eventId}", Screen.EditEvent.Companion.route)
   }
@@ -168,6 +175,7 @@ class JoinMeNavigationTest {
             Screen.CreateSerie,
             Screen.EditEvent("test-id"),
             Screen.History,
+            Screen.Calendar,
             Screen.Groups,
             Screen.CreateGroup,
             Screen.GroupDetail("test-id"),
@@ -197,6 +205,7 @@ class JoinMeNavigationTest {
             Screen.CreateEvent.route,
             Screen.CreateSerie.route,
             Screen.History.route,
+            Screen.Calendar.route,
             Screen.EditEvent.Companion.route,
             Screen.Groups.route,
             Screen.CreateGroup.route,
@@ -224,6 +233,7 @@ class JoinMeNavigationTest {
             Screen.Profile,
             Screen.CreateEvent,
             Screen.History,
+            Screen.Calendar,
             Screen.Groups,
             Screen.CreateGroup,
             Screen.EditProfile,
@@ -258,6 +268,7 @@ class JoinMeNavigationTest {
             Screen.CreateEvent,
             Screen.CreateSerie,
             Screen.History,
+            Screen.Calendar,
             Screen.EditEvent("test-id"),
             Screen.Groups,
             Screen.CreateGroup,
