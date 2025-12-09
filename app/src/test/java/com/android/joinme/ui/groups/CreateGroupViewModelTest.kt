@@ -1,5 +1,7 @@
 package com.android.joinme.ui.groups
 
+import android.content.Context
+import android.net.Uri
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.groups.GroupRepository
 import com.google.firebase.Firebase
@@ -303,14 +305,14 @@ class CreateGroupViewModelTest {
 
     coVerify {
       mockRepository.addGroup(
-          match {
-            it.id == groupId &&
-                it.name == "Test Group" &&
-                it.category == EventType.SOCIAL &&
-                it.description == "Test description" &&
-                it.ownerId == testUid &&
-                it.memberIds == listOf(testUid)
-          })
+        match {
+          it.id == groupId &&
+                  it.name == "Test Group" &&
+                  it.category == EventType.SOCIAL &&
+                  it.description == "Test description" &&
+                  it.ownerId == testUid &&
+                  it.memberIds == listOf(testUid)
+        })
     }
   }
 
@@ -328,9 +330,9 @@ class CreateGroupViewModelTest {
 
     coVerify {
       mockRepository.addGroup(
-          match {
-            it.name == "Trimmed Name" // Trimmed when saved
-          })
+        match {
+          it.name == "Trimmed Name" // Trimmed when saved
+        })
     }
   }
 
@@ -532,5 +534,132 @@ class CreateGroupViewModelTest {
     val state = viewModel.uiState.value
     assertEquals("", state.name)
     assertEquals("", state.description)
+  }
+
+  // =======================================
+  // Pending Photo Tests
+  // =======================================
+
+  private fun createTestUri(): Uri = mockk<Uri>()
+
+  private fun createMockContext(): Context = mockk<Context>()
+
+  private fun setupSuccessfulGroupCreation(groupId: String = "test-group-id") {
+    every { mockRepository.getNewGroupId() } returns groupId
+    coEvery { mockRepository.addGroup(any()) } just Runs
+  }
+
+  @Test
+  fun `initial state has no pending photo`() = runTest {
+    val state = viewModel.uiState.value
+    assertNull(state.pendingPhotoUri)
+    assertNull(state.photoError)
+  }
+
+  @Test
+  fun `setPendingPhoto and clearPendingPhoto manage URI state`() = runTest {
+    val testUri = createTestUri()
+
+    // Set photo
+    viewModel.setPendingPhoto(testUri)
+    assertEquals(testUri, viewModel.uiState.value.pendingPhotoUri)
+
+    // Clear photo
+    viewModel.clearPendingPhoto()
+    assertNull(viewModel.uiState.value.pendingPhotoUri)
+  }
+
+  @Test
+  fun `photo selection does not affect form validity`() = runTest {
+    viewModel.setPendingPhoto(createTestUri())
+    assertFalse(viewModel.uiState.value.isValid)
+
+    viewModel.setName("Valid Name")
+    assertTrue(viewModel.uiState.value.isValid)
+
+    viewModel.clearPendingPhoto()
+    assertTrue(viewModel.uiState.value.isValid)
+  }
+
+  // =======================================
+  // Create Group with Photo Tests
+  // =======================================
+
+  @Test
+  fun `createGroup uploads photo when pendingPhotoUri and context are set`() = runTest {
+    val groupId = "test-group-id"
+    val testUri = createTestUri()
+    val mockContext = createMockContext()
+
+    setupSuccessfulGroupCreation(groupId)
+    coEvery { mockRepository.uploadGroupPhoto(mockContext, groupId, testUri) } returns "https://uploaded.url/photo.jpg"
+
+    viewModel.setName("Test Group")
+    viewModel.setPendingPhoto(testUri)
+    viewModel.createGroup(mockContext)
+    advanceUntilIdle()
+
+    coVerify { mockRepository.uploadGroupPhoto(mockContext, groupId, testUri) }
+    val state = viewModel.uiState.value
+    assertEquals(groupId, state.createdGroupId)
+    assertNull(state.pendingPhotoUri) // Cleared on success
+    assertNull(state.photoError)
+  }
+
+  @Test
+  fun `createGroup skips photo upload when pendingPhotoUri or context is null`() = runTest {
+    val groupId = "test-group-id"
+    setupSuccessfulGroupCreation(groupId)
+
+    // Test with no photo
+    viewModel.setName("Test Group")
+    viewModel.createGroup(createMockContext())
+    advanceUntilIdle()
+
+    coVerify(exactly = 0) { mockRepository.uploadGroupPhoto(any(), any(), any()) }
+    assertEquals(groupId, viewModel.uiState.value.createdGroupId)
+
+    // Reset and test with no context
+    viewModel.clearSuccessState()
+    viewModel.setPendingPhoto(createTestUri())
+    viewModel.createGroup(null)
+    advanceUntilIdle()
+
+    coVerify(exactly = 0) { mockRepository.uploadGroupPhoto(any(), any(), any()) }
+  }
+
+  @Test
+  fun `createGroup succeeds with photoError when photo upload fails`() = runTest {
+    val groupId = "test-group-id"
+    val testUri = createTestUri()
+    val mockContext = createMockContext()
+
+    setupSuccessfulGroupCreation(groupId)
+    coEvery { mockRepository.uploadGroupPhoto(mockContext, groupId, testUri) } throws RuntimeException("Upload failed")
+
+    viewModel.setName("Test Group")
+    viewModel.setPendingPhoto(testUri)
+    viewModel.createGroup(mockContext)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertEquals(groupId, state.createdGroupId) // Group still created
+    assertNull(state.errorMsg)
+    assertEquals("Group created but photo upload failed: Upload failed", state.photoError)
+  }
+
+  @Test
+  fun `createGroup failure does not attempt photo upload`() = runTest {
+    every { mockRepository.getNewGroupId() } returns "group-id"
+    coEvery { mockRepository.addGroup(any()) } throws RuntimeException("Creation failed")
+
+    viewModel.setName("Test Group")
+    viewModel.setPendingPhoto(createTestUri())
+    viewModel.createGroup(createMockContext())
+    advanceUntilIdle()
+
+    coVerify(exactly = 0) { mockRepository.uploadGroupPhoto(any(), any(), any()) }
+    assertNull(viewModel.uiState.value.createdGroupId)
+    assertTrue(viewModel.uiState.value.errorMsg?.contains("Failed to create group") == true)
   }
 }
