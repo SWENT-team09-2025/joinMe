@@ -1,5 +1,7 @@
 package com.android.joinme.ui.groups
 
+// Implemented with help of Claude AI
+
 import android.content.Context
 import android.net.Uri
 import com.android.joinme.model.event.EventType
@@ -305,14 +307,14 @@ class CreateGroupViewModelTest {
 
     coVerify {
       mockRepository.addGroup(
-        match {
-          it.id == groupId &&
-                  it.name == "Test Group" &&
-                  it.category == EventType.SOCIAL &&
-                  it.description == "Test description" &&
-                  it.ownerId == testUid &&
-                  it.memberIds == listOf(testUid)
-        })
+          match {
+            it.id == groupId &&
+                it.name == "Test Group" &&
+                it.category == EventType.SOCIAL &&
+                it.description == "Test description" &&
+                it.ownerId == testUid &&
+                it.memberIds == listOf(testUid)
+          })
     }
   }
 
@@ -330,9 +332,9 @@ class CreateGroupViewModelTest {
 
     coVerify {
       mockRepository.addGroup(
-        match {
-          it.name == "Trimmed Name" // Trimmed when saved
-        })
+          match {
+            it.name == "Trimmed Name" // Trimmed when saved
+          })
     }
   }
 
@@ -592,7 +594,8 @@ class CreateGroupViewModelTest {
     val mockContext = createMockContext()
 
     setupSuccessfulGroupCreation(groupId)
-    coEvery { mockRepository.uploadGroupPhoto(mockContext, groupId, testUri) } returns "https://uploaded.url/photo.jpg"
+    coEvery { mockRepository.uploadGroupPhoto(mockContext, groupId, testUri) } returns
+        "https://uploaded.url/photo.jpg"
 
     viewModel.setName("Test Group")
     viewModel.setPendingPhoto(testUri)
@@ -635,7 +638,8 @@ class CreateGroupViewModelTest {
     val mockContext = createMockContext()
 
     setupSuccessfulGroupCreation(groupId)
-    coEvery { mockRepository.uploadGroupPhoto(mockContext, groupId, testUri) } throws RuntimeException("Upload failed")
+    coEvery { mockRepository.uploadGroupPhoto(mockContext, groupId, testUri) } throws
+        RuntimeException("Upload failed")
 
     viewModel.setName("Test Group")
     viewModel.setPendingPhoto(testUri)
