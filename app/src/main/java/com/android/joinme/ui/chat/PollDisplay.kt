@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -367,6 +368,9 @@ private fun PollOptionItem(
   val votePercentage = poll.getVotePercentage(option.id)
   val voteCount = poll.getVoteCount(option.id)
   val canVote = !poll.isClosed
+  val surfaceColor =
+      if (isSelected) MaterialTheme.colorScheme.primaryContainer
+      else MaterialTheme.colorScheme.surface
 
   Surface(
       modifier =
@@ -374,78 +378,122 @@ private fun PollOptionItem(
               .clip(RoundedCornerShape(Dimens.CornerRadius.medium))
               .clickable(enabled = canVote) { onVote() }
               .testTag(PollDisplayTestTags.getPollOptionTag(poll.id, option.id)),
-      color =
-          if (isSelected) MaterialTheme.colorScheme.primaryContainer
-          else MaterialTheme.colorScheme.surface,
+      color = surfaceColor,
       shape = RoundedCornerShape(Dimens.CornerRadius.medium)) {
         Box(modifier = Modifier.fillMaxWidth()) {
-          // Progress bar background
-          LinearProgressIndicator(
-              progress = { votePercentage / 100f },
-              modifier =
-                  Modifier.fillMaxWidth().height(Dimens.Button.minHeight).animateContentSize(),
-              color =
-                  if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                  else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-              trackColor = androidx.compose.ui.graphics.Color.Transparent,
-          )
+          PollOptionProgressBar(isSelected = isSelected, votePercentage = votePercentage)
+          PollOptionContent(
+              option = option,
+              isSelected = isSelected,
+              votePercentage = votePercentage,
+              voteCount = voteCount,
+              showVotersPreview = !poll.isAnonymous && voteCount > 0,
+              voterIds = poll.getVotersForOption(option.id),
+              voterProfiles = voterProfiles,
+              onShowVoters = onShowVoters)
+        }
+      }
+}
 
-          // Content overlay
-          Row(
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .height(Dimens.Button.minHeight)
-                      .padding(horizontal = Dimens.Padding.medium),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically) {
-                // Option text with checkmark if selected
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)) {
-                      if (isSelected) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = stringResource(R.string.poll_selected),
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(Dimens.IconSize.small))
-                        Spacer(modifier = Modifier.width(Dimens.Spacing.small))
-                      }
+/** Progress bar background for poll option. */
+@Composable
+private fun PollOptionProgressBar(isSelected: Boolean, votePercentage: Float) {
+  val progressColor =
+      if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+      else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
 
-                      Text(
-                          text = option.text,
-                          style = MaterialTheme.typography.bodyMedium,
-                          fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                          maxLines = 2,
-                          overflow = TextOverflow.Ellipsis)
-                    }
+  LinearProgressIndicator(
+      progress = { votePercentage / 100f },
+      modifier = Modifier.fillMaxWidth().height(Dimens.Button.minHeight).animateContentSize(),
+      color = progressColor,
+      trackColor = androidx.compose.ui.graphics.Color.Transparent)
+}
 
-                // Vote count and percentage
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
-                      // Show voters preview (if not anonymous)
-                      if (!poll.isAnonymous && voteCount > 0) {
-                        VotersPreview(
-                            voterIds = poll.getVotersForOption(option.id),
-                            voterProfiles = voterProfiles,
-                            onClick = onShowVoters)
-                      }
+/** Content overlay for poll option showing text and vote info. */
+@Composable
+private fun PollOptionContent(
+    option: com.android.joinme.model.chat.PollOption,
+    isSelected: Boolean,
+    votePercentage: Float,
+    voteCount: Int,
+    showVotersPreview: Boolean,
+    voterIds: List<String>,
+    voterProfiles: Map<String, Profile>,
+    onShowVoters: () -> Unit
+) {
+  Row(
+      modifier =
+          Modifier.fillMaxWidth()
+              .height(Dimens.Button.minHeight)
+              .padding(horizontal = Dimens.Padding.medium),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically) {
+        OptionTextWithCheckmark(option = option, isSelected = isSelected)
+        VoteInfoSection(
+            isSelected = isSelected,
+            votePercentage = votePercentage,
+            voteCount = voteCount,
+            showVotersPreview = showVotersPreview,
+            voterIds = voterIds,
+            voterProfiles = voterProfiles,
+            onShowVoters = onShowVoters)
+      }
+}
 
-                      Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = "${votePercentage.toInt()}%",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color =
-                                if (isSelected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface)
-                        Text(
-                            text = stringResource(R.string.poll_votes, voteCount),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                      }
-                    }
-              }
+/** Option text with optional checkmark for selected state. */
+@Composable
+private fun RowScope.OptionTextWithCheckmark(
+    option: com.android.joinme.model.chat.PollOption,
+    isSelected: Boolean
+) {
+  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+    if (isSelected) {
+      Icon(
+          imageVector = Icons.Default.Check,
+          contentDescription = stringResource(R.string.poll_selected),
+          tint = MaterialTheme.colorScheme.primary,
+          modifier = Modifier.size(Dimens.IconSize.small))
+      Spacer(modifier = Modifier.width(Dimens.Spacing.small))
+    }
+    Text(
+        text = option.text,
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis)
+  }
+}
+
+/** Vote count, percentage, and optional voters preview. */
+@Composable
+private fun VoteInfoSection(
+    isSelected: Boolean,
+    votePercentage: Float,
+    voteCount: Int,
+    showVotersPreview: Boolean,
+    voterIds: List<String>,
+    voterProfiles: Map<String, Profile>,
+    onShowVoters: () -> Unit
+) {
+  val percentageColor =
+      if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+
+  Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
+        if (showVotersPreview) {
+          VotersPreview(voterIds = voterIds, voterProfiles = voterProfiles, onClick = onShowVoters)
+        }
+        Column(horizontalAlignment = Alignment.End) {
+          Text(
+              text = "${votePercentage.toInt()}%",
+              style = MaterialTheme.typography.labelMedium,
+              fontWeight = FontWeight.Bold,
+              color = percentageColor)
+          Text(
+              text = stringResource(R.string.poll_votes, voteCount),
+              style = MaterialTheme.typography.labelSmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
       }
 }
