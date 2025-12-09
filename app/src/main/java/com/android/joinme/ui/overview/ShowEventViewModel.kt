@@ -12,6 +12,7 @@ import com.android.joinme.model.event.isUpcoming
 import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.groups.streaks.StreakService
+import com.android.joinme.model.map.Location
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import com.android.joinme.model.profile.ProfileRepositoryProvider
@@ -22,12 +23,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+/** Note: this file was co-written with the help of AI (Claude) */
+
 /** UI state for the ShowEvent screen. */
 data class ShowEventUIState(
     val type: String = "",
     val title: String = "",
     val description: String = "",
     val location: String = "",
+    val locationCoordinates: Location? = null,
     val maxParticipants: String = "",
     val participantsCount: String = "",
     val duration: String = "",
@@ -112,6 +116,7 @@ class ShowEventViewModel(
                 title = event.title,
                 description = event.description,
                 location = event.location?.name ?: "",
+                locationCoordinates = event.location,
                 maxParticipants = event.maxParticipants.toString(),
                 participantsCount = event.participants.size.toString(),
                 duration = event.duration.toString(),

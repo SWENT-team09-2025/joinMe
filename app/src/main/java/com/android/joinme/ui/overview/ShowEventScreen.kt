@@ -1,6 +1,9 @@
 package com.android.joinme.ui.overview
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
@@ -28,6 +32,8 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+
+/** Note: this file was co-written with the help of AI (Claude) */
 
 /** Delete confirmation dialog for event deletion. */
 @Composable
@@ -360,12 +366,31 @@ fun ShowEventScreen(
                   thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
 
               // Location
-              Text(
-                  text = eventUIState.location,
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+              Row(
                   modifier =
-                      Modifier.fillMaxWidth().testTag(ShowEventScreenTestTags.EVENT_LOCATION))
+                      Modifier.fillMaxWidth()
+                          .testTag(ShowEventScreenTestTags.EVENT_LOCATION)
+                          .clickable {
+                            eventUIState.locationCoordinates?.let { location ->
+                              val geoUri =
+                                  Uri.parse(
+                                      "geo:${location.latitude},${location.longitude}?q=${location.latitude},${location.longitude}(${Uri.encode(location.name)})")
+                              val intent = Intent(Intent.ACTION_VIEW, geoUri)
+                              context.startActivity(intent)
+                            }
+                          }
+                          .padding(vertical = Dimens.Padding.small),
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
+                    Icon(
+                        imageVector = Icons.Filled.LocationOn,
+                        contentDescription = "Location",
+                        tint = MaterialTheme.colorScheme.primary)
+                    Text(
+                        text = eventUIState.location,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary)
+                  }
 
               HorizontalDivider(
                   thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
