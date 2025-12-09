@@ -29,7 +29,7 @@ import androidx.navigation.navigation
 import com.android.joinme.model.chat.ChatRepositoryProvider
 import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.groups.GroupRepositoryProvider
-import com.android.joinme.model.invitation.InvitationRepositoryFirestore
+import com.android.joinme.model.invitation.InvitationRepositoryProvider
 import com.android.joinme.model.invitation.InvitationType
 import com.android.joinme.model.invitation.deepLink.DeepLinkService
 import com.android.joinme.model.notification.FCMTokenManager
@@ -135,7 +135,7 @@ private suspend fun processInvitation(
     navigationActions: NavigationActions
 ) {
   try {
-    val invitationRepository = InvitationRepositoryFirestore()
+    val invitationRepository = InvitationRepositoryProvider.repository
     val result = invitationRepository.resolveInvitation(token)
 
     result
