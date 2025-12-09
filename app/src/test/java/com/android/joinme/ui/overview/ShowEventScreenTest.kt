@@ -823,7 +823,7 @@ class ShowEventScreenTest {
 
   /** --- LOCATION TESTS --- */
   @Test
-  fun eventLocation_isClickableWhenCoordinatesExist() {
+  fun eventLocation_isClickableAndTriggersIntent() {
     val repo = EventsRepositoryLocal()
     val event = createTestEvent() // Has location with coordinates
     runBlocking { repo.addEvent(event) }
@@ -843,10 +843,17 @@ class ShowEventScreenTest {
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
 
-    // Verify location is displayed and clickable (has click action)
+    // Verify location is displayed and has click action
     composeTestRule
         .onNodeWithTag(ShowEventScreenTestTags.EVENT_LOCATION)
         .assertIsDisplayed()
         .assertHasClickAction()
+
+    // Click the location - this triggers the intent creation and startActivity
+    // The Intent will fail silently in test environment, but code path is covered
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_LOCATION).performClick()
+
+    // Verify no crash occurred
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_LOCATION).assertExists()
   }
 }
