@@ -2,11 +2,12 @@ package com.android.joinme.model.invitation.deepLink
 
 import android.content.Intent
 import android.net.Uri
+import com.android.joinme.BuildConfig
 
 /** Service for handling deep links in the application. */
 object DeepLinkService {
-  private const val BASE_URL = "https://joinme-aa9e8.web.app"
-  private const val INVITATION_PATH = "invite"
+  private const val BASE_URL = BuildConfig.DEEPLINK_BASE_URL
+  private const val INVITATION_PATH = BuildConfig.DEEPLINK_INVITATION_PATH
 
   /**
    * Generates the invitation link for the given token.
