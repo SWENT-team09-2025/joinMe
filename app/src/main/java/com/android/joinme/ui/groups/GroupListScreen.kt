@@ -517,7 +517,7 @@ private fun GroupCardMenuOverlay(
                   onClick = {
                     scope.launch {
                       shareInvitation(
-                          invitationType = InvitationType.INVITATION_TO_GROUP,
+                          invitationType = InvitationType.GROUP,
                           targetId = group.id,
                           createdBy = currentUserId ?: "",
                           expiresInDays = 7,

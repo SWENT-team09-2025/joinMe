@@ -110,6 +110,7 @@ private suspend fun handleGroupJoin(
       Toast.makeText(context, context.getString(R.string.success_joining_group), Toast.LENGTH_SHORT)
           .show()
     }
+    navigationActions.navigateTo(Screen.Groups)
     navigationActions.navigateTo(Screen.GroupDetail(groupId))
   } catch (e: Exception) {
     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
@@ -253,7 +254,7 @@ class MainActivity : ComponentActivity() {
 
   override fun onNewIntent(newIntent: Intent) {
     super.onNewIntent(newIntent)
-    setIntent(newIntent)
+    intent = newIntent
     // Check if this is an invitation link and update state to trigger recomposition
     val token = DeepLinkService.parseInvitationLink(newIntent)
     if (token != null) {
@@ -309,6 +310,7 @@ fun JoinMe(
 
   var currentUser by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
   var pendingInvitationToken by remember { mutableStateOf<String?>(null) }
+  var initialTokenProcessed by remember { mutableStateOf(false) }
 
   // Listen for auth state changes
   LaunchedEffect(Unit) {
@@ -398,13 +400,26 @@ fun JoinMe(
 
   // Handle invitation link token (and check for authentification)
   LaunchedEffect(invitationToken, newInvitationToken, currentUserId) {
-    val tokenToProcess = newInvitationToken ?: invitationToken
+    // Determine which token to process
+    val tokenToProcess =
+        newInvitationToken ?: (if (!initialTokenProcessed) invitationToken else null)
+
     if (tokenToProcess != null) {
       if (currentUserId.isEmpty()) {
         pendingInvitationToken = tokenToProcess
+        if (tokenToProcess == invitationToken) {
+          initialTokenProcessed = true
+        }
       } else {
         coroutineScope.launch {
-          processInvitation(invitationToken, currentUserId, context, navigationActions)
+          processInvitation(tokenToProcess, currentUserId, context, navigationActions)
+
+          if (tokenToProcess == invitationToken) {
+            initialTokenProcessed = true
+          }
+          if (newInvitationToken != null) {
+            onInvitationProcessed()
+          }
         }
       }
     }
