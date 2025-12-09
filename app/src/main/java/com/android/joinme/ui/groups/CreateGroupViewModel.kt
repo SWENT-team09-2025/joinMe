@@ -1,5 +1,7 @@
 package com.android.joinme.ui.groups
 
+// AI-assisted implementation — reviewed and adapted for project standards.
+
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.viewModelScope

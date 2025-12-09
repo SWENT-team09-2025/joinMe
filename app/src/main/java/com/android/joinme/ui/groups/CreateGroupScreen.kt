@@ -1,5 +1,7 @@
 package com.android.joinme.ui.groups
 
+// AI-assisted implementation — reviewed and adapted for project standards.
+
 import android.widget.Toast
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
