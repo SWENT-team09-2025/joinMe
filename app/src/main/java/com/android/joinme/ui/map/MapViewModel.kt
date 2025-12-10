@@ -6,6 +6,8 @@ import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
+import com.android.joinme.model.filter.FilterRepository
+import com.android.joinme.model.filter.FilterState
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.map.UserLocation
 import com.android.joinme.model.serie.Serie
@@ -41,7 +43,7 @@ data class MapUIState(
     val errorMsg: String? = null,
     val isLoading: Boolean = false,
     val isFollowingUser: Boolean = true,
-    val isReturningFromMarkerClick: Boolean = false
+    val isReturningFromMarkerClick: Boolean = false,
 )
 
 /**
@@ -49,11 +51,13 @@ data class MapUIState(
  *
  * @param locationService The service used to retrieve the user's location.
  * @param eventsRepository The repository used to retrieve events for the map.
+ * @param filterRepository The repository managing filter state.
  */
 class MapViewModel(
     private var locationService: UserLocationService? = null,
     private val eventsRepository: EventsRepository? = null,
-    private val seriesRepository: SeriesRepository? = null
+    private val seriesRepository: SeriesRepository? = null,
+    private val filterRepository: FilterRepository = FilterRepository
 ) : ViewModel() {
 
   /** The repository used to retrieve events et series for the map. */
@@ -70,6 +74,13 @@ class MapViewModel(
   /** A read-only state flow exposed to the UI (observed by Jetpack Compose). */
   val uiState: StateFlow<MapUIState> = _uiState.asStateFlow()
 
+  /** Expose filter state from FilterRepository */
+  val filterState: StateFlow<FilterState> = filterRepository.filterState
+
+  /** Store all events and series fetched from repositories */
+  private var allEvents: List<Event> = emptyList()
+  private var allSeries: List<Serie> = emptyList()
+
   /**
    * Initializes a Firebase authentication state listener. When a user logs in, this can trigger
    * fetching of localizable events.
@@ -80,6 +91,9 @@ class MapViewModel(
         fetchLocalizableEvents()
       }
     }
+
+    // Observe filter changes and re-apply filters automatically
+    viewModelScope.launch { filterRepository.filterState.collect { applyFilters() } }
   }
 
   /**
@@ -90,33 +104,55 @@ class MapViewModel(
     viewModelScope.launch {
       try {
         _uiState.value = _uiState.value.copy(isLoading = true, errorMsg = null)
-        val events = repoEvent.getAllEvents(EventFilter.EVENTS_FOR_MAP_SCREEN)
-        val series = repoSeries.getAllSeries(SerieFilter.SERIES_FOR_MAP_SCREEN)
+        allEvents = repoEvent.getAllEvents(EventFilter.EVENTS_FOR_MAP_SCREEN)
+        allSeries = repoSeries.getAllSeries(SerieFilter.SERIES_FOR_MAP_SCREEN)
 
-        val eventsById = events.associateBy { it.eventId }
-
-        val seriesEventIds = series.flatMap { it.eventIds }.toSet()
-        val eventsNotInSeries = events.filterNot { it.eventId in seriesEventIds }
-
-        val seriesMap =
-            series
-                .mapNotNull { serie ->
-                  if (serie.eventIds.isEmpty()) {
-                    null
-                  } else {
-                    val firstEvent = eventsById[serie.eventIds[0]]
-                    firstEvent?.location?.let { location -> location to serie }
-                  }
-                }
-                .toMap()
-
-        _uiState.value =
-            _uiState.value.copy(events = eventsNotInSeries, series = seriesMap, isLoading = false)
+        applyFilters()
+        _uiState.value = _uiState.value.copy(isLoading = false)
       } catch (e: Exception) {
         _uiState.value =
             _uiState.value.copy(errorMsg = "Failed to load events: ${e.message}", isLoading = false)
       }
     }
+  }
+
+  /**
+   * Applies current filters to all events and series, and updates the UI state.
+   *
+   * This is called automatically when filters change or when new data is fetched.
+   */
+  private fun applyFilters() {
+    // Get current user ID for participation filtering
+    val currentUserId =
+        try {
+          Firebase.auth.currentUser?.uid ?: ""
+        } catch (e: IllegalStateException) {
+          ""
+        }
+
+    // Apply filters from FilterRepository
+    val filteredEvents = filterRepository.applyFilters(allEvents, currentUserId)
+    val filteredSeries = filterRepository.applyFiltersToSeries(allSeries, allEvents, currentUserId)
+
+    // Remove events that are part of a series
+    val seriesEventIds = allSeries.flatMap { it.eventIds }.toSet()
+    val eventsNotInSeries = filteredEvents.filterNot { it.eventId in seriesEventIds }
+
+    // Map series to their locations (using first event's location)
+    val eventsById = allEvents.associateBy { it.eventId }
+    val seriesMap =
+        filteredSeries
+            .mapNotNull { serie ->
+              if (serie.eventIds.isEmpty()) {
+                null
+              } else {
+                val firstEvent = eventsById[serie.eventIds[0]]
+                firstEvent?.location?.let { location -> location to serie }
+              }
+            }
+            .toMap()
+
+    _uiState.value = _uiState.value.copy(events = eventsNotInSeries, series = seriesMap)
   }
 
   /**
@@ -186,6 +222,29 @@ class MapViewModel(
     locationService = service
     startLocationUpdates()
   }
+
+  // ========== Filter Toggle Methods (delegate to FilterRepository) ==========
+
+  /** Toggles the "Social" event type filter. */
+  fun toggleSocial() = filterRepository.toggleSocial()
+
+  /** Toggles the "Activity" event type filter. */
+  fun toggleActivity() = filterRepository.toggleActivity()
+
+  /** Toggles the "Sport" event type filter. */
+  fun toggleSport() = filterRepository.toggleSport()
+
+  /** Toggles the "My Events" participation filter (events owned by the user). */
+  fun toggleMyEvents() = filterRepository.toggleMyEvents()
+
+  /** Toggles the "Joined Events" participation filter (events the user participates in). */
+  fun toggleJoinedEvents() = filterRepository.toggleJoinedEvents()
+
+  /** Toggles the "Other Events" participation filter (public events the user hasn't joined). */
+  fun toggleOtherEvents() = filterRepository.toggleOtherEvents()
+
+  /** Clears all filters and resets them to their default state. */
+  fun clearFilters() = filterRepository.reset()
 
   /** Called when the ViewModel is cleared. Stops location updates to prevent memory leaks. */
   override fun onCleared() {
