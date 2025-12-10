@@ -23,6 +23,45 @@ class ChatScreenAndroidTest {
   private val testUserId = "user1"
   private val testChatId = "chat1"
 
+  // Common test dependencies
+  private lateinit var repo: FakeChatRepository
+  private lateinit var profileRepo: FakeProfileRepository
+  private lateinit var viewModel: ChatViewModel
+
+  // Common test location
+  private val epflLocation =
+      com.android.joinme.model.map.Location(
+          latitude = 46.5197, longitude = 6.6323, name = "EPFL Campus")
+
+  @org.junit.Before
+  fun setUp() {
+    repo = FakeChatRepository(uploadShouldSucceed = true)
+    profileRepo = FakeProfileRepository()
+    viewModel = ChatViewModel(repo, profileRepo)
+  }
+
+  /**
+   * Helper function to compose LocationPreviewDialog with test data.
+   *
+   * @param userLocation Location to preview
+   * @param onDismiss Callback when dialog is dismissed
+   * @param onSendLocation Callback when send button is clicked
+   */
+  private fun composeLocationPreviewDialog(
+      userLocation: com.android.joinme.model.map.UserLocation =
+          com.android.joinme.model.map.UserLocation(
+              latitude = 46.5197, longitude = 6.6323, accuracy = 10f),
+      onDismiss: () -> Unit = {},
+      onSendLocation: () -> Unit = {}
+  ) {
+    composeTestRule.setContent {
+      LocationPreviewDialog(
+          userLocation = userLocation, onDismiss = onDismiss, onSendLocation = onSendLocation)
+    }
+    composeTestRule.waitForIdle()
+    Thread.sleep(1000) // Wait for Maps to initialize
+  }
+
   // A tiny in-memory repo that mimics what the ViewModel needs
   private class FakeChatRepository(
       private var uploadShouldSucceed: Boolean = true,
@@ -123,10 +162,6 @@ class ChatScreenAndroidTest {
    */
   @Test
   fun chatScreen_imageMessages_renderCorrectly() = runTest {
-    val repo = FakeChatRepository(uploadShouldSucceed = true)
-    val profileRepo = FakeProfileRepository()
-    val viewModel = ChatViewModel(repo, profileRepo)
-
     // Create multiple image messages to test IMAGE type handling
     val messages =
         listOf(
@@ -181,10 +216,6 @@ class ChatScreenAndroidTest {
    */
   @Test
   fun chatScreen_imageMessage_opensFullScreenViewer() = runTest {
-    val repo = FakeChatRepository(uploadShouldSucceed = true)
-    val profileRepo = FakeProfileRepository()
-    val viewModel = ChatViewModel(repo, profileRepo)
-
     val messages =
         listOf(
             Message(
@@ -236,10 +267,6 @@ class ChatScreenAndroidTest {
    */
   @Test
   fun chatScreen_photoSourceDialog_opensAndDisplaysUIElements() {
-    val repo = FakeChatRepository(uploadShouldSucceed = true)
-    val profileRepo = FakeProfileRepository()
-    val viewModel = ChatViewModel(repo, profileRepo)
-
     composeTestRule.setContent {
       ChatScreen(
           chatId = testChatId,
@@ -283,10 +310,6 @@ class ChatScreenAndroidTest {
    */
   @Test
   fun chatScreen_editMessageDialog_opensAndEditsMessage() = runTest {
-    val repo = FakeChatRepository(uploadShouldSucceed = true)
-    val profileRepo = FakeProfileRepository()
-    val viewModel = ChatViewModel(repo, profileRepo)
-
     // Create a message from the current user that can be edited
     val messages =
         listOf(
@@ -357,10 +380,6 @@ class ChatScreenAndroidTest {
   /** Tests edit message dialog cancel functionality. */
   @Test
   fun chatScreen_editMessageDialog_cancelKeepsOriginalMessage() = runTest {
-    val repo = FakeChatRepository(uploadShouldSucceed = true)
-    val profileRepo = FakeProfileRepository()
-    val viewModel = ChatViewModel(repo, profileRepo)
-
     val messages =
         listOf(
             Message(
@@ -416,10 +435,6 @@ class ChatScreenAndroidTest {
    */
   @Test
   fun chatScreen_fullScreenImageViewer_displaysErrorState() = runTest {
-    val repo = FakeChatRepository(uploadShouldSucceed = true)
-    val profileRepo = FakeProfileRepository()
-    val viewModel = ChatViewModel(repo, profileRepo)
-
     // Use an invalid URL that will fail to load in Coil
     val messages =
         listOf(
@@ -476,14 +491,6 @@ class ChatScreenAndroidTest {
    */
   @Test
   fun chatScreen_locationAndMixedMessages_renderCorrectlyWithMaps() = runTest {
-    val repo = FakeChatRepository(uploadShouldSucceed = true)
-    val profileRepo = FakeProfileRepository()
-    val viewModel = ChatViewModel(repo, profileRepo)
-
-    val testLocation =
-        com.android.joinme.model.map.Location(
-            latitude = 46.5197, longitude = 6.6323, name = "EPFL Campus")
-
     val messages =
         listOf(
             // Image message
@@ -504,7 +511,7 @@ class ChatScreenAndroidTest {
                 content = "static_map_url",
                 timestamp = System.currentTimeMillis() - 2000,
                 type = MessageType.LOCATION,
-                location = testLocation),
+                location = epflLocation),
             // Location message from other user
             Message(
                 id = "loc2",
@@ -514,7 +521,7 @@ class ChatScreenAndroidTest {
                 content = "static_map_url",
                 timestamp = System.currentTimeMillis() - 1500,
                 type = MessageType.LOCATION,
-                location = testLocation.copy(name = "Meeting Point")),
+                location = epflLocation.copy(name = "Meeting Point")),
             // Text messages
             Message(
                 id = "txt1",
@@ -575,15 +582,12 @@ class ChatScreenAndroidTest {
   }
 
   /**
-   * Tests that clicking on a location message triggers the navigation callback. This test covers
-   * the onClick behavior of location messages that couldn't be reliably tested in Robolectric.
+   * Tests that clicking on a location message triggers the navigation callback. This test focuses
+   * solely on the click behavior since display is already tested in
+   * chatScreen_locationAndMixedMessages_renderCorrectlyWithMaps.
    */
   @Test
   fun chatScreen_locationMessage_clickTriggersNavigation() = runTest {
-    val repo = FakeChatRepository(uploadShouldSucceed = true)
-    val profileRepo = FakeProfileRepository()
-    val viewModel = ChatViewModel(repo, profileRepo)
-
     var navigationCallbackInvoked = false
     var navigatedLocation: com.android.joinme.model.map.Location? = null
 
@@ -619,21 +623,13 @@ class ChatScreenAndroidTest {
     }
 
     composeTestRule.waitForIdle()
-    Thread.sleep(3000) // Wait longer for Maps to fully initialize and become interactive
+    Thread.sleep(3000) // Wait for Maps to fully initialize and become interactive
 
-    // Verify exactly one location preview exists (only one location message in this test)
-    composeTestRule
-        .onAllNodesWithTag(ChatScreenTestTags.LOCATION_MESSAGE_PREVIEW)
-        .assertCountEquals(1)
-
-    // Verify location name is visible
-    composeTestRule.onNodeWithText("Test Location", useUnmergedTree = true).assertExists()
-
-    // Try clicking on the location name text (more reliable than clicking on Maps)
+    // Click on the location name text (more reliable than clicking on Maps)
     composeTestRule.onNodeWithText("Test Location", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
-    Thread.sleep(1000) // Give more time for callback to execute
+    Thread.sleep(1000) // Give time for callback to execute
 
     // Verify callback was invoked with correct location
     assert(navigationCallbackInvoked) { "Navigation callback was not invoked" }
@@ -651,10 +647,6 @@ class ChatScreenAndroidTest {
    */
   @Test
   fun chatScreen_attachmentMenu_locationOptionDisplayed() = runTest {
-    val repo = FakeChatRepository(uploadShouldSucceed = true)
-    val profileRepo = FakeProfileRepository()
-    val viewModel = ChatViewModel(repo, profileRepo)
-
     composeTestRule.setContent {
       ChatScreen(
           chatId = testChatId,
@@ -693,16 +685,7 @@ class ChatScreenAndroidTest {
    */
   @Test
   fun chatScreen_locationPreviewDialog_displaysCorrectly() = runTest {
-    val testLocation =
-        com.android.joinme.model.map.UserLocation(
-            latitude = 46.5197, longitude = 6.6323, accuracy = 10f)
-
-    composeTestRule.setContent {
-      LocationPreviewDialog(userLocation = testLocation, onDismiss = {}, onSendLocation = {})
-    }
-
-    composeTestRule.waitForIdle()
-    Thread.sleep(1000) // Wait for Maps to initialize
+    composeLocationPreviewDialog()
 
     // Verify dialog is displayed
     composeTestRule.onNodeWithTag(ChatScreenTestTags.LOCATION_PREVIEW_DIALOG).assertIsDisplayed()
@@ -735,17 +718,7 @@ class ChatScreenAndroidTest {
   @Test
   fun chatScreen_locationPreviewDialog_cancelButtonDismisses() = runTest {
     var dialogDismissed = false
-
-    val testLocation =
-        com.android.joinme.model.map.UserLocation(
-            latitude = 46.5197, longitude = 6.6323, accuracy = 10f)
-
-    composeTestRule.setContent {
-      LocationPreviewDialog(
-          userLocation = testLocation, onDismiss = { dialogDismissed = true }, onSendLocation = {})
-    }
-
-    composeTestRule.waitForIdle()
+    composeLocationPreviewDialog(onDismiss = { dialogDismissed = true })
 
     // Click cancel button
     composeTestRule.onNodeWithTag(ChatScreenTestTags.LOCATION_PREVIEW_CANCEL_BUTTON).performClick()
@@ -759,17 +732,7 @@ class ChatScreenAndroidTest {
   @Test
   fun chatScreen_locationPreviewDialog_sendButtonTriggersLocationSend() = runTest {
     var locationSent = false
-
-    val testLocation =
-        com.android.joinme.model.map.UserLocation(
-            latitude = 46.5197, longitude = 6.6323, accuracy = 10f)
-
-    composeTestRule.setContent {
-      LocationPreviewDialog(
-          userLocation = testLocation, onDismiss = {}, onSendLocation = { locationSent = true })
-    }
-
-    composeTestRule.waitForIdle()
+    composeLocationPreviewDialog(onSendLocation = { locationSent = true })
 
     // Click send button
     composeTestRule.onNodeWithTag(ChatScreenTestTags.LOCATION_PREVIEW_SEND_BUTTON).performClick()

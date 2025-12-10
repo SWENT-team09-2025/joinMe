@@ -822,51 +822,6 @@ class ChatScreenTest {
   // ============================================================================
 
   @Test
-  fun chatScreen_locationMessage_rendersWithMapPreviewAndSenderName() {
-    val testLocation =
-        com.android.joinme.model.map.Location(
-            latitude = 46.5197, longitude = 6.6323, name = "EPFL Campus")
-    val messages =
-        listOf(
-            // Own location message
-            Message(
-                id = "loc1",
-                conversationId = "chat1",
-                senderId = "user1",
-                senderName = "Alice",
-                content = "static_map_url",
-                timestamp = System.currentTimeMillis() - 1000,
-                type = MessageType.LOCATION,
-                location = testLocation),
-            // Other user's location message (should show sender name)
-            Message(
-                id = "loc2",
-                conversationId = "chat1",
-                senderId = "user2",
-                senderName = "Bob",
-                content = "static_map_url",
-                timestamp = System.currentTimeMillis(),
-                type = MessageType.LOCATION,
-                location = testLocation.copy(name = "Meeting Point")))
-    fakeChatRepository.setMessages(messages)
-
-    setupChatScreen(currentUserId = "user1")
-
-    composeTestRule.waitForIdle()
-
-    // Verify both message containers exist
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("loc1")).assertExists()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("loc2")).assertExists()
-
-    // Verify location names are displayed
-    composeTestRule.onNodeWithText("EPFL Campus", useUnmergedTree = true).assertExists()
-    composeTestRule.onNodeWithText("Meeting Point", useUnmergedTree = true).assertExists()
-
-    // Verify sender name shown for other user (Bob), but not for own message
-    composeTestRule.onNodeWithText("Bob", useUnmergedTree = true).assertExists()
-  }
-
-  @Test
   fun chatScreen_locationMessage_displaysCorrectlyForOwnAndOthersMessages() {
     // Test that location messages render properly for both current user and others
     // Note: Context menu interactions with location messages cannot be fully tested

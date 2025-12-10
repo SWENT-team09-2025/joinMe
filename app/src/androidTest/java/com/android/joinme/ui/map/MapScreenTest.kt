@@ -45,6 +45,26 @@ class MapScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
 
+  private lateinit var testViewModel: MapViewModel
+  private lateinit var mutableState: MutableStateFlow<MapUIState>
+
+  @org.junit.Before
+  fun setUp() {
+    testViewModel = MapViewModel()
+    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
+    stateField.isAccessible = true
+    mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
+  }
+
+  /**
+   * Helper function to set the following user state.
+   *
+   * @param following Whether the map should be following the user
+   */
+  private fun setFollowingUser(following: Boolean) {
+    mutableState.value = MapUIState(isFollowingUser = following)
+  }
+
   @Test
   fun mapScreen_tagsAreDisplayed() {
     composeTestRule.setContent { MapScreen(viewModel = MapViewModel(), navigationActions = null) }
@@ -80,8 +100,6 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_displaysMarkersForEvents() {
-    val testViewModel = MapViewModel()
-
     // Create test events with locations
     val testEvents =
         listOf(
@@ -110,10 +128,7 @@ class MapScreenTest {
                 visibility = EventVisibility.PUBLIC,
                 ownerId = "owner2"))
 
-    // Use reflection to inject events into the ViewModel state
-    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
+    // Inject events into the ViewModel state
     mutableState.value = MapUIState(events = testEvents)
 
     composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
@@ -127,13 +142,6 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_animatesCameraWhenUserLocationChanges() {
-    val testViewModel = MapViewModel()
-
-    // Inject user location to trigger camera animation
-    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
-
     composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
 
     // Update user location after initial composition
@@ -151,8 +159,6 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_displaysMarkersForSeries() {
-    val testViewModel = MapViewModel()
-
     // Create test locations
     val location1 = Location(latitude = 46.5187, longitude = 6.5629, name = "EPFL")
     val location2 = Location(latitude = 46.52, longitude = 6.57, name = "Lausanne")
@@ -183,10 +189,7 @@ class MapScreenTest {
                     eventIds = listOf("event4", "event5"),
                     ownerId = "owner2"))
 
-    // Use reflection to inject series into the ViewModel state
-    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
+    // Inject series into the ViewModel state
     mutableState.value = MapUIState(series = testSeries)
 
     composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
@@ -225,13 +228,8 @@ class MapScreenTest {
 
   @Test
   fun myLocationButton_clickEnablesFollowingUser() {
-    val testViewModel = MapViewModel()
-
     // Set initial state to not following
-    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
-    mutableState.value = MapUIState(isFollowingUser = false)
+    setFollowingUser(false)
 
     composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
 
@@ -246,12 +244,7 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_enablesFollowingUserOnEntryWhenNotReturningFromMarkerClick() {
-    val testViewModel = MapViewModel()
-
     // Set initial state to not returning from marker click
-    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
     mutableState.value = MapUIState(isFollowingUser = false, isReturningFromMarkerClick = false)
 
     composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
@@ -264,12 +257,7 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_clearsMarkerClickFlagWhenReturningFromMarkerClick() {
-    val testViewModel = MapViewModel()
-
     // Set initial state to returning from marker click
-    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
     mutableState.value = MapUIState(isFollowingUser = false, isReturningFromMarkerClick = true)
 
     composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
@@ -285,17 +273,12 @@ class MapScreenTest {
   fun mapScreen_centersOnInitialLocation_whenProvidedFromChatMessage() {
     // This test covers the MapInitialLocationEffect composable
     // Tests that map centers on specific location (e.g., from chat location message)
-    val testViewModel = MapViewModel()
-
     // EPFL location coordinates
     val initialLatitude = 46.5196
     val initialLongitude = 6.5680
 
     // Set initial user following to true
-    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
-    mutableState.value = MapUIState(isFollowingUser = true)
+    setFollowingUser(true)
 
     composeTestRule.setContent {
       MapScreen(
@@ -320,13 +303,8 @@ class MapScreenTest {
   @Test
   fun mapScreen_doesNotCenterOnLocation_whenInitialLocationIsNull() {
     // This test verifies that MapInitialLocationEffect does not trigger when location is null
-    val testViewModel = MapViewModel()
-
     // Set initial user following to true
-    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
-    mutableState.value = MapUIState(isFollowingUser = true)
+    setFollowingUser(true)
 
     composeTestRule.setContent {
       MapScreen(

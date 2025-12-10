@@ -1422,10 +1422,16 @@ class MainActivityTest {
   fun mainActivity_chatScreen_onNavigateToMap_navigatesToMapWithLocation() = runBlocking {
     val currentUser = FirebaseAuth.getInstance().currentUser
 
-    // Skip test if user is not authenticated
+    // Skip test if user is not authenticated, but log it so it's visible
     if (currentUser == null) {
+      android.util.Log.w(
+          "MainActivityTest",
+          "Skipping mainActivity_chatScreen_onNavigateToMap_navigatesToMapWithLocation: " +
+              "No authenticated user found. This test requires Firebase authentication.")
       return@runBlocking
     }
+
+    val userId = currentUser.uid
 
     // Create a test event with chat and location message
     val eventRepository =
@@ -1441,10 +1447,10 @@ class MainActivityTest {
             location = com.android.joinme.model.map.Location(46.5196, 6.5680, "EPFL"),
             date = com.google.firebase.Timestamp.now(),
             duration = 60,
-            participants = listOf(currentUser.uid),
+            participants = listOf(userId),
             maxParticipants = 10,
             visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
-            ownerId = currentUser.uid)
+            ownerId = userId)
     eventRepository.addEvent(testEvent)
 
     // Add a location message to the chat

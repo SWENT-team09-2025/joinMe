@@ -109,6 +109,21 @@ import java.util.Locale
 import kotlinx.coroutines.launch
 
 /**
+ * Disabled MapUiSettings for location previews.
+ *
+ * Disables all user interaction with the map preview to prevent interference with message
+ * click/long-press gestures.
+ */
+private val disabledMapUiSettings =
+    MapUiSettings(
+        zoomControlsEnabled = false,
+        scrollGesturesEnabled = false,
+        zoomGesturesEnabled = false,
+        tiltGesturesEnabled = false,
+        rotationGesturesEnabled = false,
+        mapToolbarEnabled = false)
+
+/**
  * Test tags for UI testing of the Chat screen components.
  *
  * Provides consistent identifiers for testing individual UI elements including input fields,
@@ -907,7 +922,7 @@ private fun UserAvatar(photoUrl: String?, userName: String, modifier: Modifier =
 private fun ChatLocationMessage(location: Location, onClick: () -> Unit = {}) {
   val locationLatLng = LatLng(location.latitude, location.longitude)
   val cameraPositionState = rememberCameraPositionState {
-    position = CameraPosition.fromLatLngZoom(locationLatLng, 15f)
+    position = CameraPosition.fromLatLngZoom(locationLatLng, Dimens.Chat.locationPreviewZoom)
   }
 
   Column(
@@ -919,20 +934,15 @@ private fun ChatLocationMessage(location: Location, onClick: () -> Unit = {}) {
         Box(
             modifier =
                 Modifier.fillMaxWidth()
-                    .height(Dimens.Chat.messageBubbleMaxWidth * 0.55f)
+                    .height(
+                        Dimens.Chat.messageBubbleMaxWidth *
+                            Dimens.Chat.locationMessageHeightMultiplier)
                     .clip(RoundedCornerShape(Dimens.CornerRadius.small))) {
               GoogleMap(
                   modifier = Modifier.fillMaxSize(),
                   cameraPositionState = cameraPositionState,
                   properties = MapProperties(),
-                  uiSettings =
-                      MapUiSettings(
-                          zoomControlsEnabled = false,
-                          scrollGesturesEnabled = false,
-                          zoomGesturesEnabled = false,
-                          tiltGesturesEnabled = false,
-                          rotationGesturesEnabled = false,
-                          mapToolbarEnabled = false)) {
+                  uiSettings = disabledMapUiSettings) {
                     Marker(state = MarkerState(position = locationLatLng), title = location.name)
                   }
             }
@@ -1267,25 +1277,27 @@ private fun AttachmentMenu(
   }
 
   // Location preview dialog
-  if (showLocationPreview && currentUserLocation != null) {
-    LocationPreviewDialog(
-        userLocation = currentUserLocation!!,
-        onDismiss = {
-          showLocationPreview = false
-          currentUserLocation = null
-        },
-        onSendLocation = {
-          viewModel.sendCurrentLocation(
-              context = context,
-              userLocation = currentUserLocation!!,
-              senderName = currentUserName,
-              onSuccess = {
-                showLocationPreview = false
-                currentUserLocation = null
-                onDismiss()
-              },
-              onError = { error -> Toast.makeText(context, error, Toast.LENGTH_SHORT).show() })
-        })
+  if (showLocationPreview) {
+    currentUserLocation?.let { location ->
+      LocationPreviewDialog(
+          userLocation = location,
+          onDismiss = {
+            showLocationPreview = false
+            currentUserLocation = null
+          },
+          onSendLocation = {
+            viewModel.sendCurrentLocation(
+                context = context,
+                userLocation = location,
+                senderName = currentUserName,
+                onSuccess = {
+                  showLocationPreview = false
+                  currentUserLocation = null
+                  onDismiss()
+                },
+                onError = { error -> Toast.makeText(context, error, Toast.LENGTH_SHORT).show() })
+          })
+    }
   }
 }
 
@@ -1306,7 +1318,7 @@ internal fun LocationPreviewDialog(
 ) {
   val locationLatLng = LatLng(userLocation.latitude, userLocation.longitude)
   val cameraPositionState = rememberCameraPositionState {
-    position = CameraPosition.fromLatLngZoom(locationLatLng, 15f)
+    position = CameraPosition.fromLatLngZoom(locationLatLng, Dimens.Chat.locationPreviewZoom)
   }
 
   AlertDialog(
@@ -1321,20 +1333,16 @@ internal fun LocationPreviewDialog(
               Box(
                   modifier =
                       Modifier.fillMaxWidth()
-                          .height(Dimens.Chat.messageBubbleMaxWidth * 0.67f)
+                          .height(
+                              Dimens.Chat.messageBubbleMaxWidth *
+                                  Dimens.Chat.locationPreviewDialogHeightMultiplier)
                           .clip(RoundedCornerShape(Dimens.CornerRadius.medium))
                           .testTag(ChatScreenTestTags.LOCATION_PREVIEW_MAP)) {
                     GoogleMap(
                         modifier = Modifier.fillMaxSize(),
                         cameraPositionState = cameraPositionState,
                         properties = MapProperties(),
-                        uiSettings =
-                            MapUiSettings(
-                                zoomControlsEnabled = false,
-                                scrollGesturesEnabled = false,
-                                zoomGesturesEnabled = false,
-                                tiltGesturesEnabled = false,
-                                rotationGesturesEnabled = false)) {
+                        uiSettings = disabledMapUiSettings) {
                           Marker(
                               state = MarkerState(position = locationLatLng),
                               title = stringResource(R.string.current_location))
