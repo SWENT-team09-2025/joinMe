@@ -259,9 +259,12 @@ class EventsRepositoryCachedTest {
     every { networkMonitor.isOnline() } returns false
     every { mockAuth.currentUser } returns null
 
-    val result = cachedRepo.getAllEvents(EventFilter.EVENTS_FOR_OVERVIEW_SCREEN)
-
-    assertTrue(result.isEmpty())
+    try {
+      cachedRepo.getAllEvents(EventFilter.EVENTS_FOR_OVERVIEW_SCREEN)
+      fail("Should have thrown Exception")
+    } catch (e: Exception) {
+      assertTrue(e.message!!.contains("User not logged in"))
+    }
   }
 
   @Test
