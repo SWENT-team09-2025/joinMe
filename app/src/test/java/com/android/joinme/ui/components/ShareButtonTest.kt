@@ -1,6 +1,7 @@
 package com.android.joinme.ui.components
 
 import android.content.Context
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.core.app.ApplicationProvider
@@ -61,7 +62,7 @@ class ShareButtonTest {
     }
 
     // Verify button is rendered
-    composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertExists()
+    composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertHasClickAction()
   }
 
   /** Test 2: Covers shareInvitation failure path Lines covered: 103-109 (onFailure block) */
