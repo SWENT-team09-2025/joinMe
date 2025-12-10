@@ -117,4 +117,11 @@
     <!-- Notification Types -->
     <string name="notification_type_event_chat_message">event_chat_message</string>
     <string name="notification_type_group_chat_message">group_chat_message</string>
+
+    <!-- Invitation link -->
+    <string name="process_invitation_failed">Failed to process invitation: %1$s</string>
+    <string name="invalid_invitation_link">Invalid or expired invitation link</string>
+    <string name="fail_joining_group">Failed to join group: %1$s</string>
+    <string name="success_joining_group">Successfully joined the group!</string>
+    <string name="sign_in_to_join_group">Please sign in to join the group</string>
 </resources>
