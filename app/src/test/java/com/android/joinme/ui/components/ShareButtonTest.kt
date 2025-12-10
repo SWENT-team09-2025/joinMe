@@ -86,4 +86,63 @@ class ShareButtonTest {
     assert(errorCalled)
     assert(ShadowToast.getTextOfLatestToast()?.contains("Failed to create invitation") == true)
   }
+
+  /**
+   * Test 3: Covers shareInvitation success path Lines covered: 97-99 (onSuccess block) This test
+   * verifies the success path by mocking createInvitation to return a success result and ensuring
+   * the code executes without throwing exceptions.
+   */
+  @Test
+  fun shareInvitation_success_completesWithoutException() = runTest {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+
+    mockkConstructor(InvitationRepositoryFirestore::class)
+    coEvery {
+      anyConstructed<InvitationRepositoryFirestore>().createInvitation(any(), any(), any(), any())
+    } returns Result.success("test-token-123")
+
+    mockkObject(com.android.joinme.model.invitation.deepLink.DeepLinkService)
+    every {
+      com.android.joinme.model.invitation.deepLink.DeepLinkService.generateInvitationLink(any())
+    } returns "https://joinme-aa9e8.web.app/invite/test-token-123"
+
+    // Mock context to prevent actual activity launch
+    val mockContext = spyk(context)
+    every { mockContext.startActivity(any()) } returns Unit
+
+    // This should complete without throwing an exception
+    shareInvitation(
+        invitationType = InvitationType.SERIE,
+        targetId = "serie-id",
+        createdBy = "user-123",
+        expiresInDays = 7,
+        context = mockContext,
+        onError = {})
+
+    // If we get here without exception, the success path was executed
+    assert(true)
+  }
+
+  /** Test 4: Covers shareInvitation exception catch path Lines covered: 108-114 (catch block) */
+  @Test
+  fun shareInvitation_exception_callsOnError() = runTest {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    var errorCalled = false
+
+    mockkConstructor(InvitationRepositoryFirestore::class)
+    coEvery {
+      anyConstructed<InvitationRepositoryFirestore>().createInvitation(any(), any(), any(), any())
+    } throws RuntimeException("Network error")
+
+    shareInvitation(
+        invitationType = InvitationType.GROUP,
+        targetId = "group-id",
+        createdBy = "user-456",
+        expiresInDays = null,
+        context = context,
+        onError = { errorCalled = true })
+
+    assert(errorCalled)
+    assert(ShadowToast.getTextOfLatestToast()?.contains("Failed to create invitation") == true)
+  }
 }

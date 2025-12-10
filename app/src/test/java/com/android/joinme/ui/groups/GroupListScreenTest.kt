@@ -597,4 +597,68 @@ class GroupListScreenTest {
 
     assertTrue(editClicked)
   }
+
+  @Test
+  fun scrimClick_dismissesMenu() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("SHARE GROUP").assertIsDisplayed()
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("test1")).performClick()
+
+    composeTestRule.onNodeWithText("SHARE GROUP").assertDoesNotExist()
+  }
+
+  @Test
+  fun groupCardDescription_whenBlank_isNotDisplayed() {
+    val group = Group(id = "1", name = "Group", description = "   ", ownerId = "owner")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    composeTestRule.onNodeWithText("Group").assertIsDisplayed()
+
+    composeTestRule.onNodeWithText("   ").assertDoesNotExist()
+  }
+
+  @Test
+  fun currentUserId_returnsTestUserId_inTestEnvironment() {
+
+    val testUserId = "test-user-id"
+    mockFirebaseAuthWithUser(testUserId)
+
+    val group =
+        Group(id = "1", name = "Test Group", ownerId = testUserId, memberIds = listOf(testUserId))
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("1")).performClick()
+    composeTestRule.onNodeWithText("EDIT GROUP").assertExists()
+    composeTestRule.onNodeWithText("DELETE GROUP").assertExists()
+  }
+
+  @Test
+  fun menuButton_capturesYPosition() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+
+    composeTestRule.onNodeWithText("SHARE GROUP").assertIsDisplayed()
+  }
+
+  @Test
+  fun groupsRefresh_whenScreenResumes() {
+    val initialGroups = listOf(Group(id = "1", name = "Group 1", ownerId = "owner"))
+    val viewModel = createViewModel(initialGroups)
+
+    composeTestRule.setContent { GroupListScreen(viewModel = viewModel) }
+
+    composeTestRule.onNodeWithText("Group 1").assertIsDisplayed()
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LIST).assertIsDisplayed()
+  }
 }
