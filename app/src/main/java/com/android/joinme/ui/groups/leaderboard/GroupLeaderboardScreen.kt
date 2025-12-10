@@ -56,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.android.joinme.R
+import com.android.joinme.ui.profile.ProfilePhotoImage
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.customColors
 
@@ -298,7 +299,7 @@ private fun LeaderboardItem(entry: LeaderboardEntry) {
               Spacer(modifier = Modifier.width(Dimens.Spacing.medium))
 
               // User avatar
-              UserAvatar(displayName = entry.displayName, userId = entry.userId)
+              UserAvatar(photoUrl = entry.photoUrl, displayName = entry.displayName)
 
               Spacer(modifier = Modifier.width(Dimens.Spacing.medium))
 
@@ -344,22 +345,19 @@ private fun RankBadge(rank: Int) {
       }
 }
 
-/** User avatar placeholder (using first letter of display name). */
+/**
+ * User avatar using ProfilePhotoImage component.
+ *
+ * @param photoUrl The user's profile photo URL, or null to show default avatar.
+ * @param displayName The user's display name for accessibility.
+ */
 @Composable
-private fun UserAvatar(displayName: String, userId: String) {
-  Box(
-      modifier =
-          Modifier.size(Dimens.GroupDetail.memberProfilePictureSize)
-              .clip(CircleShape)
-              .background(MaterialTheme.colorScheme.surfaceVariant),
-      contentAlignment = Alignment.Center) {
-        // Display first letter as placeholder
-        Text(
-            text = displayName.firstOrNull()?.uppercase() ?: "?",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-      }
+private fun UserAvatar(photoUrl: String?, displayName: String) {
+  ProfilePhotoImage(
+      photoUrl = photoUrl,
+      contentDescription = stringResource(R.string.user_avatar_description, displayName),
+      size = Dimens.GroupDetail.memberProfilePictureSize,
+      showLoadingIndicator = false)
 }
 
 /** Crown badge for top 3 positions with appropriate colors. */
