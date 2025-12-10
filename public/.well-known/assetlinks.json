@@ -1,0 +1,11 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.android.joinme",
+    "sha256_cert_fingerprints": [
+      "AC:E5:ED:96:21:C5:B5:0F:36:14:69:60:50:81:5B:07:B2:2A:40:1A:7F:F5:CB:D9:F9:87:83:5A:D8:28:E7:81",
+      "18:17:8F:5F:4C:FF:4E:E0:FB:C0:E6:02:6F:A9:DC:17:9D:FC:FF:11:82:A5:DB:64:9E:5C:49:7C:3A:88:FD:A7"
+    ]
+  }
+}]

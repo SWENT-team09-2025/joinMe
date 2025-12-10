@@ -17,7 +17,7 @@ class DeepLinkServiceTest {
     val token = "abc123xyz"
     val link = DeepLinkService.generateInvitationLink(token)
 
-    assertEquals("https://joinme.app/invite/abc123xyz", link)
+    assertEquals("https://joinme-aa9e8.web.app/invite/abc123xyz", link)
   }
 
   @Test
