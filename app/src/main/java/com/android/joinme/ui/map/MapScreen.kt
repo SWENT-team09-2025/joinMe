@@ -412,8 +412,8 @@ fun MapScreen(
                           state = MarkerState(position = locationPosition),
                           icon = locationMarkerIcon,
                           tag = "locationMarker",
-                          title = "Location",
-                          snippet = "Shared location")
+                          title = context.getString(R.string.shared_location_marker_title),
+                          snippet = context.getString(R.string.shared_location_marker_snippet))
                     }
                   }
 

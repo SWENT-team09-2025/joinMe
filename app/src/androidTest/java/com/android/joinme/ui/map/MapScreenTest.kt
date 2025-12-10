@@ -359,13 +359,12 @@ class MapScreenTest {
   }
 
   @Test
-  fun mapScreen_locationMarker_onlyShownWhenFlagIsTrue() {
-    // Tests that location marker is only shown when showLocationMarker=true
-    // (chat locations show marker, event locations don't to avoid duplicate markers)
+  fun mapScreen_locationMarker_notShownWhenFlagIsFalse() {
+    // Test that location marker is not shown when showLocationMarker=false
+    // (e.g., navigating to event location that already has event marker)
     val initialLatitude = 46.5196
     val initialLongitude = 6.5680
 
-    // Test with marker flag = false (e.g., navigating to event location)
     composeTestRule.setContent {
       MapScreen(
           viewModel = testViewModel,
@@ -377,13 +376,20 @@ class MapScreenTest {
 
     composeTestRule.waitForIdle()
 
-    // Verify the map displays without marker
+    // Verify the map displays without location marker
     composeTestRule
         .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
         .assertExists()
         .assertIsDisplayed()
+  }
 
-    // Test with marker flag = true (e.g., chat location with marker)
+  @Test
+  fun mapScreen_locationMarker_shownWhenFlagIsTrue() {
+    // Test that location marker is shown when showLocationMarker=true
+    // (e.g., chat location with marker to indicate the shared position)
+    val initialLatitude = 46.5196
+    val initialLongitude = 6.5680
+
     composeTestRule.setContent {
       MapScreen(
           viewModel = testViewModel,
@@ -395,7 +401,7 @@ class MapScreenTest {
 
     composeTestRule.waitForIdle()
 
-    // Verify the map displays with marker
+    // Verify the map displays with location marker
     composeTestRule
         .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
         .assertExists()
