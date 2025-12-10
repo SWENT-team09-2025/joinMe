@@ -16,13 +16,11 @@ import kotlinx.coroutines.launch
  * UI state for the Search screen.
  *
  * @property query The current search query text
- * @property categoryExpanded Whether the sport category dropdown menu is expanded
  * @property eventItems List of event items (events and series) to display after applying filters
  * @property errorMsg Error message to display if fetching events fails
  */
 data class SearchUIState(
     val query: String = "",
-    val categoryExpanded: Boolean = false,
     val eventItems: List<EventItem> = emptyList(),
     val errorMsg: String? = null,
 )
@@ -94,27 +92,9 @@ class SearchViewModel(
     filterRepository.toggleActivity()
   }
 
-  /**
-   * Sets the category dropdown expanded state.
-   *
-   * @param expanded True to expand the dropdown, false to collapse it
-   */
-  fun setCategoryExpanded(expanded: Boolean) {
-    _uiState.value = _uiState.value.copy(categoryExpanded = expanded)
-  }
-
-  /** Toggles the "Select All" sports filter. Delegates to FilterRepository. */
-  fun toggleSelectAll() {
-    filterRepository.toggleSelectAll()
-  }
-
-  /**
-   * Toggles a specific sport filter by ID. Delegates to FilterRepository.
-   *
-   * @param sportId The unique identifier of the sport to toggle
-   */
-  fun toggleSport(sportId: String) {
-    filterRepository.toggleSport(sportId)
+  /** Toggles the "Sport" filter. Delegates to FilterRepository. */
+  fun toggleSport() {
+    filterRepository.toggleSport()
   }
 
   /**
