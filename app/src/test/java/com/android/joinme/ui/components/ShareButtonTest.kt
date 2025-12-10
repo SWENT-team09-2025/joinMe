@@ -50,10 +50,29 @@ class ShareButtonTest {
   }
 
   /**
-   * Test 1: Covers ShareButton composable rendering Lines covered: 46-69 (ShareButton composable)
+   * Test 1: Covers ShareButton composable rendering and success path Lines covered: 46-69
+   * (ShareButton composable) + 97-102 (onSuccess block)
    */
   @Test
-  fun shareButton_rendersCorrectly_forGroupInvitation() {
+  fun shareButton_rendersCorrectly_forGroupInvitation() = runTest {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+
+    val mockRepository = mockk<InvitationsRepository>()
+    coEvery { mockRepository.createInvitation(any(), any(), any(), any()) } returns
+        Result.success("test-token-123")
+
+    mockkObject(InvitationRepositoryProvider)
+    every { InvitationRepositoryProvider.repository } returns mockRepository
+
+    mockkObject(com.android.joinme.model.invitation.deepLink.DeepLinkService)
+    every {
+      com.android.joinme.model.invitation.deepLink.DeepLinkService.generateInvitationLink(any())
+    } returns "https://joinme-aa9e8.web.app/invite/test-token-123"
+
+    // Mock context to prevent actual activity launch
+    val mockContext = spyk(context)
+    every { mockContext.startActivity(any()) } returns Unit
+
     composeTestRule.setContent {
       ShareButton(
           invitationType = InvitationType.GROUP,
@@ -64,6 +83,15 @@ class ShareButtonTest {
 
     // Verify button is rendered
     composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertHasClickAction()
+
+    // Test success path with mocked dependencies
+    shareInvitation(
+        invitationType = InvitationType.SERIE,
+        targetId = "serie-id",
+        createdBy = "user-123",
+        expiresInDays = 7,
+        context = mockContext,
+        onError = {})
   }
 
   /** Test 2: Covers shareInvitation failure path Lines covered: 103-109 (onFailure block) */
