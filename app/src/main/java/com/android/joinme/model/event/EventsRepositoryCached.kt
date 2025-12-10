@@ -1,6 +1,7 @@
 package com.android.joinme.model.event
 
 import android.content.Context
+import android.util.Log
 import com.android.joinme.model.database.AppDatabase
 import com.android.joinme.model.database.toEntity
 import com.android.joinme.model.database.toEvent
@@ -34,9 +35,9 @@ class EventsRepositoryCached(
   private val database = AppDatabase.getDatabase(context)
   private val eventDao = database.eventDao()
 
-  // Cannot use interface delegation as only this method delegates; all others have custom caching
-  // logic
-  override fun getNewEventId(): String = firestoreRepo.getNewEventId() // NOSONAR
+  override fun getNewEventId(): String {
+    return firestoreRepo.getNewEventId()
+  }
 
   override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
     // Try to fetch from Firestore if online
@@ -49,12 +50,14 @@ class EventsRepositoryCached(
         }
         return events
       } catch (e: Exception) {
-        // Network error, fall back to cache
+        Log.w("EventsRepositoryCached", "Failed to fetch from Firestore, falling back to cache", e)
       }
     }
 
     // Offline or network error - apply filter to cached events
-    val userId = Firebase.auth.currentUser?.uid ?: return emptyList()
+    val userId =
+        Firebase.auth.currentUser?.uid
+            ?: throw Exception("EventsRepositoryCached: User not logged in.")
     val allCachedEvents = eventDao.getAllEvents().map { it.toEvent() }
 
     return applyEventFilter(eventFilter, allCachedEvents, userId)
@@ -100,34 +103,19 @@ class EventsRepositoryCached(
   }
 
   override suspend fun getEvent(eventId: String): Event {
-    // Try cache first for faster response
-    val cached = eventDao.getEventById(eventId)
-    if (cached != null && !networkMonitor.isOnline()) {
-      // Offline and have cached version - return it
-      return cached.toEvent()
+    val cached = eventDao.getEventById(eventId)?.toEvent()
+
+    if (!networkMonitor.isOnline()) {
+      return cached
+          ?: throw OfflineException(
+              "Cannot fetch event while offline and no cached version available")
     }
 
-    // Online or no cache - fetch from Firestore
-    if (networkMonitor.isOnline()) {
-      try {
-        val event = firestoreRepo.getEvent(eventId)
-        // Cache the fetched event
-        eventDao.insertEvent(event.toEntity())
-        return event
-      } catch (e: Exception) {
-        // Firestore failed, try cache as fallback
-        if (cached != null) {
-          return cached.toEvent()
-        }
-        throw e
-      }
+    return try {
+      firestoreRepo.getEvent(eventId).also { event -> eventDao.insertEvent(event.toEntity()) }
+    } catch (e: Exception) {
+      cached ?: throw e
     }
-
-    // Offline and no cache - throw exception
-    if (cached != null) {
-      return cached.toEvent()
-    }
-    throw OfflineException("Cannot fetch event while offline and no cached version available")
   }
 
   override suspend fun addEvent(event: Event) {
@@ -160,7 +148,7 @@ class EventsRepositoryCached(
         }
         return events
       } catch (e: Exception) {
-        // Fall back to cache
+        Log.w("EventsRepositoryCached", "Failed to fetch from Firestore, falling back to cache", e)
       }
     }
 
@@ -177,7 +165,7 @@ class EventsRepositoryCached(
         }
         return events
       } catch (e: Exception) {
-        // Fall back to cache
+        Log.w("EventsRepositoryCached", "Failed to fetch from Firestore, falling back to cache", e)
       }
     }
 

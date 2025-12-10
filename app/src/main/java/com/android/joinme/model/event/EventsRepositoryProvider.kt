@@ -29,20 +29,8 @@ object EventsRepositoryProvider {
    * @return EventsRepository implementation
    */
   fun getRepository(context: Context? = null): EventsRepository {
-    val isTestEnv =
-        android.os.Build.FINGERPRINT == "robolectric" ||
-            android.os.Debug.isDebuggerConnected() ||
-            System.getProperty("IS_TEST_ENV") == "true" ||
-            try {
-              // Check if we're running in an instrumented test by looking for the test runner
-              Class.forName("androidx.test.runner.AndroidJUnitRunner")
-              true
-            } catch (e: ClassNotFoundException) {
-              false
-            }
-
     // Test environment: use local repository
-    if (isTestEnv) return localRepo
+    if (isTestEnvironment()) return localRepo
 
     // Production: use cached repository with offline support
     requireNotNull(context) { "Context is required for production repository" }
@@ -56,19 +44,11 @@ object EventsRepositoryProvider {
    * @param context Application context (if null, attempts to get from Firebase)
    * @return EventsRepository implementation
    */
+  @Deprecated(
+      "Use getRepository(context) instead. Network state is handled internally.",
+      ReplaceWith("getRepository(context)"))
   fun getRepository(isOnline: Boolean, context: Context? = null): EventsRepository {
-    val isTestEnv =
-        android.os.Build.FINGERPRINT == "robolectric" ||
-            android.os.Debug.isDebuggerConnected() ||
-            System.getProperty("IS_TEST_ENV") == "true" ||
-            try {
-              Class.forName("androidx.test.runner.AndroidJUnitRunner")
-              true
-            } catch (e: ClassNotFoundException) {
-              false
-            }
-
-    if (isTestEnv) return localRepo
+    if (isTestEnvironment()) return localRepo
 
     // Try to get context from Firebase if not provided
     val ctx =
@@ -100,6 +80,23 @@ object EventsRepositoryProvider {
       cachedRepo = EventsRepositoryCached(context, firestore, networkMonitor)
     }
     return cachedRepo!!
+  }
+
+  /**
+   * Checks if the current environment is a test environment.
+   *
+   * @return true if running in a test environment, false otherwise
+   */
+  private fun isTestEnvironment(): Boolean {
+    return android.os.Build.FINGERPRINT == "robolectric" ||
+        android.os.Debug.isDebuggerConnected() ||
+        System.getProperty("IS_TEST_ENV") == "true" ||
+        try {
+          Class.forName("androidx.test.runner.AndroidJUnitRunner")
+          true
+        } catch (e: ClassNotFoundException) {
+          false
+        }
   }
 
   /** For testing only - allows resetting the singleton state. */
