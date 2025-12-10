@@ -30,32 +30,48 @@ class PollDisplayTest {
   // ============================================================================
 
   @Test
-  fun pollCard_displaysQuestionAndOptions() {
-    val poll = createPoll(question = "Favorite color?")
+  fun pollCard_displaysQuestionOptionsAndVotes() {
+    val poll =
+        createPoll(
+            question = "Favorite color?",
+            options =
+                listOf(
+                    PollOption(0, "Red", listOf("u1", "u2")), PollOption(1, "Blue", listOf("u3"))))
     setupPollCard(poll)
 
+    // Question displayed
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollQuestionTag(testPollId))
         .assertTextContains("Favorite color?")
+    // Options displayed
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollOptionTag(testPollId, 0))
         .assertIsDisplayed()
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollOptionTag(testPollId, 1))
         .assertIsDisplayed()
-  }
-
-  @Test
-  fun pollCard_displaysTotalVotesCount() {
-    val poll =
-        createPoll(
-            options =
-                listOf(PollOption(0, "A", listOf("u1", "u2")), PollOption(1, "B", listOf("u3"))))
-    setupPollCard(poll)
-
+    // Total votes displayed
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollTotalVotesTag(testPollId))
         .assertTextContains("3", substring = true)
+    // Creator name displayed
+    composeTestRule.onNodeWithText("Creator", substring = true).assertIsDisplayed()
+  }
+
+  @Test
+  fun pollCard_displaysVotePercentage() {
+    val poll =
+        createPoll(
+            options =
+                listOf(
+                    PollOption(0, "Option A", listOf("u1", "u2", "u3")),
+                    PollOption(1, "Option B", listOf("u4"))))
+    setupPollCard(poll)
+
+    // 75% for option A (3 out of 4)
+    composeTestRule.onNodeWithText("75%").assertIsDisplayed()
+    // 25% for option B (1 out of 4)
+    composeTestRule.onNodeWithText("25%").assertIsDisplayed()
   }
 
   // ============================================================================
@@ -63,32 +79,19 @@ class PollDisplayTest {
   // ============================================================================
 
   @Test
-  fun pollCard_closedPoll_showsClosedBadge() {
-    val poll = createPoll(isClosed = true)
+  fun pollCard_showsAllBadgesWhenApplicable() {
+    val poll = createPoll(isClosed = true, isAnonymous = true, allowMultipleAnswers = true)
     setupPollCard(poll)
 
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollClosedBadgeTag(testPollId))
         .assertIsDisplayed()
-  }
-
-  @Test
-  fun pollCard_anonymousPoll_showsAnonymousBadge() {
-    val poll = createPoll(isAnonymous = true)
-    setupPollCard(poll)
-
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollAnonymousBadgeTag(testPollId))
         .assertIsDisplayed()
-  }
-
-  @Test
-  fun pollCard_multipleAnswersPoll_showsMultipleSelectionBadge() {
-    val poll = createPoll(allowMultipleAnswers = true)
-    setupPollCard(poll)
-
-    // The multiple selection badge doesn't have a unique testTag, verify via text
-    composeTestRule.onNodeWithText("Multiple selection", substring = true).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(PollDisplayTestTags.getPollMultipleSelectionBadgeTag(testPollId))
+        .assertIsDisplayed()
   }
 
   @Test
@@ -102,6 +105,9 @@ class PollDisplayTest {
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollAnonymousBadgeTag(testPollId))
         .assertDoesNotExist()
+    composeTestRule
+        .onNodeWithTag(PollDisplayTestTags.getPollMultipleSelectionBadgeTag(testPollId))
+        .assertDoesNotExist()
   }
 
   // ============================================================================
@@ -112,7 +118,6 @@ class PollDisplayTest {
   fun pollCard_creatorSeesMenuButton() {
     val poll = createPoll(creatorId = testUserId)
     setupPollCard(poll)
-
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollMenuButtonTag(testPollId))
         .assertIsDisplayed()
@@ -122,7 +127,6 @@ class PollDisplayTest {
   fun pollCard_nonCreatorDoesNotSeeMenuButton() {
     val poll = createPoll(creatorId = "other_user")
     setupPollCard(poll)
-
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollMenuButtonTag(testPollId))
         .assertDoesNotExist()
@@ -132,7 +136,6 @@ class PollDisplayTest {
   fun pollCard_menuShowsCloseOption_whenOpen() {
     val poll = createPoll(creatorId = testUserId, isClosed = false)
     setupPollCard(poll)
-
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollMenuButtonTag(testPollId))
         .performClick()
@@ -143,22 +146,10 @@ class PollDisplayTest {
   fun pollCard_menuShowsReopenOption_whenClosed() {
     val poll = createPoll(creatorId = testUserId, isClosed = true)
     setupPollCard(poll)
-
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollMenuButtonTag(testPollId))
         .performClick()
     composeTestRule.onNodeWithText("Reopen poll", substring = true).assertIsDisplayed()
-  }
-
-  @Test
-  fun pollCard_menuShowsDeleteOption() {
-    val poll = createPoll(creatorId = testUserId)
-    setupPollCard(poll)
-
-    composeTestRule
-        .onNodeWithTag(PollDisplayTestTags.getPollMenuButtonTag(testPollId))
-        .performClick()
-    composeTestRule.onNodeWithText("Delete", substring = true).assertIsDisplayed()
   }
 
   // ============================================================================
@@ -168,8 +159,7 @@ class PollDisplayTest {
   @Test
   fun pollCard_votingCallsOnVote() {
     var votedOptionId: Int? = null
-    val poll = createPoll()
-
+    val poll = createPoll(isClosed = false)
     composeTestRule.setContent {
       PollCard(
           poll = poll,
@@ -179,7 +169,6 @@ class PollDisplayTest {
           onReopenPoll = {},
           onDeletePoll = {})
     }
-
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollOptionTag(testPollId, 0))
         .performClick()
@@ -190,7 +179,6 @@ class PollDisplayTest {
   fun pollCard_closedPoll_votingDisabled() {
     var voteCalled = false
     val poll = createPoll(isClosed = true)
-
     composeTestRule.setContent {
       PollCard(
           poll = poll,
@@ -200,28 +188,10 @@ class PollDisplayTest {
           onReopenPoll = {},
           onDeletePoll = {})
     }
-
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollOptionTag(testPollId, 0))
         .performClick()
-    // Voting should not work on closed poll (click handler checks canVote)
     assertFalse("Vote callback should not be triggered on closed poll", voteCalled)
-  }
-
-  @Test
-  fun pollCard_userVotedOption_showsCheckmark() {
-    val poll =
-        createPoll(
-            options =
-                listOf(
-                    PollOption(0, "Option A", listOf(testUserId)),
-                    PollOption(1, "Option B", emptyList())))
-    setupPollCard(poll)
-
-    // Option with user's vote should show checkmark (verified via visual selection)
-    composeTestRule
-        .onNodeWithTag(PollDisplayTestTags.getPollOptionTag(testPollId, 0))
-        .assertIsDisplayed()
   }
 
   // ============================================================================
@@ -232,7 +202,6 @@ class PollDisplayTest {
   fun pollCard_closePollCallback_triggered() {
     var closeCalled = false
     val poll = createPoll(creatorId = testUserId, isClosed = false)
-
     composeTestRule.setContent {
       PollCard(
           poll = poll,
@@ -254,7 +223,6 @@ class PollDisplayTest {
   fun pollCard_reopenPollCallback_triggered() {
     var reopenCalled = false
     val poll = createPoll(creatorId = testUserId, isClosed = true)
-
     composeTestRule.setContent {
       PollCard(
           poll = poll,
@@ -272,26 +240,14 @@ class PollDisplayTest {
     assertTrue(reopenCalled)
   }
 
-  @Test
-  fun pollCard_deleteConfirmationDialog_shown() {
-    val poll = createPoll(creatorId = testUserId)
-    setupPollCard(poll)
-
-    composeTestRule
-        .onNodeWithTag(PollDisplayTestTags.getPollMenuButtonTag(testPollId))
-        .performClick()
-    composeTestRule.onNodeWithText("Delete", substring = true).performClick()
-
-    // Delete confirmation dialog should appear
-    composeTestRule.onNodeWithText("Delete Poll", substring = true).assertIsDisplayed()
-    composeTestRule.onNodeWithText("Are you sure", substring = true).assertIsDisplayed()
-  }
+  // ============================================================================
+  // Delete Dialog Tests
+  // ============================================================================
 
   @Test
-  fun pollCard_deleteConfirmation_triggersCallback() {
+  fun pollCard_deleteDialog_showsConfirmationAndCallsCallback() {
     var deleteCalled = false
     val poll = createPoll(creatorId = testUserId)
-
     composeTestRule.setContent {
       PollCard(
           poll = poll,
@@ -302,17 +258,23 @@ class PollDisplayTest {
           onDeletePoll = { deleteCalled = true })
     }
 
+    // Open menu and click delete
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollMenuButtonTag(testPollId))
         .performClick()
     composeTestRule.onNodeWithText("Delete", substring = true).performClick()
-    // Click delete button in confirmation dialog
+
+    // Confirmation dialog appears
+    composeTestRule.onNodeWithText("Delete Poll", substring = true).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Are you sure", substring = true).assertIsDisplayed()
+
+    // Confirm deletion
     composeTestRule.onNodeWithText("Delete").performClick()
     assertTrue(deleteCalled)
   }
 
   @Test
-  fun pollCard_deleteConfirmation_cancelDismisses() {
+  fun pollCard_deleteDialog_cancelDismisses() {
     val poll = createPoll(creatorId = testUserId)
     setupPollCard(poll)
 
@@ -322,57 +284,27 @@ class PollDisplayTest {
     composeTestRule.onNodeWithText("Delete", substring = true).performClick()
     composeTestRule.onNodeWithText("Cancel").performClick()
 
-    // Dialog should be dismissed
     composeTestRule.onNodeWithText("Delete Poll").assertDoesNotExist()
   }
 
   // ============================================================================
-  // VotersDialog Tests
+  // VotersPreview Tests
   // ============================================================================
 
   @Test
-  fun pollCard_nonAnonymous_showsVotersOnClick() {
-    val voterProfiles = mapOf("voter1" to Profile(uid = "voter1", username = "VoterOne"))
-    val poll =
-        createPoll(
-            isAnonymous = false,
-            options =
-                listOf(
-                    PollOption(0, "Option A", listOf("voter1")),
-                    PollOption(1, "Option B", emptyList())))
-
-    composeTestRule.setContent {
-      PollCard(
-          poll = poll,
-          currentUserId = testUserId,
-          voterProfiles = voterProfiles,
-          onVote = {},
-          onClosePoll = {},
-          onReopenPoll = {},
-          onDeletePoll = {})
-    }
-
-    // Click on voters preview (the small avatar area)
-    // This should open the voters dialog
-    composeTestRule
-        .onNodeWithTag(PollDisplayTestTags.getPollOptionTag(testPollId, 0))
-        .performClick()
-  }
-
-  @Test
-  fun pollCard_votersDialog_showsVoterNames() {
+  fun pollCard_nonAnonymous_showsVotersPreview() {
     val voterProfiles =
         mapOf(
-            "voter1" to Profile(uid = "voter1", username = "Alice"),
-            "voter2" to Profile(uid = "voter2", username = "Bob"))
+            "v1" to Profile(uid = "v1", username = "Voter1"),
+            "v2" to Profile(uid = "v2", username = "Voter2"))
+
     val poll =
         createPoll(
             isAnonymous = false,
             options =
                 listOf(
-                    PollOption(0, "Option A", listOf("voter1", "voter2")),
+                    PollOption(0, "Option A", listOf("v1", "v2")),
                     PollOption(1, "Option B", emptyList())))
-
     composeTestRule.setContent {
       PollCard(
           poll = poll,
@@ -383,12 +315,36 @@ class PollDisplayTest {
           onReopenPoll = {},
           onDeletePoll = {})
     }
-
-    // VotersDialog would be triggered by clicking on voters preview
-    // Testing that the component renders without crash
+    // Card renders successfully with voters
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollCardTag(testPollId))
         .assertIsDisplayed()
+  }
+
+  @Test
+  fun pollCard_votersPreview_showsPlusNBadge_whenMoreThan3Voters() {
+    val voters = (1..5).map { "voter$it" }
+    val voterProfiles = voters.associateWith { Profile(uid = it, username = "User $it") }
+
+    val poll =
+        createPoll(
+            isAnonymous = false,
+            options =
+                listOf(PollOption(0, "Option A", voters), PollOption(1, "Option B", emptyList())))
+
+    composeTestRule.setContent {
+      PollCard(
+          poll = poll,
+          currentUserId = testUserId,
+          voterProfiles = voterProfiles,
+          onVote = {},
+          onClosePoll = {},
+          onReopenPoll = {},
+          onDeletePoll = {})
+    }
+
+    // Should show "+2" badge (5 voters - 3 displayed = 2 remaining)
+    composeTestRule.onNodeWithText("+2").assertIsDisplayed()
   }
 
   // ============================================================================

@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -59,6 +60,7 @@ import com.android.joinme.ui.theme.customColors
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /** Test tags for Poll display UI testing. */
 object PollDisplayTestTags {
@@ -70,6 +72,7 @@ object PollDisplayTestTags {
   const val POLL_MENU_BUTTON_PREFIX = "pollMenuButton_"
   const val POLL_CLOSED_BADGE_PREFIX = "pollClosedBadge_"
   const val POLL_ANONYMOUS_BADGE_PREFIX = "pollAnonymousBadge_"
+  const val POLL_MULTIPLE_SELECTION_BADGE_PREFIX = "pollMultipleSelectionBadge_"
   const val POLL_VOTERS_DIALOG = "pollVotersDialog"
 
   fun getPollCardTag(pollId: String): String = "$POLL_CARD_PREFIX$pollId"
@@ -88,6 +91,9 @@ object PollDisplayTestTags {
   fun getPollClosedBadgeTag(pollId: String): String = "$POLL_CLOSED_BADGE_PREFIX$pollId"
 
   fun getPollAnonymousBadgeTag(pollId: String): String = "$POLL_ANONYMOUS_BADGE_PREFIX$pollId"
+
+  fun getPollMultipleSelectionBadgeTag(pollId: String): String =
+      "$POLL_MULTIPLE_SELECTION_BADGE_PREFIX$pollId"
 }
 
 /**
@@ -133,6 +139,7 @@ fun PollCard(
               isCreator = isCreator,
               showMenu = showMenu,
               onMenuToggle = { showMenu = !showMenu },
+              onMenuDismiss = { showMenu = false },
               onClosePoll = {
                 onClosePoll()
                 showMenu = false
@@ -163,18 +170,20 @@ fun PollCard(
 
           // Options
           poll.options.forEach { option ->
-            PollOptionItem(
-                poll = poll,
-                option = option,
-                currentUserId = currentUserId,
-                voterProfiles = voterProfiles,
-                onVote = { onVote(option.id) },
-                onShowVoters = {
-                  if (!poll.isAnonymous) {
-                    showVotersDialog = option.id
-                  }
-                })
-            Spacer(modifier = Modifier.height(Dimens.Spacing.small))
+            key(option.id) {
+              PollOptionItem(
+                  poll = poll,
+                  option = option,
+                  currentUserId = currentUserId,
+                  voterProfiles = voterProfiles,
+                  onVote = { onVote(option.id) },
+                  onShowVoters = {
+                    if (!poll.isAnonymous) {
+                      showVotersDialog = option.id
+                    }
+                  })
+              Spacer(modifier = Modifier.height(Dimens.Spacing.small))
+            }
           }
 
           // Total votes
@@ -219,6 +228,7 @@ private fun PollHeader(
     isCreator: Boolean,
     showMenu: Boolean,
     onMenuToggle: () -> Unit,
+    onMenuDismiss: () -> Unit,
     onClosePoll: () -> Unit,
     onReopenPoll: () -> Unit,
     onDeletePoll: () -> Unit
@@ -230,7 +240,7 @@ private fun PollHeader(
         Row(verticalAlignment = Alignment.CenterVertically) {
           Icon(
               imageVector = Icons.Default.HowToVote,
-              contentDescription = null,
+              contentDescription = stringResource(R.string.poll),
               tint = MaterialTheme.colorScheme.primary,
               modifier = Modifier.size(Dimens.IconSize.medium))
           Spacer(modifier = Modifier.width(Dimens.Spacing.small))
@@ -259,20 +269,24 @@ private fun PollHeader(
                       tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
 
-            DropdownMenu(expanded = showMenu, onDismissRequest = { onMenuToggle() }) {
+            DropdownMenu(expanded = showMenu, onDismissRequest = onMenuDismiss) {
               if (poll.isClosed) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.poll_reopen)) },
                     onClick = onReopenPoll,
                     leadingIcon = {
-                      Icon(imageVector = Icons.Default.LockOpen, contentDescription = null)
+                      Icon(
+                          imageVector = Icons.Default.LockOpen,
+                          contentDescription = stringResource(R.string.poll_reopen))
                     })
               } else {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.poll_close)) },
                     onClick = onClosePoll,
                     leadingIcon = {
-                      Icon(imageVector = Icons.Default.Lock, contentDescription = null)
+                      Icon(
+                          imageVector = Icons.Default.Lock,
+                          contentDescription = stringResource(R.string.poll_close))
                     })
               }
               DropdownMenuItem(
@@ -283,7 +297,7 @@ private fun PollHeader(
                   leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.delete),
                         tint = MaterialTheme.colorScheme.error)
                   })
             }
@@ -317,7 +331,7 @@ private fun PollBadges(poll: Poll) {
           icon = Icons.Default.Check,
           text = stringResource(R.string.poll_multiple_selection),
           color = MaterialTheme.colorScheme.secondary,
-          testTag = "")
+          testTag = PollDisplayTestTags.getPollMultipleSelectionBadgeTag(poll.id))
     }
   }
 
@@ -486,7 +500,7 @@ private fun VoteInfoSection(
         }
         Column(horizontalAlignment = Alignment.End) {
           Text(
-              text = "${votePercentage.toInt()}%",
+              text = "${votePercentage.roundToInt()}%",
               style = MaterialTheme.typography.labelMedium,
               fontWeight = FontWeight.Bold,
               color = percentageColor)
@@ -614,8 +628,10 @@ private fun DeletePollDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
       dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } })
 }
 
+/** Cached date formatter for poll timestamps to avoid recreation on every recomposition. */
+private val pollTimestampFormatter = SimpleDateFormat("MMM d, HH:mm", Locale.getDefault())
+
 /** Formats a poll timestamp into a readable string. */
 private fun formatPollTimestamp(timestamp: Long): String {
-  val dateFormat = SimpleDateFormat("MMM d, HH:mm", Locale.getDefault())
-  return dateFormat.format(Date(timestamp))
+  return pollTimestampFormatter.format(Date(timestamp))
 }
