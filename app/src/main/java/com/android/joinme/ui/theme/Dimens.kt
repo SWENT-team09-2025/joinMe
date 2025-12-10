@@ -697,4 +697,17 @@ object Dimens {
     /** 100.dp - photo size for public profile photo */
     val photoSize: Dp = 100.dp
   }
+
+  /**
+   * Leaderboard screen dimensions.
+   *
+   * Dimensions specific to the group leaderboard screen including badge sizes.
+   */
+  object Leaderboard {
+    /** 32dp - Size of the rank badge circle */
+    val rankBadgeSize: Dp = 32.dp
+
+    /** 40dp - Size of the top 3 crown badge */
+    val topThreeBadgeSize: Dp = 40.dp
+  }
 }

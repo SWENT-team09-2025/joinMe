@@ -34,11 +34,11 @@ import com.android.joinme.ui.theme.Dimens
 
 /** Test tags for the StreakInfoDialog */
 object StreakInfoDialogTestTags {
-    const val DIALOG = "streak_info_dialog"
-    const val CLOSE_BUTTON = "streak_info_close_button"
-    const val TITLE_HOW = "streak_info_title_how"
-    const val TITLE_WHAT = "streak_info_title_what"
-    const val TITLE_WHY = "streak_info_title_why"
+  const val DIALOG = "streak_info_dialog"
+  const val CLOSE_BUTTON = "streak_info_close_button"
+  const val TITLE_HOW = "streak_info_title_how"
+  const val TITLE_WHAT = "streak_info_title_what"
+  const val TITLE_WHY = "streak_info_title_why"
 }
 
 /**
@@ -47,101 +47,81 @@ object StreakInfoDialogTestTags {
  * @param onDismiss Callback when the dialog should be dismissed.
  */
 @Composable
-fun StreakInfoDialog(
-    onDismiss: () -> Unit
-) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            dismissOnBackPress = true,
-            dismissOnClickOutside = true
-        )
-    ) {
+fun StreakInfoDialog(onDismiss: () -> Unit) {
+  Dialog(
+      onDismissRequest = onDismiss,
+      properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)) {
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag(StreakInfoDialogTestTags.DIALOG),
+            modifier = Modifier.fillMaxWidth().testTag(StreakInfoDialogTestTags.DIALOG),
             shape = RoundedCornerShape(Dimens.CornerRadius.extraLarge),
             color = MaterialTheme.colorScheme.surface,
-            tonalElevation = Dimens.Elevation.large
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(Dimens.Padding.large)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                // Header with title and close button
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
-                ) {
+            tonalElevation = Dimens.Elevation.large) {
+              Column(
+                  modifier =
+                      Modifier.padding(Dimens.Padding.large)
+                          .verticalScroll(rememberScrollState())) {
+                    // Header with title and close button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top) {
+                          Text(
+                              text = stringResource(R.string.leaderboard_rules_title_how),
+                              style = MaterialTheme.typography.titleLarge,
+                              fontWeight = FontWeight.Bold,
+                              color = MaterialTheme.colorScheme.onSurface,
+                              modifier =
+                                  Modifier.weight(1f).testTag(StreakInfoDialogTestTags.TITLE_HOW))
+                          IconButton(
+                              onClick = onDismiss,
+                              modifier =
+                                  Modifier.size(24.dp)
+                                      .testTag(StreakInfoDialogTestTags.CLOSE_BUTTON)) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.close),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                              }
+                        }
+
                     Text(
-                        text = stringResource(R.string.leaderboard_rules_title_how),
-                        style = MaterialTheme.typography.titleLarge,
+                        text = stringResource(R.string.leaderboard_rules_content_how),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = Dimens.Padding.small))
+
+                    Spacer(modifier = Modifier.height(Dimens.Spacing.large))
+
+                    // What is a streak section
+                    Text(
+                        text = stringResource(R.string.leaderboard_rules_title_what),
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag(StreakInfoDialogTestTags.TITLE_HOW)
-                    )
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .testTag(StreakInfoDialogTestTags.CLOSE_BUTTON)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.close),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                        modifier = Modifier.testTag(StreakInfoDialogTestTags.TITLE_WHAT))
 
-                Text(
-                    text = stringResource(R.string.leaderboard_rules_content_how),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = Dimens.Padding.small)
-                )
+                    Text(
+                        text = stringResource(R.string.leaderboard_rules_content_what),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = Dimens.Padding.small))
 
-                Spacer(modifier = Modifier.height(Dimens.Spacing.large))
+                    Spacer(modifier = Modifier.height(Dimens.Spacing.large))
 
-                // What is a streak section
-                Text(
-                    text = stringResource(R.string.leaderboard_rules_title_what),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.testTag(StreakInfoDialogTestTags.TITLE_WHAT)
-                )
+                    // Why it matters section
+                    Text(
+                        text = stringResource(R.string.leaderboard_rules_title_why),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.testTag(StreakInfoDialogTestTags.TITLE_WHY))
 
-                Text(
-                    text = stringResource(R.string.leaderboard_rules_content_what),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = Dimens.Padding.small)
-                )
-
-                Spacer(modifier = Modifier.height(Dimens.Spacing.large))
-
-                // Why it matters section
-                Text(
-                    text = stringResource(R.string.leaderboard_rules_title_why),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.testTag(StreakInfoDialogTestTags.TITLE_WHY)
-                )
-
-                Text(
-                    text = stringResource(R.string.leaderboard_rules_content_why),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = Dimens.Padding.small)
-                )
+                    Text(
+                        text = stringResource(R.string.leaderboard_rules_content_why),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = Dimens.Padding.small))
+                  }
             }
-        }
-    }
+      }
 }
