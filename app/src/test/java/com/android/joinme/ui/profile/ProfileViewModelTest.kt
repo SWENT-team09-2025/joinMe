@@ -204,6 +204,23 @@ class ProfileViewModelTest {
     assertFalse(viewModel.isLoading.value)
   }
 
+  @Test
+  fun `createOrUpdateProfile sets error on timeout`() = runTest {
+    coEvery { mockProfileRepository.createOrUpdateProfile(testProfile) } coAnswers
+        {
+          kotlinx.coroutines.delay(15000L) // Delay longer than the 10s timeout
+        }
+    var errorMessage = ""
+
+    viewModel.createOrUpdateProfile(
+        profile = testProfile, onSuccess = {}, onError = { errorMessage = it })
+    testScheduler.advanceUntilIdle()
+
+    assertTrue(viewModel.error.value?.contains("Connection timeout") == true)
+    assertTrue(errorMessage.contains("Connection timeout"))
+    assertFalse(viewModel.isLoading.value)
+  }
+
   // ==================== DELETE PROFILE TESTS ====================
 
   @Test
