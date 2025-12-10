@@ -1,9 +1,12 @@
 package com.android.joinme.ui.groups
 
+// AI-assisted implementation — reviewed and adapted for project standards.
+
 import android.widget.Toast
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.ui.profile.rememberPhotoPickerLauncher
 
 object CreateGroupScreenTestTags {
   const val SCREEN = "create_group_screen"
@@ -20,7 +23,7 @@ object CreateGroupScreenTestTags {
   const val DESCRIPTION_SUPPORTING_TEXT = "create_description_supporting_text"
   const val CATEGORY_MENU = "create_category_menu"
   const val CATEGORY_OPTION_PREFIX = "create_category_option_"
-  const val DELETE_PHOTO_BUTTON = "delete_photo_button"
+  const val DELETE_PHOTO_BUTTON = "create_delete_photo_button"
   const val CATEGORY_DROPDOWN_TOUCHABLE_AREA = "create_category_dropdown_touchable_area"
 }
 
@@ -31,7 +34,13 @@ object CreateGroupScreenTestTags {
  * - Group name (required, 3-30 characters)
  * - Category (Social/Activity/Sports)
  * - Description (optional, max 300 characters)
- * - Group photo (not yet implemented)
+ * - Group photo (optional, uploaded only on submission)
+ *
+ * Photo handling:
+ * - User selects a photo which is stored locally as a URI
+ * - A local preview is shown in the UI
+ * - The photo is only uploaded to Firebase Storage when "Create Group" is clicked
+ * - This prevents orphaned files if user abandons the screen
  *
  * @param viewModel The ViewModel managing the create group state
  * @param onBackClick Callback when user navigates back
@@ -46,6 +55,15 @@ fun CreateGroupScreen(
   val uiState by viewModel.uiState.collectAsState()
   val context = LocalContext.current
 
+  // Set up the photo picker
+  val photoPicker =
+      rememberPhotoPickerLauncher(
+          onPhotoPicked = { uri ->
+            // Store URI locally for preview - no upload yet
+            viewModel.setPendingPhoto(uri)
+          },
+          onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
+
   // Handle success navigation
   LaunchedEffect(uiState.createdGroupId) {
     uiState.createdGroupId?.let {
@@ -59,6 +77,14 @@ fun CreateGroupScreen(
     uiState.errorMsg?.let { error ->
       Toast.makeText(context, error, Toast.LENGTH_LONG).show()
       viewModel.clearErrorMsg()
+    }
+  }
+
+  // Handle photo errors (shown separately since group may have been created successfully)
+  LaunchedEffect(uiState.photoError) {
+    uiState.photoError?.let { error ->
+      Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+      viewModel.clearPhotoError()
     }
   }
 
@@ -100,10 +126,11 @@ fun CreateGroupScreen(
       onNameChange = { viewModel.setName(it) },
       onCategoryChange = { viewModel.setCategory(it) },
       onDescriptionChange = { viewModel.setDescription(it) },
-      onSave = { viewModel.createGroup() },
+      onSave = { viewModel.createGroup(context) },
       onGoBack = onBackClick,
       saveButtonText = "Create Group",
-      onPictureEditClick = {
-        Toast.makeText(context, "Not yet implemented", Toast.LENGTH_SHORT).show()
-      })
+      onPictureEditClick = { photoPicker.launch() },
+      onPictureDeleteClick = { viewModel.clearPendingPhoto() },
+      groupPictureUrl = uiState.pendingPhotoUri?.toString(),
+      isUploadingPicture = false)
 }
