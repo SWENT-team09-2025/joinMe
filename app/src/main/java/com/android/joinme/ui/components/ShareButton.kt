@@ -15,7 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import com.android.joinme.R
-import com.android.joinme.model.invitation.InvitationRepositoryFirestore
+import com.android.joinme.model.invitation.InvitationRepositoryProvider
 import com.android.joinme.model.invitation.InvitationType
 import com.android.joinme.model.invitation.deepLink.DeepLinkService
 import com.android.joinme.ui.theme.Dimens
@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 const val SHARE_SHEET_TYPE = "text/plain"
+const val SEVEN_DAYS = 7
 
 /** Test tags for ShareButton UI elements. */
 object ShareButtonTestTags {
@@ -46,7 +47,7 @@ fun ShareButton(
     invitationType: InvitationType,
     targetId: String,
     createdBy: String,
-    expiresInDays: Int? = 7,
+    expiresInDays: Int? = SEVEN_DAYS,
     onError: (String) -> Unit = {}
 ) {
   val context = LocalContext.current
@@ -80,12 +81,14 @@ suspend fun shareInvitation(
     invitationType: InvitationType,
     targetId: String,
     createdBy: String,
-    expiresInDays: Int? = 7,
+    expiresInDays: Int? = SEVEN_DAYS,
     context: Context,
     onError: (String) -> Unit = {}
 ) {
   try {
-    val invitationRepository = InvitationRepositoryFirestore()
+
+    val invitationRepository = InvitationRepositoryProvider.repository
+
     val result =
         invitationRepository.createInvitation(
             type = invitationType,

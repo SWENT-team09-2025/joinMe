@@ -14,9 +14,13 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.test.core.app.ApplicationProvider
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.invitation.InvitationType
+import com.android.joinme.ui.components.shareInvitation
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -660,5 +664,33 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithText("Group 1").assertIsDisplayed()
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.LIST).assertIsDisplayed()
+  }
+
+  @Test
+  fun shareGroupButton_callsShareInvitation() {
+    val testUserId = "test-user-id"
+    mockFirebaseAuthWithUser(testUserId)
+    val group =
+        Group(
+            id = "group1",
+            name = "Share Group",
+            ownerId = testUserId,
+            memberIds = listOf(testUserId))
+
+    // Mock the shareInvitation function (top-level suspend)
+    mockkStatic("com.android.joinme.ui.components.ShareButtonKt")
+    coEvery { shareInvitation(any(), any(), any(), any(), any(), any()) } returns Unit
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("group1")).performClick()
+    composeTestRule.waitForIdle()
+
+    // Click SHARE GROUP bubble
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).performClick()
+
+    // Verify shareInvitation is called with correct params
+    coVerify { shareInvitation(InvitationType.GROUP, "group1", testUserId, 7, any(), any()) }
   }
 }
