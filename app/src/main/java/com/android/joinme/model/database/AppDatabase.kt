@@ -39,6 +39,7 @@ abstract class AppDatabase : RoomDatabase() {
     /** For testing only - allows setting a custom database instance. */
     @androidx.annotation.VisibleForTesting
     fun setTestInstance(database: AppDatabase?) {
+      INSTANCE?.close() // Close existing instance to prevent leaks
       INSTANCE = database
     }
   }
