@@ -233,6 +233,37 @@ private fun initLocationServiceIfGranted(
 }
 
 /**
+ * Displays a marker at the specified location when enabled.
+ *
+ * This is used to show a marker for locations shared in chat messages or other contexts where a
+ * specific location needs to be highlighted on the map.
+ *
+ * @param showLocationMarker Whether to show the location marker
+ * @param initialLatitude The latitude of the location to mark
+ * @param initialLongitude The longitude of the location to mark
+ */
+@Composable
+private fun ShowLocationMarker(
+    showLocationMarker: Boolean,
+    initialLatitude: Double?,
+    initialLongitude: Double?
+) {
+  if (showLocationMarker && initialLatitude != null && initialLongitude != null) {
+    val context = LocalContext.current
+    val locationPosition = LatLng(initialLatitude, initialLongitude)
+    // Use tertiary color for standalone location markers
+    val locationMarkerIcon = createMarkerForColor(MaterialTheme.colorScheme.tertiary)
+
+    Marker(
+        state = MarkerState(position = locationPosition),
+        icon = locationMarkerIcon,
+        tag = "locationMarker",
+        title = context.getString(R.string.shared_location_marker_title),
+        snippet = context.getString(R.string.shared_location_marker_snippet))
+  }
+}
+
+/**
  * Displays the main map screen of the application.
  *
  * This composable handles:
@@ -402,19 +433,10 @@ fun MapScreen(
                     }
 
                     // Show marker for initial location (e.g., from chat location messages)
-                    if (showLocationMarker && initialLatitude != null && initialLongitude != null) {
-                      val locationPosition = LatLng(initialLatitude, initialLongitude)
-                      // Use tertiary color for standalone location markers
-                      val locationMarkerIcon =
-                          createMarkerForColor(MaterialTheme.colorScheme.tertiary)
-
-                      Marker(
-                          state = MarkerState(position = locationPosition),
-                          icon = locationMarkerIcon,
-                          tag = "locationMarker",
-                          title = context.getString(R.string.shared_location_marker_title),
-                          snippet = context.getString(R.string.shared_location_marker_snippet))
-                    }
+                    ShowLocationMarker(
+                        showLocationMarker = showLocationMarker,
+                        initialLatitude = initialLatitude,
+                        initialLongitude = initialLongitude)
                   }
 
               IconButton(
