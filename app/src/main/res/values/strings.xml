@@ -117,4 +117,8 @@
     <!-- Notification Types -->
     <string name="notification_type_event_chat_message">event_chat_message</string>
     <string name="notification_type_group_chat_message">group_chat_message</string>
+
+    <!-- Group Photo -->
+    <string name="group_photo_uploaded">Photo uploaded successfully</string>
+    <string name="group_photo_deleted">Photo deleted</string>
 </resources>

@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.R
 import com.android.joinme.ui.profile.rememberPhotoPickerLauncher
 
 object EditGroupScreenTags {
@@ -61,7 +62,7 @@ fun EditGroupScreen(
                 groupId = groupId,
                 imageUri = uri,
                 onSuccess = {
-                  Toast.makeText(context, "Photo uploaded successfully", Toast.LENGTH_SHORT).show()
+                  Toast.makeText(context, R.string.group_photo_uploaded, Toast.LENGTH_SHORT).show()
                 },
                 onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
           },
@@ -137,7 +138,9 @@ fun EditGroupScreen(
       onPictureDeleteClick = {
         viewModel.deleteGroupPhoto(
             groupId = groupId,
-            onSuccess = { Toast.makeText(context, "Photo deleted", Toast.LENGTH_SHORT).show() },
+            onSuccess = {
+              Toast.makeText(context, R.string.group_photo_deleted, Toast.LENGTH_SHORT).show()
+            },
             onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
       },
       groupPictureUrl = uiState.photoUrl,
