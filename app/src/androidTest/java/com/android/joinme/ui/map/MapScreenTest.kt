@@ -330,13 +330,8 @@ class MapScreenTest {
   @Test
   fun mapScreen_centersOnPartialInitialLocation_onlyWhenBothCoordinatesProvided() {
     // This test verifies that MapInitialLocationEffect requires both coordinates
-    val testViewModel = MapViewModel()
-
     // Set initial user following to true
-    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
-    mutableState.value = MapUIState(isFollowingUser = true)
+    setFollowingUser(true)
 
     composeTestRule.setContent {
       MapScreen(
