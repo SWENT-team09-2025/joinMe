@@ -134,17 +134,23 @@ sealed class Screen(
    *
    * @param latitude Optional latitude to center the map on
    * @param longitude Optional longitude to center the map on
+   * @param showMarker Whether to show a marker at the specified location
    */
-  data class Map(val latitude: Double? = null, val longitude: Double? = null) :
+  data class Map(
+      val latitude: Double? = null,
+      val longitude: Double? = null,
+      val showMarker: Boolean = false
+  ) :
       Screen(
           route =
-              if (latitude != null && longitude != null) "map?lat=$latitude&lon=$longitude"
+              if (latitude != null && longitude != null)
+                  "map?lat=$latitude&lon=$longitude&marker=$showMarker"
               else "map",
           name = "Map",
           isTopLevelDestination = true) {
     companion object {
       // Route pattern for navigation graph (with parameter placeholders)
-      const val route = "map?lat={lat}&lon={lon}"
+      const val route = "map?lat={lat}&lon={lon}&marker={marker}"
       // Default route for bottom navigation (without parameters)
       const val defaultRoute = "map"
     }

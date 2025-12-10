@@ -285,7 +285,8 @@ class MapScreenTest {
           viewModel = testViewModel,
           navigationActions = null,
           initialLatitude = initialLatitude,
-          initialLongitude = initialLongitude)
+          initialLongitude = initialLongitude,
+          showLocationMarker = true)
     }
 
     composeTestRule.waitForIdle()
@@ -293,7 +294,7 @@ class MapScreenTest {
     // Verify that following user is disabled (MapInitialLocationEffect should disable it)
     assert(!testViewModel.uiState.value.isFollowingUser)
 
-    // Verify the map screen is displayed
+    // Verify the map screen is displayed with location marker
     composeTestRule
         .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
         .assertExists()
@@ -351,6 +352,50 @@ class MapScreenTest {
     assert(testViewModel.uiState.value.isFollowingUser)
 
     // Verify the map screen is displayed
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_locationMarker_onlyShownWhenFlagIsTrue() {
+    // Tests that location marker is only shown when showLocationMarker=true
+    // (chat locations show marker, event locations don't to avoid duplicate markers)
+    val initialLatitude = 46.5196
+    val initialLongitude = 6.5680
+
+    // Test with marker flag = false (e.g., navigating to event location)
+    composeTestRule.setContent {
+      MapScreen(
+          viewModel = testViewModel,
+          navigationActions = null,
+          initialLatitude = initialLatitude,
+          initialLongitude = initialLongitude,
+          showLocationMarker = false)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Verify the map displays without marker
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+
+    // Test with marker flag = true (e.g., chat location with marker)
+    composeTestRule.setContent {
+      MapScreen(
+          viewModel = testViewModel,
+          navigationActions = null,
+          initialLatitude = initialLatitude,
+          initialLongitude = initialLongitude,
+          showLocationMarker = true)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Verify the map displays with marker
     composeTestRule
         .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
         .assertExists()

@@ -246,6 +246,8 @@ private fun initLocationServiceIfGranted(
  * @param navigationActions Optional navigation actions for switching tabs or screens.
  * @param initialLatitude Optional latitude to center the map on initially.
  * @param initialLongitude Optional longitude to center the map on initially.
+ * @param showLocationMarker Whether to show a marker at the initial location (e.g., for chat
+ *   locations).
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -253,7 +255,8 @@ fun MapScreen(
     viewModel: MapViewModel = viewModel(),
     navigationActions: NavigationActions? = null,
     initialLatitude: Double? = null,
-    initialLongitude: Double? = null
+    initialLongitude: Double? = null,
+    showLocationMarker: Boolean = false
 ) {
   val context = LocalContext.current
 
@@ -396,6 +399,21 @@ fun MapScreen(
                             viewModel.onMarkerClick()
                             navigationActions?.navigateTo(Screen.SerieDetails(serie.serieId))
                           })
+                    }
+
+                    // Show marker for initial location (e.g., from chat location messages)
+                    if (showLocationMarker && initialLatitude != null && initialLongitude != null) {
+                      val locationPosition = LatLng(initialLatitude, initialLongitude)
+                      // Use tertiary color for standalone location markers
+                      val locationMarkerIcon =
+                          createMarkerForColor(MaterialTheme.colorScheme.tertiary)
+
+                      Marker(
+                          state = MarkerState(position = locationPosition),
+                          icon = locationMarkerIcon,
+                          tag = "locationMarker",
+                          title = "Location",
+                          snippet = "Shared location")
                     }
                   }
 

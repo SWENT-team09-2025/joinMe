@@ -176,12 +176,19 @@ class ScreenTest {
 
     // Test with parameters (for location sharing navigation)
     val mapWithLocation = Screen.Map(latitude = 46.5197, longitude = 6.6323)
-    assertEquals("map?lat=46.5197&lon=6.6323", mapWithLocation.route)
+    assertEquals("map?lat=46.5197&lon=6.6323&marker=false", mapWithLocation.route)
     assertEquals("Map", mapWithLocation.name)
     assertTrue(mapWithLocation.isTopLevelDestination)
 
+    // Test with location and marker
+    val mapWithLocationAndMarker =
+        Screen.Map(latitude = 46.5197, longitude = 6.6323, showMarker = true)
+    assertEquals("map?lat=46.5197&lon=6.6323&marker=true", mapWithLocationAndMarker.route)
+    assertEquals("Map", mapWithLocationAndMarker.name)
+    assertTrue(mapWithLocationAndMarker.isTopLevelDestination)
+
     // Test companion route pattern and default route
-    assertEquals("map?lat={lat}&lon={lon}", Screen.Map.route)
+    assertEquals("map?lat={lat}&lon={lon}&marker={marker}", Screen.Map.route)
     assertEquals("map", Screen.Map.defaultRoute)
   }
 
@@ -194,12 +201,14 @@ class ScreenTest {
 
     // Negative coordinates (Southern/Western hemispheres)
     assertEquals(
-        "map?lat=-33.8688&lon=-151.2093",
+        "map?lat=-33.8688&lon=-151.2093&marker=false",
         Screen.Map(latitude = -33.8688, longitude = -151.2093).route)
 
     // Zero coordinates and extreme values
-    assertEquals("map?lat=0.0&lon=0.0", Screen.Map(latitude = 0.0, longitude = 0.0).route)
-    assertEquals("map?lat=90.0&lon=180.0", Screen.Map(latitude = 90.0, longitude = 180.0).route)
+    assertEquals(
+        "map?lat=0.0&lon=0.0&marker=false", Screen.Map(latitude = 0.0, longitude = 0.0).route)
+    assertEquals(
+        "map?lat=90.0&lon=180.0&marker=false", Screen.Map(latitude = 90.0, longitude = 180.0).route)
   }
 
   // ========== ShowEventScreen with SerieId Tests ==========

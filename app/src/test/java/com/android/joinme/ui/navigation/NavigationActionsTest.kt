@@ -517,7 +517,7 @@ class NavigationActionsTest {
     assertEquals("Map", map.name)
     assertTrue(map.isTopLevelDestination)
     // Also verify the companion route pattern
-    assertEquals("map?lat={lat}&lon={lon}", Screen.Map.route)
+    assertEquals("map?lat={lat}&lon={lon}&marker={marker}", Screen.Map.route)
   }
 
   @Test
@@ -530,7 +530,7 @@ class NavigationActionsTest {
 
     verify {
       navController.navigate(
-          eq("map?lat=$latitude&lon=$longitude"),
+          eq("map?lat=$latitude&lon=$longitude&marker=false"),
           withArg<NavOptionsBuilder.() -> Unit> { block ->
             val options = navOptions(block)
             assertTrue(options.shouldLaunchSingleTop())
