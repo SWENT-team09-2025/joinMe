@@ -44,9 +44,6 @@ object EventsRepositoryProvider {
    * @param context Application context (if null, attempts to get from Firebase)
    * @return EventsRepository implementation
    */
-  @Deprecated(
-      "Use getRepository(context) instead. Network state is handled internally.",
-      ReplaceWith("getRepository(context)"))
   fun getRepository(isOnline: Boolean, context: Context? = null): EventsRepository {
     if (isTestEnvironment()) return localRepo
 

@@ -31,13 +31,11 @@ class EventsRepositoryCached(
     private val firestoreRepo: EventsRepository,
     private val networkMonitor: NetworkMonitor
 ) : EventsRepository {
-
+  private var firestoreErrorMsg = "Failed to fetch from Firestore, falling back to cache"
   private val database = AppDatabase.getDatabase(context)
   private val eventDao = database.eventDao()
 
-  override fun getNewEventId(): String {
-    return firestoreRepo.getNewEventId()
-  }
+  override fun getNewEventId(): String = firestoreRepo.getNewEventId() // NOSONAR
 
   override suspend fun getAllEvents(eventFilter: EventFilter): List<Event> {
     // Try to fetch from Firestore if online
@@ -50,7 +48,7 @@ class EventsRepositoryCached(
         }
         return events
       } catch (e: Exception) {
-        Log.w("EventsRepositoryCached", "Failed to fetch from Firestore, falling back to cache", e)
+        Log.w("EventsRepositoryCached", firestoreErrorMsg, e)
       }
     }
 
@@ -148,7 +146,7 @@ class EventsRepositoryCached(
         }
         return events
       } catch (e: Exception) {
-        Log.w("EventsRepositoryCached", "Failed to fetch from Firestore, falling back to cache", e)
+        Log.w("EventsRepositoryCached", firestoreErrorMsg, e)
       }
     }
 
@@ -165,7 +163,7 @@ class EventsRepositoryCached(
         }
         return events
       } catch (e: Exception) {
-        Log.w("EventsRepositoryCached", "Failed to fetch from Firestore, falling back to cache", e)
+        Log.w("EventsRepositoryCached", firestoreErrorMsg, e)
       }
     }
 
