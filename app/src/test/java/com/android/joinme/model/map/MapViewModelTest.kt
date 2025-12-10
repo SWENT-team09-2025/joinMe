@@ -9,6 +9,7 @@ import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
+import com.android.joinme.model.filter.FilterRepository
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.ui.map.MapUIState
 import com.android.joinme.ui.map.MapViewModel
@@ -372,4 +373,37 @@ class MapViewModelTest {
         assertFalse(viewModel.uiState.value.isFollowingUser)
         assertFalse(viewModel.uiState.value.isReturningFromMarkerClick)
       }
+
+  @Test
+  fun `test Toggle Function`() = runTest {
+    val repo = FilterRepository
+    assertFalse(repo.filterState.value.isSportSelected)
+    assertFalse(repo.filterState.value.isSocialSelected)
+    assertFalse(repo.filterState.value.isActivitySelected)
+    assertFalse(repo.filterState.value.showMyEvents)
+    assertFalse(repo.filterState.value.showJoinedEvents)
+    assertFalse(repo.filterState.value.showOtherEvents)
+
+    viewModel.toggleSport()
+    viewModel.toggleActivity()
+    viewModel.toggleSocial()
+    viewModel.toggleMyEvents()
+    viewModel.toggleJoinedEvents()
+    viewModel.toggleOtherEvents()
+
+    assertTrue(repo.filterState.value.isSportSelected)
+    assertTrue(repo.filterState.value.isSocialSelected)
+    assertTrue(repo.filterState.value.isActivitySelected)
+    assertTrue(repo.filterState.value.showMyEvents)
+    assertTrue(repo.filterState.value.showJoinedEvents)
+    assertTrue(repo.filterState.value.showOtherEvents)
+    viewModel.clearFilters()
+
+    assertFalse(repo.filterState.value.isSportSelected)
+    assertFalse(repo.filterState.value.isSocialSelected)
+    assertFalse(repo.filterState.value.isActivitySelected)
+    assertFalse(repo.filterState.value.showMyEvents)
+    assertFalse(repo.filterState.value.showJoinedEvents)
+    assertFalse(repo.filterState.value.showOtherEvents)
+  }
 }
