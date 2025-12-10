@@ -132,18 +132,60 @@ class ProfileViewModelTest {
     assertTrue(viewModel.error.value?.contains("Failed to load profile") == true)
   }
 
+  @Test
+  fun `loadProfile skips loading if profile already loaded for same uid`() = runTest {
+    // First load
+    coEvery { mockProfileRepository.getProfile("test-uid") } returns testProfile
+    viewModel.loadProfile("test-uid")
+    testScheduler.advanceUntilIdle()
+    assertEquals(testProfile, viewModel.profile.value)
+
+    // Clear the mock to verify it's not called again
+    clearMocks(mockProfileRepository, answers = false)
+
+    // Second load with same uid should skip
+    viewModel.loadProfile("test-uid")
+    testScheduler.advanceUntilIdle()
+
+    // Profile should still be there, but repository should not be called again
+    assertEquals(testProfile, viewModel.profile.value)
+    coVerify(exactly = 0) { mockProfileRepository.getProfile(any()) }
+  }
+
+  @Test
+  fun `loadProfile reloads if uid is different`() = runTest {
+    // First load for user 1
+    coEvery { mockProfileRepository.getProfile("test-uid-1") } returns testProfile
+    viewModel.loadProfile("test-uid-1")
+    testScheduler.advanceUntilIdle()
+    assertEquals(testProfile, viewModel.profile.value)
+
+    // Second load for user 2 should actually load
+    val testProfile2 = testProfile.copy(uid = "test-uid-2", username = "User2")
+    coEvery { mockProfileRepository.getProfile("test-uid-2") } returns testProfile2
+    viewModel.loadProfile("test-uid-2")
+    testScheduler.advanceUntilIdle()
+
+    // Should have new profile
+    assertEquals(testProfile2, viewModel.profile.value)
+    coVerify(exactly = 1) { mockProfileRepository.getProfile("test-uid-2") }
+  }
+
   // ==================== CREATE/UPDATE PROFILE TESTS ====================
 
   @Test
   fun `createOrUpdateProfile updates profile successfully`() = runTest {
     coEvery { mockProfileRepository.createOrUpdateProfile(testProfile) } just Runs
+    var successCalled = false
 
-    viewModel.createOrUpdateProfile(testProfile)
+    viewModel.createOrUpdateProfile(
+        profile = testProfile, onSuccess = { successCalled = true }, onError = {})
     testScheduler.advanceUntilIdle()
 
     assertEquals(testProfile, viewModel.profile.value)
     assertNull(viewModel.error.value)
     assertFalse(viewModel.isLoading.value)
+    assertTrue(successCalled)
     coVerify { mockProfileRepository.createOrUpdateProfile(testProfile) }
   }
 
@@ -151,11 +193,14 @@ class ProfileViewModelTest {
   fun `createOrUpdateProfile sets error on exception`() = runTest {
     coEvery { mockProfileRepository.createOrUpdateProfile(testProfile) } throws
         Exception("Save failed")
+    var errorMessage = ""
 
-    viewModel.createOrUpdateProfile(testProfile)
+    viewModel.createOrUpdateProfile(
+        profile = testProfile, onSuccess = {}, onError = { errorMessage = it })
     testScheduler.advanceUntilIdle()
 
     assertTrue(viewModel.error.value?.contains("Failed to save profile") == true)
+    assertTrue(errorMessage.contains("Failed to save profile"))
     assertFalse(viewModel.isLoading.value)
   }
 

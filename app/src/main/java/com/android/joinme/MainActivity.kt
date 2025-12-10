@@ -59,6 +59,7 @@ import com.android.joinme.ui.overview.SearchScreen
 import com.android.joinme.ui.overview.SerieDetailsScreen
 import com.android.joinme.ui.overview.ShowEventScreen
 import com.android.joinme.ui.profile.EditProfileScreen
+import com.android.joinme.ui.profile.ProfileViewModel
 import com.android.joinme.ui.profile.PublicProfileScreen
 import com.android.joinme.ui.profile.ViewProfileScreen
 import com.android.joinme.ui.signIn.SignInScreen
@@ -296,6 +297,11 @@ fun JoinMe(
   val coroutineScope = rememberCoroutineScope()
 
   var currentUser by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
+
+  // Shared ProfileViewModel for ViewProfile and EditProfile screens
+  // Key it to currentUserId so it gets recreated when user changes
+  val sharedProfileViewModel: ProfileViewModel =
+      viewModel(key = currentUser?.uid ?: context.getString(R.string.unknown_user_key))
   var pendingInvitationToken by remember { mutableStateOf<String?>(null) }
 
   // Listen for auth state changes
@@ -600,6 +606,7 @@ fun JoinMe(
       composable(Screen.Profile.route) {
         ViewProfileScreen(
             uid = currentUserId,
+            profileViewModel = sharedProfileViewModel,
             onTabSelected = { tab -> navigationActions.navigateTo(tab.destination) },
             onGroupClick = { navigationActions.navigateTo(Screen.Groups) },
             onEditClick = { navigationActions.navigateTo(Screen.EditProfile) },
@@ -656,6 +663,7 @@ fun JoinMe(
       composable(Screen.EditProfile.route) {
         EditProfileScreen(
             uid = currentUserId,
+            profileViewModel = sharedProfileViewModel,
             onBackClick = {
               navigationActions.navigateAndClearBackStackTo(
                   screen = Screen.Profile, popUpToRoute = Screen.Profile.route, inclusive = false)

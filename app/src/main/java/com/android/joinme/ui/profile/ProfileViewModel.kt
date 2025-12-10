@@ -76,6 +76,11 @@ class ProfileViewModel(
    */
   fun loadProfile(uid: String) {
     viewModelScope.launch(Dispatchers.Main) {
+      // Skip if already loaded for this UID
+      if (_profile.value?.uid == uid) {
+        return@launch
+      }
+
       _isLoading.value = true
       clearError()
       clearProfile()
@@ -149,8 +154,14 @@ class ProfileViewModel(
    * has a 10-second timeout to prevent indefinite waiting.
    *
    * @param profile The [Profile] object to create or update.
+   * @param onSuccess Callback invoked after successful profile update.
+   * @param onError Callback invoked if update fails, receives error message.
    */
-  fun createOrUpdateProfile(profile: Profile) {
+  fun createOrUpdateProfile(
+      profile: Profile,
+      onSuccess: () -> Unit = {},
+      onError: (String) -> Unit = {}
+  ) {
     viewModelScope.launch {
       try {
         _isLoading.value = true
@@ -159,12 +170,17 @@ class ProfileViewModel(
         withTimeout(10000L) { repository.createOrUpdateProfile(profile) }
 
         _profile.value = profile
+        onSuccess()
       } catch (e: TimeoutCancellationException) {
         Log.e(TAG, "Timeout updating profile", e)
-        _error.value = "Connection timeout. Please try again."
+        val errorMsg = "Connection timeout. Please try again."
+        _error.value = errorMsg
+        onError(errorMsg)
       } catch (e: Exception) {
         Log.e(TAG, "Error creating/updating profile", e)
-        _error.value = "Failed to save profile: ${e.message}"
+        val errorMsg = "Failed to save profile: ${e.message}"
+        _error.value = errorMsg
+        onError(errorMsg)
       } finally {
         _isLoading.value = false
       }
