@@ -758,23 +758,6 @@ class GroupDetailScreenTest {
   }
 
   @Test
-  fun successfulLoad_showsGroupLogo() {
-    setup()
-    fakeGroupRepo.setGroup(
-        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS))
-
-    val viewModel = createViewModel()
-    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
-
-    composeTestRule.waitUntil(timeoutMillis = 3000) {
-      composeTestRule.onAllNodesWithText("Test Group").fetchSemanticsNodes().isNotEmpty()
-    }
-
-    // The logo image should be displayed
-    composeTestRule.onNodeWithContentDescription("Group picture").assertIsDisplayed()
-  }
-
-  @Test
   fun multipleMembers_eachHasProfileIcon() {
     setup()
     fakeGroupRepo.setGroup(
@@ -1083,5 +1066,83 @@ class GroupDetailScreenTest {
     // Button should still be visible and clickable
     composeTestRule.onNodeWithText("Retry").assertIsDisplayed()
     composeTestRule.onNodeWithText("Retry").assertHasClickAction()
+  }
+
+  // ==============================
+  // Group Photo Tests
+  // ==============================
+
+  @Test
+  fun groupPhoto_whenUrlIsNull_displaysDefaultPlaceholder() {
+    setup()
+    // Group with NO photo URL
+    fakeGroupRepo.setGroup(
+        Group(
+            id = "group1",
+            name = "No Photo Group",
+            ownerId = "owner1",
+            category = EventType.SPORTS,
+            photoUrl = null))
+
+    val viewModel = createViewModel()
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("No Photo Group").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    // Use test tag for reliable detection in Robolectric tests
+    composeTestRule
+        .onNodeWithTag(GroupPhotoImageTestTags.GROUP_PHOTO_PLACEHOLDER)
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun groupPhoto_whenUrlIsPresent_displaysPhotoComponent() {
+    setup()
+    // Group WITH photo URL
+    fakeGroupRepo.setGroup(
+        Group(
+            id = "group1",
+            name = "Photo Group",
+            ownerId = "owner1",
+            category = EventType.SPORTS,
+            photoUrl = "https://example.com/photo.jpg"))
+
+    val viewModel = createViewModel()
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Photo Group").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    // In Robolectric, Coil image loading fails, so it shows placeholder on error
+    // We verify the photo component is rendered (either real image or error fallback)
+    composeTestRule.onNodeWithTag(GroupPhotoImageTestTags.GROUP_PHOTO).assertExists()
+  }
+
+  @Test
+  fun groupPhoto_whenUrlIsEmpty_displaysPlaceholder() {
+    setup()
+    // Group with EMPTY photo URL
+    fakeGroupRepo.setGroup(
+        Group(
+            id = "group1",
+            name = "Empty Photo URL Group",
+            ownerId = "owner1",
+            category = EventType.SPORTS,
+            photoUrl = ""))
+
+    val viewModel = createViewModel()
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Empty Photo URL Group").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    // Should fall back to placeholder - use test tag for reliable detection
+    composeTestRule
+        .onNodeWithTag(GroupPhotoImageTestTags.GROUP_PHOTO_PLACEHOLDER)
+        .assertIsDisplayed()
   }
 }

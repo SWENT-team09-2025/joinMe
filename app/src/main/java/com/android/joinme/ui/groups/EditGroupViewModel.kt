@@ -1,5 +1,8 @@
 package com.android.joinme.ui.groups
 
+import android.content.Context
+import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.groups.GroupRepository
@@ -21,6 +24,9 @@ import kotlinx.coroutines.launch
  * @property isLoading Whether a load/update operation is in progress
  * @property editedGroupId The ID of the successfully edited group, null otherwise
  * @property errorMsg Error message to display
+ * @property photoUrl Current photo URL of the group
+ * @property isUploadingPhoto Whether a photo upload/delete operation is in progress
+ * @property photoError Error message for photo operations
  */
 data class EditGroupUIState(
     override val name: String = "",
@@ -31,7 +37,10 @@ data class EditGroupUIState(
     override val isValid: Boolean = false,
     override val isLoading: Boolean = false,
     val editedGroupId: String? = null,
-    override val errorMsg: String? = null
+    override val errorMsg: String? = null,
+    val photoUrl: String? = null,
+    val isUploadingPhoto: Boolean = false,
+    val photoError: String? = null
 ) : GroupFormUIState
 
 /**
@@ -60,6 +69,7 @@ class EditGroupViewModel(
 ) : BaseGroupFormViewModel() {
 
   companion object {
+    private const val TAG = "EditGroupViewModel"
     private const val ERROR_LOAD_FAILED = "Failed to load group"
     private const val ERROR_UPDATE_FAILED = "Failed to update group"
     private const val ERROR_UNKNOWN = "Unknown error"
@@ -81,6 +91,11 @@ class EditGroupViewModel(
    */
   fun clearSuccessState() {
     _uiState.value = _uiState.value.copy(editedGroupId = null)
+  }
+
+  /** Clears the photo error state. */
+  fun clearPhotoError() {
+    _uiState.value = _uiState.value.copy(photoError = null)
   }
 
   /**
@@ -110,6 +125,7 @@ class EditGroupViewModel(
                 name = group.name,
                 category = group.category,
                 description = group.description,
+                photoUrl = group.photoUrl,
                 nameError = null,
                 descriptionError = null,
                 isValid = computeValidity(group.name, null, null),
@@ -161,6 +177,82 @@ class EditGroupViewModel(
         _uiState.value =
             _uiState.value.copy(
                 isLoading = false, errorMsg = "$ERROR_UPDATE_FAILED: ${e.message ?: ERROR_UNKNOWN}")
+      }
+    }
+  }
+
+  /**
+   * Uploads a photo for the group.
+   *
+   * This method handles the complete photo upload flow:
+   * 1. Uploads the photo to Firebase Storage (with compression and orientation correction)
+   * 2. Updates the group's photoUrl in Firestore
+   * 3. Updates the local UI state with the new photo URL
+   *
+   * @param context Android context needed for image processing
+   * @param groupId The ID of the group to upload the photo for
+   * @param imageUri The URI of the image to upload
+   * @param onSuccess Callback invoked after successful upload
+   * @param onError Callback invoked if upload fails, receives error message
+   */
+  fun uploadGroupPhoto(
+      context: Context,
+      groupId: String,
+      imageUri: Uri,
+      onSuccess: () -> Unit = {},
+      onError: (String) -> Unit = {}
+  ) {
+    viewModelScope.launch {
+      _uiState.value = _uiState.value.copy(isUploadingPhoto = true, photoError = null)
+
+      try {
+        Log.d(TAG, "Starting photo upload for group $groupId")
+
+        val downloadUrl = repository.uploadGroupPhoto(context, groupId, imageUri)
+
+        _uiState.value = _uiState.value.copy(isUploadingPhoto = false, photoUrl = downloadUrl)
+
+        onSuccess()
+      } catch (e: Exception) {
+        val errorMsg = "Failed to upload photo: ${e.message ?: ERROR_UNKNOWN}"
+        Log.e(TAG, "Error uploading photo", e)
+        _uiState.value = _uiState.value.copy(isUploadingPhoto = false, photoError = errorMsg)
+        onError(errorMsg)
+      }
+    }
+  }
+
+  /**
+   * Deletes the group's photo.
+   *
+   * This method:
+   * 1. Deletes the photo from Firebase Storage
+   * 2. Clears the photoUrl field in Firestore
+   * 3. Updates the local UI state to remove the photo URL
+   *
+   * @param groupId The ID of the group to delete the photo for
+   * @param onSuccess Callback invoked after successful deletion
+   * @param onError Callback invoked if deletion fails, receives error message
+   */
+  fun deleteGroupPhoto(
+      groupId: String,
+      onSuccess: () -> Unit = {},
+      onError: (String) -> Unit = {}
+  ) {
+    viewModelScope.launch {
+      _uiState.value = _uiState.value.copy(isUploadingPhoto = true, photoError = null)
+
+      try {
+        repository.deleteGroupPhoto(groupId)
+
+        _uiState.value = _uiState.value.copy(isUploadingPhoto = false, photoUrl = null)
+
+        onSuccess()
+      } catch (e: Exception) {
+        val errorMsg = "Failed to delete photo: ${e.message ?: ERROR_UNKNOWN}"
+        Log.e(TAG, "Error deleting photo", e)
+        _uiState.value = _uiState.value.copy(isUploadingPhoto = false, photoError = errorMsg)
+        onError(errorMsg)
       }
     }
   }
