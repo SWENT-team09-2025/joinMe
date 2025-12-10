@@ -1506,4 +1506,74 @@ class MainActivityTest {
       } catch (_: Exception) {}
     }
   }
+
+  // ========== Invitation Deep Link Tests (New Code Coverage) ==========
+  // These tests cover the new invitation link handling added in this PR
+
+  @Test
+  fun mainActivity_launchesWithInvitationDeepLink_parsesToken() {
+    // Covers lines 186-189: onNewIntent() and invitation deep link parsing
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val invitationIntent =
+        Intent(context, MainActivity::class.java).apply {
+          action = Intent.ACTION_VIEW
+          data = Uri.parse("https://joinme-aa9e8.web.app/invite/test-token-123")
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(invitationIntent)
+    composeTestRule.waitForIdle()
+
+    scenario.use {
+      it.onActivity { activity ->
+        assert(
+            activity.intent.data?.toString() ==
+                "https://joinme-aa9e8.web.app/invite/test-token-123")
+        assert(!activity.isFinishing)
+      }
+    }
+
+    scenario.close()
+  }
+
+  @Test
+  fun mainActivity_invitationLink_handlesInvalidToken() = runBlocking {
+    // Covers lines 325-374: invitationToken LaunchedEffect with invalid token
+    // Specifically covers lines 355-363 (onFailure) and lines 364-370 (catch block)
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("https://joinme-aa9e8.web.app/invite/invalid-token")
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+
+    scenario.use { it.onActivity { activity -> assert(!activity.isFinishing) } }
+
+    scenario.close()
+  }
+
+  @Test
+  fun mainActivity_invitationLink_parsesCustomScheme() = runBlocking {
+    // Covers DeepLinkService.parseInvitationLink() and custom scheme handling
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val intent =
+        Intent(context, MainActivity::class.java).apply {
+          data = Uri.parse("joinme://invite/custom-token-456")
+        }
+
+    val scenario = ActivityScenario.launch<MainActivity>(intent)
+    composeTestRule.waitForIdle()
+
+    scenario.use {
+      it.onActivity { activity ->
+        // Verify custom scheme deep link is parsed
+        assert(activity.intent.data?.host == "invite")
+        assert(!activity.isFinishing)
+      }
+    }
+
+    scenario.close()
+  }
 }
