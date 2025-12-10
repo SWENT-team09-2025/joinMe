@@ -15,10 +15,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
+ * Holds resolved user profile information for leaderboard display.
+ *
+ * @property displayName The user's display name.
+ * @property photoUrl The user's profile photo URL, or null if not available.
+ */
+private data class UserProfileInfo(val displayName: String, val photoUrl: String?)
+
+/**
  * Represents a single entry in the leaderboard.
  *
  * @property userId The unique identifier of the user.
  * @property displayName The user's display name.
+ * @property photoUrl The user's profile photo URL, or null if not available.
  * @property streakWeeks The number of consecutive weeks (current or all-time).
  * @property streakActivities The number of activities (current or all-time).
  * @property rank The user's position in the leaderboard (1-indexed).
@@ -26,6 +35,7 @@ import kotlinx.coroutines.launch
 data class LeaderboardEntry(
     val userId: String,
     val displayName: String,
+    val photoUrl: String?,
     val streakWeeks: Int,
     val streakActivities: Int,
     val rank: Int
@@ -51,8 +61,8 @@ data class GroupLeaderboardUIState(
 /**
  * ViewModel for the Group Leaderboard screen.
  *
- * Responsible for fetching streak data for all group members, resolving their display names, and
- * exposing sorted leaderboards for both current and all-time streaks.
+ * Responsible for fetching streak data for all group members, resolving their display names and
+ * photo URLs, and exposing sorted leaderboards for both current and all-time streaks.
  *
  * Sorting criteria: activities count descending, then weeks as tiebreaker (descending).
  *
@@ -81,8 +91,8 @@ class GroupLeaderboardViewModel(
   /**
    * Loads the leaderboard data for a specific group.
    *
-   * Fetches all streaks for the group, resolves user display names via batch fetch, and produces
-   * two sorted leaderboards: current and all-time.
+   * Fetches all streaks for the group, resolves user profile info via batch fetch, and produces two
+   * sorted leaderboards: current and all-time.
    *
    * @param groupId The unique identifier of the group.
    */
@@ -99,13 +109,13 @@ class GroupLeaderboardViewModel(
           return@launch
         }
 
-        // 2. Batch fetch user profiles for display names
+        // 2. Batch fetch user profiles for display names and photo URLs
         val userIds = streaks.map { it.userId }
-        val displayNames = resolveDisplayNames(userIds)
+        val userProfiles = resolveUserProfiles(userIds)
 
         // 3. Build and sort leaderboards
-        val currentLeaderboard = buildLeaderboard(streaks, displayNames, isCurrent = true)
-        val allTimeLeaderboard = buildLeaderboard(streaks, displayNames, isCurrent = false)
+        val currentLeaderboard = buildLeaderboard(streaks, userProfiles, isCurrent = true)
+        val allTimeLeaderboard = buildLeaderboard(streaks, userProfiles, isCurrent = false)
 
         _uiState.value =
             GroupLeaderboardUIState(
@@ -121,18 +131,21 @@ class GroupLeaderboardViewModel(
   }
 
   /**
-   * Resolves user IDs to display names via batch fetch.
+   * Resolves user IDs to profile information (display name and photo URL) via batch fetch.
    *
    * @param userIds The list of user IDs to resolve.
-   * @return A map of userId to displayName. Users not found will have "Unknown" as their name.
+   * @return A map of userId to UserProfileInfo. Users not found will have "Unknown" as their name
+   *   and null as their photo URL.
    */
-  private suspend fun resolveDisplayNames(userIds: List<String>): Map<String, String> {
+  private suspend fun resolveUserProfiles(userIds: List<String>): Map<String, UserProfileInfo> {
     return try {
       val profiles = profileRepository.getProfilesByIds(userIds)
-      profiles?.associate { it.uid to it.username } ?: userIds.associateWith { "Unknown" }
+      profiles?.associate {
+        it.uid to UserProfileInfo(displayName = it.username, photoUrl = it.photoUrl)
+      } ?: userIds.associateWith { UserProfileInfo(displayName = "Unknown", photoUrl = null) }
     } catch (e: Exception) {
       Log.e("GroupLeaderboardViewModel", "Error fetching profiles", e)
-      userIds.associateWith { "Unknown" }
+      userIds.associateWith { UserProfileInfo(displayName = "Unknown", photoUrl = null) }
     }
   }
 
@@ -140,17 +153,17 @@ class GroupLeaderboardViewModel(
    * Builds a sorted leaderboard from streaks.
    *
    * @param streaks The list of streaks to process.
-   * @param displayNames A map of userId to displayName.
+   * @param userProfiles A map of userId to UserProfileInfo.
    * @param isCurrent If true, uses current streak values; if false, uses all-time best values.
    * @return A sorted list of LeaderboardEntry with ranks assigned (ties share the same rank).
    */
   private fun buildLeaderboard(
       streaks: List<GroupStreak>,
-      displayNames: Map<String, String>,
+      userProfiles: Map<String, UserProfileInfo>,
       isCurrent: Boolean
   ): List<LeaderboardEntry> {
     val sorted = sortStreaks(streaks, isCurrent)
-    return assignRanks(sorted, displayNames, isCurrent)
+    return assignRanks(sorted, userProfiles, isCurrent)
   }
 
   /** Sorts streaks by activities descending, then weeks descending as tiebreaker. */
@@ -163,7 +176,7 @@ class GroupLeaderboardViewModel(
   /** Assigns ranks with tie handling (standard competition ranking). */
   private fun assignRanks(
       sorted: List<GroupStreak>,
-      displayNames: Map<String, String>,
+      userProfiles: Map<String, UserProfileInfo>,
       isCurrent: Boolean
   ): List<LeaderboardEntry> {
     val result = mutableListOf<LeaderboardEntry>()
@@ -174,7 +187,7 @@ class GroupLeaderboardViewModel(
         currentRank = index + 1
       }
 
-      result.add(createEntry(streak, displayNames, isCurrent, currentRank))
+      result.add(createEntry(streak, userProfiles, isCurrent, currentRank))
     }
 
     return result
@@ -189,13 +202,17 @@ class GroupLeaderboardViewModel(
   /** Creates a LeaderboardEntry from a streak. */
   private fun createEntry(
       streak: GroupStreak,
-      displayNames: Map<String, String>,
+      userProfiles: Map<String, UserProfileInfo>,
       isCurrent: Boolean,
       rank: Int
   ): LeaderboardEntry {
+    val profileInfo =
+        userProfiles[streak.userId] ?: UserProfileInfo(displayName = "Unknown", photoUrl = null)
+
     return LeaderboardEntry(
         userId = streak.userId,
-        displayName = displayNames[streak.userId] ?: "Unknown",
+        displayName = profileInfo.displayName,
+        photoUrl = profileInfo.photoUrl,
         streakWeeks = getWeeks(streak, isCurrent),
         streakActivities = getActivities(streak, isCurrent),
         rank = rank)
