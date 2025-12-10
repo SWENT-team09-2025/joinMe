@@ -32,6 +32,7 @@ class FilterRepositoryTest {
 
     assertFalse(state.isSocialSelected)
     assertFalse(state.isActivitySelected)
+    assertFalse(state.isSportSelected)
     assertFalse(state.isSelectAllChecked)
     assertEquals(0, state.selectedSportsCount)
     assertTrue(state.sportCategories.none { it.isChecked })
@@ -74,6 +75,17 @@ class FilterRepositoryTest {
     FilterRepository.toggleActivity()
     val secondToggle = FilterRepository.filterState.first()
     assertFalse(secondToggle.isActivitySelected)
+  }
+
+  @Test
+  fun `toggleSport twice returns to initial state`() = runTest {
+    FilterRepository.toggleSport()
+    val firstToggle = FilterRepository.filterState.first()
+    assertTrue(firstToggle.isSportSelected)
+
+    FilterRepository.toggleSport()
+    val secondToggle = FilterRepository.filterState.first()
+    assertFalse(secondToggle.isSportSelected)
   }
 
   @Test
@@ -196,9 +208,9 @@ class FilterRepositoryTest {
   }
 
   @Test
-  fun `applyFilters returns sports events when any sport is selected`() = runTest {
-    // Select only one sport
-    FilterRepository.toggleSport("basket")
+  fun `applyFilters returns sports events when sport filter is selected`() = runTest {
+    // Select sport filter
+    FilterRepository.toggleSport()
 
     val events =
         listOf(
@@ -240,16 +252,14 @@ class FilterRepositoryTest {
 
   @Test
   fun `complex filter scenario works correctly`() = runTest {
-    // Select activity and some sports
+    // Select activity and sport
     FilterRepository.toggleActivity()
-    FilterRepository.toggleSport("basket")
-    FilterRepository.toggleSport("football")
+    FilterRepository.toggleSport()
 
     val state = FilterRepository.filterState.first()
     assertFalse(state.isSocialSelected)
     assertTrue(state.isActivitySelected)
-    assertEquals(2, state.selectedSportsCount)
-    assertFalse(state.isSelectAllChecked)
+    assertTrue(state.isSportSelected)
   }
 
   @Test

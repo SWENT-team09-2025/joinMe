@@ -62,7 +62,7 @@ class SearchViewModelTest {
     assertEquals("", uiState.query)
     assertFalse(filterState.isSocialSelected)
     assertFalse(filterState.isActivitySelected)
-    assertFalse(uiState.categoryExpanded)
+    assertFalse(filterState.isSportSelected)
     assertEquals(4, filterState.sportCategories.size)
     assertTrue(uiState.eventItems.isEmpty())
   }
@@ -92,45 +92,11 @@ class SearchViewModelTest {
   }
 
   @Test
-  fun `setCategoryExpanded updates dropdown expanded state`() = runTest {
-    viewModel.setCategoryExpanded(true)
+  fun `toggleSport updates sport filter state`() = runTest {
+    viewModel.toggleSport()
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertTrue(viewModel.uiState.value.categoryExpanded)
-
-    viewModel.setCategoryExpanded(false)
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    assertFalse(viewModel.uiState.value.categoryExpanded)
-  }
-
-  @Test
-  fun `toggleSelectAll updates all sport filters`() = runTest {
-    // Initially nothing selected
-    assertFalse(viewModel.filterState.value.sportCategories.any { it.isChecked })
-
-    // Select all
-    viewModel.toggleSelectAll()
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    assertTrue(viewModel.filterState.value.sportCategories.all { it.isChecked })
-
-    // Unselect all
-    viewModel.toggleSelectAll()
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    assertFalse(viewModel.filterState.value.sportCategories.any { it.isChecked })
-  }
-
-  @Test
-  fun `toggleSport updates specific sport filter`() = runTest {
-    val sportId = "basket"
-
-    viewModel.toggleSport(sportId)
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    val basketFilter = viewModel.filterState.value.sportCategories.find { it.id == sportId }
-    assertTrue(basketFilter?.isChecked == true)
+    assertTrue(viewModel.filterState.value.isSportSelected)
   }
 
   @Test
