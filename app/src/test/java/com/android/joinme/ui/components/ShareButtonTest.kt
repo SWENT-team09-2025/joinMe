@@ -5,8 +5,9 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.core.app.ApplicationProvider
-import com.android.joinme.model.invitation.InvitationRepositoryFirestore
+import com.android.joinme.model.invitation.InvitationRepositoryProvider
 import com.android.joinme.model.invitation.InvitationType
+import com.android.joinme.model.invitation.InvitationsRepository
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -71,10 +72,12 @@ class ShareButtonTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     var errorCalled = false
 
-    mockkConstructor(InvitationRepositoryFirestore::class)
-    coEvery {
-      anyConstructed<InvitationRepositoryFirestore>().createInvitation(any(), any(), any(), any())
-    } returns Result.failure(Exception("Test error"))
+    val mockRepository = mockk<InvitationsRepository>()
+    coEvery { mockRepository.createInvitation(any(), any(), any(), any()) } returns
+        Result.failure(Exception("Test error"))
+
+    mockkObject(InvitationRepositoryProvider)
+    every { InvitationRepositoryProvider.repository } returns mockRepository
 
     shareInvitation(
         invitationType = InvitationType.EVENT,
@@ -98,10 +101,12 @@ class ShareButtonTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     var errorCalled = false
 
-    mockkConstructor(InvitationRepositoryFirestore::class)
-    coEvery {
-      anyConstructed<InvitationRepositoryFirestore>().createInvitation(any(), any(), any(), any())
-    } throws RuntimeException("Network error")
+    val mockRepository = mockk<InvitationsRepository>()
+    coEvery { mockRepository.createInvitation(any(), any(), any(), any()) } throws
+        RuntimeException("Network error")
+
+    mockkObject(InvitationRepositoryProvider)
+    every { InvitationRepositoryProvider.repository } returns mockRepository
 
     shareInvitation(
         invitationType = InvitationType.GROUP,
