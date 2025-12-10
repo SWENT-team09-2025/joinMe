@@ -1,5 +1,7 @@
 package com.android.joinme.ui.groups
 
+import android.content.Context
+import android.net.Uri
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
@@ -729,5 +731,188 @@ class EditGroupViewModelTest {
     state = viewModel.uiState.value
     assertNull(state.descriptionError)
     assertTrue(state.isValid)
+  }
+
+  // =======================================
+  // Upload Group Photo Tests
+  // =======================================
+
+  @Test
+  fun `uploadGroupPhoto success updates photoUrl and calls onSuccess`() = runTest {
+    val mockContext = mockk<Context>()
+    val mockUri = mockk<Uri>()
+    val downloadUrl = "https://storage.example.com/photo.jpg"
+    var successCalled = false
+
+    coEvery { mockRepository.uploadGroupPhoto(mockContext, testGroup.id, mockUri) } returns
+        downloadUrl
+
+    viewModel.uploadGroupPhoto(
+        mockContext, testGroup.id, mockUri, onSuccess = { successCalled = true })
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertFalse(state.isUploadingPhoto)
+    assertEquals(downloadUrl, state.photoUrl)
+    assertNull(state.photoError)
+    assertTrue(successCalled)
+
+    coVerify { mockRepository.uploadGroupPhoto(mockContext, testGroup.id, mockUri) }
+  }
+
+  @Test
+  fun `uploadGroupPhoto sets loading state while uploading`() = runTest {
+    val mockContext = mockk<Context>()
+    val mockUri = mockk<Uri>()
+
+    coEvery { mockRepository.uploadGroupPhoto(mockContext, testGroup.id, mockUri) } coAnswers
+        {
+          assertTrue(viewModel.uiState.value.isUploadingPhoto)
+          "https://example.com/photo.jpg"
+        }
+
+    viewModel.uploadGroupPhoto(mockContext, testGroup.id, mockUri)
+    advanceUntilIdle()
+
+    assertFalse(viewModel.uiState.value.isUploadingPhoto)
+  }
+
+  @Test
+  fun `uploadGroupPhoto failure sets error and calls onError`() = runTest {
+    val mockContext = mockk<Context>()
+    val mockUri = mockk<Uri>()
+    var errorMessage: String? = null
+
+    coEvery { mockRepository.uploadGroupPhoto(mockContext, testGroup.id, mockUri) } throws
+        Exception("Network error")
+
+    viewModel.uploadGroupPhoto(mockContext, testGroup.id, mockUri, onError = { errorMessage = it })
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertFalse(state.isUploadingPhoto)
+    assertNull(state.photoUrl)
+    assertEquals("Failed to upload photo: Network error", state.photoError)
+    assertEquals("Failed to upload photo: Network error", errorMessage)
+  }
+
+  @Test
+  fun `uploadGroupPhoto failure with null message uses unknown error`() = runTest {
+    val mockContext = mockk<Context>()
+    val mockUri = mockk<Uri>()
+
+    coEvery { mockRepository.uploadGroupPhoto(mockContext, testGroup.id, mockUri) } throws
+        RuntimeException(null as String?)
+
+    viewModel.uploadGroupPhoto(mockContext, testGroup.id, mockUri)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertEquals("Failed to upload photo: Unknown error", state.photoError)
+  }
+
+  // =======================================
+  // Delete Group Photo Tests
+  // =======================================
+
+  @Test
+  fun `deleteGroupPhoto success clears photoUrl and calls onSuccess`() = runTest {
+    var successCalled = false
+
+    coEvery { mockRepository.deleteGroupPhoto(testGroup.id) } just Runs
+
+    // Set initial photo URL
+    coEvery { mockRepository.getGroup(testGroup.id) } returns
+        testGroup.copy(photoUrl = "https://example.com/photo.jpg")
+    viewModel.loadGroup(testGroup.id)
+    advanceUntilIdle()
+
+    viewModel.deleteGroupPhoto(testGroup.id, onSuccess = { successCalled = true })
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertFalse(state.isUploadingPhoto)
+    assertNull(state.photoUrl)
+    assertNull(state.photoError)
+    assertTrue(successCalled)
+
+    coVerify { mockRepository.deleteGroupPhoto(testGroup.id) }
+  }
+
+  @Test
+  fun `deleteGroupPhoto sets loading state while deleting`() = runTest {
+    coEvery { mockRepository.deleteGroupPhoto(testGroup.id) } coAnswers
+        {
+          assertTrue(viewModel.uiState.value.isUploadingPhoto)
+        }
+
+    viewModel.deleteGroupPhoto(testGroup.id)
+    advanceUntilIdle()
+
+    assertFalse(viewModel.uiState.value.isUploadingPhoto)
+  }
+
+  @Test
+  fun `deleteGroupPhoto failure sets error and calls onError`() = runTest {
+    var errorMessage: String? = null
+
+    coEvery { mockRepository.deleteGroupPhoto(testGroup.id) } throws Exception("Storage error")
+
+    viewModel.deleteGroupPhoto(testGroup.id, onError = { errorMessage = it })
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertFalse(state.isUploadingPhoto)
+    assertEquals("Failed to delete photo: Storage error", state.photoError)
+    assertEquals("Failed to delete photo: Storage error", errorMessage)
+  }
+
+  @Test
+  fun `deleteGroupPhoto failure with null message uses unknown error`() = runTest {
+    coEvery { mockRepository.deleteGroupPhoto(testGroup.id) } throws
+        RuntimeException(null as String?)
+
+    viewModel.deleteGroupPhoto(testGroup.id)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertEquals("Failed to delete photo: Unknown error", state.photoError)
+  }
+
+  // =======================================
+  // Photo State Management Tests
+  // =======================================
+
+  @Test
+  fun `clearPhotoError clears photo error`() = runTest {
+    coEvery { mockRepository.deleteGroupPhoto(testGroup.id) } throws Exception("Error")
+
+    viewModel.deleteGroupPhoto(testGroup.id)
+    advanceUntilIdle()
+    assertNotNull(viewModel.uiState.value.photoError)
+
+    viewModel.clearPhotoError()
+
+    assertNull(viewModel.uiState.value.photoError)
+  }
+
+  @Test
+  fun `loadGroup loads photoUrl from group`() = runTest {
+    val groupWithPhoto = testGroup.copy(photoUrl = "https://example.com/group-photo.jpg")
+    coEvery { mockRepository.getGroup(testGroup.id) } returns groupWithPhoto
+
+    viewModel.loadGroup(testGroup.id)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertEquals("https://example.com/group-photo.jpg", state.photoUrl)
+  }
+
+  @Test
+  fun `initial state has null photoUrl and no photo loading`() = runTest {
+    val state = viewModel.uiState.value
+    assertNull(state.photoUrl)
+    assertFalse(state.isUploadingPhoto)
+    assertNull(state.photoError)
   }
 }

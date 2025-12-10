@@ -99,62 +99,15 @@ class SearchScreenTest {
   }
 
   @Test
-  fun searchScreen_sportDropdownOpensOnClick() {
+  fun searchScreen_sportFilterChipToggles() {
     setupScreen()
 
-    // Initially, sport items are not displayed
-    composeTestRule.onNodeWithText("Basket").assertDoesNotExist()
+    val sportChip = composeTestRule.onNodeWithText("Sport")
 
-    // Click the Sport filter to open dropdown
-    composeTestRule.onNodeWithText("Sport").performClick()
-
-    // Now sport items should be visible
-    composeTestRule.onNodeWithText("Select all").assertIsDisplayed()
-
-    composeTestRule.onNodeWithText("Basket").assertIsDisplayed()
-  }
-
-  @Test
-  fun searchScreen_sportDropdownShowsAllSports() {
-    setupScreen()
-
-    // Open dropdown
-    composeTestRule.onNodeWithText("Sport").performClick()
-
-    // Verify all sports are displayed
-    composeTestRule.onNodeWithText("Select all").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Basket").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Football").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Tennis").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Running").assertIsDisplayed()
-  }
-
-  @Test
-  fun searchScreen_canSelectSportFromDropdown() {
-    setupScreen()
-
-    // Open dropdown
-    composeTestRule.onNodeWithText("Sport").performClick()
-
-    // Click on Basket
-    composeTestRule.onNodeWithText("Basket").performClick()
-
-    // Verify it's still in the dropdown (for verification)
-    composeTestRule.onNodeWithText("Basket").assertIsDisplayed()
-  }
-
-  @Test
-  fun searchScreen_selectAllInDropdownWorks() {
-    setupScreen()
-
-    // Open dropdown
-    composeTestRule.onNodeWithText("Sport").performClick()
-
-    // Click Select all
-    composeTestRule.onNodeWithText("Select all").performClick()
-
-    // Verify dropdown still shows items
-    composeTestRule.onNodeWithText("Basket").assertIsDisplayed()
+    sportChip.assertIsDisplayed()
+    sportChip.performClick()
+    sportChip.performClick()
+    sportChip.assertIsDisplayed()
   }
 
   @Test
@@ -170,24 +123,6 @@ class SearchScreenTest {
     // Both should still be displayed
     composeTestRule.onNodeWithText("Activity").assertIsDisplayed()
     composeTestRule.onNodeWithText("Social").assertIsDisplayed()
-  }
-
-  @Test
-  fun searchScreen_canToggleMultipleSportsInDropdown() {
-    setupScreen()
-
-    // Open dropdown
-    composeTestRule.onNodeWithText("Sport").performClick()
-
-    // Select multiple sports
-    composeTestRule.onNodeWithText("Basket").performClick()
-    composeTestRule.onNodeWithText("Football").performClick()
-    composeTestRule.onNodeWithText("Tennis").performClick()
-
-    // All should still be visible
-    composeTestRule.onNodeWithText("Basket").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Football").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Tennis").assertIsDisplayed()
   }
 
   @Test
@@ -232,24 +167,6 @@ class SearchScreenTest {
   }
 
   @Test
-  fun searchScreen_dropdownClosesAndReopens() {
-    setupScreen()
-
-    // Open dropdown
-    composeTestRule.onNodeWithText("Sport").performClick()
-
-    composeTestRule.onNodeWithText("Basket").assertIsDisplayed()
-
-    // Close by clicking outside (click on the screen)
-    composeTestRule.onNodeWithText("Search").performClick()
-
-    // Reopen
-    composeTestRule.onNodeWithText("Sport").performClick()
-
-    composeTestRule.onNodeWithText("Basket").assertIsDisplayed()
-  }
-
-  @Test
   fun searchScreen_viewModelIntegration_queryUpdates() {
     val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
@@ -286,25 +203,15 @@ class SearchScreenTest {
   }
 
   @Test
-  fun searchScreen_viewModelIntegration_sportSelectionUpdates() {
+  fun searchScreen_viewModelIntegration_sportFilterUpdates() {
     val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
 
-    // Initially basket is unchecked
-    val basketSportBefore = viewModel.filterState.value.sportCategories.find { it.id == "basket" }
-    assert(basketSportBefore?.isChecked == false)
-
-    // Open dropdown
     composeTestRule.onNodeWithText("Sport").performClick()
-
-    // Click to select basket
-    composeTestRule.onNodeWithText("Basket").performClick()
 
     composeTestRule.waitForIdle()
 
-    // After toggle, basket should be checked
-    val basketSportAfter = viewModel.filterState.value.sportCategories.find { it.id == "basket" }
-    assert(basketSportAfter?.isChecked == true)
+    assert(viewModel.filterState.value.isSportSelected)
   }
 
   @Test
@@ -416,12 +323,8 @@ class SearchScreenTest {
     composeTestRule.onNodeWithText("Social").performClick()
     composeTestRule.waitForIdle()
 
-    // Open sport dropdown
+    // Select sport filter
     composeTestRule.onNodeWithText("Sport").performClick()
-    composeTestRule.waitForIdle()
-
-    // Select a sport
-    composeTestRule.onNodeWithText("Tennis").performClick()
     composeTestRule.waitForIdle()
 
     // Activity should still be displayed
@@ -627,22 +530,6 @@ class SearchScreenTest {
 
     // Search text field should have proper test tag
     composeTestRule.onNodeWithTag(SearchScreenTestTags.SEARCH_TEXT_FIELD).assertIsDisplayed()
-  }
-
-  @Test
-  fun searchScreen_dropdownClosesAfterSelectingSport() {
-    setupScreen()
-
-    // Open dropdown
-    composeTestRule.onNodeWithText("Sport").performClick()
-    composeTestRule.waitForIdle()
-
-    // Select a sport (dropdown stays open in current implementation)
-    composeTestRule.onNodeWithText("Basket").performClick()
-    composeTestRule.waitForIdle()
-
-    // Dropdown should still be visible
-    composeTestRule.onNodeWithText("Select all").assertIsDisplayed()
   }
 
   // Fake implementations for testing
