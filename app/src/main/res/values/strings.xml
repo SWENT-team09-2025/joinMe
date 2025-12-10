@@ -128,10 +128,38 @@
     <string name="notification_type_event_chat_message">event_chat_message</string>
     <string name="notification_type_group_chat_message">group_chat_message</string>
 
+
+    <!-- Invitation Types -->
+    <string name="share_invitation_link">Share invitation link</string>
+    <string name="message_invitation_link"> Join my %1$s on JoinMe:\n%2$s </string>
+
+    <!-- Group Photo -->
+    <string name="group_photo_uploaded">Photo uploaded successfully</string>
+    <string name="group_photo_deleted">Photo deleted</string>
+    
     <!-- Invitation link -->
     <string name="process_invitation_failed">Failed to process invitation: %1$s</string>
     <string name="invalid_invitation_link">Invalid or expired invitation link</string>
     <string name="fail_joining_group">Failed to join group: %1$s</string>
     <string name="success_joining_group">Successfully joined the group!</string>
     <string name="sign_in_to_join_group">Please sign in to join the group</string>
+
+    <!-- Group button -->
+    <string name="delete_group_button">DELETE GROUP</string>
+    <string name="edit_group_button">EDIT GROUP</string>
+    <string name="share_group_button">SHARE GROUP </string>
+    <string name="leave_group_button">LEAVE GROUP</string>
+    <string name="create_group_button">CREATE A GROUP</string>
+    <string name="more_options">More options</string>
+
+    <!-- Group confirmation dialog -->
+    <string name="message_group_deletion">Are you sure you want to delete\nthis group?</string>
+    <string name="advertisment_group_deletion">The group will be permanently deleted\nThis action is irreversible</string>
+    <string name="message_group_leaving">Are you sure you want to leave\nthis group?</string>
+    <string name="confirmation_group_button">Yes</string>
+    <string name="negation_group_button">No</string>
+
+    <!-- Group message -->
+    <string name="currently_not">You are currently not</string>
+    <string name="assigned_to_group">assigned to a group…</string>
 </resources>

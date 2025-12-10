@@ -110,6 +110,7 @@ private suspend fun handleGroupJoin(
       Toast.makeText(context, context.getString(R.string.success_joining_group), Toast.LENGTH_SHORT)
           .show()
     }
+    navigationActions.navigateTo(Screen.Groups)
     navigationActions.navigateTo(Screen.GroupDetail(groupId))
   } catch (e: Exception) {
     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
@@ -208,6 +209,8 @@ private fun getCurrentUserId(currentUser: com.google.firebase.auth.FirebaseUser?
  * with the JoinMe composable, which handles all navigation and UI logic.
  */
 class MainActivity : ComponentActivity() {
+  // State to hold new invitation tokens when app receives deep link while running
+  private val newInvitationToken = mutableStateOf<String?>(null)
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -233,6 +236,7 @@ class MainActivity : ComponentActivity() {
     setContent {
       JoinMeTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
+          val dynamicInvitationToken by newInvitationToken
           JoinMe(
               initialEventId = initialEventId,
               initialGroupId = initialGroupId,
@@ -240,15 +244,22 @@ class MainActivity : ComponentActivity() {
               chatName = chatName,
               conversationId = conversationId,
               invitationToken = invitationToken,
+              newInvitationToken = dynamicInvitationToken,
+              onInvitationProcessed = { newInvitationToken.value = null },
               followerId = followerId)
         }
       }
     }
   }
 
-  override fun onNewIntent(intent: Intent) {
-    super.onNewIntent(intent)
-    setIntent(intent)
+  override fun onNewIntent(newIntent: Intent) {
+    super.onNewIntent(newIntent)
+    intent = newIntent
+    // Check if this is an invitation link and update state to trigger recomposition
+    val token = DeepLinkService.parseInvitationLink(newIntent)
+    if (token != null) {
+      newInvitationToken.value = token
+    }
   }
 
   private fun createNotificationChannel() {
@@ -289,6 +300,8 @@ fun JoinMe(
     conversationId: String? = null,
     followerId: String? = null,
     invitationToken: String? = null,
+    newInvitationToken: String? = null,
+    onInvitationProcessed: () -> Unit = {},
     enableNotificationPermissionRequest: Boolean = true
 ) {
   val navController = rememberNavController()
@@ -297,6 +310,7 @@ fun JoinMe(
 
   var currentUser by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
   var pendingInvitationToken by remember { mutableStateOf<String?>(null) }
+  var initialTokenProcessed by remember { mutableStateOf(false) }
 
   // Listen for auth state changes
   LaunchedEffect(Unit) {
@@ -385,13 +399,27 @@ fun JoinMe(
   }
 
   // Handle invitation link token (and check for authentification)
-  LaunchedEffect(invitationToken, currentUserId) {
-    if (invitationToken != null) {
+  LaunchedEffect(invitationToken, newInvitationToken, currentUserId) {
+    // Determine which token to process
+    val tokenToProcess =
+        newInvitationToken ?: (if (!initialTokenProcessed) invitationToken else null)
+
+    if (tokenToProcess != null) {
       if (currentUserId.isEmpty()) {
-        pendingInvitationToken = invitationToken
+        pendingInvitationToken = tokenToProcess
+        if (tokenToProcess == invitationToken) {
+          initialTokenProcessed = true
+        }
       } else {
         coroutineScope.launch {
-          processInvitation(invitationToken, currentUserId, context, navigationActions)
+          processInvitation(tokenToProcess, currentUserId, context, navigationActions)
+
+          if (tokenToProcess == invitationToken) {
+            initialTokenProcessed = true
+          }
+          if (newInvitationToken != null) {
+            onInvitationProcessed()
+          }
         }
       }
     }
@@ -678,15 +706,6 @@ fun JoinMe(
 
         GroupListScreen(
             viewModel = groupListViewModel,
-            onJoinWithLink = { groupId ->
-              groupListViewModel.joinGroup(
-                  groupId = groupId,
-                  onSuccess = {
-                    Toast.makeText(context, "Successfully joined the group!", Toast.LENGTH_SHORT)
-                        .show()
-                  },
-                  onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
-            },
             onCreateGroup = { navigationActions.navigateTo(Screen.CreateGroup) },
             onGroup = { group ->
               // Navigate to group details

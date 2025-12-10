@@ -23,42 +23,78 @@ class EditGroupScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
 
-  @Before
-  fun setUp() {
-    // Initialize Firebase for Robolectric tests
-    val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-    if (FirebaseApp.getApps(context).isEmpty()) {
-      FirebaseApp.initializeApp(context)
-    }
-  }
-
   private lateinit var fakeRepository: FakeGroupRepository
   private lateinit var viewModel: EditGroupViewModel
   private lateinit var testGroup: Group
 
   @Before
-  fun setup() {
+  fun setUp() {
+    val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+    if (FirebaseApp.getApps(context).isEmpty()) {
+      FirebaseApp.initializeApp(context)
+    }
+
     fakeRepository = FakeGroupRepository()
     viewModel = EditGroupViewModel(fakeRepository)
 
-    testGroup =
-        Group(
-            id = "test-group-1",
-            name = "Basketball Team",
-            category = EventType.SPORTS,
-            description = "Weekly basketball games",
-            ownerId = "owner-123",
-            memberIds = listOf("owner-123", "member-456"),
-            eventIds = listOf("event-1", "event-2"))
-
+    testGroup = createTestGroup()
     fakeRepository.addGroupForTest(testGroup)
   }
+
+  // ==========================================
+  // Test Helpers
+  // ==========================================
+
+  private fun createTestGroup(
+      id: String = "test-group-1",
+      name: String = "Basketball Team",
+      category: EventType = EventType.SPORTS,
+      description: String = "Weekly basketball games",
+      photoUrl: String? = null
+  ) =
+      Group(
+          id = id,
+          name = name,
+          category = category,
+          description = description,
+          ownerId = "owner-123",
+          memberIds = listOf("owner-123", "member-456"),
+          eventIds = listOf("event-1", "event-2"),
+          photoUrl = photoUrl)
+
+  private fun setScreenContent(groupId: String = testGroup.id) {
+    composeTestRule.setContent { EditGroupScreen(groupId = groupId, viewModel = viewModel) }
+    composeTestRule.waitForIdle()
+  }
+
+  private fun waitForFormLoaded() {
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+  }
+
+  private fun waitForDeleteButtonGone() {
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule
+          .onAllNodesWithTag(EditGroupScreenTags.DELETE_PHOTO_BUTTON)
+          .fetchSemanticsNodes()
+          .isEmpty()
+    }
+  }
+
+  // ==========================================
+  // Fake Repository
+  // ==========================================
 
   private class FakeGroupRepository : GroupRepository {
     private val groups = mutableListOf<Group>()
     private var idCounter = 0
 
     fun addGroupForTest(group: Group) {
+      groups.removeAll { it.id == group.id }
       groups.add(group)
     }
 
@@ -80,34 +116,23 @@ class EditGroupScreenTest {
 
     override suspend fun deleteGroup(groupId: String, userId: String) {
       val group = getGroup(groupId)
-
-      if (group.ownerId != userId) {
-        throw Exception("Only the group owner can delete this group")
-      }
-
+      if (group.ownerId != userId) throw Exception("Only the group owner can delete this group")
       if (!groups.removeIf { it.id == groupId }) throw Exception("Group not found")
     }
 
     override suspend fun leaveGroup(groupId: String, userId: String) {
       val group = getGroup(groupId)
       val updatedMemberIds = group.memberIds.filter { it != userId }
-
-      if (updatedMemberIds.size == group.memberIds.size) {
-        throw Exception("User is not a member of this group")
-      }
-
-      val updatedGroup = group.copy(memberIds = updatedMemberIds)
-      editGroup(groupId, updatedGroup)
+      if (updatedMemberIds.size == group.memberIds.size)
+          throw Exception("User is not a member of this group")
+      editGroup(groupId, group.copy(memberIds = updatedMemberIds))
     }
 
     override suspend fun joinGroup(groupId: String, userId: String) {
       val group = getGroup(groupId)
-      if (group.memberIds.contains(userId)) {
-        throw Exception("User is already a member of this group")
-      }
-      val updatedMemberIds = group.memberIds + userId
-      val updatedGroup = group.copy(memberIds = updatedMemberIds)
-      editGroup(groupId, updatedGroup)
+      if (group.memberIds.contains(userId))
+          throw Exception("User is already a member of this group")
+      editGroup(groupId, group.copy(memberIds = group.memberIds + userId))
     }
 
     override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
@@ -120,28 +145,26 @@ class EditGroupScreenTest {
         groupId: String,
         imageUri: Uri
     ): String {
-      // Not needed for these tests
-      return "http://fakeurl.com/photo.jpg"
+      val newUrl = "https://fake-storage.com/${groupId}.jpg"
+      val group = getGroup(groupId)
+      editGroup(groupId, group.copy(photoUrl = newUrl))
+      return newUrl
     }
 
     override suspend fun deleteGroupPhoto(groupId: String) {
-      // Not needed for these tests
+      val group = getGroup(groupId)
+      editGroup(groupId, group.copy(photoUrl = null))
     }
   }
 
+  // ==========================================
+  // Display Tests
+  // ==========================================
+
   @Test
   fun editGroupScreen_displaysAllComponents() {
-    composeTestRule.setContent { EditGroupScreen(groupId = testGroup.id, viewModel = viewModel) }
-
-    composeTestRule.waitForIdle()
-
-    // Wait for loading to complete
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+    setScreenContent()
+    waitForFormLoaded()
 
     composeTestRule.onNodeWithTag(EditGroupScreenTags.SCREEN).assertIsDisplayed()
     composeTestRule.onNodeWithTag(EditGroupScreenTags.TITLE).assertIsDisplayed()
@@ -153,33 +176,21 @@ class EditGroupScreenTest {
     composeTestRule
         .onNodeWithTag(EditGroupScreenTags.GROUP_DESCRIPTION_TEXT_FIELD)
         .assertIsDisplayed()
-    // Elements below the fold need to be scrolled to or checked with assertExists()
     composeTestRule.onNodeWithTag(EditGroupScreenTags.DESCRIPTION_SUPPORTING_TEXT).assertExists()
     composeTestRule.onNodeWithTag(EditGroupScreenTags.SAVE_BUTTON).assertExists()
   }
 
   @Test
   fun editGroupScreen_loadsAndDisplaysOriginalGroupData() {
-    composeTestRule.setContent { EditGroupScreen(groupId = testGroup.id, viewModel = viewModel) }
-
-    composeTestRule.waitForIdle()
-
-    // Wait for loading to complete
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+    setScreenContent()
+    waitForFormLoaded()
 
     composeTestRule
         .onNodeWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD)
         .assertTextContains("Basketball Team")
-
     composeTestRule
         .onNodeWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN)
         .assertTextContains("Sports")
-
     composeTestRule
         .onNodeWithTag(EditGroupScreenTags.GROUP_DESCRIPTION_TEXT_FIELD)
         .assertTextContains("Weekly basketball games")
@@ -187,34 +198,28 @@ class EditGroupScreenTest {
 
   @Test
   fun editGroupScreen_initialState_saveButtonIsEnabled() {
-    composeTestRule.setContent { EditGroupScreen(groupId = testGroup.id, viewModel = viewModel) }
-
-    composeTestRule.waitForIdle()
-
-    // Wait for loading to complete
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(EditGroupScreenTags.SAVE_BUTTON)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+    setScreenContent()
+    waitForFormLoaded()
 
     composeTestRule.onNodeWithTag(EditGroupScreenTags.SAVE_BUTTON).assertIsEnabled()
   }
 
   @Test
+  fun editGroupScreen_titleDisplaysCorrectText() {
+    setScreenContent()
+    waitForFormLoaded()
+
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.TITLE).assertTextEquals("Edit Group")
+  }
+
+  // ==========================================
+  // Name Input Tests
+  // ==========================================
+
+  @Test
   fun nameInput_canModifyExistingName() {
-    composeTestRule.setContent { EditGroupScreen(groupId = testGroup.id, viewModel = viewModel) }
-
-    composeTestRule.waitForIdle()
-
-    // Wait for loading to complete
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+    setScreenContent()
+    waitForFormLoaded()
 
     composeTestRule.onNodeWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD).performTextClearance()
     composeTestRule
@@ -227,18 +232,36 @@ class EditGroupScreenTest {
   }
 
   @Test
-  fun categoryDropdown_opensMenuOnClick() {
-    composeTestRule.setContent { EditGroupScreen(groupId = testGroup.id, viewModel = viewModel) }
+  fun nameInput_invalidShortName_disablesSaveButton() {
+    setScreenContent()
+    waitForFormLoaded()
 
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD).performTextClearance()
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD).performTextInput("ab")
     composeTestRule.waitForIdle()
 
-    // Wait for loading to complete
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.SAVE_BUTTON).assertIsNotEnabled()
+  }
+
+  @Test
+  fun nameInput_emptyName_disablesSaveButton() {
+    setScreenContent()
+    waitForFormLoaded()
+
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD).performTextClearance()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.SAVE_BUTTON).assertIsNotEnabled()
+  }
+
+  // ==========================================
+  // Category Dropdown Tests
+  // ==========================================
+
+  @Test
+  fun categoryDropdown_opensMenuOnClick() {
+    setScreenContent()
+    waitForFormLoaded()
 
     composeTestRule.onNodeWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN).performClick()
     composeTestRule
@@ -248,17 +271,8 @@ class EditGroupScreenTest {
 
   @Test
   fun categoryDropdown_showsAllThreeOptions() {
-    composeTestRule.setContent { EditGroupScreen(groupId = testGroup.id, viewModel = viewModel) }
-
-    composeTestRule.waitForIdle()
-
-    // Wait for loading to complete
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+    setScreenContent()
+    waitForFormLoaded()
 
     composeTestRule.onNodeWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN).performClick()
     composeTestRule.onNodeWithText("SOCIAL").assertIsDisplayed()
@@ -268,17 +282,8 @@ class EditGroupScreenTest {
 
   @Test
   fun categoryDropdown_canChangeCategoryFromSportsToSocial() {
-    composeTestRule.setContent { EditGroupScreen(groupId = testGroup.id, viewModel = viewModel) }
-
-    composeTestRule.waitForIdle()
-
-    // Wait for loading to complete
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+    setScreenContent()
+    waitForFormLoaded()
 
     composeTestRule
         .onNodeWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN)
@@ -294,17 +299,8 @@ class EditGroupScreenTest {
 
   @Test
   fun categoryDropdown_canChangeCategoryFromSportsToActivity() {
-    composeTestRule.setContent { EditGroupScreen(groupId = testGroup.id, viewModel = viewModel) }
-
-    composeTestRule.waitForIdle()
-
-    // Wait for loading to complete
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+    setScreenContent()
+    waitForFormLoaded()
 
     composeTestRule.onNodeWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN).performClick()
     composeTestRule.onNodeWithText("ACTIVITY").performClick()
@@ -316,17 +312,8 @@ class EditGroupScreenTest {
 
   @Test
   fun categoryDropdown_closesAfterSelection() {
-    composeTestRule.setContent { EditGroupScreen(groupId = testGroup.id, viewModel = viewModel) }
-
-    composeTestRule.waitForIdle()
-
-    // Wait for loading to complete
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+    setScreenContent()
+    waitForFormLoaded()
 
     composeTestRule.onNodeWithTag(EditGroupScreenTags.CATEGORY_DROPDOWN).performClick()
     composeTestRule.onNodeWithText("SOCIAL").performClick()
@@ -336,19 +323,31 @@ class EditGroupScreenTest {
         .assertDoesNotExist()
   }
 
+  // ==========================================
+  // Description Input Tests
+  // ==========================================
+
+  @Test
+  fun descriptionInput_canModifyDescription() {
+    setScreenContent()
+    waitForFormLoaded()
+
+    composeTestRule
+        .onNodeWithTag(EditGroupScreenTags.GROUP_DESCRIPTION_TEXT_FIELD)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditGroupScreenTags.GROUP_DESCRIPTION_TEXT_FIELD)
+        .performTextInput("New description")
+
+    composeTestRule
+        .onNodeWithTag(EditGroupScreenTags.GROUP_DESCRIPTION_TEXT_FIELD)
+        .assertTextContains("New description")
+  }
+
   @Test
   fun descriptionInput_accepts300Characters() {
-    composeTestRule.setContent { EditGroupScreen(groupId = testGroup.id, viewModel = viewModel) }
-
-    composeTestRule.waitForIdle()
-
-    // Wait for loading to complete
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(EditGroupScreenTags.GROUP_DESCRIPTION_TEXT_FIELD)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+    setScreenContent()
+    waitForFormLoaded()
 
     composeTestRule
         .onNodeWithTag(EditGroupScreenTags.GROUP_DESCRIPTION_TEXT_FIELD)
@@ -363,62 +362,22 @@ class EditGroupScreenTest {
   }
 
   @Test
-  fun saveButton_enabledWhenFormIsValid() {
-    composeTestRule.setContent { EditGroupScreen(groupId = testGroup.id, viewModel = viewModel) }
+  fun descriptionInput_canClearDescriptionCompletely() {
+    setScreenContent()
+    waitForFormLoaded()
 
-    composeTestRule.waitForIdle()
-
-    // Wait for loading to complete
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-
-    composeTestRule.onNodeWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD).performTextClearance()
     composeTestRule
-        .onNodeWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD)
-        .performTextInput("Valid Group")
-
+        .onNodeWithTag(EditGroupScreenTags.GROUP_DESCRIPTION_TEXT_FIELD)
+        .performTextClearance()
     composeTestRule.waitForIdle()
+
     composeTestRule.onNodeWithTag(EditGroupScreenTags.SAVE_BUTTON).assertIsEnabled()
   }
 
   @Test
-  fun saveButton_disabledWhenNameIsInvalid() {
-    composeTestRule.setContent { EditGroupScreen(groupId = testGroup.id, viewModel = viewModel) }
-
-    composeTestRule.waitForIdle()
-
-    // Wait for loading to complete
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-
-    composeTestRule.onNodeWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD).performTextClearance()
-    composeTestRule.onNodeWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD).performTextInput("ab")
-
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag(EditGroupScreenTags.SAVE_BUTTON).assertIsNotEnabled()
-  }
-
-  @Test
-  fun saveButton_disabledWhenDescriptionIsTooLong() {
-    composeTestRule.setContent { EditGroupScreen(groupId = testGroup.id, viewModel = viewModel) }
-
-    composeTestRule.waitForIdle()
-
-    // Wait for loading to complete
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(EditGroupScreenTags.GROUP_DESCRIPTION_TEXT_FIELD)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+  fun descriptionInput_tooLong_disablesSaveButton() {
+    setScreenContent()
+    waitForFormLoaded()
 
     composeTestRule
         .onNodeWithTag(EditGroupScreenTags.GROUP_DESCRIPTION_TEXT_FIELD)
@@ -426,24 +385,65 @@ class EditGroupScreenTest {
     composeTestRule
         .onNodeWithTag(EditGroupScreenTags.GROUP_DESCRIPTION_TEXT_FIELD)
         .performTextInput("a".repeat(301))
-
     composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.SAVE_BUTTON).assertIsNotEnabled()
+  }
+
+  // ==========================================
+  // Save Button Tests
+  // ==========================================
+
+  @Test
+  fun saveButton_enabledWhenFormIsValid() {
+    setScreenContent()
+    waitForFormLoaded()
+
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD).performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD)
+        .performTextInput("Valid Group")
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.SAVE_BUTTON).assertIsEnabled()
+  }
+
+  @Test
+  fun saveButton_disabledWhenNameIsInvalid() {
+    setScreenContent()
+    waitForFormLoaded()
+
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD).performTextClearance()
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD).performTextInput("ab")
+    composeTestRule.waitForIdle()
+
     composeTestRule.onNodeWithTag(EditGroupScreenTags.SAVE_BUTTON).assertIsNotEnabled()
   }
 
   @Test
-  fun completeForm_modifyAllFields_enablesSaveButton() {
-    composeTestRule.setContent { EditGroupScreen(groupId = testGroup.id, viewModel = viewModel) }
+  fun saveButton_disabledWhenDescriptionIsTooLong() {
+    setScreenContent()
+    waitForFormLoaded()
 
+    composeTestRule
+        .onNodeWithTag(EditGroupScreenTags.GROUP_DESCRIPTION_TEXT_FIELD)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditGroupScreenTags.GROUP_DESCRIPTION_TEXT_FIELD)
+        .performTextInput("a".repeat(301))
     composeTestRule.waitForIdle()
 
-    // Wait for loading to complete
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.SAVE_BUTTON).assertIsNotEnabled()
+  }
+
+  // ==========================================
+  // Complete Form Tests
+  // ==========================================
+
+  @Test
+  fun completeForm_modifyAllFields_enablesSaveButton() {
+    setScreenContent()
+    waitForFormLoaded()
 
     composeTestRule.onNodeWithTag(EditGroupScreenTags.GROUP_NAME_TEXT_FIELD).performTextClearance()
     composeTestRule
@@ -467,43 +467,100 @@ class EditGroupScreenTest {
     composeTestRule.onNodeWithTag(EditGroupScreenTags.SAVE_BUTTON).assertIsEnabled()
   }
 
+  // ==========================================
+  // Group Photo Tests
+  // ==========================================
+
   @Test
-  fun editGroupScreen_titleDisplaysCorrectText() {
-    composeTestRule.setContent { EditGroupScreen(groupId = testGroup.id, viewModel = viewModel) }
+  fun photoSection_displaysPlaceholder_whenNoPhoto() {
+    setScreenContent()
+    waitForFormLoaded()
 
-    composeTestRule.waitForIdle()
-
-    // Wait for loading to complete
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(EditGroupScreenTags.TITLE)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-
-    composeTestRule.onNodeWithTag(EditGroupScreenTags.TITLE).assertTextEquals("Edit Group")
+    // Use test tag for reliable detection (content description may vary with Coil loading states)
+    composeTestRule
+        .onNodeWithTag(GroupPhotoImageTestTags.GROUP_PHOTO_PLACEHOLDER)
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.EDIT_PHOTO_BUTTON).assertIsDisplayed()
   }
 
   @Test
-  fun editGroupScreen_canClearDescriptionCompletely() {
-    composeTestRule.setContent { EditGroupScreen(groupId = testGroup.id, viewModel = viewModel) }
+  fun photoSection_displaysPhotoSection_whenPhotoExists() {
+    val groupWithPhoto = createTestGroup(photoUrl = "https://example.com/existing.jpg")
+    fakeRepository.addGroupForTest(groupWithPhoto)
+    viewModel = EditGroupViewModel(fakeRepository)
 
-    composeTestRule.waitForIdle()
+    setScreenContent()
+    waitForFormLoaded()
 
-    // Wait for loading to complete
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule
-          .onAllNodesWithTag(EditGroupScreenTags.GROUP_DESCRIPTION_TEXT_FIELD)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+    // Photo section should be displayed (actual image loading may fail in Robolectric)
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.GROUP_PICTURE).assertIsDisplayed()
+  }
+
+  @Test
+  fun deletePhotoButton_isHidden_whenNoPhoto() {
+    setScreenContent()
+    waitForFormLoaded()
+
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.DELETE_PHOTO_BUTTON).assertDoesNotExist()
+  }
+
+  @Test
+  fun deletePhotoButton_isVisible_whenPhotoExists() {
+    val groupWithPhoto = createTestGroup(photoUrl = "https://example.com/existing.jpg")
+    fakeRepository.addGroupForTest(groupWithPhoto)
+    viewModel = EditGroupViewModel(fakeRepository)
+
+    setScreenContent()
+    waitForFormLoaded()
 
     composeTestRule
-        .onNodeWithTag(EditGroupScreenTags.GROUP_DESCRIPTION_TEXT_FIELD)
-        .performTextClearance()
+        .onNodeWithTag(EditGroupScreenTags.DELETE_PHOTO_BUTTON)
+        .assertIsDisplayed()
+        .assertHasClickAction()
+  }
 
-    composeTestRule.waitForIdle()
+  @Test
+  fun deletePhotoButton_click_removesPhotoAndHidesButton() {
+    val groupWithPhoto = createTestGroup(photoUrl = "https://example.com/existing.jpg")
+    fakeRepository.addGroupForTest(groupWithPhoto)
+    viewModel = EditGroupViewModel(fakeRepository)
 
-    composeTestRule.onNodeWithTag(EditGroupScreenTags.SAVE_BUTTON).assertIsEnabled()
+    setScreenContent()
+    waitForFormLoaded()
+
+    composeTestRule.onNodeWithTag(EditGroupScreenTags.DELETE_PHOTO_BUTTON).performClick()
+
+    waitForDeleteButtonGone()
+
+    // Verify placeholder is shown after deletion
+    composeTestRule
+        .onNodeWithTag(GroupPhotoImageTestTags.GROUP_PHOTO_PLACEHOLDER)
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun editPhotoButton_isAlwaysVisible() {
+    setScreenContent()
+    waitForFormLoaded()
+
+    composeTestRule
+        .onNodeWithTag(EditGroupScreenTags.EDIT_PHOTO_BUTTON)
+        .assertIsDisplayed()
+        .assertHasClickAction()
+  }
+
+  @Test
+  fun editPhotoButton_isVisibleEvenWithPhoto() {
+    val groupWithPhoto = createTestGroup(photoUrl = "https://example.com/existing.jpg")
+    fakeRepository.addGroupForTest(groupWithPhoto)
+    viewModel = EditGroupViewModel(fakeRepository)
+
+    setScreenContent()
+    waitForFormLoaded()
+
+    composeTestRule
+        .onNodeWithTag(EditGroupScreenTags.EDIT_PHOTO_BUTTON)
+        .assertIsDisplayed()
+        .assertHasClickAction()
   }
 }
