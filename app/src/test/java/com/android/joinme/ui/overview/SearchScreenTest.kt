@@ -125,7 +125,6 @@ class SearchScreenTest {
     composeTestRule.onNodeWithText("Social").assertIsDisplayed()
   }
 
-
   @Test
   fun searchScreen_searchFieldClearsText() {
     setupScreen()
@@ -166,7 +165,6 @@ class SearchScreenTest {
     composeTestRule.onNodeWithText("Activity").assertIsDisplayed()
     composeTestRule.onNodeWithText("Sport").assertIsDisplayed()
   }
-
 
   @Test
   fun searchScreen_viewModelIntegration_queryUpdates() {
@@ -533,7 +531,6 @@ class SearchScreenTest {
     // Search text field should have proper test tag
     composeTestRule.onNodeWithTag(SearchScreenTestTags.SEARCH_TEXT_FIELD).assertIsDisplayed()
   }
-
 
   // Fake implementations for testing
   private class FakeEventRepository : com.android.joinme.model.event.EventsRepository {
