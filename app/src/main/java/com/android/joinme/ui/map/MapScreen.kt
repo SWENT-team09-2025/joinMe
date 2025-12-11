@@ -58,6 +58,7 @@ import com.android.joinme.ui.navigation.Screen
 import com.android.joinme.ui.navigation.Tab
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.customColors
+import com.android.joinme.ui.theme.getUserColor
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -90,12 +91,55 @@ object MapScreenTestTags {
   fun getTestTagForMarker(id: String): String = "marker$id"
 }
 
+/** Diameter of the circle marker for shared locations */
+const val CIRCLE_MARKER_SIZE = 48
+
 const val LOW_SATURATION_THRESHOLD = 0.1f
 const val LOW_VALUE_THRESHOLD = 0.1f
 const val ONE_S_IN_MS = 1000
 const val ZOOM_PROPORTION = 15f
 const val CONTAINER_COLOR = true
 const val NOT_CONTAINER_COLOR = false
+const val BORDER_WIDTH_DP = 4
+
+/**
+ * Creates a circular marker icon for shared locations based on user color.
+ *
+ * Creates a filled circle with a white border to represent a user's shared location on the map,
+ * similar to the current location indicator but with the user's unique color.
+ *
+ * @param color The user's color for the circle
+ * @return A BitmapDescriptor for the circle marker
+ */
+internal fun createCircleMarker(color: Color): BitmapDescriptor {
+  val bitmap = createBitmap(CIRCLE_MARKER_SIZE, CIRCLE_MARKER_SIZE)
+  val canvas = Canvas(bitmap)
+
+  // Draw outer white circle (border)
+  val borderPaint =
+      Paint().apply {
+        this.color = android.graphics.Color.WHITE
+        isAntiAlias = true
+        style = Paint.Style.FILL
+      }
+  canvas.drawCircle(
+      CIRCLE_MARKER_SIZE / 2f, CIRCLE_MARKER_SIZE / 2f, CIRCLE_MARKER_SIZE / 2f, borderPaint)
+
+  // Draw inner colored circle
+  val circlePaint =
+      Paint().apply {
+        this.color = color.toArgb()
+        isAntiAlias = true
+        style = Paint.Style.FILL
+      }
+  canvas.drawCircle(
+      CIRCLE_MARKER_SIZE / 2f,
+      CIRCLE_MARKER_SIZE / 2f,
+      (CIRCLE_MARKER_SIZE / 2f) - BORDER_WIDTH_DP,
+      circlePaint)
+
+  return BitmapDescriptorFactory.fromBitmap(bitmap)
+}
 
 /**
  * Creates a marker icon for Google Maps based on the given color.
@@ -151,6 +195,46 @@ internal fun createMarkerForColor(color: Color): BitmapDescriptor {
   } else {
     // Use default marker with hue
     BitmapDescriptorFactory.defaultMarker(hsv[0])
+  }
+}
+
+/**
+ * Handles camera positioning when centering on a specific location.
+ *
+ * This is used when navigating to a specific location (e.g., from a chat location message). It
+ * centers the map on the provided coordinates and disables user following.
+ *
+ * @param initialLatitude Optional latitude to center on
+ * @param initialLongitude Optional longitude to center on
+ * @param cameraPositionState Camera position state to animate
+ * @param onProgrammaticMoveStart Callback when programmatic move starts
+ * @param onProgrammaticMoveEnd Callback when programmatic move ends
+ * @param onDisableFollowing Callback to disable user following
+ */
+@Composable
+private fun MapInitialLocationEffect(
+    initialLatitude: Double?,
+    initialLongitude: Double?,
+    cameraPositionState: com.google.maps.android.compose.CameraPositionState,
+    onProgrammaticMoveStart: () -> Unit,
+    onProgrammaticMoveEnd: () -> Unit,
+    onDisableFollowing: () -> Unit
+) {
+  LaunchedEffect(initialLatitude, initialLongitude) {
+    if (initialLatitude != null && initialLongitude != null) {
+      try {
+        onProgrammaticMoveStart()
+        onDisableFollowing() // Don't follow user when viewing specific location
+        cameraPositionState.animate(
+            update =
+                CameraUpdateFactory.newLatLngZoom(LatLng(initialLatitude, initialLongitude), 16f),
+            durationMs = 1000)
+      } catch (e: Exception) {
+        // Animation was interrupted or failed
+      } finally {
+        onProgrammaticMoveEnd()
+      }
+    }
   }
 }
 
@@ -361,6 +445,51 @@ private fun FilterBottomSheet(
 }
 
 /**
+ * Displays a circle marker at the specified location when enabled.
+ *
+ * This is used to show a colored circle marker for locations shared in chat messages. The circle
+ * uses the user's unique color (based on their userId) to match their chat message bubbles.
+ *
+ * Note: Does not show marker for current user's shared location, as the blue "my location"
+ * indicator already shows their position.
+ *
+ * @param showLocationMarker Whether to show the location marker
+ * @param initialLatitude The latitude of the location to mark
+ * @param initialLongitude The longitude of the location to mark
+ * @param userId The user ID who shared this location (used to generate their unique color)
+ * @param currentUserId The current user's ID (to avoid duplicate markers)
+ */
+@Composable
+private fun ShowLocationMarker(
+    showLocationMarker: Boolean,
+    initialLatitude: Double?,
+    initialLongitude: Double?,
+    userId: String?,
+    currentUserId: String?
+) {
+  // Don't show marker if it's the current user (their blue location circle is already visible)
+  if (showLocationMarker &&
+      initialLatitude != null &&
+      initialLongitude != null &&
+      userId != null &&
+      userId != currentUserId) {
+    val context = LocalContext.current
+    val locationPosition = LatLng(initialLatitude, initialLongitude)
+
+    // Get the user's color (same as their chat bubble color)
+    val (userColor, _) = getUserColor(userId)
+    val circleMarkerIcon = createCircleMarker(userColor)
+
+    Marker(
+        state = MarkerState(position = locationPosition),
+        icon = circleMarkerIcon,
+        tag = "locationMarker",
+        title = context.getString(R.string.shared_location_marker_title),
+        snippet = context.getString(R.string.shared_location_marker_snippet))
+  }
+}
+
+/**
  * Displays the main map screen of the application.
  *
  * This composable handles:
@@ -368,13 +497,29 @@ private fun FilterBottomSheet(
  * - Requesting and managing location permissions.
  * - Displaying a Google Map centered on the user's location (if available).
  * - Rendering a bottom navigation menu and a filter button overlay.
+ * - Optionally centering on a specific location (e.g., from a chat message).
  *
  * @param viewModel The [MapViewModel] managing location and UI state.
  * @param navigationActions Optional navigation actions for switching tabs or screens.
+ * @param initialLatitude Optional latitude to center the map on initially.
+ * @param initialLongitude Optional longitude to center the map on initially.
+ * @param showLocationMarker Whether to show a marker at the initial location (e.g., for chat
+ *   locations).
+ * @param sharedLocationUserId User ID of the person who shared the location (for colored circle
+ *   marker).
+ * @param currentUserId Current user's ID (to avoid showing duplicate marker for own location).
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
-fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: NavigationActions? = null) {
+fun MapScreen(
+    viewModel: MapViewModel = viewModel(),
+    navigationActions: NavigationActions? = null,
+    initialLatitude: Double? = null,
+    initialLongitude: Double? = null,
+    showLocationMarker: Boolean = false,
+    sharedLocationUserId: String? = null,
+    currentUserId: String? = null
+) {
   val context = LocalContext.current
 
   // --- Collect the current UI state from the ViewModel ---
@@ -427,6 +572,15 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
 
   // --- Mark map as initialized once the camera position state is ready ---
   LaunchedEffect(cameraPositionState) { isMapInitialized = true }
+
+  // --- Center map on specific location if provided (e.g., from chat location message) ---
+  MapInitialLocationEffect(
+      initialLatitude = initialLatitude,
+      initialLongitude = initialLongitude,
+      cameraPositionState = cameraPositionState,
+      onProgrammaticMoveStart = { isProgrammaticMove = true },
+      onProgrammaticMoveEnd = { isProgrammaticMove = false },
+      onDisableFollowing = { viewModel.disableFollowingUser() })
 
   // --- Center the map when the user location changes (only if following is enabled) ---
   LaunchedEffect(currentLat, currentLng, isFollowingUser) {
@@ -514,6 +668,14 @@ fun MapScreen(viewModel: MapViewModel = viewModel(), navigationActions: Navigati
                             navigationActions?.navigateTo(Screen.SerieDetails(serie.serieId))
                           })
                     }
+
+                    // Show marker for initial location (e.g., from chat location messages)
+                    ShowLocationMarker(
+                        showLocationMarker = showLocationMarker,
+                        initialLatitude = initialLatitude,
+                        initialLongitude = initialLongitude,
+                        userId = sharedLocationUserId,
+                        currentUserId = currentUserId)
                   }
 
               val hasFilters = hasActiveFilters(filterState)

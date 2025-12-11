@@ -683,6 +683,15 @@ object Dimens {
   object Chat {
     /** 280dp - Maximum width for message bubbles (70% of typical phone screen) */
     val messageBubbleMaxWidth: Dp = 280.dp
+
+    /** 0.55 - Height multiplier for location message preview (relative to bubble width) */
+    const val locationMessageHeightMultiplier: Float = 0.55f
+
+    /** 0.67 - Height multiplier for location preview dialog (relative to bubble width) */
+    const val locationPreviewDialogHeightMultiplier: Float = 0.67f
+
+    /** 15f - Zoom level for location preview maps */
+    const val locationPreviewZoom: Float = 15f
   }
 
   /**

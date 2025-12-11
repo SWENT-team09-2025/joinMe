@@ -615,12 +615,23 @@ fun JoinMe(
     // Map
     // ============================================================================
     navigation(
-        startDestination = Screen.Map.route,
-        route = Screen.Map.name,
+        startDestination = Screen.Map.defaultRoute,
+        route = Screen.Map().name,
     ) {
       composable(Screen.Map.route) { backStackEntry ->
         val mapViewModel: MapViewModel = viewModel(backStackEntry)
-        MapScreen(viewModel = mapViewModel, navigationActions = navigationActions)
+        val lat = backStackEntry.arguments?.getString("lat")?.toDoubleOrNull()
+        val lon = backStackEntry.arguments?.getString("lon")?.toDoubleOrNull()
+        val showMarker = backStackEntry.arguments?.getString("marker")?.toBoolean() ?: false
+        val userId = backStackEntry.arguments?.getString("userId")
+        MapScreen(
+            viewModel = mapViewModel,
+            navigationActions = navigationActions,
+            initialLatitude = lat,
+            initialLongitude = lon,
+            showLocationMarker = showMarker,
+            sharedLocationUserId = userId,
+            currentUserId = currentUserId)
       }
     }
 
@@ -825,7 +836,18 @@ fun JoinMe(
               currentUserName = currentUserName,
               viewModel = chatViewModel,
               totalParticipants = totalParticipants,
-              onLeaveClick = { navigationActions.goBack() })
+              onLeaveClick = { navigationActions.goBack() },
+              onNavigateToMap = { location, senderId ->
+                // Navigate to map screen centered on the location with a marker
+                navigationActions.navigateTo(
+                    Screen.Map(
+                        location.latitude,
+                        location.longitude,
+                        showMarker = true,
+                        userId = senderId))
+                Toast.makeText(context, "Viewing location: ${location.name}", Toast.LENGTH_SHORT)
+                    .show()
+              })
         } else {
           Toast.makeText(context, "Chat ID or title is null", Toast.LENGTH_SHORT).show()
         }

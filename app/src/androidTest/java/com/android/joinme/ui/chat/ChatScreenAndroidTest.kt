@@ -23,6 +23,45 @@ class ChatScreenAndroidTest {
   private val testUserId = "user1"
   private val testChatId = "chat1"
 
+  // Common test dependencies
+  private lateinit var repo: FakeChatRepository
+  private lateinit var profileRepo: FakeProfileRepository
+  private lateinit var viewModel: ChatViewModel
+
+  // Common test location
+  private val epflLocation =
+      com.android.joinme.model.map.Location(
+          latitude = 46.5197, longitude = 6.6323, name = "EPFL Campus")
+
+  @org.junit.Before
+  fun setUp() {
+    repo = FakeChatRepository(uploadShouldSucceed = true)
+    profileRepo = FakeProfileRepository()
+    viewModel = ChatViewModel(repo, profileRepo)
+  }
+
+  /**
+   * Helper function to compose LocationPreviewDialog with test data.
+   *
+   * @param userLocation Location to preview
+   * @param onDismiss Callback when dialog is dismissed
+   * @param onSendLocation Callback when send button is clicked
+   */
+  private fun composeLocationPreviewDialog(
+      userLocation: com.android.joinme.model.map.UserLocation =
+          com.android.joinme.model.map.UserLocation(
+              latitude = 46.5197, longitude = 6.6323, accuracy = 10f),
+      onDismiss: () -> Unit = {},
+      onSendLocation: () -> Unit = {}
+  ) {
+    composeTestRule.setContent {
+      LocationPreviewDialog(
+          userLocation = userLocation, onDismiss = onDismiss, onSendLocation = onSendLocation)
+    }
+    composeTestRule.waitForIdle()
+    Thread.sleep(1000) // Wait for Maps to initialize
+  }
+
   // A tiny in-memory repo that mimics what the ViewModel needs
   private class FakeChatRepository(
       private var uploadShouldSucceed: Boolean = true,
@@ -123,10 +162,6 @@ class ChatScreenAndroidTest {
    */
   @Test
   fun chatScreen_imageMessages_renderCorrectly() = runTest {
-    val repo = FakeChatRepository(uploadShouldSucceed = true)
-    val profileRepo = FakeProfileRepository()
-    val viewModel = ChatViewModel(repo, profileRepo)
-
     // Create multiple image messages to test IMAGE type handling
     val messages =
         listOf(
@@ -181,10 +216,6 @@ class ChatScreenAndroidTest {
    */
   @Test
   fun chatScreen_imageMessage_opensFullScreenViewer() = runTest {
-    val repo = FakeChatRepository(uploadShouldSucceed = true)
-    val profileRepo = FakeProfileRepository()
-    val viewModel = ChatViewModel(repo, profileRepo)
-
     val messages =
         listOf(
             Message(
@@ -236,10 +267,6 @@ class ChatScreenAndroidTest {
    */
   @Test
   fun chatScreen_photoSourceDialog_opensAndDisplaysUIElements() {
-    val repo = FakeChatRepository(uploadShouldSucceed = true)
-    val profileRepo = FakeProfileRepository()
-    val viewModel = ChatViewModel(repo, profileRepo)
-
     composeTestRule.setContent {
       ChatScreen(
           chatId = testChatId,
@@ -283,10 +310,6 @@ class ChatScreenAndroidTest {
    */
   @Test
   fun chatScreen_editMessageDialog_opensAndEditsMessage() = runTest {
-    val repo = FakeChatRepository(uploadShouldSucceed = true)
-    val profileRepo = FakeProfileRepository()
-    val viewModel = ChatViewModel(repo, profileRepo)
-
     // Create a message from the current user that can be edited
     val messages =
         listOf(
@@ -357,10 +380,6 @@ class ChatScreenAndroidTest {
   /** Tests edit message dialog cancel functionality. */
   @Test
   fun chatScreen_editMessageDialog_cancelKeepsOriginalMessage() = runTest {
-    val repo = FakeChatRepository(uploadShouldSucceed = true)
-    val profileRepo = FakeProfileRepository()
-    val viewModel = ChatViewModel(repo, profileRepo)
-
     val messages =
         listOf(
             Message(
@@ -416,10 +435,6 @@ class ChatScreenAndroidTest {
    */
   @Test
   fun chatScreen_fullScreenImageViewer_displaysErrorState() = runTest {
-    val repo = FakeChatRepository(uploadShouldSucceed = true)
-    val profileRepo = FakeProfileRepository()
-    val viewModel = ChatViewModel(repo, profileRepo)
-
     // Use an invalid URL that will fail to load in Coil
     val messages =
         listOf(
@@ -466,5 +481,264 @@ class ChatScreenAndroidTest {
     // Close the viewer
     composeTestRule.onNodeWithContentDescription("Close").assertExists()
     composeTestRule.waitForIdle()
+  }
+
+  /**
+   * Tests that LOCATION type messages render correctly with Google Maps and that mixed message
+   * types (text, image, location) coexist properly in real Android environment. Covers the
+   * when(message.type) branch for MessageType.LOCATION and verifies all complex components (Coil
+   * for images, Maps for locations) work together.
+   */
+  @Test
+  fun chatScreen_locationAndMixedMessages_renderCorrectlyWithMaps() = runTest {
+    val messages =
+        listOf(
+            // Image message
+            Message(
+                id = "img1",
+                conversationId = testChatId,
+                senderId = "user2",
+                senderName = "Bob",
+                content = "https://picsum.photos/200/200",
+                timestamp = System.currentTimeMillis() - 3000,
+                type = MessageType.IMAGE),
+            // Location message from current user
+            Message(
+                id = "loc1",
+                conversationId = testChatId,
+                senderId = testUserId,
+                senderName = "Alice",
+                content = "static_map_url",
+                timestamp = System.currentTimeMillis() - 2000,
+                type = MessageType.LOCATION,
+                location = epflLocation),
+            // Location message from other user
+            Message(
+                id = "loc2",
+                conversationId = testChatId,
+                senderId = "user2",
+                senderName = "Bob",
+                content = "static_map_url",
+                timestamp = System.currentTimeMillis() - 1500,
+                type = MessageType.LOCATION,
+                location = epflLocation.copy(name = "Meeting Point")),
+            // Text messages
+            Message(
+                id = "txt1",
+                conversationId = testChatId,
+                senderId = testUserId,
+                senderName = "Alice",
+                content = "Check out this place!",
+                timestamp = System.currentTimeMillis() - 1000,
+                type = MessageType.TEXT),
+            Message(
+                id = "txt2",
+                conversationId = testChatId,
+                senderId = "user2",
+                senderName = "Bob",
+                content = "Looks great!",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.TEXT))
+
+    repo.setMessages(messages)
+
+    composeTestRule.setContent {
+      ChatScreen(
+          chatId = testChatId,
+          chatTitle = "Test Chat",
+          currentUserId = testUserId,
+          currentUserName = "Alice",
+          viewModel = viewModel)
+    }
+
+    composeTestRule.waitForIdle()
+    Thread.sleep(2000) // Wait for Coil and Maps to initialize
+
+    // Verify all message containers exist
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("img1")).assertExists()
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("loc1"))
+        .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("loc2"))
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("txt1")).assertExists()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("txt2")).assertExists()
+
+    // Verify location names are displayed
+    composeTestRule.onNodeWithText("EPFL Campus", useUnmergedTree = true).assertExists()
+    composeTestRule.onNodeWithText("Meeting Point", useUnmergedTree = true).assertExists()
+
+    // Verify text content
+    composeTestRule.onNodeWithText("Check out this place!", useUnmergedTree = true).assertExists()
+    composeTestRule.onNodeWithText("Looks great!", useUnmergedTree = true).assertExists()
+
+    // Verify location previews exist (there are 2 location messages)
+    composeTestRule
+        .onAllNodesWithTag(ChatScreenTestTags.LOCATION_MESSAGE_PREVIEW)
+        .assertCountEquals(2)
+
+    // Note: Don't assert on "Bob" text as it appears in multiple messages (image, location, text)
+  }
+
+  /**
+   * Tests that clicking on a location message triggers the navigation callback. This test focuses
+   * solely on the click behavior since display is already tested in
+   * chatScreen_locationAndMixedMessages_renderCorrectlyWithMaps.
+   */
+  @Test
+  fun chatScreen_locationMessage_clickTriggersNavigation() = runTest {
+    var navigationCallbackInvoked = false
+    var navigatedLocation: com.android.joinme.model.map.Location? = null
+
+    val testLocation =
+        com.android.joinme.model.map.Location(
+            latitude = 46.5197, longitude = 6.6323, name = "Test Location")
+
+    val messages =
+        listOf(
+            Message(
+                id = "loc1",
+                conversationId = testChatId,
+                senderId = testUserId,
+                senderName = "Alice",
+                content = "static_map_url",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.LOCATION,
+                location = testLocation))
+
+    repo.setMessages(messages)
+
+    composeTestRule.setContent {
+      ChatScreen(
+          chatId = testChatId,
+          chatTitle = "Test Chat",
+          currentUserId = testUserId,
+          currentUserName = "Alice",
+          viewModel = viewModel,
+          onNavigateToMap = { location, _ ->
+            navigationCallbackInvoked = true
+            navigatedLocation = location
+          })
+    }
+
+    composeTestRule.waitForIdle()
+    Thread.sleep(3000) // Wait for Maps to fully initialize and become interactive
+
+    // Click on the location name text (more reliable than clicking on Maps)
+    composeTestRule.onNodeWithText("Test Location", useUnmergedTree = true).performClick()
+
+    composeTestRule.waitForIdle()
+    Thread.sleep(1000) // Give time for callback to execute
+
+    // Verify callback was invoked with correct location
+    assert(navigationCallbackInvoked) { "Navigation callback was not invoked" }
+    assert(navigatedLocation == testLocation) {
+      "Expected location $testLocation but got $navigatedLocation"
+    }
+  }
+
+  /**
+   * Tests the AttachmentMenu location option displays correctly. Covers: - Location option is
+   * displayed and clickable in AttachmentMenu
+   *
+   * Note: Clicking the location option triggers rememberLocationPermissionsLauncher in
+   * ChatImageLaunchers.kt which is excluded from coverage (requires real location permissions).
+   */
+  @Test
+  fun chatScreen_attachmentMenu_locationOptionDisplayed() = runTest {
+    composeTestRule.setContent {
+      ChatScreen(
+          chatId = testChatId,
+          chatTitle = "Test Chat",
+          currentUserId = testUserId,
+          currentUserName = "Alice",
+          viewModel = viewModel)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Click attachment button to open menu
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify attachment menu is displayed with all options
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_PHOTO).assertExists()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_LOCATION).assertExists()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_POLL).assertExists()
+
+    // Verify location option is displayed with proper icon and label, and is clickable
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.ATTACHMENT_LOCATION)
+        .assertExists()
+        .assertHasClickAction()
+    composeTestRule.onNodeWithContentDescription("Location").assertExists()
+  }
+
+  /**
+   * Tests LocationPreviewDialog displays correctly with all UI elements. This test composes the
+   * dialog directly with test data to verify: - Dialog displays with correct structure and test
+   * tags - Map preview is shown - Location coordinates are displayed - Send and Cancel buttons are
+   * present
+   */
+  @Test
+  fun chatScreen_locationPreviewDialog_displaysCorrectly() = runTest {
+    composeLocationPreviewDialog()
+
+    // Verify dialog is displayed
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.LOCATION_PREVIEW_DIALOG).assertIsDisplayed()
+
+    // Verify title
+    composeTestRule.onNodeWithText("Location Preview").assertIsDisplayed()
+
+    // Verify location coordinates are displayed
+    composeTestRule.onNodeWithText("46.5197, 6.6323").assertIsDisplayed()
+
+    // Verify map preview exists
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.LOCATION_PREVIEW_MAP).assertExists()
+
+    // Verify buttons exist
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.LOCATION_PREVIEW_SEND_BUTTON)
+        .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.LOCATION_PREVIEW_CANCEL_BUTTON)
+        .assertIsDisplayed()
+
+    // Verify Send Location button text
+    composeTestRule.onNodeWithText("Send Location").assertIsDisplayed()
+
+    // Verify Cancel button text
+    composeTestRule.onNodeWithText("Cancel").assertIsDisplayed()
+  }
+
+  /** Tests LocationPreviewDialog cancel button dismisses the dialog. */
+  @Test
+  fun chatScreen_locationPreviewDialog_cancelButtonDismisses() = runTest {
+    var dialogDismissed = false
+    composeLocationPreviewDialog(onDismiss = { dialogDismissed = true })
+
+    // Click cancel button
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.LOCATION_PREVIEW_CANCEL_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify dialog was dismissed
+    assert(dialogDismissed) { "Cancel button should dismiss the dialog" }
+  }
+
+  /** Tests LocationPreviewDialog send button triggers location send. */
+  @Test
+  fun chatScreen_locationPreviewDialog_sendButtonTriggersLocationSend() = runTest {
+    var locationSent = false
+    composeLocationPreviewDialog(onSendLocation = { locationSent = true })
+
+    // Click send button
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.LOCATION_PREVIEW_SEND_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify location send was triggered
+    assert(locationSent) { "Send button should trigger location send" }
   }
 }

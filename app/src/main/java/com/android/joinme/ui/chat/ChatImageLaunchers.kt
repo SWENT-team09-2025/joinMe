@@ -17,6 +17,17 @@ import java.io.File
 import kotlinx.coroutines.launch
 
 /**
+ * Helper function to show a Toast message.
+ *
+ * @param context Android context
+ * @param message Message to display
+ * @param duration Toast duration (default: LENGTH_SHORT)
+ */
+private fun showToast(context: Context, message: String, duration: Int = Toast.LENGTH_SHORT) {
+  Toast.makeText(context, message, duration).show()
+}
+
+/**
  * Untestable launcher code extracted from ChatScreen.
  *
  * This file contains ActivityResultLauncher callbacks that cannot be tested in unit or
@@ -69,14 +80,10 @@ fun rememberImagePickerLauncher(
               context = context,
               imageUri = uri,
               senderName = currentUserName,
-              onSuccess = {
-                coroutineScope.launch {
-                  Toast.makeText(context, imageSentSuccess, Toast.LENGTH_SHORT).show()
-                }
-              },
+              onSuccess = { coroutineScope.launch { showToast(context, imageSentSuccess) } },
               onError = { error ->
                 android.util.Log.e("ChatScreen", "Upload ERROR callback triggered: $error")
-                coroutineScope.launch { Toast.makeText(context, error, Toast.LENGTH_LONG).show() }
+                coroutineScope.launch { showToast(context, error, Toast.LENGTH_LONG) }
               })
           onDismiss()
         } else {
@@ -113,14 +120,10 @@ fun rememberCameraLauncher(
               context = context,
               imageUri = cameraImageUri()!!,
               senderName = currentUserName,
-              onSuccess = {
-                coroutineScope.launch {
-                  Toast.makeText(context, imageSentSuccess, Toast.LENGTH_SHORT).show()
-                }
-              },
+              onSuccess = { coroutineScope.launch { showToast(context, imageSentSuccess) } },
               onError = { error ->
                 android.util.Log.e("ChatScreen", "Camera upload ERROR: $error")
-                coroutineScope.launch { Toast.makeText(context, error, Toast.LENGTH_LONG).show() }
+                coroutineScope.launch { showToast(context, error, Toast.LENGTH_LONG) }
               })
           onDismiss()
         } else {
@@ -152,8 +155,50 @@ fun rememberCameraPermissionLauncher(
           cameraLauncher.launch(uri)
         } else {
           // Permission denied
-          Toast.makeText(context, "Camera permission is required to take photos", Toast.LENGTH_LONG)
-              .show()
+          showToast(context, "Camera permission is required to take photos", Toast.LENGTH_LONG)
+        }
+      })
+}
+
+/**
+ * Creates a location permissions launcher for accessing user location.
+ *
+ * @param onLocationRetrieved Callback invoked when location is successfully retrieved
+ * @return ActivityResultLauncher for requesting multiple location permissions
+ */
+@Composable
+fun rememberLocationPermissionsLauncher(
+    onLocationRetrieved: (com.android.joinme.model.map.UserLocation) -> Unit
+): ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>> {
+  val context = LocalContext.current
+  val locationPermissionRequired = context.getString(R.string.location_permission_required)
+  val coroutineScope = rememberCoroutineScope()
+
+  return rememberLauncherForActivityResult(
+      contract = ActivityResultContracts.RequestMultiplePermissions(),
+      onResult = { permissions ->
+        val allGranted = permissions.values.all { it }
+        if (allGranted) {
+          // All location permissions granted, fetch location
+          coroutineScope.launch {
+            try {
+              val locationService =
+                  com.android.joinme.ui.map.userLocation.LocationServiceImpl(context)
+              val location = locationService.getCurrentLocation()
+              if (location != null) {
+                onLocationRetrieved(location)
+              } else {
+                showToast(
+                    context,
+                    context.getString(R.string.failed_to_send_location, "Location unavailable"))
+              }
+            } catch (e: Exception) {
+              showToast(context, context.getString(R.string.failed_to_send_location, e.message))
+            }
+          }
+        } else {
+          // Permissions denied
+          showToast(context, locationPermissionRequired, Toast.LENGTH_LONG)
         }
       })
 }
