@@ -25,15 +25,6 @@ interface SerieDao {
   @Query("SELECT * FROM series") suspend fun getAllSeries(): List<SerieEntity>
 
   /**
-   * Retrieves all series owned by a specific user.
-   *
-   * @param userId The unique identifier of the serie owner
-   * @return List of series owned by the specified user
-   */
-  @Query("SELECT * FROM series WHERE ownerId = :userId")
-  suspend fun getSeriesByOwner(userId: String): List<SerieEntity>
-
-  /**
    * Inserts or updates a single serie in the database.
    *
    * If a serie with the same ID already exists, it will be replaced with the new data.

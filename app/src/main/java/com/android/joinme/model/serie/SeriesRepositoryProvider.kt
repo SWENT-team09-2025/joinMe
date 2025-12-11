@@ -3,6 +3,7 @@ package com.android.joinme.model.serie
 import android.content.Context
 import com.android.joinme.network.NetworkMonitor
 import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.firestore
 
 /**
@@ -43,12 +44,19 @@ object SeriesRepositoryProvider {
    *
    * @deprecated Use getRepository(context) instead for offline support
    */
-  @Deprecated(
-      "Use getRepository(context) instead. This property doesn't support offline caching.",
-      ReplaceWith("getRepository(context)"))
   val repository: SeriesRepository
     get() {
-      return if (isTestEnvironment()) _localRepository else getFirestoreRepo()
+      if (isTestEnvironment()) return _localRepository
+
+      // Try to get context from FirebaseApp
+      val context =
+          try {
+            FirebaseApp.getInstance().applicationContext
+          } catch (e: Exception) {
+            throw e
+          }
+
+      return getRepository(context)
     }
 
   private fun getFirestoreRepo(): SeriesRepository {

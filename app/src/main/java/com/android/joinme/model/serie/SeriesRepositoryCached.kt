@@ -10,6 +10,7 @@ import com.android.joinme.model.utils.Visibility
 import com.android.joinme.network.NetworkMonitor
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.withTimeout
 
 /**
  * Cached implementation of SeriesRepository. Implements offline-first read strategy and online-only
@@ -37,13 +38,18 @@ class SeriesRepositoryCached(
   private val database = AppDatabase.getDatabase(context)
   private val serieDao = database.serieDao()
 
+  companion object {
+    /** Timeout for Firestore operations in milliseconds (3 seconds) */
+    private const val FIRESTORE_TIMEOUT_MS = 3000L
+  }
+
   override fun getNewSerieId(): String = firestoreRepo.getNewSerieId() // NOSONAR
 
   override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> {
     // Try to fetch from Firestore if online
     if (networkMonitor.isOnline()) {
       try {
-        val series = firestoreRepo.getAllSeries(serieFilter)
+        val series = withTimeout(FIRESTORE_TIMEOUT_MS) { firestoreRepo.getAllSeries(serieFilter) }
         if (series.isNotEmpty()) {
           // Cache the fetched series
           serieDao.insertSeries(series.map { it.toEntity() })
@@ -111,7 +117,9 @@ class SeriesRepositoryCached(
     }
 
     return try {
-      firestoreRepo.getSerie(serieId).also { serie -> serieDao.insertSerie(serie.toEntity()) }
+      withTimeout(FIRESTORE_TIMEOUT_MS) {
+        firestoreRepo.getSerie(serieId).also { serie -> serieDao.insertSerie(serie.toEntity()) }
+      }
     } catch (e: Exception) {
       cached ?: throw e
     }
@@ -141,7 +149,7 @@ class SeriesRepositoryCached(
   override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> {
     if (networkMonitor.isOnline()) {
       try {
-        val series = firestoreRepo.getSeriesByIds(seriesIds)
+        val series = withTimeout(FIRESTORE_TIMEOUT_MS) { firestoreRepo.getSeriesByIds(seriesIds) }
         if (series.isNotEmpty()) {
           serieDao.insertSeries(series.map { it.toEntity() })
         }
