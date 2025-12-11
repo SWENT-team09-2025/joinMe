@@ -205,4 +205,8 @@
     <!-- Group message -->
     <string name="currently_not">You are currently not</string>
     <string name="assigned_to_group">assigned to a group…</string>
+
+    <!-- Activity Group Screen -->
+    <string name="group_activities_title">%1$s Activities</string>
+    <string name="group_activities_default">Group Activities</string>
 </resources>

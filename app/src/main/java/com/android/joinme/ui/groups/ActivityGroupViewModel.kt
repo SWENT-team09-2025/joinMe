@@ -2,18 +2,21 @@ package com.android.joinme.ui.groups
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
+import com.android.joinme.model.event.isExpired
+import com.android.joinme.model.eventItem.EventItem
 import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.groups.GroupRepositoryProvider
-import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
+import com.android.joinme.model.serie.isExpired
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
+/** Note: This file was co-written with the help of AI (Claude). */
 
 /**
  * UI state for the ActivityGroup screen.
@@ -21,14 +24,14 @@ import kotlinx.coroutines.launch
  * Represents the current state of group activities including events and series.
  *
  * @property isLoading Whether the data is currently being loaded
- * @property events List of events associated with the group
- * @property series List of series associated with the group
+ * @property groupName The name of the group
+ * @property items List of EventItem (events and series mixed) associated with the group
  * @property error Error message if loading failed, null otherwise
  */
 data class ActivityGroupUiState(
     val isLoading: Boolean = false,
-    val events: List<Event> = emptyList(),
-    val series: List<Serie> = emptyList(),
+    val groupName: String = "",
+    val items: List<EventItem> = emptyList(),
     val error: String? = null
 )
 
@@ -69,7 +72,7 @@ class ActivityGroupViewModel(
         // Load events using the group's event IDs
         val loadedEvents =
             if (group.eventIds.isNotEmpty()) {
-              eventsRepository.getEventsByIds(group.eventIds)
+              eventsRepository.getEventsByIds(group.eventIds).filterNot { it.isExpired() }
             } else {
               emptyList()
             }
@@ -77,20 +80,32 @@ class ActivityGroupViewModel(
         // Load series using the group's serie IDs
         val loadedSeries =
             if (group.serieIds.isNotEmpty()) {
-              seriesRepository.getSeriesByIds(group.serieIds)
+              seriesRepository.getSeriesByIds(group.serieIds).filterNot { it.isExpired() }
             } else {
               emptyList()
             }
 
+        // Identify events that belong to series
+        val serieEventIds = loadedSeries.flatMap { it.eventIds }.toSet()
+
+        // Filter out standalone events (events not in any serie)
+        val standaloneEvents = loadedEvents.filterNot { it.eventId in serieEventIds }
+
+        // Create EventItems
+        val eventItems = standaloneEvents.map { EventItem.SingleEvent(it) }
+        val serieItems = loadedSeries.map { EventItem.EventSerie(it) }
+
+        // Combine all items and sort by date
+        val allItems = (eventItems + serieItems).sortedBy { it.date.toDate().time }
+
         _uiState.value =
             ActivityGroupUiState(
-                isLoading = false, events = loadedEvents, series = loadedSeries, error = null)
+                isLoading = false, groupName = group.name, items = allItems, error = null)
       } catch (e: Exception) {
         _uiState.value =
             ActivityGroupUiState(
                 isLoading = false,
-                events = emptyList(),
-                series = emptyList(),
+                items = emptyList(),
                 error = "Failed to load group activities: ${e.message}")
       }
     }

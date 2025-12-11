@@ -29,14 +29,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.R
 import com.android.joinme.model.event.Event
+import com.android.joinme.model.eventItem.EventItem
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.ui.components.EventCard
 import com.android.joinme.ui.components.SerieCard
 import com.android.joinme.ui.navigation.NavigationTestTags
 import com.android.joinme.ui.theme.Dimens
+
+/** Note: This file was co-written with the help of AI (Claude). */
 
 /**
  * Test tags for UI testing of the ActivityGroup screen components.
@@ -102,8 +107,8 @@ fun ActivityGroupScreen(
 ) {
   val context = LocalContext.current
   val uiState by activityGroupViewModel.uiState.collectAsState()
-  val events = uiState.events
-  val series = uiState.series
+  val items = uiState.items
+  val groupName = uiState.groupName
   val isLoading = uiState.isLoading
 
   // Trigger data load when screen is first displayed
@@ -119,9 +124,13 @@ fun ActivityGroupScreen(
         Column {
           CenterAlignedTopAppBar(
               modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
-              // TODO(#354): Replace with actual group name once fetched
               title = {
-                Text(text = "Group Activities", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    text =
+                        if (groupName.isNotEmpty())
+                            stringResource(R.string.group_activities_title, groupName)
+                        else stringResource(R.string.group_activities_default),
+                    style = MaterialTheme.typography.titleLarge)
               },
               navigationIcon = {
                 IconButton(
@@ -149,7 +158,7 @@ fun ActivityGroupScreen(
                     modifier = Modifier.testTag(ActivityGroupScreenTestTags.LOADING_INDICATOR))
               }
             }
-            events.isEmpty() && series.isEmpty() -> {
+            items.isEmpty() -> {
               // Empty state
               Column(
                   modifier = Modifier.fillMaxSize(),
@@ -164,29 +173,30 @@ fun ActivityGroupScreen(
                   }
             }
             else -> {
-              // Content state: Display all events and series
+              // Content state: Display all items (events and series mixed)
               LazyColumn(
                   contentPadding =
                       PaddingValues(
                           vertical = Dimens.Padding.small, horizontal = Dimens.Padding.medium),
                   modifier =
                       Modifier.fillMaxWidth().testTag(ActivityGroupScreenTestTags.ACTIVITY_LIST)) {
-                    // Render all events
-                    items(events.size) { index ->
-                      EventCard(
-                          modifier = Modifier.padding(vertical = Dimens.Padding.small),
-                          event = events[index],
-                          onClick = { onSelectedEvent(events[index].eventId) },
-                          testTag = ActivityGroupScreenTestTags.getTestTagForEvent(events[index]))
-                    }
-
-                    // Render all series
-                    items(series.size) { index ->
-                      SerieCard(
-                          modifier = Modifier.padding(vertical = Dimens.Padding.small),
-                          serie = series[index],
-                          onClick = { onSelectedSerie(series[index].serieId) },
-                          testTag = ActivityGroupScreenTestTags.getTestTagForSerie(series[index]))
+                    items(items.size) { index ->
+                      when (val item = items[index]) {
+                        is EventItem.SingleEvent -> {
+                          EventCard(
+                              modifier = Modifier.padding(vertical = Dimens.Padding.small),
+                              event = item.event,
+                              onClick = { onSelectedEvent(item.event.eventId) },
+                              testTag = ActivityGroupScreenTestTags.getTestTagForEvent(item.event))
+                        }
+                        is EventItem.EventSerie -> {
+                          SerieCard(
+                              modifier = Modifier.padding(vertical = Dimens.Padding.small),
+                              serie = item.serie,
+                              onClick = { onSelectedSerie(item.serie.serieId) },
+                              testTag = ActivityGroupScreenTestTags.getTestTagForSerie(item.serie))
+                        }
+                      }
                     }
                   }
             }
