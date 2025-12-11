@@ -1210,17 +1210,9 @@ class SerieDetailsScreenTest {
   }
 
   /** --- SHARE BUTTON TESTS --- */
-  @Test
-  fun activeUpcomingSerie_displaysShareButton() {
+  private fun setupSerieDetailsScreen(serie: Serie) {
     setup()
-    // Create an active serie with future end time
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.DAY_OF_YEAR, 7) // 7 days from now
-    val futureEndTime = Timestamp(calendar.time)
-
-    val serie = createTestSerie(ownerId = "owner123", lastEventEndTime = futureEndTime)
     fakeSeriesRepo.setSerie(serie)
-
     val viewModel = createViewModel()
 
     composeTestRule.setContent {
@@ -1233,36 +1225,31 @@ class SerieDetailsScreenTest {
           .fetchSemanticsNodes()
           .isNotEmpty()
     }
+  }
 
-    // Verify share button is displayed for active serie
+  @Test
+  fun activeUpcomingSerie_displaysShareButton() {
+    val futureEndTime =
+        Timestamp(Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 7) }.time)
+    setupSerieDetailsScreen(createTestSerie(ownerId = "owner123", lastEventEndTime = futureEndTime))
     composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertIsDisplayed()
   }
 
   @Test
   fun expiredSerie_hidesShareButton() {
-    setup()
-    // Create an expired serie with past end time
-    val calendar = Calendar.getInstance()
-    calendar.add(Calendar.HOUR, -2) // 2 hours ago
-    val pastEndTime = Timestamp(calendar.time)
+    val pastEndTime = Timestamp(Calendar.getInstance().apply { add(Calendar.HOUR, -2) }.time)
+    setupSerieDetailsScreen(createTestSerie(ownerId = "owner123", lastEventEndTime = pastEndTime))
+    composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertDoesNotExist()
+  }
 
-    val expiredSerie = createTestSerie(ownerId = "owner123", lastEventEndTime = pastEndTime)
-    fakeSeriesRepo.setSerie(expiredSerie)
-
-    val viewModel = createViewModel()
-
-    composeTestRule.setContent {
-      SerieDetailsScreen(serieId = expiredSerie.serieId, serieDetailsViewModel = viewModel)
-    }
-
-    composeTestRule.waitUntil(timeoutMillis = 3000) {
-      composeTestRule
-          .onAllNodesWithTag(SerieDetailsScreenTestTags.SERIE_TITLE)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-
-    // Verify share button is NOT displayed for expired serie
+  @Test
+  fun groupSerie_hidesShareButton() {
+    val futureEndTime =
+        Timestamp(Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 7) }.time)
+    val groupSerie =
+        createTestSerie(ownerId = "owner123", lastEventEndTime = futureEndTime)
+            .copy(groupId = "group-123")
+    setupSerieDetailsScreen(groupSerie)
     composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertDoesNotExist()
   }
 }

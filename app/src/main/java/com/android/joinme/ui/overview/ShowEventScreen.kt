@@ -291,9 +291,13 @@ fun ShowEventScreen(
                 }
               },
               actions = {
-                // Only show share button if event doesn't belong to a serie and is not expired
+                // Only show share button if event is standalone (not in serie/group) and not
+                // expired
                 val timestamp = eventUIState.dateTimestamp
-                if (!eventUIState.partOfASerie && !eventUIState.isPastEvent && timestamp != null) {
+                if (!eventUIState.partOfASerie &&
+                    eventUIState.groupId == null &&
+                    !eventUIState.isPastEvent &&
+                    timestamp != null) {
                   val daysUntilEvent =
                       ceil((timestamp.toDate().time - System.currentTimeMillis()) / MILLIS_PER_DAY)
                           .toInt()

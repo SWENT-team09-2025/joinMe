@@ -822,10 +822,8 @@ class ShowEventScreenTest {
   }
 
   /** --- SHARE BUTTON TESTS --- */
-  @Test
-  fun standaloneUpcomingEvent_displaysShareButton() {
+  private fun setupShowEventScreen(event: Event, serieId: String? = null) {
     val repo = EventsRepositoryLocal()
-    val event = createTestEvent().copy(partOfASerie = false)
     runBlocking { repo.addEvent(event) }
     val groupRepo = mock(GroupRepository::class.java)
     val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
@@ -833,7 +831,7 @@ class ShowEventScreenTest {
     composeTestRule.setContent {
       ShowEventScreen(
           eventId = event.eventId,
-          serieId = null,
+          serieId = serieId,
           currentUserId = "user1",
           showEventViewModel = viewModel,
           onGoBack = {},
@@ -843,57 +841,29 @@ class ShowEventScreenTest {
     composeTestRule.waitForIdle()
     composeTestRule.mainClock.advanceTimeBy(2000)
     composeTestRule.waitForIdle()
+  }
 
+  @Test
+  fun standaloneUpcomingEvent_displaysShareButton() {
+    setupShowEventScreen(createTestEvent().copy(partOfASerie = false))
     composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertIsDisplayed()
   }
 
   @Test
   fun eventPartOfSerie_hidesShareButton() {
-    val repo = EventsRepositoryLocal()
-    val event = createTestEvent().copy(partOfASerie = true)
-    runBlocking { repo.addEvent(event) }
-    val groupRepo = mock(GroupRepository::class.java)
-    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
-
-    composeTestRule.setContent {
-      ShowEventScreen(
-          eventId = event.eventId,
-          serieId = "serie-123",
-          currentUserId = "user1",
-          showEventViewModel = viewModel,
-          onGoBack = {},
-          onEditEvent = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
+    setupShowEventScreen(createTestEvent().copy(partOfASerie = true), serieId = "serie-123")
     composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertDoesNotExist()
   }
 
   @Test
   fun pastStandaloneEvent_hidesShareButton() {
-    val repo = EventsRepositoryLocal()
-    val pastEvent = createTestEvent(daysFromNow = -7).copy(partOfASerie = false)
-    runBlocking { repo.addEvent(pastEvent) }
-    val groupRepo = mock(GroupRepository::class.java)
-    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
+    setupShowEventScreen(createTestEvent(daysFromNow = -7).copy(partOfASerie = false))
+    composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertDoesNotExist()
+  }
 
-    composeTestRule.setContent {
-      ShowEventScreen(
-          eventId = pastEvent.eventId,
-          serieId = null,
-          currentUserId = "user1",
-          showEventViewModel = viewModel,
-          onGoBack = {},
-          onEditEvent = {})
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(2000)
-    composeTestRule.waitForIdle()
-
+  @Test
+  fun groupEvent_hidesShareButton() {
+    setupShowEventScreen(createTestEvent().copy(partOfASerie = false, groupId = "group-123"))
     composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertDoesNotExist()
   }
 }

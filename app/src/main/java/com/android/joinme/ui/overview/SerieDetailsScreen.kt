@@ -33,7 +33,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /** Note: this file was co-written with the help of AI (Claude) */
-
 private const val MILLIS_PER_DAY = 24 * 60 * 60 * 1000.0
 
 /**
@@ -179,6 +178,7 @@ fun SerieDetailsScreen(
             currentUserId = currentUserId,
             serieDate = uiState.serie?.date,
             isPastSerie = uiState.isPastSerie,
+            groupId = uiState.groupId,
             onGoBack = onGoBack)
       }) { paddingValues ->
         when {
@@ -242,6 +242,7 @@ private fun SerieDetailsTopBar(
     currentUserId: String,
     serieDate: Timestamp?,
     isPastSerie: Boolean,
+    groupId: String?,
     onGoBack: () -> Unit
 ) {
   Column {
@@ -260,7 +261,7 @@ private fun SerieDetailsTopBar(
               }
         },
         actions = {
-          if (serieDate != null && !isPastSerie) {
+          if (serieDate != null && !isPastSerie && groupId == null) {
             val daysUntilSerie =
                 ceil((serieDate.toDate().time - System.currentTimeMillis()) / MILLIS_PER_DAY)
                     .toInt()
