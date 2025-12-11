@@ -34,6 +34,9 @@ import kotlinx.coroutines.launch
 
 private const val MILLIS_PER_DAY = 24 * 60 * 60 * 1000.0
 
+val ShowEventUIState.shouldShowShareButton: Boolean
+  get() = !partOfASerie && groupId == null && !isPastEvent && dateTimestamp != null
+
 /** Delete confirmation dialog for event deletion. */
 @Composable
 private fun DeleteEventDialog(showDialog: Boolean, onDismiss: () -> Unit, onConfirm: () -> Unit) {
@@ -293,11 +296,8 @@ fun ShowEventScreen(
               actions = {
                 // Only show share button if event is standalone (not in serie/group) and not
                 // expired
-                val timestamp = eventUIState.dateTimestamp
-                if (!eventUIState.partOfASerie &&
-                    eventUIState.groupId == null &&
-                    !eventUIState.isPastEvent &&
-                    timestamp != null) {
+                if (eventUIState.shouldShowShareButton) {
+                  val timestamp = eventUIState.dateTimestamp!!
                   val daysUntilEvent =
                       ceil((timestamp.toDate().time - System.currentTimeMillis()) / MILLIS_PER_DAY)
                           .toInt()

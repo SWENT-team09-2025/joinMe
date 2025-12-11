@@ -173,7 +173,7 @@ fun SerieDetailsScreen(
       modifier = Modifier.testTag(SerieDetailsScreenTestTags.SCREEN),
       topBar = {
         SerieDetailsTopBar(
-            serieTitle = uiState.serie?.title ?: "Loading...",
+            serieTitle = uiState.serie?.title ?: stringResource(R.string.loading),
             serieId = serieId,
             currentUserId = currentUserId,
             serieDate = uiState.serie?.date,
