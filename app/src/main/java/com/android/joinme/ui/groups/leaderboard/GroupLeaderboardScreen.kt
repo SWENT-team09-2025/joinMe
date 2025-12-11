@@ -3,6 +3,7 @@ package com.android.joinme.ui.groups.leaderboard
 // Implemented with the help of AI tools, adapted and refined to follow project conventions.
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,8 +35,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -74,6 +74,7 @@ object LeaderboardTestTags {
   const val ITEM_PREFIX = "leaderboard_item_"
   const val LOADING = "leaderboard_loading"
   const val EMPTY_STATE = "leaderboard_empty_state"
+  const val PURPLE_CONTAINER = "leaderboard_purple_container"
 }
 
 /**
@@ -117,6 +118,8 @@ fun GroupLeaderboardScreen(
           LeaderboardTabs(
               selectedTabIndex = selectedTabIndex, onTabSelected = { selectedTabIndex = it })
 
+          Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
+
           when {
             uiState.isLoading -> {
               LoadingState()
@@ -132,7 +135,7 @@ fun GroupLeaderboardScreen(
               if (entries.isEmpty()) {
                 EmptyState()
               } else {
-                LeaderboardList(entries = entries)
+                LeaderboardContainer(entries = entries)
               }
             }
           }
@@ -194,15 +197,11 @@ private fun LeaderboardTabs(selectedTabIndex: Int, onTabSelected: (Int) -> Unit)
       selectedTabIndex = selectedTabIndex,
       modifier =
           Modifier.fillMaxWidth()
-              .padding(horizontal = Dimens.Padding.medium)
+              .padding(horizontal = Dimens.Padding.large)
               .testTag(LeaderboardTestTags.TAB_ROW),
       containerColor = Color.Transparent,
       contentColor = MaterialTheme.colorScheme.primary,
-      indicator = { tabPositions ->
-        TabRowDefaults.SecondaryIndicator(
-            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-            color = MaterialTheme.colorScheme.primary)
-      },
+      indicator = {}, // Remove the underline indicator
       divider = {}) {
         tabs.forEachIndexed { index, title ->
           val isSelected = selectedTabIndex == index
@@ -213,6 +212,7 @@ private fun LeaderboardTabs(selectedTabIndex: Int, onTabSelected: (Int) -> Unit)
                   Modifier.testTag(
                           if (index == 0) LeaderboardTestTags.TAB_CURRENT
                           else LeaderboardTestTags.TAB_ALL_TIME)
+                      .padding(horizontal = Dimens.Padding.extraSmall)
                       .clip(RoundedCornerShape(Dimens.CornerRadius.pill))
                       .then(
                           if (isSelected) {
@@ -265,13 +265,46 @@ private fun EmptyState() {
       }
 }
 
+/** Purple container wrapping the leaderboard list with decorative bump at top. */
+@Composable
+private fun LeaderboardContainer(entries: List<LeaderboardEntry>) {
+  Box(
+      modifier =
+          Modifier.fillMaxSize()
+              .padding(horizontal = Dimens.Padding.medium)
+              .testTag(LeaderboardTestTags.PURPLE_CONTAINER)) {
+        // Main purple container
+        Box(
+            modifier =
+                Modifier.fillMaxSize()
+                    .padding(top = Dimens.Leaderboard.bumpHeight / 2)
+                    .background(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape =
+                            RoundedCornerShape(
+                                topStart = Dimens.Leaderboard.containerCornerRadius,
+                                topEnd = Dimens.Leaderboard.containerCornerRadius,
+                                bottomStart = Dimens.CornerRadius.none,
+                                bottomEnd = Dimens.CornerRadius.none))) {
+              // Leaderboard list inside the purple container
+              LeaderboardList(
+                  entries = entries,
+                  modifier = Modifier.padding(top = Dimens.Leaderboard.bumpHeight / 2))
+            }
+      }
+}
+
 /** Lazy column displaying leaderboard entries. */
 @Composable
-private fun LeaderboardList(entries: List<LeaderboardEntry>) {
+private fun LeaderboardList(entries: List<LeaderboardEntry>, modifier: Modifier = Modifier) {
   LazyColumn(
-      modifier = Modifier.fillMaxSize().testTag(LeaderboardTestTags.LIST),
+      modifier = modifier.fillMaxSize().testTag(LeaderboardTestTags.LIST),
       contentPadding =
-          PaddingValues(horizontal = Dimens.Padding.medium, vertical = Dimens.Padding.medium),
+          PaddingValues(
+              start = Dimens.Padding.medium,
+              end = Dimens.Padding.medium,
+              top = Dimens.Padding.medium,
+              bottom = Dimens.Padding.large),
       verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
         items(items = entries, key = { it.userId }) { entry -> LeaderboardItem(entry = entry) }
       }
@@ -285,16 +318,19 @@ private fun LeaderboardItem(entry: LeaderboardEntry) {
   Card(
       modifier =
           Modifier.fillMaxWidth().testTag("${LeaderboardTestTags.ITEM_PREFIX}${entry.userId}"),
-      shape = RoundedCornerShape(Dimens.CornerRadius.large),
+      shape = RoundedCornerShape(Dimens.Leaderboard.cardCornerRadius),
       colors =
           CardDefaults.cardColors(
               containerColor = MaterialTheme.colorScheme.surface,
               contentColor = MaterialTheme.colorScheme.onSurface),
       elevation = CardDefaults.cardElevation(defaultElevation = Dimens.Elevation.small)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.medium),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(
+                        horizontal = Dimens.Padding.medium, vertical = Dimens.Padding.smallMedium),
             verticalAlignment = Alignment.CenterVertically) {
-              // Rank number
+              // Rank number with circle border
               RankBadge(rank = entry.rank)
 
               Spacer(modifier = Modifier.width(Dimens.Spacing.medium))
@@ -318,7 +354,7 @@ private fun LeaderboardItem(entry: LeaderboardEntry) {
                         stringResource(
                             R.string.leaderboard_activities_joined, entry.streakActivities),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f))
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
               }
 
               // Crown badge for top 3
@@ -330,19 +366,22 @@ private fun LeaderboardItem(entry: LeaderboardEntry) {
       }
 }
 
-/** Rank number display on the left side of the card. */
+/** Rank number display with circular border. */
 @Composable
 private fun RankBadge(rank: Int) {
   Box(
       modifier =
           Modifier.size(Dimens.Leaderboard.rankBadgeSize)
-              .background(color = MaterialTheme.colorScheme.surface, shape = CircleShape),
+              .border(
+                  width = Dimens.BorderWidth.medium,
+                  color = MaterialTheme.colorScheme.primary,
+                  shape = CircleShape),
       contentAlignment = Alignment.Center) {
         Text(
             text = rank.toString(),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface)
+            color = MaterialTheme.colorScheme.primary)
       }
 }
 
@@ -357,7 +396,7 @@ private fun UserAvatar(photoUrl: String?, displayName: String) {
   ProfilePhotoImage(
       photoUrl = photoUrl,
       contentDescription = stringResource(R.string.user_avatar_description, displayName),
-      size = Dimens.GroupDetail.memberProfilePictureSize,
+      size = Dimens.Leaderboard.avatarSize,
       showLoadingIndicator = false)
 }
 
