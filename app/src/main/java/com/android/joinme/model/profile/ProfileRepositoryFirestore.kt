@@ -83,17 +83,16 @@ class ProfileRepositoryFirestore(
     return try {
       uids.map { uid ->
         try {
-          Log.d("ProfileRepositoryFirestore", "Fetching profile for UID: $uid")
           getProfile(uid)
         } catch (_: NoSuchElementException) {
-          Log.d(TAG, "Profile not found: $uid")
-            null
+          null
         }
       }
     } catch (e: Exception) {
       Log.e(TAG, "Error fetching profiles", e)
       null
-    } as List<Profile>?
+    }
+        as List<Profile>?
   }
   /**
    * Creates or updates a user profile in Firestore. If the profile document already exists, it
