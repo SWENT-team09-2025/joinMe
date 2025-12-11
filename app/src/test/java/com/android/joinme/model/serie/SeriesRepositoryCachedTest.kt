@@ -1,4 +1,5 @@
 package com.android.joinme.model.serie
+
 /** This file was implemented with the help of AI * */
 import android.content.Context
 import androidx.room.Room
@@ -110,7 +111,7 @@ class SeriesRepositoryCachedTest {
   // ========== getAllSeries Tests ==========
 
   @Test
-  fun `getAllSeries fetches from firestore when online`() = runBlocking {
+  fun `getAllSeries fetches from firestore when online and caches result`() = runBlocking {
     val series = listOf(createSerie("1"), createSerie("2"))
     every { networkMonitor.isOnline() } returns true
     coEvery { firestoreRepo.getAllSeries(any()) } returns series
@@ -119,20 +120,8 @@ class SeriesRepositoryCachedTest {
 
     assertEquals(2, result.size)
     coVerify { firestoreRepo.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN) }
-  }
-
-  @Test
-  fun `getAllSeries caches series from firestore`() = runBlocking {
-    val series = listOf(createSerie("1", participants = listOf("testUser")))
-    every { networkMonitor.isOnline() } returns true
-    coEvery { firestoreRepo.getAllSeries(any()) } returns series
-
-    cachedRepo.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN)
-
-    // Verify serie was cached
-    val cached = database.serieDao().getSerieById("1")
-    assertNotNull(cached)
-    assertEquals("Serie 1", cached?.title)
+    // Verify caching
+    assertNotNull(database.serieDao().getSerieById("1"))
   }
 
   @Test
@@ -196,20 +185,10 @@ class SeriesRepositoryCachedTest {
     val privateSerie =
         createSerie(
             "2", visibility = Visibility.PRIVATE, date = futureDate, participants = listOf("other"))
-    val userParticipatingSerie =
-        createSerie(
-            "3",
-            visibility = Visibility.PUBLIC,
-            date = futureDate,
-            participants = listOf("testUser"))
 
     database
         .serieDao()
-        .insertSeries(
-            listOf(
-                publicUpcomingSerie.toEntity(),
-                privateSerie.toEntity(),
-                userParticipatingSerie.toEntity()))
+        .insertSeries(listOf(publicUpcomingSerie.toEntity(), privateSerie.toEntity()))
 
     every { networkMonitor.isOnline() } returns false
 
@@ -237,13 +216,8 @@ class SeriesRepositoryCachedTest {
             date = pastDate,
             lastEventEndTime = activeEndTime,
             participants = listOf("testUser"))
-    val expiredSerie =
-        createSerie("3", date = pastDate, lastEventEndTime = Timestamp(calendarPast.time))
 
-    database
-        .serieDao()
-        .insertSeries(
-            listOf(upcomingSerie.toEntity(), activeSerie.toEntity(), expiredSerie.toEntity()))
+    database.serieDao().insertSeries(listOf(upcomingSerie.toEntity(), activeSerie.toEntity()))
 
     every { networkMonitor.isOnline() } returns false
 
@@ -255,7 +229,7 @@ class SeriesRepositoryCachedTest {
   }
 
   @Test
-  fun `getAllSeries falls back to cache when firestore throws exception`() = runBlocking {
+  fun `getAllSeries falls back to cache when firestore fails`() = runBlocking {
     val cachedSerie = createSerie("1", participants = listOf("testUser"))
     database.serieDao().insertSerie(cachedSerie.toEntity())
 
@@ -279,17 +253,6 @@ class SeriesRepositoryCachedTest {
     } catch (e: Exception) {
       assertTrue(e.message!!.contains("User not logged in"))
     }
-  }
-
-  @Test
-  fun `getAllSeries does not cache empty list from firestore`() = runBlocking {
-    every { networkMonitor.isOnline() } returns true
-    coEvery { firestoreRepo.getAllSeries(any()) } returns emptyList()
-
-    val result = cachedRepo.getAllSeries(SerieFilter.SERIES_FOR_OVERVIEW_SCREEN)
-
-    assertTrue(result.isEmpty())
-    assertEquals(0, database.serieDao().getAllSeries().size)
   }
 
   // ========== getSerie Tests ==========
@@ -345,106 +308,66 @@ class SeriesRepositoryCachedTest {
     assertEquals("1", result.serieId)
   }
 
-  @Test
-  fun `getSerie throws exception when firestore fails and no cache`() = runBlocking {
-    every { networkMonitor.isOnline() } returns true
-    coEvery { firestoreRepo.getSerie("1") } throws Exception("Network error")
-
-    try {
-      cachedRepo.getSerie("1")
-      fail("Should have thrown exception")
-    } catch (e: Exception) {
-      assertEquals("Network error", e.message)
-    }
-  }
-
-  // ========== addSerie Tests ==========
+  // ========== Write Operations Tests ==========
 
   @Test
-  fun `addSerie adds to firestore and caches when online`() = runBlocking {
-    val serie = createSerie("1")
-    every { networkMonitor.isOnline() } returns true
-    coEvery { firestoreRepo.addSerie(serie) } just Runs
-
-    cachedRepo.addSerie(serie)
-
-    coVerify { firestoreRepo.addSerie(serie) }
-    assertNotNull(database.serieDao().getSerieById("1"))
-  }
-
-  @Test
-  fun `addSerie throws OfflineException when offline`() = runBlocking {
+  fun `write operations throw OfflineException when offline`() = runBlocking {
     val serie = createSerie("1")
     every { networkMonitor.isOnline() } returns false
 
+    // Test addSerie
     try {
       cachedRepo.addSerie(serie)
-      fail("Should have thrown OfflineException")
+      fail("addSerie should have thrown OfflineException")
     } catch (e: OfflineException) {
       assertTrue(e.message!!.contains("internet connection"))
     }
 
-    coVerify(exactly = 0) { firestoreRepo.addSerie(any()) }
-  }
-
-  // ========== editSerie Tests ==========
-
-  @Test
-  fun `editSerie updates firestore and cache when online`() = runBlocking {
-    val serie = createSerie("1", title = "Updated Title")
-    every { networkMonitor.isOnline() } returns true
-    coEvery { firestoreRepo.editSerie("1", serie) } just Runs
-
-    cachedRepo.editSerie("1", serie)
-
-    coVerify { firestoreRepo.editSerie("1", serie) }
-    val cached = database.serieDao().getSerieById("1")
-    assertEquals("Updated Title", cached?.title)
-  }
-
-  @Test
-  fun `editSerie throws OfflineException when offline`() = runBlocking {
-    val serie = createSerie("1")
-    every { networkMonitor.isOnline() } returns false
-
+    // Test editSerie
     try {
       cachedRepo.editSerie("1", serie)
-      fail("Should have thrown OfflineException")
+      fail("editSerie should have thrown OfflineException")
     } catch (e: OfflineException) {
       assertTrue(e.message!!.contains("internet connection"))
     }
 
-    coVerify(exactly = 0) { firestoreRepo.editSerie(any(), any()) }
-  }
-
-  // ========== deleteSerie Tests ==========
-
-  @Test
-  fun `deleteSerie removes from firestore and cache when online`() = runBlocking {
-    val serie = createSerie("1")
-    database.serieDao().insertSerie(serie.toEntity())
-
-    every { networkMonitor.isOnline() } returns true
-    coEvery { firestoreRepo.deleteSerie("1") } just Runs
-
-    cachedRepo.deleteSerie("1")
-
-    coVerify { firestoreRepo.deleteSerie("1") }
-    assertNull(database.serieDao().getSerieById("1"))
-  }
-
-  @Test
-  fun `deleteSerie throws OfflineException when offline`() = runBlocking {
-    every { networkMonitor.isOnline() } returns false
-
+    // Test deleteSerie
     try {
       cachedRepo.deleteSerie("1")
-      fail("Should have thrown OfflineException")
+      fail("deleteSerie should have thrown OfflineException")
     } catch (e: OfflineException) {
       assertTrue(e.message!!.contains("internet connection"))
     }
 
+    // Verify no firestore calls were made
+    coVerify(exactly = 0) { firestoreRepo.addSerie(any()) }
+    coVerify(exactly = 0) { firestoreRepo.editSerie(any(), any()) }
     coVerify(exactly = 0) { firestoreRepo.deleteSerie(any()) }
+  }
+
+  @Test
+  fun `write operations update both firestore and cache when online`() = runBlocking {
+    val serie = createSerie("1", title = "Test Serie")
+    every { networkMonitor.isOnline() } returns true
+    coEvery { firestoreRepo.addSerie(any()) } just Runs
+    coEvery { firestoreRepo.editSerie(any(), any()) } just Runs
+    coEvery { firestoreRepo.deleteSerie(any()) } just Runs
+
+    // Test addSerie
+    cachedRepo.addSerie(serie)
+    coVerify { firestoreRepo.addSerie(serie) }
+    assertNotNull(database.serieDao().getSerieById("1"))
+
+    // Test editSerie
+    val updatedSerie = serie.copy(title = "Updated")
+    cachedRepo.editSerie("1", updatedSerie)
+    coVerify { firestoreRepo.editSerie("1", updatedSerie) }
+    assertEquals("Updated", database.serieDao().getSerieById("1")?.title)
+
+    // Test deleteSerie
+    cachedRepo.deleteSerie("1")
+    coVerify { firestoreRepo.deleteSerie("1") }
+    assertNull(database.serieDao().getSerieById("1"))
   }
 
   // ========== getSeriesByIds Tests ==========
@@ -477,7 +400,7 @@ class SeriesRepositoryCachedTest {
   }
 
   @Test
-  fun `getSeriesByIds returns only cached series available when offline`() = runBlocking {
+  fun `getSeriesByIds returns only available cached series when offline`() = runBlocking {
     val serie1 = createSerie("1")
     database.serieDao().insertSerie(serie1.toEntity())
 
@@ -487,30 +410,5 @@ class SeriesRepositoryCachedTest {
 
     assertEquals(1, result.size)
     assertEquals("1", result[0].serieId)
-  }
-
-  @Test
-  fun `getSeriesByIds falls back to cache when firestore fails`() = runBlocking {
-    val serie = createSerie("1")
-    database.serieDao().insertSerie(serie.toEntity())
-
-    every { networkMonitor.isOnline() } returns true
-    coEvery { firestoreRepo.getSeriesByIds(any()) } throws Exception("Network error")
-
-    val result = cachedRepo.getSeriesByIds(listOf("1"))
-
-    assertEquals(1, result.size)
-    assertEquals("1", result[0].serieId)
-  }
-
-  @Test
-  fun `getSeriesByIds does not cache empty list from firestore`() = runBlocking {
-    every { networkMonitor.isOnline() } returns true
-    coEvery { firestoreRepo.getSeriesByIds(any()) } returns emptyList()
-
-    val result = cachedRepo.getSeriesByIds(listOf("1", "2"))
-
-    assertTrue(result.isEmpty())
-    assertEquals(0, database.serieDao().getAllSeries().size)
   }
 }

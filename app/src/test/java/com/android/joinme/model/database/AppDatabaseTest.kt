@@ -16,6 +16,7 @@ class AppDatabaseTest {
 
   private lateinit var database: AppDatabase
   private lateinit var eventDao: EventDao
+  private lateinit var serieDao: SerieDao
   private lateinit var context: Context
 
   @Before
@@ -26,6 +27,7 @@ class AppDatabaseTest {
             .allowMainThreadQueries()
             .build()
     eventDao = database.eventDao()
+    serieDao = database.serieDao()
   }
 
   @After
@@ -196,5 +198,94 @@ class AppDatabaseTest {
     val remaining = eventDao.getAllEvents()
     assertEquals(1, remaining.size)
     assertEquals("recent", remaining[0].eventId)
+  }
+
+  // ========== SerieDao Integration Tests ==========
+
+  private fun createTestSerie(
+      id: String,
+      title: String = "Serie $id",
+      cachedAt: Long = System.currentTimeMillis()
+  ) =
+      SerieEntity(
+          serieId = id,
+          title = title,
+          description = "Desc",
+          dateSeconds = 100,
+          dateNanoseconds = 0,
+          participantsJson = "[]",
+          maxParticipants = 10,
+          visibility = "PUBLIC",
+          eventIdsJson = "[\"event1\"]",
+          ownerId = "owner1",
+          lastEventEndTimeSeconds = null,
+          lastEventEndTimeNanoseconds = null,
+          groupId = null,
+          cachedAt = cachedAt)
+
+  @Test
+  fun `database provides serieDao instance`() {
+    assertNotNull(serieDao)
+  }
+
+  @Test
+  fun `serieDao can insert and retrieve series`() = runBlocking {
+    val serie = createTestSerie("serie1")
+    serieDao.insertSerie(serie)
+
+    val retrieved = serieDao.getSerieById("serie1")
+    assertNotNull(retrieved)
+    assertEquals("serie1", retrieved?.serieId)
+  }
+
+  @Test
+  fun `eventDao and serieDao work independently`() = runBlocking {
+    val event = createTestEvent("event1")
+    val serie = createTestSerie("serie1")
+
+    eventDao.insertEvent(event)
+    serieDao.insertSerie(serie)
+
+    assertEquals(1, eventDao.getAllEvents().size)
+    assertEquals(1, serieDao.getAllSeries().size)
+  }
+
+  @Test
+  fun `database version is 2 with both entities`() {
+    // This test verifies that the database includes both EventEntity and SerieEntity
+    // by ensuring both DAOs are accessible and functional
+    assertNotNull(database.eventDao())
+    assertNotNull(database.serieDao())
+  }
+
+  @Test
+  fun `clearing database removes both events and series`() = runBlocking {
+    eventDao.insertEvent(createTestEvent("event1"))
+    serieDao.insertSerie(createTestSerie("serie1"))
+
+    database.clearAllTables()
+
+    assertEquals(0, eventDao.getAllEvents().size)
+    assertEquals(0, serieDao.getAllSeries().size)
+  }
+
+  @Test
+  fun `database singleton works with series`() = runBlocking {
+    // Set the current database as the test instance
+    AppDatabase.setTestInstance(database)
+
+    val serie = createTestSerie("test1")
+    serieDao.insertSerie(serie)
+
+    // Get another instance and verify it's the same singleton
+    val db2 = AppDatabase.getDatabase(context)
+    val serie2Dao = db2.serieDao()
+
+    // Should be the same instance
+    assertSame(database, db2)
+
+    val retrieved = serie2Dao.getSerieById("test1")
+    assertNotNull(retrieved)
+    assertEquals("test1", retrieved?.serieId)
   }
 }
