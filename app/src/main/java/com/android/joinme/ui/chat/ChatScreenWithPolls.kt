@@ -515,7 +515,7 @@ private fun MessageInputWithPolls(
                 modifier =
                     Modifier.size(Dimens.TouchTarget.minimum)
                         .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                        .testTag(ChatScreenTestTags.MIC_BUTTON)) {
+                        .testTag("micButton")) {
                   Icon(
                       imageVector = Icons.Default.Mic,
                       contentDescription = stringResource(R.string.record_audio),

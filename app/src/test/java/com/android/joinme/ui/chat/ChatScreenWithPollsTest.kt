@@ -189,7 +189,7 @@ class ChatScreenWithPollsTest {
     composeTestRule.waitForIdle()
 
     // After sending, the mic button should be shown (indicating empty input)
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.MIC_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag("micButton").assertIsDisplayed()
   }
 
   @Test
