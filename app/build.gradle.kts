@@ -8,6 +8,18 @@ plugins {
     alias(libs.plugins.sonar)
     id("jacoco")
     id("com.google.gms.google-services")
+    id("kotlin-kapt")
+}
+
+// Configure KAPT to use JVM 17 (Kotlin 1.8.10 doesn't support JVM 21)
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KaptGenerateStubs>().configureEach {
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.internal.KaptWithoutKotlincTask>().configureEach {
+    kaptProcessJvmArgs.addAll(listOf("-Xmx512m"))
 }
 
 android {
@@ -63,16 +75,16 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.4.2"
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 
     packaging {
@@ -257,6 +269,14 @@ dependencies {
 
     // ---------- WorkManager ------------
     implementation(libs.androidx.work.runtime.ktx)
+
+    // ---------- Room Database ------------
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
+
+    // Room Testing
+    testImplementation("androidx.room:room-testing:2.6.1")
 }
 
 tasks.withType<Test>().configureEach {
