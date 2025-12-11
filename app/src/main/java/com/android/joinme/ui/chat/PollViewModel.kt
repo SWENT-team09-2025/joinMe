@@ -119,7 +119,6 @@ class PollViewModel(
    * @param userId The ID of the current user
    */
   fun initialize(conversationId: String, userId: String) {
-    Log.d(TAG, "Initializing PollViewModel: conversationId=$conversationId, userId=$userId")
     currentConversationId = conversationId
     _pollsState.value = _pollsState.value.copy(currentUserId = userId)
     observePolls()
@@ -302,10 +301,6 @@ class PollViewModel(
         val pollId = pollRepository.getNewPollId()
         val currentUserId = _pollsState.value.currentUserId
 
-        Log.d(
-            TAG,
-            "Creating poll with id=$pollId, conversationId=$currentConversationId, creatorId=$currentUserId")
-
         val poll =
             Poll(
                 id = pollId,
@@ -323,7 +318,6 @@ class PollViewModel(
                 createdAt = System.currentTimeMillis())
 
         pollRepository.createPoll(poll)
-        Log.d(TAG, "Poll created successfully: $pollId")
 
         // Send a message to the chat with the poll ID
         val messageId = chatRepository.getNewMessageId()
@@ -337,7 +331,6 @@ class PollViewModel(
                 timestamp = poll.createdAt,
                 type = MessageType.POLL)
         chatRepository.addMessage(pollMessage)
-        Log.d(TAG, "Poll message sent to chat: $messageId")
 
         _creationState.value = PollCreationState()
         onSuccess()
