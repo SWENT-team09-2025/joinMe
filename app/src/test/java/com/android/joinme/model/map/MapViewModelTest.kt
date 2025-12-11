@@ -222,7 +222,8 @@ class MapViewModelTest {
                     participants = emptyList(),
                     maxParticipants = 10,
                     visibility = EventVisibility.PUBLIC,
-                    ownerId = "owner1"),
+                    ownerId = "owner1",
+                    partOfASerie = true),
                 Event(
                     eventId = "event2",
                     type = EventType.ACTIVITY,
@@ -294,7 +295,8 @@ class MapViewModelTest {
                     participants = emptyList(),
                     maxParticipants = 10,
                     visibility = EventVisibility.PUBLIC,
-                    ownerId = "owner1"),
+                    ownerId = "owner1",
+                    partOfASerie = true),
                 Event(
                     eventId = "event2",
                     type = EventType.ACTIVITY,
@@ -306,7 +308,8 @@ class MapViewModelTest {
                     participants = emptyList(),
                     maxParticipants = 15,
                     visibility = EventVisibility.PUBLIC,
-                    ownerId = "owner2"))
+                    ownerId = "owner2",
+                    partOfASerie = false))
 
         val testSeries =
             listOf(
