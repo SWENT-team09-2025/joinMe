@@ -677,6 +677,9 @@ fun JoinMe(
                 navigationActions.navigateTo(
                     Screen.FollowList(
                         profileUserId, com.android.joinme.ui.profile.FollowTab.FOLLOWING.name))
+              },
+              onMessageClick = { chatId, chatTitle, totalParticipants ->
+                navigationActions.navigateTo(Screen.Chat(chatId, chatTitle, totalParticipants))
               })
         } ?: run { Toast.makeText(context, "UserId is null", Toast.LENGTH_SHORT).show() }
       }
