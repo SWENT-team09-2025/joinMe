@@ -1,9 +1,7 @@
 package com.android.joinme.ui.overview
 
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,13 +14,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -99,16 +93,13 @@ private fun SearchTextField(query: String, onQueryChange: (String) -> Unit) {
       modifier = Modifier.fillMaxWidth().testTag(SearchScreenTestTags.SEARCH_TEXT_FIELD))
 }
 
-/** Filter chips row with Social, Activity, and Sport dropdown. */
+/** Filter chips row with Social, Activity, and Sport. */
 @Composable
 private fun FilterChipsRow(
     filterState: FilterState,
-    categoryExpanded: Boolean,
     onToggleSocial: () -> Unit,
     onToggleActivity: () -> Unit,
-    onSetCategoryExpanded: (Boolean) -> Unit,
-    onToggleSelectAll: () -> Unit,
-    onToggleSport: (String) -> Unit
+    onToggleSport: () -> Unit
 ) {
   Row(
       modifier = Modifier.fillMaxWidth(),
@@ -125,41 +116,11 @@ private fun FilterChipsRow(
             label = { Text("Activity") },
             colors = MaterialTheme.customColors.filterChip)
 
-        // Dropdown filter
-        Box {
-          FilterChip(
-              selected = filterState.selectedSportsCount >= 1,
-              onClick = { onSetCategoryExpanded(true) },
-              label = { Text("Sport") },
-              trailingIcon = {
-                Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
-              },
-              colors = MaterialTheme.customColors.filterChip)
-
-          DropdownMenu(
-              expanded = categoryExpanded,
-              onDismissRequest = { onSetCategoryExpanded(false) },
-              modifier = Modifier.background(MaterialTheme.customColors.backgroundMenu)) {
-                DropdownMenuItem(
-                    text = { Text("Select all") },
-                    onClick = onToggleSelectAll,
-                    trailingIcon = {
-                      Checkbox(checked = filterState.isSelectAllChecked, onCheckedChange = null)
-                    },
-                    colors = MaterialTheme.customColors.dropdownMenu)
-
-                // Loop through all sport categories dynamically
-                filterState.sportCategories.forEach { sport ->
-                  DropdownMenuItem(
-                      text = { Text(sport.name) },
-                      onClick = { onToggleSport(sport.id) },
-                      trailingIcon = {
-                        Checkbox(checked = sport.isChecked, onCheckedChange = null)
-                      },
-                      colors = MaterialTheme.customColors.dropdownMenu)
-                }
-              }
-        }
+        FilterChip(
+            selected = filterState.isSportSelected,
+            onClick = onToggleSport,
+            label = { Text("Sport") },
+            colors = MaterialTheme.customColors.filterChip)
       }
 }
 
@@ -286,12 +247,9 @@ fun SearchScreen(
 
                 FilterChipsRow(
                     filterState = filterState,
-                    categoryExpanded = uiState.categoryExpanded,
                     onToggleSocial = { searchViewModel.toggleSocial() },
                     onToggleActivity = { searchViewModel.toggleActivity() },
-                    onSetCategoryExpanded = { searchViewModel.setCategoryExpanded(it) },
-                    onToggleSelectAll = { searchViewModel.toggleSelectAll() },
-                    onToggleSport = { searchViewModel.toggleSport(it) })
+                    onToggleSport = { searchViewModel.toggleSport() })
               }
 
           if (eventItems.isNotEmpty()) {
