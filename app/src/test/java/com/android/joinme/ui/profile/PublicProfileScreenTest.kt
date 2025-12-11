@@ -18,7 +18,15 @@ import com.android.joinme.ui.groups.GroupDetailScreenTestTags
 import com.android.joinme.ui.overview.ShowEventScreenTestTags
 import com.google.firebase.FirebaseApp
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import java.util.Date
+import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -45,6 +53,20 @@ class PublicProfileScreenTest {
     if (FirebaseApp.getApps(context).isEmpty()) {
       FirebaseApp.initializeApp(context)
     }
+  }
+
+  @After
+  fun tearDown() {
+    unmockkStatic(FirebaseAuth::class)
+  }
+
+  private fun mockFirebaseAuthWithUser(userId: String) {
+    mockkStatic(FirebaseAuth::class)
+    val mockAuth = mockk<FirebaseAuth>()
+    val mockUser = mockk<FirebaseUser>()
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns mockUser
+    every { mockUser.uid } returns userId
   }
 
   private fun createTestProfile(
@@ -455,12 +477,13 @@ class PublicProfileScreenTest {
   }
 
   @Test
-  fun publicProfileScreen_messageButtonIsClickable() {
+  fun publicProfileScreen_messageButtonClickWithoutAuthShowsToast() {
     val profile = createTestProfile(username = "TestUser123")
     val viewModel =
         PublicProfileViewModel(
             FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
 
+    // Don't mock Firebase auth - currentUserId will be null
     composeTestRule.setContent {
       PublicProfileScreen(
           userId = otherUserId,
@@ -472,14 +495,51 @@ class PublicProfileScreenTest {
     viewModel.loadPublicProfile(otherUserId, currentUserId)
     composeTestRule.waitForIdle()
 
-    // Click the message button - verifies it doesn't crash
-    // Note: Full callback testing requires Firebase Auth mocking
-    // The DM ID generation logic is tested in ChatUtilsTest
+    // Click the message button - should show "Please sign in" toast
     composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.MESSAGE_BUTTON).performClick()
     composeTestRule.waitForIdle()
 
     // Verify button is still displayed after click
     composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.MESSAGE_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun publicProfileScreen_messageButtonClickWithAuthInvokesCallback() {
+    val profile = createTestProfile(username = "TestUser123")
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    var capturedChatId: String? = null
+    var capturedChatTitle: String? = null
+    var capturedTotalParticipants: Int? = null
+
+    // Mock Firebase auth with valid user
+    mockFirebaseAuthWithUser(currentUserId)
+
+    composeTestRule.setContent {
+      PublicProfileScreen(
+          userId = otherUserId,
+          viewModel = viewModel,
+          onBackClick = {},
+          onMessageClick = { chatId, chatTitle, totalParticipants ->
+            capturedChatId = chatId
+            capturedChatTitle = chatTitle
+            capturedTotalParticipants = totalParticipants
+          })
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    // Click the message button
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.MESSAGE_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify callback was invoked with correct parameters
+    assertEquals("dm_current-user-id_other-user-id", capturedChatId)
+    assertEquals(profile.username, capturedChatTitle)
+    assertEquals(2, capturedTotalParticipants)
   }
 
   // ==================== COMMON EVENTS TESTS ====================
