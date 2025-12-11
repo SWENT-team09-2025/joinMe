@@ -2,6 +2,7 @@ package com.android.joinme.ui.groups.leaderboard
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.test.core.app.ApplicationProvider
 import com.android.joinme.model.groups.streaks.GroupStreak
 import com.android.joinme.model.groups.streaks.GroupStreakRepository
 import com.android.joinme.model.profile.Profile
@@ -80,7 +81,9 @@ class GroupLeaderboardScreenTest {
     fakeProfileRepo = FakeLeaderboardProfileRepository()
   }
 
-  private fun createViewModel() = GroupLeaderboardViewModel(fakeStreakRepo, fakeProfileRepo)
+  private fun createViewModel() =
+      GroupLeaderboardViewModel(
+          ApplicationProvider.getApplicationContext(), fakeStreakRepo, fakeProfileRepo)
 
   private fun setupWithData(
       groupId: String = "group1",
@@ -218,7 +221,9 @@ class GroupLeaderboardScreenTest {
   fun loadingState_displaysIndicator() {
     fakeStreakRepo = FakeGroupStreakRepository()
     fakeProfileRepo = FakeLeaderboardProfileRepository()
-    viewModel = GroupLeaderboardViewModel(fakeStreakRepo, fakeProfileRepo)
+    viewModel =
+        GroupLeaderboardViewModel(
+            ApplicationProvider.getApplicationContext(), fakeStreakRepo, fakeProfileRepo)
 
     composeTestRule.setContent {
       GroupLeaderboardScreen(groupId = "group1", viewModel = viewModel, onNavigateBack = {})

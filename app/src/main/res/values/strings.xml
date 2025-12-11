@@ -184,6 +184,7 @@
     <string name="leaderboard_activities_joined">%d activities joined</string>
     <string name="leaderboard_empty_message">No streak data available yet.\nStart participating in group activities!</string>
     <string name="leaderboard_button">Leaderboard</string>
+    <string name="leaderboard_load_error">Failed to load leaderboard: %1$s</string>
 
     <!-- Streak Info Dialog -->
     <string name="leaderboard_rules_title_how">How the leaderboard works</string>

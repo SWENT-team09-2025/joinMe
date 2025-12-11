@@ -1,9 +1,11 @@
 // Implemented with help of Claude AI
 package com.android.joinme.ui.groups.leaderboard
 
+import android.app.Application
 import android.util.Log
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.android.joinme.R
 import com.android.joinme.model.groups.streaks.GroupStreak
 import com.android.joinme.model.groups.streaks.GroupStreakRepository
 import com.android.joinme.model.groups.streaks.GroupStreakRepositoryProvider
@@ -70,10 +72,11 @@ data class GroupLeaderboardUIState(
  * @property profileRepository The repository used to fetch user profiles.
  */
 class GroupLeaderboardViewModel(
+    application: Application,
     private val streakRepository: GroupStreakRepository =
         GroupStreakRepositoryProvider.getRepository(),
     private val profileRepository: ProfileRepository = ProfileRepositoryProvider.repository
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
   private val _uiState = MutableStateFlow(GroupLeaderboardUIState())
   val uiState: StateFlow<GroupLeaderboardUIState> = _uiState.asStateFlow()
@@ -124,7 +127,10 @@ class GroupLeaderboardViewModel(
                 isLoading = false)
       } catch (e: Exception) {
         Log.e("GroupLeaderboardViewModel", "Error loading leaderboard", e)
-        setErrorMsg("Failed to load leaderboard: ${e.message}")
+        // Fixed: Use localized string resource instead of hardcoded string
+        val errorText =
+            getApplication<Application>().getString(R.string.leaderboard_load_error, e.message)
+        setErrorMsg(errorText)
         _uiState.value = _uiState.value.copy(isLoading = false)
       }
     }
@@ -138,14 +144,16 @@ class GroupLeaderboardViewModel(
    *   and null as their photo URL.
    */
   private suspend fun resolveUserProfiles(userIds: List<String>): Map<String, UserProfileInfo> {
+    val unknownUserText = getApplication<Application>().getString(R.string.unknown_user)
+
     return try {
       val profiles = profileRepository.getProfilesByIds(userIds)
       profiles?.associate {
         it.uid to UserProfileInfo(displayName = it.username, photoUrl = it.photoUrl)
-      } ?: userIds.associateWith { UserProfileInfo(displayName = "Unknown", photoUrl = null) }
+      } ?: userIds.associateWith { UserProfileInfo(displayName = unknownUserText, photoUrl = null) }
     } catch (e: Exception) {
       Log.e("GroupLeaderboardViewModel", "Error fetching profiles", e)
-      userIds.associateWith { UserProfileInfo(displayName = "Unknown", photoUrl = null) }
+      userIds.associateWith { UserProfileInfo(displayName = unknownUserText, photoUrl = null) }
     }
   }
 
@@ -206,8 +214,11 @@ class GroupLeaderboardViewModel(
       isCurrent: Boolean,
       rank: Int
   ): LeaderboardEntry {
+    val unknownUserText = getApplication<Application>().getString(R.string.unknown_user)
+
     val profileInfo =
-        userProfiles[streak.userId] ?: UserProfileInfo(displayName = "Unknown", photoUrl = null)
+        userProfiles[streak.userId]
+            ?: UserProfileInfo(displayName = unknownUserText, photoUrl = null)
 
     return LeaderboardEntry(
         userId = streak.userId,
