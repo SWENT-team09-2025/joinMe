@@ -187,6 +187,29 @@
     <string name="success_joining_group">Successfully joined the group!</string>
     <string name="sign_in_to_join_group">Please sign in to join the group</string>
 
+    <!-- Group Leaderboard Screen -->
+    <string name="leaderboard_title">Leaderboard</string>
+    <string name="leaderboard_tab_current">Current</string>
+    <string name="leaderboard_tab_all_time">All Time</string>
+    <string name="leaderboard_info_button_description">Leaderboard information</string>
+    <string name="leaderboard_activities_joined">%d activities joined</string>
+    <string name="leaderboard_empty_message">No streak data available yet.\nStart participating in group activities!</string>
+    <string name="leaderboard_button">Leaderboard</string>
+    <string name="leaderboard_load_error">Failed to load leaderboard: %1$s</string>
+
+    <!-- Streak Info Dialog -->
+    <string name="leaderboard_rules_title_how">How the leaderboard works</string>
+    <string name="leaderboard_rules_content_how">Your rank is based on how many activities you have
+        joined inside your current streak. The more active you are week after week, the higher
+        you climb.</string>
+    <string name="leaderboard_rules_title_what">What is a streak?</string>
+    <string name="leaderboard_rules_content_what">A streak is the number of consecutive weeks where
+        you join at least one group activity. Missing a full week breaks your streak and starts it
+        back at zero.</string>
+    <string name="leaderboard_rules_title_why">Why it matters</string>
+    <string name="leaderboard_rules_content_why">Streaks reward consistency. Stay active, keep
+        your streak alive, and compete with your friends to reach the top. Every week is a
+        chance to move up — don\'t lose the momentum!</string>
     <!-- Map constant -->
     <string name="type_object">Type</string>
     <string name="social_type">Social</string>
