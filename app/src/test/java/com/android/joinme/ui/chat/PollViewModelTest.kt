@@ -431,11 +431,11 @@ class PollViewModelTest {
     viewModel.updateQuestion("Test question?")
     viewModel.updateOption(0, "Option A")
     viewModel.updateOption(1, "Option B")
-    var networkError: String? = null
+    var networkError: PollError? = null
     viewModel.createPoll(creatorName = testUserName, onError = { networkError = it })
     advanceUntilIdle()
     assertNotNull(networkError)
-    assertTrue(networkError!!.contains("Network error"))
+    assertTrue(networkError is PollError.CreateFailed)
   }
 
   // ============ Voting Tests ============
@@ -465,8 +465,8 @@ class PollViewModelTest {
 
     viewModel.vote("poll1", 0)
     advanceUntilIdle()
-    assertNotNull(viewModel.pollsState.value.errorMessage)
-    assertTrue(viewModel.pollsState.value.errorMessage!!.contains("closed"))
+    assertNotNull(viewModel.pollsState.value.error)
+    assertTrue(viewModel.pollsState.value.error is PollError.VoteOnClosedPoll)
   }
 
   // ============ Poll Management Tests ============
@@ -505,13 +505,13 @@ class PollViewModelTest {
 
     viewModel.reopenPoll("poll1")
     advanceUntilIdle()
-    assertNotNull(viewModel.pollsState.value.errorMessage)
-    assertTrue(viewModel.pollsState.value.errorMessage!!.contains("creator"))
+    assertNotNull(viewModel.pollsState.value.error)
+    assertTrue(viewModel.pollsState.value.error is PollError.ReopenNotCreator)
 
     viewModel.clearError()
     viewModel.deletePoll("poll1")
     advanceUntilIdle()
-    assertNotNull(viewModel.pollsState.value.errorMessage)
+    assertNotNull(viewModel.pollsState.value.error)
     assertEquals(1, viewModel.pollsState.value.polls.size)
   }
 
@@ -529,10 +529,10 @@ class PollViewModelTest {
 
     viewModel.vote("poll1", 0)
     advanceUntilIdle()
-    assertNotNull(viewModel.pollsState.value.errorMessage)
+    assertNotNull(viewModel.pollsState.value.error)
 
     viewModel.clearError()
-    assertNull(viewModel.pollsState.value.errorMessage)
+    assertNull(viewModel.pollsState.value.error)
 
     // Trigger creation state validation error
     viewModel.createPoll(creatorName = testUserName, onError = {})
@@ -550,11 +550,11 @@ class PollViewModelTest {
     viewModel.updateOption(0, "Option A")
     viewModel.updateOption(1, "Option B")
 
-    var errorMessage: String? = null
-    viewModel.createPoll(creatorName = testUserName, onError = { errorMessage = it })
+    var pollError: PollError? = null
+    viewModel.createPoll(creatorName = testUserName, onError = { pollError = it })
 
-    assertNotNull(errorMessage)
-    assertTrue(errorMessage!!.contains("not initialized"))
+    assertNotNull(pollError)
+    assertTrue(pollError is PollError.ChatNotInitialized)
   }
 
   @Test
@@ -580,7 +580,7 @@ class PollViewModelTest {
     viewModel.reopenPoll("nonexistent")
     viewModel.deletePoll("nonexistent")
     advanceUntilIdle()
-    assertNull(viewModel.pollsState.value.errorMessage)
+    assertNull(viewModel.pollsState.value.error)
 
     // Repository error
     val poll = createSamplePoll("poll1").copy(creatorId = testUserId)
@@ -592,12 +592,12 @@ class PollViewModelTest {
 
     viewModel.vote("poll1", 0)
     advanceUntilIdle()
-    assertNotNull(viewModel.pollsState.value.errorMessage)
+    assertNotNull(viewModel.pollsState.value.error)
 
     viewModel.clearError()
     viewModel.closePoll("poll1")
     advanceUntilIdle()
-    assertNotNull(viewModel.pollsState.value.errorMessage)
+    assertNotNull(viewModel.pollsState.value.error)
   }
 
   @Test
@@ -637,7 +637,7 @@ class PollViewModelTest {
     pollRepository.setPolls(testConversationId, listOf(pollWithNewVoter))
     advanceUntilIdle()
 
-    assertNull(viewModel.pollsState.value.errorMessage) // Error should not be shown to user
+    assertNull(viewModel.pollsState.value.error) // Error should not be shown to user
     assertFalse(viewModel.pollsState.value.isLoadingVoterProfiles)
   }
 
