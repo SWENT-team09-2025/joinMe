@@ -76,70 +76,91 @@ class ProfileViewModel(
    */
   fun loadProfile(uid: String) {
     viewModelScope.launch(Dispatchers.Main) {
+      // Skip if already loaded for this UID
+      if (_profile.value?.uid == uid) {
+        return@launch
+      }
+
       _isLoading.value = true
       clearError()
       clearProfile()
+
       // Validate uid is not empty
       if (uid.isBlank()) {
-        _isLoading.value = false
-        _error.value = "User not authenticated. Please sign in again."
+        handleInvalidUid()
         return@launch
       }
 
       try {
-        // Try to fetch the profile (with timeout to prevent infinite waiting)
-        val fetched =
-            withTimeout(10000L) {
-              try {
-                repository.getProfile(uid)
-              } catch (_: NoSuchElementException) {
-                null // Profile doesn't exist, will bootstrap
-              }
-            }
-
-        if (fetched != null) {
-          _profile.value = fetched
-        } else {
-          // Bootstrap: create a new profile
-          val email =
-              try {
-                authRepository.getCurrentUserEmail() ?: ""
-              } catch (e: Exception) {
-                Log.e(TAG, "Error getting email", e)
-                ""
-              }
-
-          val username = deriveDefaultUsername(email, uid)
-
-          val newProfile =
-              Profile(
-                  uid = uid,
-                  email = email,
-                  username = username,
-                  dateOfBirth = null,
-                  country = null,
-                  interests = emptyList(),
-                  bio = null,
-                  createdAt = Timestamp.now(),
-                  updatedAt = Timestamp.now())
-
-          // Create profile with timeout
-          withTimeout(10000L) { repository.createOrUpdateProfile(newProfile) }
-
-          _profile.value = newProfile
-        }
+        val fetched = fetchProfileWithTimeout(uid)
+        _profile.value = fetched ?: bootstrapNewProfile(uid)
       } catch (e: TimeoutCancellationException) {
-        Log.e(TAG, "Timeout loading profile", e)
-        _profile.value = null
-        _error.value = "Connection timeout. Please check your internet connection and try again."
+        handleLoadTimeout(e)
       } catch (e: Exception) {
-        Log.e(TAG, "Error loading profile", e)
-        _profile.value = null
-        _error.value = "Failed to load profile: ${e.message}"
+        handleLoadError(e)
       } finally {
         _isLoading.value = false
       }
     }
+  }
+
+  /** Fetches a profile with timeout, returning null if profile doesn't exist. */
+  private suspend fun fetchProfileWithTimeout(uid: String): Profile? {
+    return withTimeout(10000L) {
+      try {
+        repository.getProfile(uid)
+      } catch (_: NoSuchElementException) {
+        null // Profile doesn't exist, will bootstrap
+      }
+    }
+  }
+
+  /** Creates and persists a new profile for the given UID. */
+  private suspend fun bootstrapNewProfile(uid: String): Profile {
+    val email =
+        try {
+          authRepository.getCurrentUserEmail() ?: ""
+        } catch (e: Exception) {
+          Log.e(TAG, "Error getting email", e)
+          ""
+        }
+
+    val username = deriveDefaultUsername(email, uid)
+
+    val newProfile =
+        Profile(
+            uid = uid,
+            email = email,
+            username = username,
+            dateOfBirth = null,
+            country = null,
+            interests = emptyList(),
+            bio = null,
+            createdAt = Timestamp.now(),
+            updatedAt = Timestamp.now())
+
+    withTimeout(10000L) { repository.createOrUpdateProfile(newProfile) }
+    return newProfile
+  }
+
+  /** Handles invalid UID error. */
+  private fun handleInvalidUid() {
+    _isLoading.value = false
+    _error.value = "User not authenticated. Please sign in again."
+  }
+
+  /** Handles timeout during profile loading. */
+  private fun handleLoadTimeout(e: TimeoutCancellationException) {
+    Log.e(TAG, "Timeout loading profile", e)
+    _profile.value = null
+    _error.value = "Connection timeout. Please check your internet connection and try again."
+  }
+
+  /** Handles general errors during profile loading. */
+  private fun handleLoadError(e: Exception) {
+    Log.e(TAG, "Error loading profile", e)
+    _profile.value = null
+    _error.value = "Failed to load profile: ${e.message}"
   }
 
   /**
@@ -149,8 +170,14 @@ class ProfileViewModel(
    * has a 10-second timeout to prevent indefinite waiting.
    *
    * @param profile The [Profile] object to create or update.
+   * @param onSuccess Callback invoked after successful profile update.
+   * @param onError Callback invoked if update fails, receives error message.
    */
-  fun createOrUpdateProfile(profile: Profile) {
+  fun createOrUpdateProfile(
+      profile: Profile,
+      onSuccess: () -> Unit = {},
+      onError: (String) -> Unit = {}
+  ) {
     viewModelScope.launch {
       try {
         _isLoading.value = true
@@ -159,12 +186,17 @@ class ProfileViewModel(
         withTimeout(10000L) { repository.createOrUpdateProfile(profile) }
 
         _profile.value = profile
+        onSuccess()
       } catch (e: TimeoutCancellationException) {
         Log.e(TAG, "Timeout updating profile", e)
-        _error.value = "Connection timeout. Please try again."
+        val errorMsg = ERROR_CONNECTION_TIMEOUT
+        _error.value = errorMsg
+        onError(errorMsg)
       } catch (e: Exception) {
         Log.e(TAG, "Error creating/updating profile", e)
-        _error.value = "Failed to save profile: ${e.message}"
+        val errorMsg = ERROR_SAVE_PROFILE_FAILED.format(e.message)
+        _error.value = errorMsg
+        onError(errorMsg)
       } finally {
         _isLoading.value = false
       }
@@ -417,5 +449,7 @@ class ProfileViewModel(
 
   companion object {
     private const val TAG = "ProfileViewModel"
+    private const val ERROR_CONNECTION_TIMEOUT = "Connection timeout. Please try again."
+    private const val ERROR_SAVE_PROFILE_FAILED = "Failed to save profile: %s"
   }
 }

@@ -180,8 +180,12 @@ fun EditProfileScreen(
                               interests =
                                   interests.split(",").map { it.trim() }.filter { it.isNotEmpty() },
                               bio = bio.ifBlank { null })
-                      profileViewModel.createOrUpdateProfile(updatedProfile)
-                      onSaveSuccess()
+                      profileViewModel.createOrUpdateProfile(
+                          profile = updatedProfile,
+                          onSuccess = { onSaveSuccess() },
+                          onError = { error ->
+                            Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                          })
                     }
                   })
             }

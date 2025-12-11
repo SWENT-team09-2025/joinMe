@@ -276,6 +276,8 @@ class MapScreenTest {
     // EPFL location coordinates
     val initialLatitude = 46.5196
     val initialLongitude = 6.5680
+    val otherUserId = "other-user-123"
+    val currentUserId = "current-user-456"
 
     // Set initial user following to true
     setFollowingUser(true)
@@ -286,7 +288,9 @@ class MapScreenTest {
           navigationActions = null,
           initialLatitude = initialLatitude,
           initialLongitude = initialLongitude,
-          showLocationMarker = true)
+          showLocationMarker = true,
+          sharedLocationUserId = otherUserId,
+          currentUserId = currentUserId)
     }
 
     composeTestRule.waitForIdle()
@@ -381,9 +385,11 @@ class MapScreenTest {
   @Test
   fun mapScreen_locationMarker_shownWhenFlagIsTrue() {
     // Test that location marker is shown when showLocationMarker=true
-    // (e.g., chat location with marker to indicate the shared position)
+    // and the userId is different from currentUserId (other user's shared location)
     val initialLatitude = 46.5196
     val initialLongitude = 6.5680
+    val otherUserId = "other-user-123"
+    val currentUserId = "current-user-456"
 
     composeTestRule.setContent {
       MapScreen(
@@ -391,12 +397,69 @@ class MapScreenTest {
           navigationActions = null,
           initialLatitude = initialLatitude,
           initialLongitude = initialLongitude,
-          showLocationMarker = true)
+          showLocationMarker = true,
+          sharedLocationUserId = otherUserId,
+          currentUserId = currentUserId)
     }
 
     composeTestRule.waitForIdle()
 
-    // Verify the map displays with location marker
+    // Verify the map displays with location marker for other user
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_locationMarker_notShownForCurrentUser() {
+    // Test that location marker is NOT shown when userId equals currentUserId
+    // (current user's own location - blue circle already visible)
+    val initialLatitude = 46.5196
+    val initialLongitude = 6.5680
+    val currentUserId = "current-user-123"
+
+    composeTestRule.setContent {
+      MapScreen(
+          viewModel = testViewModel,
+          navigationActions = null,
+          initialLatitude = initialLatitude,
+          initialLongitude = initialLongitude,
+          showLocationMarker = true,
+          sharedLocationUserId = currentUserId,
+          currentUserId = currentUserId)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Verify the map displays without duplicate marker for current user
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_locationMarker_notShownWhenUserIdIsNull() {
+    // Test that location marker is not shown when sharedLocationUserId is null
+    val initialLatitude = 46.5196
+    val initialLongitude = 6.5680
+    val currentUserId = "current-user-123"
+
+    composeTestRule.setContent {
+      MapScreen(
+          viewModel = testViewModel,
+          navigationActions = null,
+          initialLatitude = initialLatitude,
+          initialLongitude = initialLongitude,
+          showLocationMarker = true,
+          sharedLocationUserId = null,
+          currentUserId = currentUserId)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Verify the map displays without location marker when userId is null
     composeTestRule
         .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
         .assertExists()

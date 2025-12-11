@@ -216,7 +216,8 @@ fun ChatScreen(
     totalParticipants: Int = 1, // Total number of participants in the event/group
     presenceViewModel: PresenceViewModel? =
         null, // Optional presence view model for online tracking
-    onNavigateToMap: (Location) -> Unit = {} // Callback when user clicks on location message
+    onNavigateToMap: (Location, String) -> Unit = { _, _ ->
+    } // Callback when user clicks on location message (location, senderId)
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val snackbarHostState = remember { SnackbarHostState() }
@@ -400,7 +401,7 @@ private fun ChatContent(
     onChatColor: Color,
     viewModel: ChatViewModel,
     totalParticipants: Int,
-    onNavigateToMap: (Location) -> Unit
+    onNavigateToMap: (Location, String) -> Unit
 ) {
   val uiState by viewModel.uiState.collectAsState()
   var messageText by remember { mutableStateOf("") }
@@ -449,7 +450,7 @@ private fun ChatContent(
                 }
               },
               onImageClick = { imageUrl -> fullScreenImageUrl = imageUrl },
-              onLocationClick = { location -> onNavigateToMap(location) },
+              onLocationClick = { location, senderId -> onNavigateToMap(location, senderId) },
               modifier = Modifier.weight(1f))
 
           // Message input
@@ -528,7 +529,7 @@ private fun MessageList(
     listState: androidx.compose.foundation.lazy.LazyListState,
     onMessageLongPress: (Message) -> Unit,
     onImageClick: (String) -> Unit,
-    onLocationClick: (Location) -> Unit,
+    onLocationClick: (Location, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
   LazyColumn(
@@ -705,7 +706,7 @@ private fun MessageContent(
     onBubbleColor: Color,
     bubbleColor: Color,
     onImageClick: (String) -> Unit,
-    onLocationClick: (Location) -> Unit = {},
+    onLocationClick: (Location, String) -> Unit = { _, _ -> },
 ) {
   if (message.type == MessageType.SYSTEM) {
     Text(
@@ -735,7 +736,8 @@ private fun MessageContent(
       MessageType.LOCATION -> {
         // Display location message
         message.location?.let { location ->
-          ChatLocationMessage(location = location, onClick = { onLocationClick(location) })
+          ChatLocationMessage(
+              location = location, onClick = { onLocationClick(location, message.senderId) })
         }
       }
       else -> {
@@ -835,7 +837,7 @@ private fun MessageItem(
     totalUsersInChat: Int = 0,
     onLongPress: () -> Unit = {},
     onImageClick: (String) -> Unit = {},
-    onLocationClick: (Location) -> Unit = {}
+    onLocationClick: (Location, String) -> Unit = { _, _ -> }
 ) {
   val horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
 

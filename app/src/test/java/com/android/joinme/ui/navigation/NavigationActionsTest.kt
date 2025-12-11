@@ -517,7 +517,7 @@ class NavigationActionsTest {
     assertEquals("Map", map.name)
     assertTrue(map.isTopLevelDestination)
     // Also verify the companion route pattern
-    assertEquals("map?lat={lat}&lon={lon}&marker={marker}", Screen.Map.route)
+    assertEquals("map?lat={lat}&lon={lon}&marker={marker}&userId={userId}", Screen.Map.route)
   }
 
   @Test

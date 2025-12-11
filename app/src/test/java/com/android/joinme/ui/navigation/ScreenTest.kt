@@ -188,7 +188,7 @@ class ScreenTest {
     assertTrue(mapWithLocationAndMarker.isTopLevelDestination)
 
     // Test companion route pattern and default route
-    assertEquals("map?lat={lat}&lon={lon}&marker={marker}", Screen.Map.route)
+    assertEquals("map?lat={lat}&lon={lon}&marker={marker}&userId={userId}", Screen.Map.route)
     assertEquals("map", Screen.Map.defaultRoute)
   }
 
