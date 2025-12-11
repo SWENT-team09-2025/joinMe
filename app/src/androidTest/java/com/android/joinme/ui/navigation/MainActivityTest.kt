@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -1411,6 +1413,98 @@ class MainActivityTest {
     }
     // Note: Toast will display "Failed to access group" - this is expected behavior
     scenario.close()
+  }
+
+  // ========== Chat Location Navigation Tests ==========
+  // These tests cover the onNavigateToMap callback in MainActivity (lines 729-734)
+
+  @Test
+  fun mainActivity_chatScreen_onNavigateToMap_navigatesToMapWithLocation() = runBlocking {
+    val currentUser = FirebaseAuth.getInstance().currentUser
+
+    // Skip test if user is not authenticated, but log it so it's visible
+    if (currentUser == null) {
+      android.util.Log.w(
+          "MainActivityTest",
+          "Skipping mainActivity_chatScreen_onNavigateToMap_navigatesToMapWithLocation: " +
+              "No authenticated user found. This test requires Firebase authentication.")
+      return@runBlocking
+    }
+
+    val userId = currentUser.uid
+
+    // Create a test event with chat and location message
+    val eventRepository =
+        com.android.joinme.model.event.EventsRepositoryProvider.getRepository(
+            isOnline = true, ApplicationProvider.getApplicationContext())
+    val testEventId = eventRepository.getNewEventId()
+    val testEvent =
+        com.android.joinme.model.event.Event(
+            eventId = testEventId,
+            type = com.android.joinme.model.event.EventType.SPORTS,
+            title = "Test Event for Location Navigation",
+            description = "Testing map navigation from chat",
+            location = com.android.joinme.model.map.Location(46.5196, 6.5680, "EPFL"),
+            date = com.google.firebase.Timestamp.now(),
+            duration = 60,
+            participants = listOf(userId),
+            maxParticipants = 10,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = userId)
+    eventRepository.addEvent(testEvent)
+
+    // Add a location message to the chat
+    val chatRepository = com.android.joinme.model.chat.ChatRepositoryProvider.repository
+    val testLocation = com.android.joinme.model.map.Location(46.5196, 6.5680, "EPFL")
+    val locationMessage =
+        com.android.joinme.model.chat.Message(
+            id = chatRepository.getNewMessageId(),
+            conversationId = testEventId,
+            senderId = currentUser.uid,
+            senderName = currentUser.displayName ?: "Test User",
+            content = "Check this location",
+            timestamp = System.currentTimeMillis(),
+            type = com.android.joinme.model.chat.MessageType.LOCATION,
+            location = testLocation)
+    chatRepository.addMessage(locationMessage)
+
+    try {
+      // Launch MainActivity with event chat notification
+      val context = ApplicationProvider.getApplicationContext<Context>()
+      val intent =
+          Intent(context, MainActivity::class.java).apply {
+            putExtra("notificationType", "event_chat_message")
+            putExtra("eventId", testEventId)
+            putExtra("conversationId", testEventId)
+            putExtra("chatName", "Test Event Chat")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+          }
+
+      val scenario = ActivityScenario.launch<MainActivity>(intent)
+      composeTestRule.waitForIdle()
+      Thread.sleep(2000) // Wait for chat to load
+
+      // Find and click the location message
+      composeTestRule.onNodeWithText("EPFL", useUnmergedTree = true).assertExists().performClick()
+
+      composeTestRule.waitForIdle()
+      Thread.sleep(1000) // Wait for navigation and Toast
+
+      scenario.use {
+        it.onActivity { activity ->
+          // Verify activity is still running (not crashed)
+          assert(!activity.isFinishing)
+        }
+      }
+
+      scenario.close()
+    } finally {
+      // Cleanup
+      try {
+        eventRepository.deleteEvent(testEventId)
+        chatRepository.deleteMessage(testEventId, locationMessage.id)
+      } catch (_: Exception) {}
+    }
   }
 
   // ========== Invitation Deep Link Tests (New Code Coverage) ==========

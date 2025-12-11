@@ -69,8 +69,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="joinme.app"
-                    android:path="/invite"
+                    android:host="joinme-aa9e8.web.app"
+                    android:pathPrefix="/invite"
                     />
             </intent-filter>
             <intent-filter>
