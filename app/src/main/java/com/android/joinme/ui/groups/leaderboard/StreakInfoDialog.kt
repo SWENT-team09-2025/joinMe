@@ -26,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.android.joinme.R
@@ -75,7 +74,7 @@ fun StreakInfoDialog(onDismiss: () -> Unit) {
                           IconButton(
                               onClick = onDismiss,
                               modifier =
-                                  Modifier.size(24.dp)
+                                  Modifier.size(Dimens.IconSize.medium)
                                       .testTag(StreakInfoDialogTestTags.CLOSE_BUTTON)) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
