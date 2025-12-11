@@ -135,8 +135,7 @@ class MapViewModel(
     val filteredSeries = filterRepository.applyFiltersToSeries(allSeries, allEvents, currentUserId)
 
     // Remove events that are part of a series
-    val seriesEventIds = allSeries.flatMap { it.eventIds }.toSet()
-    val eventsNotInSeries = filteredEvents.filterNot { it.eventId in seriesEventIds }
+    val eventsNotInSeries = filteredEvents.filter { !it.partOfASerie }
 
     // Map series to their locations (using first event's location)
     val eventsById = allEvents.associateBy { it.eventId }
