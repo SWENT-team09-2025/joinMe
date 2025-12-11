@@ -1,6 +1,6 @@
 package com.android.joinme.model.chat
 
-//Implemented with help of Claude AI
+// Implemented with help of Claude AI
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

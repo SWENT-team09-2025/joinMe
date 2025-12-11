@@ -1,8 +1,6 @@
 package com.android.joinme.model.chat
 
-/**
- * Utility functions for chat operations.
- */
+/** Utility functions for chat operations. */
 object ChatUtils {
   /**
    * Generates a deterministic conversation ID for a direct message between two users.

@@ -47,9 +47,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
+import com.android.joinme.model.chat.ChatUtils
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.groups.Group
-import com.android.joinme.model.chat.ChatUtils
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.components.EventCard
 import com.android.joinme.ui.components.GroupCard
@@ -347,7 +347,8 @@ private fun InterestsSection(
                       else stringResource(R.string.no_interests_available),
                   style = MaterialTheme.typography.bodyMedium)
             }
-        MessageButton(profile = profile, currentUserId = currentUserId, onMessageClick = onMessageClick)
+        MessageButton(
+            profile = profile, currentUserId = currentUserId, onMessageClick = onMessageClick)
       }
 }
 
@@ -367,9 +368,7 @@ private fun MessageButton(
 
         try {
           // Generate deterministic DM conversation ID
-          val dmId =
-              ChatUtils.generateDirectMessageId(
-                  currentUserId, profile.uid)
+          val dmId = ChatUtils.generateDirectMessageId(currentUserId, profile.uid)
 
           // Navigate to chat with the DM ID and profile username
           onMessageClick(dmId, profile.username, 2)
