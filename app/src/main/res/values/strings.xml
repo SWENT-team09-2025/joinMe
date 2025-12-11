@@ -118,6 +118,7 @@
 
     <!-- Events/Series Details Screens -->
     <string name="group_name">Group: %1$s</string>
+    <string name="loading">Loading…</string>
 
     <!-- Calendar Screen -->
     <string name="calendar">Calendar</string>
