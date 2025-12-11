@@ -1,8 +1,10 @@
 package com.android.joinme.ui.chat
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.android.joinme.R
 import com.android.joinme.model.chat.ChatRepository
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
@@ -20,6 +22,80 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 /**
+ * Sealed class representing poll-related errors with string resource IDs. This allows the ViewModel
+ * to remain Context-free while still supporting localization.
+ */
+sealed class PollError {
+  /** Resolves the error message using the provided context. */
+  abstract fun getMessage(context: Context): String
+
+  data class LoadFailed(val details: String?) : PollError() {
+    override fun getMessage(context: Context): String =
+        context.getString(R.string.poll_error_load_failed, details ?: "")
+  }
+
+  object ChatNotInitialized : PollError() {
+    override fun getMessage(context: Context): String =
+        context.getString(R.string.poll_error_chat_not_initialized)
+  }
+
+  object InvalidPoll : PollError() {
+    override fun getMessage(context: Context): String =
+        context.getString(R.string.poll_error_invalid)
+  }
+
+  data class CreateFailed(val details: String?) : PollError() {
+    override fun getMessage(context: Context): String =
+        context.getString(R.string.poll_error_create_failed, details ?: "")
+  }
+
+  object VoteOnClosedPoll : PollError() {
+    override fun getMessage(context: Context): String =
+        context.getString(R.string.poll_error_vote_closed)
+  }
+
+  data class VoteFailed(val details: String?) : PollError() {
+    override fun getMessage(context: Context): String =
+        context.getString(R.string.poll_error_vote_failed, details ?: "")
+  }
+
+  object CloseNotCreator : PollError() {
+    override fun getMessage(context: Context): String =
+        context.getString(R.string.poll_error_close_not_creator)
+  }
+
+  data class CloseFailed(val details: String?) : PollError() {
+    override fun getMessage(context: Context): String =
+        context.getString(R.string.poll_error_close_failed, details ?: "")
+  }
+
+  object ReopenNotCreator : PollError() {
+    override fun getMessage(context: Context): String =
+        context.getString(R.string.poll_error_reopen_not_creator)
+  }
+
+  data class ReopenFailed(val details: String?) : PollError() {
+    override fun getMessage(context: Context): String =
+        context.getString(R.string.poll_error_reopen_failed, details ?: "")
+  }
+
+  object DeleteNotCreator : PollError() {
+    override fun getMessage(context: Context): String =
+        context.getString(R.string.poll_error_delete_not_creator)
+  }
+
+  data class DeleteFailed(val details: String?) : PollError() {
+    override fun getMessage(context: Context): String =
+        context.getString(R.string.poll_error_delete_failed, details ?: "")
+  }
+
+  /** Custom validation error from poll validation. */
+  data class ValidationError(val message: String) : PollError() {
+    override fun getMessage(context: Context): String = message
+  }
+}
+
+/**
  * Represents the UI state for poll creation.
  *
  * @property question The poll question being composed
@@ -27,8 +103,8 @@ import kotlinx.coroutines.launch
  * @property isAnonymous Whether the poll should be anonymous
  * @property allowMultipleAnswers Whether multiple answers are allowed
  * @property isCreating Whether a poll is currently being created
- * @property errorMessage Error message to display, null if no error
- * @property validationError Validation error message, null if valid
+ * @property error Error to display, null if no error
+ * @property validationError Validation error, null if valid
  */
 data class PollCreationState(
     val question: String = "",
@@ -36,8 +112,8 @@ data class PollCreationState(
     val isAnonymous: Boolean = false,
     val allowMultipleAnswers: Boolean = false,
     val isCreating: Boolean = false,
-    val errorMessage: String? = null,
-    val validationError: String? = null
+    val error: PollError? = null,
+    val validationError: PollError? = null
 ) {
   /** Returns the number of additional options that can be added. */
   fun getRemainingOptionsCount(): Int {
@@ -73,7 +149,7 @@ data class PollCreationState(
  * @property polls The list of polls in the current conversation
  * @property isLoading Whether polls are currently loading
  * @property isLoadingVoterProfiles Whether voter profiles are currently being fetched
- * @property errorMessage Error message to display, null if no error
+ * @property error Error to display, null if no error
  * @property currentUserId The ID of the current user
  * @property voterProfiles Map of user IDs to their profiles (for showing who voted)
  */
@@ -81,7 +157,7 @@ data class PollsUIState(
     val polls: List<Poll> = emptyList(),
     val isLoading: Boolean = true,
     val isLoadingVoterProfiles: Boolean = false,
-    val errorMessage: String? = null,
+    val error: PollError? = null,
     val currentUserId: String = "",
     val voterProfiles: Map<String, Profile> = emptyMap()
 )
@@ -139,7 +215,7 @@ class PollViewModel(
                 Log.e(TAG, "Error observing polls", e)
                 _pollsState.value =
                     _pollsState.value.copy(
-                        isLoading = false, errorMessage = "Failed to load polls: ${e.message}")
+                        isLoading = false, error = PollError.LoadFailed(e.message))
               }
               .collect { pollsList ->
                 _pollsState.value = _pollsState.value.copy(polls = pollsList, isLoading = false)
@@ -274,17 +350,21 @@ class PollViewModel(
    *
    * @param creatorName The name of the poll creator
    * @param onSuccess Callback invoked when the poll is created successfully
-   * @param onError Callback invoked if poll creation fails
+   * @param onError Callback invoked if poll creation fails (receives the PollError)
    */
-  fun createPoll(creatorName: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
+  fun createPoll(
+      creatorName: String,
+      onSuccess: () -> Unit = {},
+      onError: (PollError) -> Unit = {}
+  ) {
     val state = _creationState.value
 
     // Ensure we have a conversation ID
     if (currentConversationId.isBlank()) {
       Log.e(TAG, "Cannot create poll: conversation ID is not set")
-      val errorMsg = "Cannot create poll: chat not initialized"
-      _creationState.value = state.copy(validationError = errorMsg)
-      onError(errorMsg)
+      val error = PollError.ChatNotInitialized
+      _creationState.value = state.copy(validationError = error)
+      onError(error)
       return
     }
 
@@ -293,8 +373,10 @@ class PollViewModel(
     val validation = validatePollCreation(state.question, nonEmptyOptions)
 
     if (!validation.isValid) {
-      _creationState.value = state.copy(validationError = validation.errorMessage)
-      onError(validation.errorMessage ?: "Invalid poll")
+      val error =
+          validation.errorMessage?.let { PollError.ValidationError(it) } ?: PollError.InvalidPoll
+      _creationState.value = state.copy(validationError = error)
+      onError(error)
       return
     }
 
@@ -340,10 +422,9 @@ class PollViewModel(
         onSuccess()
       } catch (e: Exception) {
         Log.e(TAG, "Failed to create poll", e)
-        val errorMsg = "Failed to create poll: ${e.message}"
-        _creationState.value =
-            _creationState.value.copy(isCreating = false, errorMessage = errorMsg)
-        onError(errorMsg)
+        val error = PollError.CreateFailed(e.message)
+        _creationState.value = _creationState.value.copy(isCreating = false, error = error)
+        onError(error)
       }
     }
   }
@@ -364,7 +445,7 @@ class PollViewModel(
     val poll = _pollsState.value.polls.find { it.id == pollId } ?: return
 
     if (poll.isClosed) {
-      _pollsState.value = _pollsState.value.copy(errorMessage = "Cannot vote on closed poll")
+      _pollsState.value = _pollsState.value.copy(error = PollError.VoteOnClosedPoll)
       return
     }
 
@@ -381,7 +462,7 @@ class PollViewModel(
         }
       } catch (e: Exception) {
         Log.e(TAG, "Failed to vote", e)
-        _pollsState.value = _pollsState.value.copy(errorMessage = "Failed to vote: ${e.message}")
+        _pollsState.value = _pollsState.value.copy(error = PollError.VoteFailed(e.message))
       }
     }
   }
@@ -398,8 +479,7 @@ class PollViewModel(
     val poll = _pollsState.value.polls.find { it.id == pollId } ?: return
 
     if (poll.creatorId != currentUserId) {
-      _pollsState.value =
-          _pollsState.value.copy(errorMessage = "Only the poll creator can close the poll")
+      _pollsState.value = _pollsState.value.copy(error = PollError.CloseNotCreator)
       return
     }
 
@@ -408,8 +488,7 @@ class PollViewModel(
         pollRepository.closePoll(currentConversationId, pollId, currentUserId)
       } catch (e: Exception) {
         Log.e(TAG, "Failed to close poll", e)
-        _pollsState.value =
-            _pollsState.value.copy(errorMessage = "Failed to close poll: ${e.message}")
+        _pollsState.value = _pollsState.value.copy(error = PollError.CloseFailed(e.message))
       }
     }
   }
@@ -424,8 +503,7 @@ class PollViewModel(
     val poll = _pollsState.value.polls.find { it.id == pollId } ?: return
 
     if (poll.creatorId != currentUserId) {
-      _pollsState.value =
-          _pollsState.value.copy(errorMessage = "Only the poll creator can reopen the poll")
+      _pollsState.value = _pollsState.value.copy(error = PollError.ReopenNotCreator)
       return
     }
 
@@ -434,8 +512,7 @@ class PollViewModel(
         pollRepository.reopenPoll(currentConversationId, pollId, currentUserId)
       } catch (e: Exception) {
         Log.e(TAG, "Failed to reopen poll", e)
-        _pollsState.value =
-            _pollsState.value.copy(errorMessage = "Failed to reopen poll: ${e.message}")
+        _pollsState.value = _pollsState.value.copy(error = PollError.ReopenFailed(e.message))
       }
     }
   }
@@ -450,8 +527,7 @@ class PollViewModel(
     val poll = _pollsState.value.polls.find { it.id == pollId } ?: return
 
     if (poll.creatorId != currentUserId) {
-      _pollsState.value =
-          _pollsState.value.copy(errorMessage = "Only the poll creator can delete the poll")
+      _pollsState.value = _pollsState.value.copy(error = PollError.DeleteNotCreator)
       return
     }
 
@@ -460,16 +536,15 @@ class PollViewModel(
         pollRepository.deletePoll(currentConversationId, pollId, currentUserId)
       } catch (e: Exception) {
         Log.e(TAG, "Failed to delete poll", e)
-        _pollsState.value =
-            _pollsState.value.copy(errorMessage = "Failed to delete poll: ${e.message}")
+        _pollsState.value = _pollsState.value.copy(error = PollError.DeleteFailed(e.message))
       }
     }
   }
 
-  /** Clears the error message. */
+  /** Clears the error. */
   fun clearError() {
-    _pollsState.value = _pollsState.value.copy(errorMessage = null)
-    _creationState.value = _creationState.value.copy(errorMessage = null)
+    _pollsState.value = _pollsState.value.copy(error = null)
+    _creationState.value = _creationState.value.copy(error = null)
   }
 
   /** Clears the validation error. */
