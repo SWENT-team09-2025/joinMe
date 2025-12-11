@@ -49,6 +49,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.groups.Group
+import com.android.joinme.model.chat.ChatUtils
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.components.EventCard
 import com.android.joinme.ui.components.GroupCard
@@ -121,7 +122,8 @@ fun PublicProfileScreen(
     onEventClick: (Event) -> Unit = {},
     onGroupClick: (Group) -> Unit = {},
     onFollowersClick: (String) -> Unit = {},
-    onFollowingClick: (String) -> Unit = {}
+    onFollowingClick: (String) -> Unit = {},
+    onMessageClick: (String, String, Int) -> Unit = { _, _, _ -> }
 ) {
   val profile by viewModel.profile.collectAsState()
   val commonEvents by viewModel.commonEvents.collectAsState()
@@ -208,7 +210,9 @@ fun PublicProfileScreen(
                       onEventClick = onEventClick,
                       onGroupClick = onGroupClick,
                       onFollowersClick = { onFollowersClick(userId) },
-                      onFollowingClick = { onFollowingClick(userId) })
+                      onFollowingClick = { onFollowingClick(userId) },
+                      onMessageClick = onMessageClick,
+                      currentUserId = currentUserId)
                 }
               }
             }
@@ -226,7 +230,9 @@ private fun ProfileContent(
     onEventClick: (Event) -> Unit,
     onGroupClick: (Group) -> Unit,
     onFollowersClick: () -> Unit,
-    onFollowingClick: () -> Unit
+    onFollowingClick: () -> Unit,
+    onMessageClick: (String, String, Int) -> Unit,
+    currentUserId: String?
 ) {
   Column(
       modifier = Modifier.fillMaxSize().padding(Dimens.Padding.medium),
@@ -245,7 +251,8 @@ private fun ProfileContent(
             isFollowing = isFollowing,
             isFollowLoading = isFollowLoading,
             onFollowClick = onFollowClick)
-        InterestsSection(profile = profile)
+        InterestsSection(
+            profile = profile, onMessageClick = onMessageClick, currentUserId = currentUserId)
         EventStreaksSection(testTag = PublicProfileScreenTestTags.EVENT_STREAKS_SECTION)
         CommonEventsAndGroupsSection(
             commonEvents = commonEvents,
@@ -318,7 +325,11 @@ private fun FollowButton(isFollowing: Boolean, isFollowLoading: Boolean, onClick
 }
 
 @Composable
-private fun InterestsSection(profile: Profile) {
+private fun InterestsSection(
+    profile: Profile,
+    onMessageClick: (String, String, Int) -> Unit,
+    currentUserId: String?
+) {
   Row(
       modifier = Modifier.fillMaxWidth(),
       horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.medium),
@@ -336,16 +347,36 @@ private fun InterestsSection(profile: Profile) {
                       else stringResource(R.string.no_interests_available),
                   style = MaterialTheme.typography.bodyMedium)
             }
-        MessageButton()
+        MessageButton(profile = profile, currentUserId = currentUserId, onMessageClick = onMessageClick)
       }
 }
 
 @Composable
-private fun MessageButton() {
+private fun MessageButton(
+    profile: Profile,
+    currentUserId: String?,
+    onMessageClick: (String, String, Int) -> Unit
+) {
   val context = LocalContext.current
   Button(
       onClick = {
-        Toast.makeText(context, "Message functionality coming soon!", Toast.LENGTH_SHORT).show()
+        if (currentUserId.isNullOrBlank()) {
+          Toast.makeText(context, "Please sign in to send messages", Toast.LENGTH_SHORT).show()
+          return@Button
+        }
+
+        try {
+          // Generate deterministic DM conversation ID
+          val dmId =
+              ChatUtils.generateDirectMessageId(
+                  currentUserId, profile.uid)
+
+          // Navigate to chat with the DM ID and profile username
+          onMessageClick(dmId, profile.username, 2)
+        } catch (_: IllegalArgumentException) {
+          // This catches the case where user tries to message themselves
+          Toast.makeText(context, "Cannot send messages to yourself", Toast.LENGTH_SHORT).show()
+        }
       },
       modifier =
           Modifier.height(Dimens.Button.minHeight)

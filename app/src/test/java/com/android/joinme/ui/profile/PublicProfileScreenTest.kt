@@ -454,6 +454,34 @@ class PublicProfileScreenTest {
     composeTestRule.onNodeWithText("Message").assertIsDisplayed()
   }
 
+  @Test
+  fun publicProfileScreen_messageButtonIsClickable() {
+    val profile = createTestProfile(username = "TestUser123")
+    val viewModel =
+        PublicProfileViewModel(
+            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
+
+    composeTestRule.setContent {
+      PublicProfileScreen(
+          userId = otherUserId,
+          viewModel = viewModel,
+          onBackClick = {},
+          onMessageClick = { _, _, _ -> })
+    }
+
+    viewModel.loadPublicProfile(otherUserId, currentUserId)
+    composeTestRule.waitForIdle()
+
+    // Click the message button - verifies it doesn't crash
+    // Note: Full callback testing requires Firebase Auth mocking
+    // The DM ID generation logic is tested in ChatUtilsTest
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.MESSAGE_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify button is still displayed after click
+    composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.MESSAGE_BUTTON).assertIsDisplayed()
+  }
+
   // ==================== COMMON EVENTS TESTS ====================
 
   @Test
