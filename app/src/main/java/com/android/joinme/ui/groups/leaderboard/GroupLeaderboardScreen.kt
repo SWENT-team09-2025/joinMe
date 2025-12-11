@@ -336,7 +336,7 @@ private fun RankBadge(rank: Int) {
   Box(
       modifier =
           Modifier.size(Dimens.Leaderboard.rankBadgeSize)
-              .background(color = MaterialTheme.colorScheme.onSurface, shape = CircleShape),
+              .background(color = MaterialTheme.colorScheme.surface, shape = CircleShape),
       contentAlignment = Alignment.Center) {
         Text(
             text = rank.toString(),
