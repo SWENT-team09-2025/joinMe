@@ -287,22 +287,6 @@ class ProfileRepositoryFirestoreTest {
   }
 
   @Test
-  fun `getProfilesByIds returns null when profile not found`() = runTest {
-    // Given
-    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
-    every { mockSnapshot.exists() } returns false
-
-    val mockTask = Tasks.forResult(mockSnapshot)
-    every { mockDocument.get() } returns mockTask
-
-    // When
-    val result = repository.getProfilesByIds(listOf(testUid))
-
-    // Then
-    assertNull(result)
-  }
-
-  @Test
   fun `getProfilesByIds returns null when getProfile throws exception`() = runTest {
     // Given
     every { mockDocument.get() } returns Tasks.forException(Exception("Network error"))

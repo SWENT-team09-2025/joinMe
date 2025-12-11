@@ -79,9 +79,8 @@ class ProfileRepositoryFirestore(
    */
   override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? {
     if (uids.isEmpty()) return emptyList()
-
     return try {
-      uids.map { uid ->
+      uids.mapNotNull { uid ->
         try {
           getProfile(uid)
         } catch (_: NoSuchElementException) {
@@ -92,7 +91,6 @@ class ProfileRepositoryFirestore(
       Log.e(TAG, "Error fetching profiles", e)
       null
     }
-        as List<Profile>?
   }
   /**
    * Creates or updates a user profile in Firestore. If the profile document already exists, it
