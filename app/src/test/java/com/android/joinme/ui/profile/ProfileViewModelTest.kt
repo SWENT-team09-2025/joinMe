@@ -133,6 +133,34 @@ class ProfileViewModelTest {
   }
 
   @Test
+  fun `loadProfile handles blank uid error`() = runTest {
+    viewModel.loadProfile("")
+    testScheduler.advanceUntilIdle()
+
+    assertFalse(viewModel.isLoading.value)
+    assertEquals("User not authenticated. Please sign in again.", viewModel.error.value)
+    assertNull(viewModel.profile.value)
+  }
+
+  @Test
+  fun `loadProfile handles timeout exception`() = runTest {
+    coEvery { mockProfileRepository.getProfile("test-uid") } coAnswers
+        {
+          kotlinx.coroutines.delay(15000L) // Longer than 10s timeout
+          testProfile
+        }
+
+    viewModel.loadProfile("test-uid")
+    testScheduler.advanceUntilIdle()
+
+    assertNull(viewModel.profile.value)
+    assertEquals(
+        "Connection timeout. Please check your internet connection and try again.",
+        viewModel.error.value)
+    assertFalse(viewModel.isLoading.value)
+  }
+
+  @Test
   fun `loadProfile skips loading if profile already loaded for same uid`() = runTest {
     // First load
     coEvery { mockProfileRepository.getProfile("test-uid") } returns testProfile
@@ -219,6 +247,19 @@ class ProfileViewModelTest {
     assertTrue(viewModel.error.value?.contains("Connection timeout") == true)
     assertTrue(errorMessage.contains("Connection timeout"))
     assertFalse(viewModel.isLoading.value)
+  }
+
+  @Test
+  fun `createOrUpdateProfile works with default parameters`() = runTest {
+    coEvery { mockProfileRepository.createOrUpdateProfile(testProfile) } just Runs
+
+    viewModel.createOrUpdateProfile(profile = testProfile)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(testProfile, viewModel.profile.value)
+    assertNull(viewModel.error.value)
+    assertFalse(viewModel.isLoading.value)
+    coVerify { mockProfileRepository.createOrUpdateProfile(testProfile) }
   }
 
   // ==================== DELETE PROFILE TESTS ====================
