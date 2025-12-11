@@ -57,7 +57,8 @@ class EditProfileScreenTest {
       private var failOnce: Boolean = false,
       private var photoUploadShouldFail: Boolean = false,
       private var simulateUploadDelay: Boolean = false,
-      private var simulateDeleteDelay: Boolean = false
+      private var simulateDeleteDelay: Boolean = false,
+      var shouldFailOnSave: Boolean = false
   ) : ProfileRepository {
 
     override suspend fun getProfile(uid: String): Profile? {
@@ -75,6 +76,9 @@ class EditProfileScreenTest {
     }
 
     override suspend fun createOrUpdateProfile(profile: Profile) {
+      if (shouldFailOnSave) {
+        throw RuntimeException("Save failed")
+      }
       stored = profile
     }
 
@@ -866,5 +870,115 @@ class EditProfileScreenTest {
 
     // Delete button should now be hidden
     composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertDoesNotExist()
+  }
+
+  // ==================== SAVE CALLBACK TESTS ====================
+
+  @Test
+  fun editProfileScreen_callsOnSuccessCallback_afterSaveCompletes() = runTest {
+    val profile = createTestProfile()
+    val repo = FakeProfileRepository(profile)
+    val vm = ProfileViewModel(repo)
+
+    var successCallbackCalled = false
+    val onSaveSuccess = { successCallbackCalled = true }
+
+    composeTestRule.setContent {
+      EditProfileScreen(uid = testUid, profileViewModel = vm, onSaveSuccess = onSaveSuccess)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Modify username
+    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performTextClearance()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performTextInput("Updated")
+
+    // Click save
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performScrollTo()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify onSuccess was called
+    assert(successCallbackCalled) { "onSaveSuccess callback should be called after save completes" }
+  }
+
+  @Test
+  fun editProfileScreen_doesNotCallOnSuccess_whenSaveFails() = runTest {
+    val profile = createTestProfile()
+    val repo = FakeProfileRepository(profile, shouldFailOnSave = true)
+    val vm = ProfileViewModel(repo)
+
+    var successCallbackCalled = false
+    val onSaveSuccess = { successCallbackCalled = true }
+
+    composeTestRule.setContent {
+      EditProfileScreen(uid = testUid, profileViewModel = vm, onSaveSuccess = onSaveSuccess)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Modify username
+    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performTextClearance()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performTextInput("Updated")
+
+    // Click save
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performScrollTo()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify onSuccess was NOT called
+    assert(!successCallbackCalled) { "onSaveSuccess should not be called when save fails" }
+  }
+
+  @Test
+  fun editProfileScreen_showsToast_whenSaveFails() = runTest {
+    val profile = createTestProfile()
+    val repo = FakeProfileRepository(profile, shouldFailOnSave = true)
+    val vm = ProfileViewModel(repo)
+
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    composeTestRule.waitForIdle()
+
+    // Modify username
+    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performTextClearance()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performTextInput("Updated")
+
+    // Click save
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performScrollTo()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Note: Toast verification in Robolectric is limited, but save should not crash
+    // The error callback will be invoked with the error message
+  }
+
+  @Test
+  fun editProfileScreen_updatesViewModelState_afterSuccessfulSave() = runTest {
+    val profile = createTestProfile()
+    val repo = FakeProfileRepository(profile)
+    val vm = ProfileViewModel(repo)
+    vm.loadProfile(testUid)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    composeTestRule.waitForIdle()
+
+    // Modify username
+    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
+        .performTextInput("New Username")
+
+    // Click save
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performScrollTo()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify ViewModel state updated
+    assert(vm.profile.value?.username == "New Username") {
+      "ViewModel should have updated profile after save"
+    }
   }
 }
