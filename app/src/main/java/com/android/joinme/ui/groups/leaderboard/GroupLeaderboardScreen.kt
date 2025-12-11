@@ -55,6 +55,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
 import com.android.joinme.ui.profile.ProfilePhotoImage
 import com.android.joinme.ui.theme.Dimens
@@ -86,7 +87,7 @@ object LeaderboardTestTags {
 @Composable
 fun GroupLeaderboardScreen(
     groupId: String,
-    viewModel: GroupLeaderboardViewModel,
+    viewModel: GroupLeaderboardViewModel = viewModel(),
     onNavigateBack: () -> Unit
 ) {
   val uiState by viewModel.uiState.collectAsState()

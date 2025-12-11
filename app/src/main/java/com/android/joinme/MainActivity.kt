@@ -43,6 +43,7 @@ import com.android.joinme.ui.groups.EditGroupScreen
 import com.android.joinme.ui.groups.GroupDetailScreen
 import com.android.joinme.ui.groups.GroupListScreen
 import com.android.joinme.ui.groups.GroupListViewModel
+import com.android.joinme.ui.groups.leaderboard.GroupLeaderboardScreen
 import com.android.joinme.ui.history.HistoryScreen
 import com.android.joinme.ui.map.MapScreen
 import com.android.joinme.ui.map.MapViewModel
@@ -745,6 +746,9 @@ fun JoinMe(
               },
               onNavigateToChat = { chatId, chatTitle, totalParticipants ->
                 navigationActions.navigateTo(Screen.Chat(chatId, chatTitle, totalParticipants))
+              },
+              onNavigateToLeaderboard = {
+                navigationActions.navigateTo(Screen.GroupLeaderboard(groupId))
               })
         }
       }
@@ -762,6 +766,14 @@ fun JoinMe(
               onSelectedSerie = { serieId ->
                 navigationActions.navigateTo(Screen.SerieDetails(serieId))
               })
+        } ?: run { Toast.makeText(context, "Group ID is null", Toast.LENGTH_SHORT).show() }
+      }
+
+      composable(route = Screen.GroupLeaderboard.route) { navBackStackEntry ->
+        val groupId = navBackStackEntry.arguments?.getString("groupId")
+
+        groupId?.let {
+          GroupLeaderboardScreen(groupId = groupId, onNavigateBack = { navigationActions.goBack() })
         } ?: run { Toast.makeText(context, "Group ID is null", Toast.LENGTH_SHORT).show() }
       }
 
