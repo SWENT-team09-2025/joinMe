@@ -290,20 +290,6 @@ private fun LeaderboardContainer(entries: List<LeaderboardEntry>) {
                   entries = entries,
                   modifier = Modifier.padding(top = Dimens.Leaderboard.bumpHeight / 2))
             }
-
-        // Decorative bump at top center
-        Box(
-            modifier =
-                Modifier.align(Alignment.TopCenter)
-                    .size(
-                        width = Dimens.Leaderboard.bumpWidth,
-                        height = Dimens.Leaderboard.bumpHeight)
-                    .background(
-                        color = MaterialTheme.colorScheme.primary,
-                        shape =
-                            RoundedCornerShape(
-                                bottomStart = Dimens.Leaderboard.bumpRadius,
-                                bottomEnd = Dimens.Leaderboard.bumpRadius)))
       }
 }
 
