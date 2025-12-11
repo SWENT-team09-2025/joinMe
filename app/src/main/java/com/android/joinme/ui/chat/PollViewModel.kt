@@ -12,6 +12,7 @@ import com.android.joinme.model.chat.PollRepository
 import com.android.joinme.model.chat.validatePollCreation
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -107,6 +108,7 @@ class PollViewModel(
   val pollsState: StateFlow<PollsUIState> = _pollsState.asStateFlow()
 
   private var currentConversationId: String = ""
+  private var pollObservationJob: Job? = null
 
   companion object {
     private const val TAG = "PollViewModel"
@@ -126,24 +128,26 @@ class PollViewModel(
 
   /** Observes polls for the current conversation. */
   private fun observePolls() {
-    viewModelScope.launch {
-      _pollsState.value = _pollsState.value.copy(isLoading = true)
+    pollObservationJob?.cancel()
+    pollObservationJob =
+        viewModelScope.launch {
+          _pollsState.value = _pollsState.value.copy(isLoading = true)
 
-      pollRepository
-          .observePollsForConversation(currentConversationId)
-          .catch { e ->
-            Log.e(TAG, "Error observing polls", e)
-            _pollsState.value =
-                _pollsState.value.copy(
-                    isLoading = false, errorMessage = "Failed to load polls: ${e.message}")
-          }
-          .collect { pollsList ->
-            _pollsState.value = _pollsState.value.copy(polls = pollsList, isLoading = false)
+          pollRepository
+              .observePollsForConversation(currentConversationId)
+              .catch { e ->
+                Log.e(TAG, "Error observing polls", e)
+                _pollsState.value =
+                    _pollsState.value.copy(
+                        isLoading = false, errorMessage = "Failed to load polls: ${e.message}")
+              }
+              .collect { pollsList ->
+                _pollsState.value = _pollsState.value.copy(polls = pollsList, isLoading = false)
 
-            // Fetch profiles for all voters
-            fetchVoterProfiles(pollsList)
-          }
-    }
+                // Fetch profiles for all voters
+                fetchVoterProfiles(pollsList)
+              }
+        }
   }
 
   /** Fetches profile information for all voters in the polls. */
