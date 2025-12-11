@@ -50,8 +50,14 @@ class SeriesRepositoryCached(
     if (networkMonitor.isOnline()) {
       try {
         val series = withTimeout(FIRESTORE_TIMEOUT_MS) { firestoreRepo.getAllSeries(serieFilter) }
+        // Clear cache and update with fresh data to remove any deleted series
+        // For OVERVIEW and HISTORY filters, this represents the complete set of user's series
+        if (serieFilter == SerieFilter.SERIES_FOR_OVERVIEW_SCREEN ||
+            serieFilter == SerieFilter.SERIES_FOR_HISTORY_SCREEN) {
+          serieDao.deleteAllSeries()
+        }
+        // Always update cache, even if empty, to ensure consistency
         if (series.isNotEmpty()) {
-          // Cache the fetched series
           serieDao.insertSeries(series.map { it.toEntity() })
         }
         return series
@@ -108,21 +114,24 @@ class SeriesRepositoryCached(
   }
 
   override suspend fun getSerie(serieId: String): Serie {
-    val cached = serieDao.getSerieById(serieId)?.toSerie()
-
-    if (!networkMonitor.isOnline()) {
-      return cached
-          ?: throw OfflineException(
-              "Cannot fetch serie while offline and no cached version available")
-    }
-
-    return try {
-      withTimeout(FIRESTORE_TIMEOUT_MS) {
-        firestoreRepo.getSerie(serieId).also { serie -> serieDao.insertSerie(serie.toEntity()) }
+    // Try to fetch from Firestore if online
+    if (networkMonitor.isOnline()) {
+      try {
+        val serie = withTimeout(FIRESTORE_TIMEOUT_MS) { firestoreRepo.getSerie(serieId) }
+        // Delete from cache first to handle any staleness, then insert fresh data
+        serieDao.deleteSerie(serieId)
+        serieDao.insertSerie(serie.toEntity())
+        return serie
+      } catch (e: Exception) {
+        Log.w("SeriesRepositoryCached", firestoreErrorMsg, e)
       }
-    } catch (e: Exception) {
-      cached ?: throw e
     }
+
+    // Offline or network error - try cached version
+    val cached = serieDao.getSerieById(serieId)?.toSerie()
+    return cached
+        ?: throw OfflineException(
+            "Cannot fetch serie while offline and no cached version available")
   }
 
   override suspend fun addSerie(serie: Serie) {
@@ -150,6 +159,9 @@ class SeriesRepositoryCached(
     if (networkMonitor.isOnline()) {
       try {
         val series = withTimeout(FIRESTORE_TIMEOUT_MS) { firestoreRepo.getSeriesByIds(seriesIds) }
+        // Delete requested IDs from cache first to handle deleted series
+        seriesIds.forEach { serieDao.deleteSerie(it) }
+        // Always update cache, even if empty, to ensure consistency
         if (series.isNotEmpty()) {
           serieDao.insertSeries(series.map { it.toEntity() })
         }
