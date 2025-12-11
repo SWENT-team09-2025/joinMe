@@ -58,6 +58,8 @@
     <string name="location_message">Location</string>
     <string name="view_on_map">View on map</string>
     <string name="location_permission_required">Location permission required to share location</string>
+    <string name="sign_in_to_send_message">Please sign in to send messages</string>
+    <string name="cannot_message_yourself">Cannot send messages to yourself</string>
 
     <!-- Map Screen -->
     <string name="shared_location_marker_title">Location</string>

@@ -362,7 +362,9 @@ private fun MessageButton(
   Button(
       onClick = {
         if (currentUserId.isNullOrBlank()) {
-          Toast.makeText(context, "Please sign in to send messages", Toast.LENGTH_SHORT).show()
+          Toast.makeText(
+                  context, context.getString(R.string.sign_in_to_send_message), Toast.LENGTH_SHORT)
+              .show()
           return@Button
         }
 
@@ -374,7 +376,9 @@ private fun MessageButton(
           onMessageClick(dmId, profile.username, 2)
         } catch (_: IllegalArgumentException) {
           // This catches the case where user tries to message themselves
-          Toast.makeText(context, "Cannot send messages to yourself", Toast.LENGTH_SHORT).show()
+          Toast.makeText(
+                  context, context.getString(R.string.cannot_message_yourself), Toast.LENGTH_SHORT)
+              .show()
         }
       },
       modifier =
