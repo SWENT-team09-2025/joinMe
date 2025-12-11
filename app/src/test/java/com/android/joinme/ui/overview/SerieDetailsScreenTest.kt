@@ -16,6 +16,7 @@ import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.utils.Visibility
+import com.android.joinme.ui.components.ShareButtonTestTags
 import com.google.firebase.FirebaseApp
 import com.google.firebase.Timestamp
 import java.util.*
@@ -1206,5 +1207,62 @@ class SerieDetailsScreenTest {
     }
 
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.GROUP_INFO).assertDoesNotExist()
+  }
+
+  /** --- SHARE BUTTON TESTS --- */
+  @Test
+  fun activeUpcomingSerie_displaysShareButton() {
+    setup()
+    // Create an active serie with future end time
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_YEAR, 7) // 7 days from now
+    val futureEndTime = Timestamp(calendar.time)
+
+    val serie = createTestSerie(ownerId = "owner123", lastEventEndTime = futureEndTime)
+    fakeSeriesRepo.setSerie(serie)
+
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      SerieDetailsScreen(serieId = serie.serieId, serieDetailsViewModel = viewModel)
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.SERIE_TITLE)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Verify share button is displayed for active serie
+    composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun expiredSerie_hidesShareButton() {
+    setup()
+    // Create an expired serie with past end time
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.HOUR, -2) // 2 hours ago
+    val pastEndTime = Timestamp(calendar.time)
+
+    val expiredSerie = createTestSerie(ownerId = "owner123", lastEventEndTime = pastEndTime)
+    fakeSeriesRepo.setSerie(expiredSerie)
+
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      SerieDetailsScreen(serieId = expiredSerie.serieId, serieDetailsViewModel = viewModel)
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.SERIE_TITLE)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Verify share button is NOT displayed for expired serie
+    composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertDoesNotExist()
   }
 }
