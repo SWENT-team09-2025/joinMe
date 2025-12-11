@@ -616,7 +616,7 @@ class ChatScreenAndroidTest {
           currentUserId = testUserId,
           currentUserName = "Alice",
           viewModel = viewModel,
-          onNavigateToMap = { location ->
+          onNavigateToMap = { location, _ ->
             navigationCallbackInvoked = true
             navigatedLocation = location
           })
