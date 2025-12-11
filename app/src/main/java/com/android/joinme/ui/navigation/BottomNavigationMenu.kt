@@ -24,7 +24,7 @@ sealed class Tab(val name: String, val icon: ImageVector, val destination: Scree
 
   object Search : Tab("Search", Icons.Outlined.Search, Screen.Search)
 
-  object Map : Tab("Map", Icons.Outlined.Place, Screen.Map)
+  object Map : Tab("Map", Icons.Outlined.Place, Screen.Map())
 
   object Profile : Tab("Profile", Icons.Outlined.Person, Screen.Profile)
 }

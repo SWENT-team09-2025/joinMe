@@ -200,42 +200,55 @@ private fun LeaderboardTabs(selectedTabIndex: Int, onTabSelected: (Int) -> Unit)
               .padding(horizontal = Dimens.Padding.large)
               .testTag(LeaderboardTestTags.TAB_ROW),
       containerColor = Color.Transparent,
-      contentColor = MaterialTheme.colorScheme.primary,
-      indicator = {}, // Remove the underline indicator
-      divider = {}) {
+      contentColor = MaterialTheme.colorScheme.primary) {
         tabs.forEachIndexed { index, title ->
-          val isSelected = selectedTabIndex == index
-          Tab(
-              selected = isSelected,
+          val testTag =
+              if (index == 0) LeaderboardTestTags.TAB_CURRENT else LeaderboardTestTags.TAB_ALL_TIME
+          LeaderboardTabItem(
+              title = title,
+              isSelected = selectedTabIndex == index,
               onClick = { onTabSelected(index) },
-              modifier =
-                  Modifier.testTag(
-                          if (index == 0) LeaderboardTestTags.TAB_CURRENT
-                          else LeaderboardTestTags.TAB_ALL_TIME)
-                      .padding(horizontal = Dimens.Padding.extraSmall)
-                      .clip(RoundedCornerShape(Dimens.CornerRadius.pill))
-                      .then(
-                          if (isSelected) {
-                            Modifier.background(
-                                MaterialTheme.colorScheme.primary,
-                                RoundedCornerShape(Dimens.CornerRadius.pill))
-                          } else {
-                            Modifier
-                          }),
-              text = {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color =
-                        if (isSelected) {
-                          MaterialTheme.colorScheme.onPrimary
-                        } else {
-                          MaterialTheme.colorScheme.onSurfaceVariant
-                        })
-              })
+              testTag = testTag)
         }
       }
+}
+
+/** Helper composable for a single tab item to reduce cognitive complexity. */
+@Composable
+private fun LeaderboardTabItem(
+    title: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    testTag: String
+) {
+  val tabModifier =
+      Modifier.testTag(testTag)
+          .padding(horizontal = Dimens.Padding.extraSmall)
+          .clip(RoundedCornerShape(Dimens.CornerRadius.pill))
+          .then(
+              if (isSelected) {
+                Modifier.background(
+                    MaterialTheme.colorScheme.primary, RoundedCornerShape(Dimens.CornerRadius.pill))
+              } else {
+                Modifier
+              })
+
+  Tab(
+      selected = isSelected,
+      onClick = onClick,
+      modifier = tabModifier,
+      text = {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color =
+                if (isSelected) {
+                  MaterialTheme.colorScheme.onPrimary
+                } else {
+                  MaterialTheme.colorScheme.onSurfaceVariant
+                })
+      })
 }
 
 /** Loading state indicator. */

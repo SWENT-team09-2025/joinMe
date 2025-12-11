@@ -25,9 +25,9 @@ class NavigationActionsTest {
 
   @Test
   fun `navigateTo should NOT navigate again if already on same top-level`() {
-    every { navController.currentDestination?.route } returns Screen.Map.route
+    every { navController.currentDestination?.route } returns Screen.Map().route
 
-    actions.navigateTo(Screen.Map)
+    actions.navigateTo(Screen.Map())
 
     verify(exactly = 0) {
       navController.navigate(any<String>(), any<NavOptionsBuilder.() -> Unit>())
@@ -38,11 +38,11 @@ class NavigationActionsTest {
   fun `navigateTo configures popUpTo, launchSingleTop, restoreState for top-level`() {
     every { navController.currentDestination?.route } returns "auth" // ensure we navigate
 
-    actions.navigateTo(Screen.Map)
+    actions.navigateTo(Screen.Map())
 
     verify {
       navController.navigate(
-          eq(Screen.Map.route),
+          eq(Screen.Map().route),
           withArg<NavOptionsBuilder.() -> Unit> { block ->
             val options: NavOptions = navOptions(block)
 
@@ -512,9 +512,48 @@ class NavigationActionsTest {
 
   @Test
   fun `Map screen is top-level destination`() {
-    assertEquals("map", Screen.Map.route)
-    assertEquals("Map", Screen.Map.name)
-    assertTrue(Screen.Map.isTopLevelDestination)
+    val map = Screen.Map()
+    assertEquals("map", map.route)
+    assertEquals("Map", map.name)
+    assertTrue(map.isTopLevelDestination)
+    // Also verify the companion route pattern
+    assertEquals("map?lat={lat}&lon={lon}&marker={marker}&userId={userId}", Screen.Map.route)
+  }
+
+  @Test
+  fun `navigateTo Map with location parameters navigates to correct route`() {
+    val latitude = 46.5197
+    val longitude = 6.6323
+    every { navController.currentDestination?.route } returns Screen.Overview.route
+
+    actions.navigateTo(Screen.Map(latitude, longitude))
+
+    verify {
+      navController.navigate(
+          eq("map?lat=$latitude&lon=$longitude&marker=false"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldLaunchSingleTop())
+            assertTrue(options.shouldRestoreState())
+          })
+    }
+  }
+
+  @Test
+  fun `navigateTo Map without parameters uses default route`() {
+    every { navController.currentDestination?.route } returns Screen.Overview.route
+
+    actions.navigateTo(Screen.Map())
+
+    verify {
+      navController.navigate(
+          eq("map"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldLaunchSingleTop())
+            assertTrue(options.shouldRestoreState())
+          })
+    }
   }
 
   @Test
