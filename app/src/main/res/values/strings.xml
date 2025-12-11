@@ -162,6 +162,18 @@
     <string name="success_joining_group">Successfully joined the group!</string>
     <string name="sign_in_to_join_group">Please sign in to join the group</string>
 
+    <!-- Map constant -->
+    <string name="type_object">Type</string>
+    <string name="social_type">Social</string>
+    <string name="activity_type">Activity</string>
+    <string name="sport_type">Sport</string>
+    <string name="participation">Participation</string>
+    <string name="my_events">My Events</string>
+    <string name="joined_events">Joined Events</string>
+    <string name="other_events">Other Events</string>
+    <string name="clear_filters">Clear Filters</string>
+    <string name="snippet_message">Tap to see more and join me</string>
+
     <!-- Group button -->
     <string name="delete_group_button">DELETE GROUP</string>
     <string name="edit_group_button">EDIT GROUP</string>
