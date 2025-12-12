@@ -47,7 +47,7 @@ fun formatDateHeader(context: Context, timestamp: Long): String {
   }
 
   // Check if it's in the current year
-  if (messageCalendar.get(Calendar.YEAR) == todayCalendar.get(Calendar.YEAR)) {
+  if (messageCalendar[Calendar.YEAR] == todayCalendar[Calendar.YEAR]) {
     // Return "Month Day" (e.g., "January 15")
     val monthDayFormat = SimpleDateFormat("MMMM d", Locale.getDefault())
     return monthDayFormat.format(Date(timestamp))
@@ -66,8 +66,8 @@ fun formatDateHeader(context: Context, timestamp: Long): String {
  * @return true if both calendars represent the same day, false otherwise
  */
 private fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
-  return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
-      cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
+  return cal1[Calendar.YEAR] == cal2[Calendar.YEAR] &&
+      cal1[Calendar.DAY_OF_YEAR] == cal2[Calendar.DAY_OF_YEAR]
 }
 
 /**
