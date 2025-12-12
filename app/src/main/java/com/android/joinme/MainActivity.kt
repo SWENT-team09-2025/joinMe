@@ -195,7 +195,7 @@ private suspend fun processInvitation(
  */
 private fun getCurrentUserId(currentUser: com.google.firebase.auth.FirebaseUser?): String {
   return currentUser?.uid
-      ?: if (TestEnvironmentDetector.isTestEnvironment()) TestEnvironmentDetector.getTestUserId()
+      ?: if (TestEnvironmentDetector.shouldUseTestUserId()) TestEnvironmentDetector.getTestUserId()
       else ""
 }
 

@@ -46,7 +46,7 @@ class GroupRepositoryFirestore(
           firebaseUserId
         } else {
           // Return test user ID in test environments only if Firebase auth is not available
-          if (TestEnvironmentDetector.isTestEnvironment()) TestEnvironmentDetector.getTestUserId()
+          if (TestEnvironmentDetector.shouldUseTestUserId()) TestEnvironmentDetector.getTestUserId()
           else throw Exception("GroupRepositoryFirestore: User not logged in.")
         }
 
