@@ -1,5 +1,7 @@
 package com.android.joinme.ui.chat
 
+// Implemented with help of Claude AI
+
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

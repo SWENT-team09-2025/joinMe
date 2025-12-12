@@ -1,5 +1,7 @@
 package com.android.joinme.ui.chat
 
+// Implemented with help of Claude AI
+
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
