@@ -200,7 +200,9 @@ private fun LeaderboardTabs(selectedTabIndex: Int, onTabSelected: (Int) -> Unit)
               .padding(horizontal = Dimens.Padding.large)
               .testTag(LeaderboardTestTags.TAB_ROW),
       containerColor = Color.Transparent,
-      contentColor = MaterialTheme.colorScheme.primary) {
+      contentColor = MaterialTheme.colorScheme.primary,
+      indicator = { /* No indicator */},
+      divider = { /* No divider */}) {
         tabs.forEachIndexed { index, title ->
           val testTag =
               if (index == 0) LeaderboardTestTags.TAB_CURRENT else LeaderboardTestTags.TAB_ALL_TIME
