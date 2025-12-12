@@ -36,45 +36,17 @@ class ProfileRepositoryProviderTest {
   // ==================== Test Environment Detection Tests ====================
 
   @Test
-  fun `getRepository returns local repository in test environment`() {
-    // Given - Running in Robolectric test environment
-
-    // When
-    val repository = ProfileRepositoryProvider.getRepository()
-
-    // Then - Should return local repository
-    assertTrue(repository is ProfileRepositoryLocal)
-  }
-
-  @Test
-  fun `repository property returns local repository in test environment`() {
-    // Given - Running in Robolectric test environment
-
-    // When
-    val repository = ProfileRepositoryProvider.repository
-
-    // Then - Should return local repository
-    assertTrue(repository is ProfileRepositoryLocal)
-  }
-
-  @Test
-  fun `repository property getter is consistent`() {
-    // When
-    val repo1 = ProfileRepositoryProvider.repository
-    val repo2 = ProfileRepositoryProvider.repository
-
-    // Then - Should return the same instance
-    assertSame(repo1, repo2)
-  }
-
-  @Test
-  fun `getRepository is consistent`() {
+  fun `getRepository returns consistent local repository in test environment`() {
     // When
     val repo1 = ProfileRepositoryProvider.getRepository()
-    val repo2 = ProfileRepositoryProvider.getRepository()
+    val repo2 = ProfileRepositoryProvider.repository
+    val repo3 = ProfileRepositoryProvider.getRepository()
 
-    // Then - Should return the same instance
+    // Then - All should return same local repository instance
+    assertTrue(repo1 is ProfileRepositoryLocal)
+    assertTrue(repo2 is ProfileRepositoryLocal)
     assertSame(repo1, repo2)
+    assertSame(repo1, repo3)
   }
 
   // ==================== Test with IS_TEST_ENV System Property ====================
@@ -96,43 +68,18 @@ class ProfileRepositoryProviderTest {
     }
   }
 
-  // ==================== Repository Injection Tests ====================
+
+  // ==================== Context Handling Tests ====================
 
   @Test
-  fun `repository property setter allows custom repository injection`() {
-    // Given
-    val customRepo = mockk<ProfileRepository>()
-
+  fun `getRepository works with and without context in test environment`() {
     // When
-    ProfileRepositoryProvider.repository = customRepo
+    val repoWithContext = ProfileRepositoryProvider.getRepository(mockContext)
+    val repoWithNull = ProfileRepositoryProvider.getRepository(null)
 
-    // Then - Getter still returns the local repo in test env (setter doesn't override)
-    // The setter is a no-op that allows tests to compile
-    val result = ProfileRepositoryProvider.repository
-    assertNotNull(result)
-  }
-
-  // ==================== Cached Repository Production Tests ====================
-
-  @Test
-  fun `getRepository with context returns repository`() {
-    // Given
-    val context = ApplicationProvider.getApplicationContext<Context>()
-
-    // When
-    val repository = ProfileRepositoryProvider.getRepository(context)
-
-    // Then - In test environment, should still return local repository
-    assertTrue(repository is ProfileRepositoryLocal)
-  }
-
-  @Test
-  fun `getRepository with null context in test environment works`() {
-    // When
-    val repository = ProfileRepositoryProvider.getRepository(null)
-
-    // Then - In test environment, should return local repository without needing context
-    assertTrue(repository is ProfileRepositoryLocal)
+    // Then - Both should return local repository in test environment
+    assertTrue(repoWithContext is ProfileRepositoryLocal)
+    assertTrue(repoWithNull is ProfileRepositoryLocal)
   }
 
   // ==================== Reset Functionality Tests ====================
@@ -217,26 +164,17 @@ class ProfileRepositoryProviderTest {
   // ==================== Edge Cases ====================
 
   @Test
-  fun `getRepository after setting custom repository still works`() {
-    // Given
-    val customRepo = mockk<ProfileRepository>()
-    ProfileRepositoryProvider.repository = customRepo
-
-    // When
-    val result = ProfileRepositoryProvider.getRepository()
-
-    // Then - Should still return the appropriate repository for test environment
-    assertNotNull(result)
-  }
-
-  @Test
   fun `repository type is correct in test environment`() {
     // When
     val repository = ProfileRepositoryProvider.repository
+    val customRepo = mockk<ProfileRepository>()
+    ProfileRepositoryProvider.repository = customRepo
+    val afterSet = ProfileRepositoryProvider.getRepository()
 
     // Then - Should be local repository in Robolectric test
     assertTrue(repository is ProfileRepositoryLocal)
     assertFalse(repository is ProfileRepositoryFirestore)
     assertFalse(repository is ProfileRepositoryCached)
+    assertNotNull(afterSet) // Setting custom repo doesn't break getRepository
   }
 }

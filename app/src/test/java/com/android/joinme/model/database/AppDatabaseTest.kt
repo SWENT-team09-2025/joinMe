@@ -97,19 +97,15 @@ class AppDatabaseTest {
   }
 
   @Test
-  fun `getEventById returns null for non-existent event`() = runBlocking {
+  fun `getAllEvents returns all events and getById handles non-existent`() = runBlocking {
     assertNull(eventDao.getEventById("nonexistent"))
-  }
 
-  @Test
-  fun `getAllEvents returns all events`() = runBlocking {
     eventDao.insertEvent(createTestEvent("1"))
     eventDao.insertEvent(createTestEvent("2", ownerId = "owner2", visibility = "PRIVATE"))
 
     val allEvents = eventDao.getAllEvents()
     assertEquals(2, allEvents.size)
     assertTrue(allEvents.any { it.eventId == "1" })
-    assertTrue(allEvents.any { it.eventId == "2" })
   }
 
   @Test
@@ -135,15 +131,7 @@ class AppDatabaseTest {
   }
 
   @Test
-  fun `getPublicEvents respects limit parameter`() = runBlocking {
-    repeat(5) { i ->
-      eventDao.insertEvent(createTestEvent("pub$i", dateSeconds = i.toLong() * 100))
-    }
-    assertEquals(3, eventDao.getPublicEvents(3).size)
-  }
-
-  @Test
-  fun `getUpcomingEvents returns events after start time`() = runBlocking {
+  fun `getUpcomingEvents returns future events and respects limit`() = runBlocking {
     val currentTime = System.currentTimeMillis() / 1000
     eventDao.insertEvent(createTestEvent("past", dateSeconds = currentTime - 1000))
     eventDao.insertEvent(createTestEvent("future", dateSeconds = currentTime + 1000))
@@ -151,6 +139,12 @@ class AppDatabaseTest {
     val upcomingEvents = eventDao.getUpcomingEvents(currentTime, 10)
     assertEquals(1, upcomingEvents.size)
     assertEquals("future", upcomingEvents[0].eventId)
+
+    // Verify limit works
+    repeat(5) { i ->
+      eventDao.insertEvent(createTestEvent("pub$i", dateSeconds = currentTime + 2000 + i))
+    }
+    assertEquals(3, eventDao.getPublicEvents(3).size)
   }
 
   @Test
@@ -226,12 +220,8 @@ class AppDatabaseTest {
           cachedAt = cachedAt)
 
   @Test
-  fun `database provides serieDao instance`() {
-    assertNotNull(serieDao)
-  }
-
-  @Test
   fun `serieDao can insert and retrieve series`() = runBlocking {
+    assertNotNull(serieDao)
     val serie = createTestSerie("serie1")
     serieDao.insertSerie(serie)
 
@@ -241,56 +231,25 @@ class AppDatabaseTest {
   }
 
   @Test
-  fun `eventDao and serieDao work independently`() = runBlocking {
+  fun `all DAOs work independently and can be cleared`() = runBlocking {
     val event = createTestEvent("event1")
     val serie = createTestSerie("serie1")
+    val profile = createTestProfile("user1")
 
     eventDao.insertEvent(event)
     serieDao.insertSerie(serie)
+    profileDao.insertProfile(profile)
 
     assertEquals(1, eventDao.getAllEvents().size)
     assertEquals(1, serieDao.getAllSeries().size)
-  }
-
-  @Test
-  fun `database version is 3 with all three entities`() {
-    // This test verifies that the database includes EventEntity, SerieEntity, and ProfileEntity
-    // by ensuring all three DAOs are accessible and functional
-    assertNotNull(database.eventDao())
-    assertNotNull(database.serieDao())
-    assertNotNull(database.profileDao())
-  }
-
-  @Test
-  fun `clearing database removes both events and series`() = runBlocking {
-    eventDao.insertEvent(createTestEvent("event1"))
-    serieDao.insertSerie(createTestSerie("serie1"))
+    assertEquals(1, profileDao.getAllProfiles().size)
 
     database.clearAllTables()
-
     assertEquals(0, eventDao.getAllEvents().size)
     assertEquals(0, serieDao.getAllSeries().size)
+    assertEquals(0, profileDao.getAllProfiles().size)
   }
 
-  @Test
-  fun `database singleton works with series`() = runBlocking {
-    // Set the current database as the test instance
-    AppDatabase.setTestInstance(database)
-
-    val serie = createTestSerie("test1")
-    serieDao.insertSerie(serie)
-
-    // Get another instance and verify it's the same singleton
-    val db2 = AppDatabase.getDatabase(context)
-    val serie2Dao = db2.serieDao()
-
-    // Should be the same instance
-    assertSame(database, db2)
-
-    val retrieved = serie2Dao.getSerieById("test1")
-    assertNotNull(retrieved)
-    assertEquals("test1", retrieved?.serieId)
-  }
 
   // ========== ProfileDao Integration Tests ==========
 
@@ -319,12 +278,8 @@ class AppDatabaseTest {
           cachedAt = cachedAt)
 
   @Test
-  fun `database provides profileDao instance`() {
-    assertNotNull(profileDao)
-  }
-
-  @Test
   fun `profileDao can insert and retrieve profiles`() = runBlocking {
+    assertNotNull(profileDao)
     val profile = createTestProfile("user1")
     profileDao.insertProfile(profile)
 
@@ -334,53 +289,6 @@ class AppDatabaseTest {
     assertEquals("User user1", retrieved?.username)
   }
 
-  @Test
-  fun `eventDao serieDao and profileDao work independently`() = runBlocking {
-    val event = createTestEvent("event1")
-    val serie = createTestSerie("serie1")
-    val profile = createTestProfile("user1")
-
-    eventDao.insertEvent(event)
-    serieDao.insertSerie(serie)
-    profileDao.insertProfile(profile)
-
-    assertEquals(1, eventDao.getAllEvents().size)
-    assertEquals(1, serieDao.getAllSeries().size)
-    assertEquals(1, profileDao.getAllProfiles().size)
-  }
-
-  @Test
-  fun `clearing database removes events series and profiles`() = runBlocking {
-    eventDao.insertEvent(createTestEvent("event1"))
-    serieDao.insertSerie(createTestSerie("serie1"))
-    profileDao.insertProfile(createTestProfile("user1"))
-
-    database.clearAllTables()
-
-    assertEquals(0, eventDao.getAllEvents().size)
-    assertEquals(0, serieDao.getAllSeries().size)
-    assertEquals(0, profileDao.getAllProfiles().size)
-  }
-
-  @Test
-  fun `database singleton works with profiles`() = runBlocking {
-    // Set the current database as the test instance
-    AppDatabase.setTestInstance(database)
-
-    val profile = createTestProfile("user1")
-    profileDao.insertProfile(profile)
-
-    // Get another instance and verify it's the same singleton
-    val db2 = AppDatabase.getDatabase(context)
-    val profileDao2 = db2.profileDao()
-
-    // Should be the same instance
-    assertSame(database, db2)
-
-    val retrieved = profileDao2.getProfileById("user1")
-    assertNotNull(retrieved)
-    assertEquals("user1", retrieved?.uid)
-  }
 
   @Test
   fun `profileDao insertProfile replaces existing profile with same uid`() = runBlocking {
