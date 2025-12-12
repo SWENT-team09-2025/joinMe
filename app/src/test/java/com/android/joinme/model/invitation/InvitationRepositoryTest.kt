@@ -23,12 +23,13 @@ class InvitationRepositoryTest {
               type: InvitationType,
               targetId: String,
               createdBy: String,
-              expiresInDays: Int?
+              expiresInDays: Double?
           ): Result<String> {
             val token = "test-token-${invitations.size}"
             val expiresAt =
                 expiresInDays?.let {
-                  Timestamp(Date(System.currentTimeMillis() + (it * 24 * 60 * 60 * 1000L)))
+                  val millis = (it * 24 * 60 * 60 * 1000).toLong()
+                  Timestamp(java.util.Date(System.currentTimeMillis() + millis))
                 }
             invitations[token] =
                 Invitation(
@@ -68,7 +69,7 @@ class InvitationRepositoryTest {
             type = InvitationType.GROUP,
             targetId = "group123",
             createdBy = "user456",
-            expiresInDays = 7)
+            expiresInDays = 7.0)
 
     assertTrue(result.isSuccess)
     assertNotNull(result.getOrNull())

@@ -520,7 +520,6 @@ private fun GroupCardMenuOverlay(
                           invitationType = InvitationType.GROUP,
                           targetId = group.id,
                           createdBy = currentUserId ?: "",
-                          expiresInDays = 7,
                           context = context)
                       onDismiss()
                     }

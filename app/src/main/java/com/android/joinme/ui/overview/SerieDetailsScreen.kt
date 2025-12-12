@@ -28,7 +28,6 @@ import com.android.joinme.ui.theme.customColors
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
-import kotlin.math.ceil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -263,9 +262,8 @@ private fun SerieDetailsTopBar(
         actions = {
           if (serieDate != null && !isPastSerie && groupId == null) {
             val daysUntilSerie =
-                ceil((serieDate.toDate().time - System.currentTimeMillis()) / MILLIS_PER_DAY)
-                    .toInt()
-                    .coerceAtLeast(0)
+                ((serieDate.toDate().time - System.currentTimeMillis()) / MILLIS_PER_DAY)
+                    .coerceAtLeast(0.0)
 
             ShareButton(
                 invitationType = InvitationType.SERIE,

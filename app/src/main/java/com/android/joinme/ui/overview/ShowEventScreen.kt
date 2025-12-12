@@ -28,7 +28,6 @@ import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
-import kotlin.math.ceil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -299,9 +298,8 @@ fun ShowEventScreen(
                 if (eventUIState.shouldShowShareButton) {
                   val timestamp = eventUIState.dateTimestamp!!
                   val daysUntilEvent =
-                      ceil((timestamp.toDate().time - System.currentTimeMillis()) / MILLIS_PER_DAY)
-                          .toInt()
-                          .coerceAtLeast(0)
+                      ((timestamp.toDate().time - System.currentTimeMillis()) / MILLIS_PER_DAY)
+                          .coerceAtLeast(0.0)
 
                   ShareButton(
                       invitationType = InvitationType.EVENT,

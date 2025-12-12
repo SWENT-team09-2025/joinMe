@@ -25,13 +25,14 @@ class InvitationRepositoryFirestore(db: FirebaseFirestore = FirebaseFirestore.ge
       type: InvitationType,
       targetId: String,
       createdBy: String,
-      expiresInDays: Int?
+      expiresInDays: Double?
   ): Result<String> {
     return try {
       val token = UUID.randomUUID().toString()
       val expiresAt =
-          expiresInDays?.let { days ->
-            Timestamp(java.util.Date(System.currentTimeMillis() + (days * DAY_TO_MILLIS)))
+          expiresInDays?.let {
+            val millis = (it * DAY_TO_MILLIS).toLong()
+            Timestamp(java.util.Date(System.currentTimeMillis() + millis))
           }
       val invitation =
           hashMapOf(
