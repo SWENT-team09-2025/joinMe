@@ -166,7 +166,8 @@ class ProfileRepositoryCached(
   override suspend fun getFollowing(userId: String, limit: Int): List<Profile> {
     if (networkMonitor.isOnline()) {
       try {
-        val profiles = withTimeout(FIRESTORE_TIMEOUT_MS) { firestoreRepo.getFollowing(userId, limit) }
+        val profiles =
+            withTimeout(FIRESTORE_TIMEOUT_MS) { firestoreRepo.getFollowing(userId, limit) }
         // Cache the profiles returned
         if (profiles.isNotEmpty()) {
           profileDao.insertProfiles(profiles.map { it.toEntity() })
@@ -185,7 +186,8 @@ class ProfileRepositoryCached(
   override suspend fun getFollowers(userId: String, limit: Int): List<Profile> {
     if (networkMonitor.isOnline()) {
       try {
-        val profiles = withTimeout(FIRESTORE_TIMEOUT_MS) { firestoreRepo.getFollowers(userId, limit) }
+        val profiles =
+            withTimeout(FIRESTORE_TIMEOUT_MS) { firestoreRepo.getFollowers(userId, limit) }
         // Cache the profiles returned
         if (profiles.isNotEmpty()) {
           profileDao.insertProfiles(profiles.map { it.toEntity() })
@@ -205,9 +207,7 @@ class ProfileRepositoryCached(
     if (networkMonitor.isOnline()) {
       try {
         val profiles =
-            withTimeout(FIRESTORE_TIMEOUT_MS) {
-              firestoreRepo.getMutualFollowing(userId1, userId2)
-            }
+            withTimeout(FIRESTORE_TIMEOUT_MS) { firestoreRepo.getMutualFollowing(userId1, userId2) }
         // Cache the profiles returned
         if (profiles.isNotEmpty()) {
           profileDao.insertProfiles(profiles.map { it.toEntity() })

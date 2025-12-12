@@ -56,7 +56,8 @@ object ProfileRepositoryProvider {
   private fun getFirestoreRepo(): ProfileRepository {
     if (firestoreRepo == null) {
       firestoreRepo =
-          ProfileRepositoryFirestore(db = Firebase.firestore, storage = FirebaseStorage.getInstance())
+          ProfileRepositoryFirestore(
+              db = Firebase.firestore, storage = FirebaseStorage.getInstance())
     }
     return firestoreRepo!!
   }
