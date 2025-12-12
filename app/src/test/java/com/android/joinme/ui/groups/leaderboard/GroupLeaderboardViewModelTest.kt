@@ -1,5 +1,7 @@
 package com.android.joinme.ui.groups.leaderboard
 
+import android.app.Application
+import com.android.joinme.R
 import com.android.joinme.model.groups.streaks.GroupStreak
 import com.android.joinme.model.groups.streaks.GroupStreakRepository
 import com.android.joinme.model.profile.Profile
@@ -17,6 +19,8 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.mock
 import org.mockito.kotlin.whenever
 
@@ -25,6 +29,7 @@ class GroupLeaderboardViewModelTest {
 
   private lateinit var streakRepository: GroupStreakRepository
   private lateinit var profileRepository: ProfileRepository
+  private lateinit var application: Application // Mocked Application
   private lateinit var viewModel: GroupLeaderboardViewModel
   private val testDispatcher = StandardTestDispatcher()
 
@@ -35,7 +40,21 @@ class GroupLeaderboardViewModelTest {
     Dispatchers.setMain(testDispatcher)
     streakRepository = mock()
     profileRepository = mock()
-    viewModel = GroupLeaderboardViewModel(streakRepository, profileRepository)
+    application = mock(Application::class.java) // Create a mock instead of using Provider
+
+    // Stub the getString calls that the ViewModel makes
+    // 1. Stub for unknown user
+    whenever(application.getString(R.string.unknown_user)).thenReturn("Unknown")
+
+    // 2. Stub for error message with arguments
+    // We match the resource ID and any second argument (the error message)
+    whenever(application.getString(eq(R.string.leaderboard_load_error), any())).thenAnswer {
+        invocation ->
+      val errorMsg = invocation.arguments[1] as? String
+      "Failed to load leaderboard: $errorMsg"
+    }
+
+    viewModel = GroupLeaderboardViewModel(application, streakRepository, profileRepository)
   }
 
   @After
@@ -158,6 +177,7 @@ class GroupLeaderboardViewModelTest {
 
     val state = viewModel.uiState.first()
     assertEquals(1, state.currentLeaderboard.size)
+    // This now asserts "Unknown" because we mocked the getString call in setup()
     assertEquals("Unknown", state.currentLeaderboard[0].displayName)
     assertFalse(state.isLoading)
   }
@@ -173,6 +193,7 @@ class GroupLeaderboardViewModelTest {
 
     val state = viewModel.uiState.first()
     assertNotNull(state.errorMsg)
+    // This confirms our mock works: "Failed to load leaderboard: Network error"
     assertTrue(state.errorMsg!!.contains("Network error"))
     assertFalse(state.isLoading)
   }

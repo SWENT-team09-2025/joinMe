@@ -101,7 +101,7 @@ class ActivityGroupScreenTest {
   }
 
   @Test
-  fun activityGroupScreen_displaysTopBarAndBackButton() {
+  fun activityGroupScreen_displaysGroupNameInTitle() {
     val viewModel = createViewModel()
 
     runBlocking { groupRepo.addGroup(Group(id = "1", name = "Test Group")) }
@@ -112,10 +112,22 @@ class ActivityGroupScreenTest {
 
     waitForContent()
 
-    // Group assertions that use the same setup
+    composeTestRule.onNodeWithText("Test Group Activities").assertIsDisplayed()
+  }
+
+  @Test
+  fun activityGroupScreen_displaysFallbackTitleWhenGroupNameEmpty() {
+    val viewModel = createViewModel()
+
+    runBlocking { groupRepo.addGroup(Group(id = "1", name = "")) }
+
+    composeTestRule.setContent {
+      ActivityGroupScreen(groupId = "1", activityGroupViewModel = viewModel)
+    }
+
+    waitForContent()
+
     composeTestRule.onNodeWithText("Group Activities").assertIsDisplayed()
-    composeTestRule.onNodeWithTag(ActivityGroupScreenTestTags.BACK_BUTTON).assertIsDisplayed()
-    composeTestRule.onNodeWithContentDescription("Back").assertIsDisplayed()
   }
 
   @Test

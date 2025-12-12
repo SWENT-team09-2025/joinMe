@@ -19,14 +19,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
+import com.android.joinme.model.invitation.InvitationType
 import com.android.joinme.ui.components.EventCard
+import com.android.joinme.ui.components.ShareButton
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import kotlin.math.ceil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+
+/** Note: this file was co-written with the help of AI (Claude) */
+private const val MILLIS_PER_DAY = 24 * 60 * 60 * 1000.0
 
 /**
  * Gets the current user ID with test environment support.
@@ -165,7 +172,14 @@ fun SerieDetailsScreen(
   Scaffold(
       modifier = Modifier.testTag(SerieDetailsScreenTestTags.SCREEN),
       topBar = {
-        SerieDetailsTopBar(serieTitle = uiState.serie?.title ?: "Loading...", onGoBack = onGoBack)
+        SerieDetailsTopBar(
+            serieTitle = uiState.serie?.title ?: stringResource(R.string.loading),
+            serieId = serieId,
+            currentUserId = currentUserId,
+            serieDate = uiState.serie?.date,
+            isPastSerie = uiState.isPastSerie,
+            groupId = uiState.groupId,
+            onGoBack = onGoBack)
       }) { paddingValues ->
         when {
           uiState.isLoading -> {
@@ -222,7 +236,15 @@ private fun SerieDetailsEffects(
 /** Top bar for serie details screen. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SerieDetailsTopBar(serieTitle: String, onGoBack: () -> Unit) {
+private fun SerieDetailsTopBar(
+    serieTitle: String,
+    serieId: String,
+    currentUserId: String,
+    serieDate: Timestamp?,
+    isPastSerie: Boolean,
+    groupId: String?,
+    onGoBack: () -> Unit
+) {
   Column {
     CenterAlignedTopAppBar(
         title = {
@@ -237,6 +259,20 @@ private fun SerieDetailsTopBar(serieTitle: String, onGoBack: () -> Unit) {
               modifier = Modifier.testTag(SerieDetailsScreenTestTags.BACK_BUTTON)) {
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
               }
+        },
+        actions = {
+          if (serieDate != null && !isPastSerie && groupId == null) {
+            val daysUntilSerie =
+                ceil((serieDate.toDate().time - System.currentTimeMillis()) / MILLIS_PER_DAY)
+                    .toInt()
+                    .coerceAtLeast(0)
+
+            ShareButton(
+                invitationType = InvitationType.SERIE,
+                targetId = serieId,
+                createdBy = currentUserId,
+                expiresInDays = daysUntilSerie)
+          }
         },
         colors =
             TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface))

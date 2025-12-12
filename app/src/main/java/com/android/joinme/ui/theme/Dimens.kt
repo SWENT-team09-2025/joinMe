@@ -683,6 +683,15 @@ object Dimens {
   object Chat {
     /** 280dp - Maximum width for message bubbles (70% of typical phone screen) */
     val messageBubbleMaxWidth: Dp = 280.dp
+
+    /** 0.55 - Height multiplier for location message preview (relative to bubble width) */
+    const val locationMessageHeightMultiplier: Float = 0.55f
+
+    /** 0.67 - Height multiplier for location preview dialog (relative to bubble width) */
+    const val locationPreviewDialogHeightMultiplier: Float = 0.67f
+
+    /** 15f - Zoom level for location preview maps */
+    const val locationPreviewZoom: Float = 15f
   }
 
   /**
@@ -696,5 +705,37 @@ object Dimens {
 
     /** 100.dp - photo size for public profile photo */
     val photoSize: Dp = 100.dp
+  }
+
+  /**
+   * Leaderboard screen dimensions.
+   *
+   * Dimensions specific to the group leaderboard screen including badge sizes, container styling,
+   * and decorative elements.
+   */
+  object Leaderboard {
+    /** 32dp - Size of the rank badge circle */
+    val rankBadgeSize: Dp = 32.dp
+
+    /** 40dp - Size of the top 3 crown badge */
+    val topThreeBadgeSize: Dp = 40.dp
+
+    /** 48dp - Size of user avatar in leaderboard items */
+    val avatarSize: Dp = 48.dp
+
+    /** 16dp - Corner radius for leaderboard item cards */
+    val cardCornerRadius: Dp = 16.dp
+
+    /** 24dp - Corner radius for the main purple container */
+    val containerCornerRadius: Dp = 24.dp
+
+    /** 60dp - Width of the decorative bump at top of container */
+    val bumpWidth: Dp = 60.dp
+
+    /** 20dp - Height of the decorative bump at top of container */
+    val bumpHeight: Dp = 20.dp
+
+    /** 12dp - Corner radius for the decorative bump */
+    val bumpRadius: Dp = 12.dp
   }
 }

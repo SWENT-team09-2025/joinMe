@@ -79,14 +79,12 @@ class ProfileRepositoryFirestore(
    */
   override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? {
     if (uids.isEmpty()) return emptyList()
-
     return try {
-      uids.map { uid ->
+      uids.mapNotNull { uid ->
         try {
           getProfile(uid)
         } catch (_: NoSuchElementException) {
-          Log.w(TAG, "Profile not found: $uid")
-          return null
+          null
         }
       }
     } catch (e: Exception) {

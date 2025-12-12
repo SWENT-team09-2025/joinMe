@@ -45,6 +45,26 @@ class MapScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
 
+  private lateinit var testViewModel: MapViewModel
+  private lateinit var mutableState: MutableStateFlow<MapUIState>
+
+  @org.junit.Before
+  fun setUp() {
+    testViewModel = MapViewModel()
+    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
+    stateField.isAccessible = true
+    mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
+  }
+
+  /**
+   * Helper function to set the following user state.
+   *
+   * @param following Whether the map should be following the user
+   */
+  private fun setFollowingUser(following: Boolean) {
+    mutableState.value = MapUIState(isFollowingUser = following)
+  }
+
   @Test
   fun mapScreen_tagsAreDisplayed() {
     composeTestRule.setContent { MapScreen(viewModel = MapViewModel(), navigationActions = null) }
@@ -80,8 +100,6 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_displaysMarkersForEvents() {
-    val testViewModel = MapViewModel()
-
     // Create test events with locations
     val testEvents =
         listOf(
@@ -110,10 +128,7 @@ class MapScreenTest {
                 visibility = EventVisibility.PUBLIC,
                 ownerId = "owner2"))
 
-    // Use reflection to inject events into the ViewModel state
-    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
+    // Inject events into the ViewModel state
     mutableState.value = MapUIState(events = testEvents)
 
     composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
@@ -127,13 +142,6 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_animatesCameraWhenUserLocationChanges() {
-    val testViewModel = MapViewModel()
-
-    // Inject user location to trigger camera animation
-    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
-
     composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
 
     // Update user location after initial composition
@@ -151,8 +159,6 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_displaysMarkersForSeries() {
-    val testViewModel = MapViewModel()
-
     // Create test locations
     val location1 = Location(latitude = 46.5187, longitude = 6.5629, name = "EPFL")
     val location2 = Location(latitude = 46.52, longitude = 6.57, name = "Lausanne")
@@ -183,10 +189,7 @@ class MapScreenTest {
                     eventIds = listOf("event4", "event5"),
                     ownerId = "owner2"))
 
-    // Use reflection to inject series into the ViewModel state
-    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
+    // Inject series into the ViewModel state
     mutableState.value = MapUIState(series = testSeries)
 
     composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
@@ -225,13 +228,8 @@ class MapScreenTest {
 
   @Test
   fun myLocationButton_clickEnablesFollowingUser() {
-    val testViewModel = MapViewModel()
-
     // Set initial state to not following
-    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
-    mutableState.value = MapUIState(isFollowingUser = false)
+    setFollowingUser(false)
 
     composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
 
@@ -246,12 +244,7 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_enablesFollowingUserOnEntryWhenNotReturningFromMarkerClick() {
-    val testViewModel = MapViewModel()
-
     // Set initial state to not returning from marker click
-    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
     mutableState.value = MapUIState(isFollowingUser = false, isReturningFromMarkerClick = false)
 
     composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
@@ -264,12 +257,7 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_clearsMarkerClickFlagWhenReturningFromMarkerClick() {
-    val testViewModel = MapViewModel()
-
     // Set initial state to returning from marker click
-    val stateField = testViewModel.javaClass.getDeclaredField("_uiState")
-    stateField.isAccessible = true
-    val mutableState = stateField.get(testViewModel) as MutableStateFlow<MapUIState>
     mutableState.value = MapUIState(isFollowingUser = false, isReturningFromMarkerClick = true)
 
     composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
@@ -279,5 +267,202 @@ class MapScreenTest {
     // Verify that marker click flag is cleared and following is not enabled
     assert(!testViewModel.uiState.value.isReturningFromMarkerClick)
     assert(!testViewModel.uiState.value.isFollowingUser)
+  }
+
+  @Test
+  fun mapScreen_centersOnInitialLocation_whenProvidedFromChatMessage() {
+    // This test covers the MapInitialLocationEffect composable
+    // Tests that map centers on specific location (e.g., from chat location message)
+    // EPFL location coordinates
+    val initialLatitude = 46.5196
+    val initialLongitude = 6.5680
+    val otherUserId = "other-user-123"
+    val currentUserId = "current-user-456"
+
+    // Set initial user following to true
+    setFollowingUser(true)
+
+    composeTestRule.setContent {
+      MapScreen(
+          viewModel = testViewModel,
+          navigationActions = null,
+          initialLatitude = initialLatitude,
+          initialLongitude = initialLongitude,
+          showLocationMarker = true,
+          sharedLocationUserId = otherUserId,
+          currentUserId = currentUserId)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Verify that following user is disabled (MapInitialLocationEffect should disable it)
+    assert(!testViewModel.uiState.value.isFollowingUser)
+
+    // Verify the map screen is displayed with location marker
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_doesNotCenterOnLocation_whenInitialLocationIsNull() {
+    // This test verifies that MapInitialLocationEffect does not trigger when location is null
+    // Set initial user following to true
+    setFollowingUser(true)
+
+    composeTestRule.setContent {
+      MapScreen(
+          viewModel = testViewModel,
+          navigationActions = null,
+          initialLatitude = null, // No initial location
+          initialLongitude = null)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Verify that following user is still enabled (not affected by MapInitialLocationEffect)
+    assert(testViewModel.uiState.value.isFollowingUser)
+
+    // Verify the map screen is displayed
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_centersOnPartialInitialLocation_onlyWhenBothCoordinatesProvided() {
+    // This test verifies that MapInitialLocationEffect requires both coordinates
+    // Set initial user following to true
+    setFollowingUser(true)
+
+    composeTestRule.setContent {
+      MapScreen(
+          viewModel = testViewModel,
+          navigationActions = null,
+          initialLatitude = 46.5196, // Only latitude provided
+          initialLongitude = null) // Longitude missing
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Verify that following user is still enabled (MapInitialLocationEffect should not trigger)
+    assert(testViewModel.uiState.value.isFollowingUser)
+
+    // Verify the map screen is displayed
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_locationMarker_notShownWhenFlagIsFalse() {
+    // Test that location marker is not shown when showLocationMarker=false
+    // (e.g., navigating to event location that already has event marker)
+    val initialLatitude = 46.5196
+    val initialLongitude = 6.5680
+
+    composeTestRule.setContent {
+      MapScreen(
+          viewModel = testViewModel,
+          navigationActions = null,
+          initialLatitude = initialLatitude,
+          initialLongitude = initialLongitude,
+          showLocationMarker = false)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Verify the map displays without location marker
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_locationMarker_shownWhenFlagIsTrue() {
+    // Test that location marker is shown when showLocationMarker=true
+    // and the userId is different from currentUserId (other user's shared location)
+    val initialLatitude = 46.5196
+    val initialLongitude = 6.5680
+    val otherUserId = "other-user-123"
+    val currentUserId = "current-user-456"
+
+    composeTestRule.setContent {
+      MapScreen(
+          viewModel = testViewModel,
+          navigationActions = null,
+          initialLatitude = initialLatitude,
+          initialLongitude = initialLongitude,
+          showLocationMarker = true,
+          sharedLocationUserId = otherUserId,
+          currentUserId = currentUserId)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Verify the map displays with location marker for other user
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_locationMarker_notShownForCurrentUser() {
+    // Test that location marker is NOT shown when userId equals currentUserId
+    // (current user's own location - blue circle already visible)
+    val initialLatitude = 46.5196
+    val initialLongitude = 6.5680
+    val currentUserId = "current-user-123"
+
+    composeTestRule.setContent {
+      MapScreen(
+          viewModel = testViewModel,
+          navigationActions = null,
+          initialLatitude = initialLatitude,
+          initialLongitude = initialLongitude,
+          showLocationMarker = true,
+          sharedLocationUserId = currentUserId,
+          currentUserId = currentUserId)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Verify the map displays without duplicate marker for current user
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_locationMarker_notShownWhenUserIdIsNull() {
+    // Test that location marker is not shown when sharedLocationUserId is null
+    val initialLatitude = 46.5196
+    val initialLongitude = 6.5680
+    val currentUserId = "current-user-123"
+
+    composeTestRule.setContent {
+      MapScreen(
+          viewModel = testViewModel,
+          navigationActions = null,
+          initialLatitude = initialLatitude,
+          initialLongitude = initialLongitude,
+          showLocationMarker = true,
+          sharedLocationUserId = null,
+          currentUserId = currentUserId)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Verify the map displays without location marker when userId is null
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
   }
 }

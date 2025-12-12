@@ -8,6 +8,7 @@ import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
+import com.android.joinme.ui.components.ShareButtonTestTags
 import com.google.firebase.Timestamp
 import java.util.*
 import kotlinx.coroutines.runBlocking
@@ -818,5 +819,51 @@ class ShowEventScreenTest {
 
     assert(editEventCalled)
     assert(!editEventForSerieCalled)
+  }
+
+  /** --- SHARE BUTTON TESTS --- */
+  private fun setupShowEventScreen(event: Event, serieId: String? = null) {
+    val repo = EventsRepositoryLocal()
+    runBlocking { repo.addEvent(event) }
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          serieId = serieId,
+          currentUserId = "user1",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {})
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+  }
+
+  @Test
+  fun standaloneUpcomingEvent_displaysShareButton() {
+    setupShowEventScreen(createTestEvent().copy(partOfASerie = false))
+    composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun eventPartOfSerie_hidesShareButton() {
+    setupShowEventScreen(createTestEvent().copy(partOfASerie = true), serieId = "serie-123")
+    composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertDoesNotExist()
+  }
+
+  @Test
+  fun pastStandaloneEvent_hidesShareButton() {
+    setupShowEventScreen(createTestEvent(daysFromNow = -7).copy(partOfASerie = false))
+    composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertDoesNotExist()
+  }
+
+  @Test
+  fun groupEvent_hidesShareButton() {
+    setupShowEventScreen(createTestEvent().copy(partOfASerie = false, groupId = "group-123"))
+    composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertDoesNotExist()
   }
 }

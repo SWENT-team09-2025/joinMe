@@ -116,3 +116,13 @@ val chatDefaultDark = primaryContainerDark
 val onChatDefaultDark = onPrimaryContainerDark
 
 val TransparentColor = Color.Transparent
+
+// Leaderboard badge colors
+val goldLight = Color(0xFFFFD700)
+val goldDark = Color(0xFFFFD700)
+
+val silverLight = Color(0xFFC0C0C0)
+val silverDark = Color(0xFFD4D4D4)
+
+val bronzeLight = Color(0xFFCD7F32)
+val bronzeDark = Color(0xFFE8A854)

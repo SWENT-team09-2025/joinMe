@@ -1145,4 +1145,150 @@ class GroupDetailScreenTest {
         .onNodeWithTag(GroupPhotoImageTestTags.GROUP_PHOTO_PLACEHOLDER)
         .assertIsDisplayed()
   }
+
+  // Add these tests to GroupDetailScreenTest.kt
+
+  // ========== Leaderboard Button Tests ==========
+
+  @Test
+  fun leaderboardButton_isDisplayed() {
+    setup()
+    fakeGroupRepo.setGroup(
+        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS))
+
+    val viewModel = createViewModel()
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD)
+        .assertHasClickAction()
+  }
+
+  @Test
+  fun leaderboardButton_triggersCallback() {
+    setup()
+    fakeGroupRepo.setGroup(
+        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS))
+
+    var leaderboardGroupId: String? = null
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      GroupDetailScreen(
+          groupId = "group1",
+          viewModel = viewModel,
+          onNavigateToLeaderboard = { groupId -> leaderboardGroupId = groupId })
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).performClick()
+
+    assertEquals("group1", leaderboardGroupId)
+  }
+
+  @Test
+  fun leaderboardButton_hasLeaderboardIcon() {
+    setup()
+    fakeGroupRepo.setGroup(
+        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS))
+
+    val viewModel = createViewModel()
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithContentDescription("Leaderboard").assertIsDisplayed()
+  }
+
+  @Test
+  fun leaderboardButton_canBeClickedMultipleTimes() {
+    setup()
+    fakeGroupRepo.setGroup(
+        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS))
+
+    var clickCount = 0
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      GroupDetailScreen(
+          groupId = "group1", viewModel = viewModel, onNavigateToLeaderboard = { clickCount++ })
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).performClick()
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).performClick()
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).performClick()
+
+    assertEquals(3, clickCount)
+  }
+
+  @Test
+  fun leaderboardButton_notDisplayedInLoadingState() {
+    setup()
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    // Leaderboard button should not be visible during loading
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).assertDoesNotExist()
+  }
+
+  @Test
+  fun leaderboardButton_notDisplayedInErrorState() {
+    setup()
+    fakeGroupRepo.shouldThrowError = true
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Failed to load group").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    // Leaderboard button should not be visible in error state
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).assertDoesNotExist()
+  }
+
+  @Test
+  fun leaderboardButton_passesCorrectGroupId() {
+    setup()
+    val testGroupId = "special-group-id-123"
+    fakeGroupRepo.setGroup(
+        Group(
+            id = testGroupId,
+            name = "Special Group",
+            ownerId = "owner1",
+            category = EventType.SOCIAL))
+
+    var receivedGroupId: String? = null
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      GroupDetailScreen(
+          groupId = testGroupId,
+          viewModel = viewModel,
+          onNavigateToLeaderboard = { groupId -> receivedGroupId = groupId })
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).performClick()
+
+    assertEquals(testGroupId, receivedGroupId)
+  }
 }

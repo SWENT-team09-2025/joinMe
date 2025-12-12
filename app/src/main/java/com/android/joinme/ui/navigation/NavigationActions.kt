@@ -129,8 +129,38 @@ sealed class Screen(
   // Map
   // ============================================================================
 
-  /** Map screen showing events geographically (Top-level destination) */
-  object Map : Screen(route = "map", name = "Map", isTopLevelDestination = true)
+  /**
+   * Map screen showing events geographically (Top-level destination)
+   *
+   * @param latitude Optional latitude to center the map on
+   * @param longitude Optional longitude to center the map on
+   * @param showMarker Whether to show a marker at the specified location
+   * @param userId User ID of the person who shared the location (for marker color)
+   */
+  data class Map(
+      val latitude: Double? = null,
+      val longitude: Double? = null,
+      val showMarker: Boolean = false,
+      val userId: String? = null
+  ) :
+      Screen(
+          route =
+              if (latitude != null && longitude != null) {
+                if (userId != null) {
+                  "map?lat=$latitude&lon=$longitude&marker=$showMarker&userId=$userId"
+                } else {
+                  "map?lat=$latitude&lon=$longitude&marker=$showMarker"
+                }
+              } else "map",
+          name = "Map",
+          isTopLevelDestination = true) {
+    companion object {
+      // Route pattern for navigation graph (with parameter placeholders)
+      const val route = "map?lat={lat}&lon={lon}&marker={marker}&userId={userId}"
+      // Default route for bottom navigation (without parameters)
+      const val defaultRoute = "map"
+    }
+  }
 
   // ============================================================================
   // Calendar
@@ -208,6 +238,18 @@ sealed class Screen(
       Screen(route = "activity_group/${groupId}", name = "Activity Group") {
     companion object {
       const val route = "activity_group/{groupId}"
+    }
+  }
+
+  /**
+   * Screen for viewing the group leaderboard with streak rankings
+   *
+   * @param groupId The ID of the group whose leaderboard to display
+   */
+  data class GroupLeaderboard(val groupId: String) :
+      Screen(route = "group/${groupId}/leaderboard", name = "Group Leaderboard") {
+    companion object {
+      const val route = "group/{groupId}/leaderboard"
     }
   }
 

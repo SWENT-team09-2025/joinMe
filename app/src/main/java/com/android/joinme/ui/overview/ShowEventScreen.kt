@@ -21,13 +21,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
+import com.android.joinme.model.invitation.InvitationType
+import com.android.joinme.ui.components.ShareButton
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import kotlin.math.ceil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+
+private const val MILLIS_PER_DAY = 24 * 60 * 60 * 1000.0
+
+val ShowEventUIState.shouldShowShareButton: Boolean
+  get() = !partOfASerie && groupId == null && !isPastEvent && dateTimestamp != null
 
 /** Delete confirmation dialog for event deletion. */
 @Composable
@@ -283,6 +291,23 @@ fun ShowEventScreen(
                       imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                       contentDescription = "Back",
                       tint = MaterialTheme.colorScheme.primary)
+                }
+              },
+              actions = {
+                // Only show share button if event is standalone (not in serie/group) and not
+                // expired
+                if (eventUIState.shouldShowShareButton) {
+                  val timestamp = eventUIState.dateTimestamp!!
+                  val daysUntilEvent =
+                      ceil((timestamp.toDate().time - System.currentTimeMillis()) / MILLIS_PER_DAY)
+                          .toInt()
+                          .coerceAtLeast(0)
+
+                  ShareButton(
+                      invitationType = InvitationType.EVENT,
+                      targetId = eventId,
+                      createdBy = currentUserId,
+                      expiresInDays = daysUntilEvent)
                 }
               },
               colors =

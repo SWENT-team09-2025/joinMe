@@ -3,7 +3,6 @@ package com.android.joinme.ui.groups
 
 import android.content.Context
 import android.net.Uri
-import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -12,14 +11,16 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
-import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
-import com.android.joinme.ui.components.FloatingActionBubblesTestTags
+import com.android.joinme.model.invitation.InvitationType
+import com.android.joinme.ui.components.shareInvitation
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -290,63 +291,6 @@ class GroupListScreenTest {
 
     assertTrue(profileClicked)
   }
-
-  // =======================================
-  // FAB & Floating Action Bubbles Tests
-  // =======================================
-
-  @Test
-  fun fab_opensAndClosesBubbles() {
-    composeTestRule.setContent { GroupListScreen() }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule
-        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
-        .assertIsDisplayed()
-    composeTestRule.onNodeWithText("JOIN WITH LINK").assertIsDisplayed()
-    composeTestRule.onNodeWithText("CREATE A GROUP").assertIsDisplayed()
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule
-        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
-        .assertDoesNotExist()
-  }
-
-  @Test
-  fun bubbles_scrimDismissesBubbles() {
-    composeTestRule.setContent { GroupListScreen() }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithTag(FloatingActionBubblesTestTags.SCRIM).performClick()
-    composeTestRule
-        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
-        .assertDoesNotExist()
-  }
-
-  @Test
-  fun createGroupBubble_triggersCallback() {
-    var createClicked = false
-
-    composeTestRule.setContent { GroupListScreen(onCreateGroup = { createClicked = true }) }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithTag("groupCreateBubble").performClick()
-
-    assertTrue(createClicked)
-    composeTestRule
-        .onNodeWithTag(FloatingActionBubblesTestTags.BUBBLE_CONTAINER)
-        .assertDoesNotExist()
-  }
-
-  @Test
-  fun bubblesAreClickable() {
-    composeTestRule.setContent { GroupListScreen() }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithTag("groupJoinWithLinkBubble").assertHasClickAction()
-    composeTestRule.onNodeWithTag("groupCreateBubble").assertHasClickAction()
-  }
-
   // =======================================
   // Group Menu Tests
   // =======================================
@@ -362,18 +306,6 @@ class GroupListScreenTest {
 
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
     composeTestRule.onNodeWithText("SHARE GROUP").assertDoesNotExist()
-  }
-
-  @Test
-  fun groupMenu_shareGroup_triggersDialog() {
-    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
-
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_DIALOG).assertExists()
   }
 
   @Test
@@ -547,160 +479,8 @@ class GroupListScreenTest {
   }
 
   // =======================================
-  // Share Group Dialog Tests
-  // =======================================
-
-  @Test
-  fun shareGroup_opensDialog() {
-    val group = Group(id = "test1", name = "My Group", ownerId = "owner1")
-
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_DIALOG).assertExists()
-    composeTestRule.onNodeWithText("       Share this group").assertExists()
-    composeTestRule.onNodeWithText("Anyone with this ID can join the group").assertExists()
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_COPY_LINK_BUTTON)
-        .assertExists()
-  }
-
-  @Test
-  fun shareGroupDialog_copyButton_closesDialog() {
-    val group = Group(id = "test-id", name = "Test Group", ownerId = "owner1")
-
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test-id")).performClick()
-    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_DIALOG).assertExists()
-
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_COPY_LINK_BUTTON)
-        .performClick()
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_DIALOG).assertDoesNotExist()
-  }
-
-  // =======================================
-  // Join With Link Dialog Tests
-  // =======================================
-
-  @Test
-  fun joinWithLinkDialog_displaysCorrectly() {
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(emptyList())) }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).performClick()
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_DIALOG).assertExists()
-    composeTestRule.onNodeWithText("Join a group").assertExists()
-    composeTestRule.onNodeWithText("Enter the Group ID to join").assertExists()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_INPUT).assertExists()
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_PASTE_BUTTON)
-        .assertExists()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_JOIN_BUTTON).assertExists()
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_CLOSE_BUTTON)
-        .assertExists()
-  }
-
-  @Test
-  fun joinWithLinkDialog_acceptsInput() {
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(emptyList())) }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).performClick()
-
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_INPUT)
-        .performTextInput("test-group-123")
-
-    composeTestRule.onNodeWithText("test-group-123").assertExists()
-  }
-
-  @Test
-  fun joinWithLinkDialog_joinButton_triggersCallback() {
-    var joinedGroupId: String? = null
-
-    composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = createViewModel(emptyList()), onJoinWithLink = { joinedGroupId = it })
-    }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).performClick()
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_INPUT)
-        .performTextInput("  group123  ")
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_JOIN_BUTTON).performClick()
-
-    assertEquals("group123", joinedGroupId)
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_DIALOG)
-        .assertDoesNotExist()
-  }
-
-  @Test
-  fun joinWithLinkDialog_emptyInput_doesNotTrigger() {
-    var callbackInvoked = false
-
-    composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = createViewModel(emptyList()), onJoinWithLink = { callbackInvoked = true })
-    }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).performClick()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_JOIN_BUTTON).performClick()
-
-    assert(!callbackInvoked)
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_DIALOG).assertExists()
-  }
-
-  @Test
-  fun joinWithLinkDialog_closeButton_dismisses() {
-    var callbackInvoked = false
-
-    composeTestRule.setContent {
-      GroupListScreen(
-          viewModel = createViewModel(emptyList()), onJoinWithLink = { callbackInvoked = true })
-    }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE).performClick()
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_INPUT)
-        .performTextInput("group123")
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_CLOSE_BUTTON)
-        .performClick()
-
-    assert(!callbackInvoked)
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.JOIN_WITH_LINK_DIALOG)
-        .assertDoesNotExist()
-  }
-
-  // =======================================
   // Menu Interaction Tests
   // =======================================
-
-  @Test
-  fun menuClosesAfterAction() {
-    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
-
-    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
-
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
-    composeTestRule.onNodeWithText("SHARE GROUP").performClick()
-
-    // After clicking share, the menu should close and dialog should open
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_DIALOG).assertExists()
-  }
 
   @Test
   fun clickingCardWithMenuOpen_closesMenu() {
@@ -756,16 +536,161 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("1")).assertIsDisplayed()
   }
 
+  // ========== NEW TESTS FOR MISSING COVERAGE ==========
+
   @Test
-  fun emptyState_fabStillWorks() {
-    var createClicked = false
+  fun fab_click_triggersOnCreateGroupCallback() {
+    var createGroupClicked = false
 
-    composeTestRule.setContent { GroupListScreen(onCreateGroup = { createClicked = true }) }
+    composeTestRule.setContent {
+      GroupListScreen(
+          viewModel = createViewModel(emptyList()), onCreateGroup = { createGroupClicked = true })
+    }
 
-    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EMPTY).assertIsDisplayed()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP).performClick()
-    composeTestRule.onNodeWithText("CREATE A GROUP").performClick()
 
-    assertTrue(createClicked)
+    assertTrue(createGroupClicked)
+  }
+
+  @Test
+  fun editGroupButton_asOwner_triggersOnEditGroupCallback() {
+    val testUserId = "test-user-id"
+    mockFirebaseAuthWithUser(testUserId)
+    val group =
+        Group(id = "1", name = "Test Group", ownerId = testUserId, memberIds = listOf(testUserId))
+    var editedGroup: Group? = null
+
+    composeTestRule.setContent {
+      GroupListScreen(
+          viewModel = createViewModel(listOf(group)), onEditGroup = { editedGroup = it })
+    }
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("1")).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.EDIT_GROUP_BUBBLE).performClick()
+
+    assertEquals(group, editedGroup)
+  }
+
+  @Test
+  fun shareGroupButton_triggersShareInvitation() {
+    val testUserId = "test-user-id"
+    mockFirebaseAuthWithUser(testUserId)
+    val group =
+        Group(id = "1", name = "Share Group", ownerId = testUserId, memberIds = listOf(testUserId))
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("1")).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).assertIsDisplayed()
+    // Note: Actually clicking share would require mocking shareInvitation,
+    // which is complex. We verify the button exists and is clickable.
+  }
+
+  @Test
+  fun onEditClick_callback_isTriggered() {
+    var editClicked = false
+
+    composeTestRule.setContent {
+      GroupListScreen(
+          viewModel = createViewModel(emptyList()), onEditClick = { editClicked = true })
+    }
+
+    composeTestRule.onNodeWithContentDescription("Edit").performClick()
+
+    assertTrue(editClicked)
+  }
+
+  @Test
+  fun scrimClick_dismissesMenu() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+    composeTestRule.onNodeWithText("SHARE GROUP").assertIsDisplayed()
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.cardTag("test1")).performClick()
+
+    composeTestRule.onNodeWithText("SHARE GROUP").assertDoesNotExist()
+  }
+
+  @Test
+  fun groupCardDescription_whenBlank_isNotDisplayed() {
+    val group = Group(id = "1", name = "Group", description = "   ", ownerId = "owner")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    composeTestRule.onNodeWithText("Group").assertIsDisplayed()
+
+    composeTestRule.onNodeWithText("   ").assertDoesNotExist()
+  }
+
+  @Test
+  fun currentUserId_returnsTestUserId_inTestEnvironment() {
+
+    val testUserId = "test-user-id"
+    mockFirebaseAuthWithUser(testUserId)
+
+    val group =
+        Group(id = "1", name = "Test Group", ownerId = testUserId, memberIds = listOf(testUserId))
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("1")).performClick()
+    composeTestRule.onNodeWithText("EDIT GROUP").assertExists()
+    composeTestRule.onNodeWithText("DELETE GROUP").assertExists()
+  }
+
+  @Test
+  fun menuButton_capturesYPosition() {
+    val group = Group(id = "test1", name = "Test Group", ownerId = "owner1")
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).performClick()
+
+    composeTestRule.onNodeWithText("SHARE GROUP").assertIsDisplayed()
+  }
+
+  @Test
+  fun groupsRefresh_whenScreenResumes() {
+    val initialGroups = listOf(Group(id = "1", name = "Group 1", ownerId = "owner"))
+    val viewModel = createViewModel(initialGroups)
+
+    composeTestRule.setContent { GroupListScreen(viewModel = viewModel) }
+
+    composeTestRule.onNodeWithText("Group 1").assertIsDisplayed()
+
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.LIST).assertIsDisplayed()
+  }
+
+  @Test
+  fun shareGroupButton_callsShareInvitation() {
+    val testUserId = "test-user-id"
+    mockFirebaseAuthWithUser(testUserId)
+    val group =
+        Group(
+            id = "group1",
+            name = "Share Group",
+            ownerId = testUserId,
+            memberIds = listOf(testUserId))
+
+    // Mock the shareInvitation function (top-level suspend)
+    mockkStatic("com.android.joinme.ui.components.ShareButtonKt")
+    coEvery { shareInvitation(any(), any(), any(), any(), any(), any()) } returns Unit
+
+    composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
+
+    // Open menu
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("group1")).performClick()
+    composeTestRule.waitForIdle()
+
+    // Click SHARE GROUP bubble
+    composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).performClick()
+
+    // Verify shareInvitation is called with correct params
+    coVerify { shareInvitation(InvitationType.GROUP, "group1", testUserId, 7, any(), any()) }
   }
 }

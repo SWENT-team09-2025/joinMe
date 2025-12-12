@@ -15,6 +15,7 @@ import com.android.joinme.model.groups.streaks.StreakService
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import com.android.joinme.model.profile.ProfileRepositoryProvider
+import com.google.firebase.Timestamp
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +33,7 @@ data class ShowEventUIState(
     val participantsCount: String = "",
     val duration: String = "",
     val date: String = "",
+    val dateTimestamp: Timestamp? = null,
     val visibility: String = "",
     val ownerId: String = "",
     val ownerName: String = "",
@@ -116,6 +118,7 @@ class ShowEventViewModel(
                 participantsCount = event.participants.size.toString(),
                 duration = event.duration.toString(),
                 date = formattedDate,
+                dateTimestamp = event.date,
                 visibility = event.visibility.displayString().uppercase(),
                 ownerId = event.ownerId,
                 ownerName = ownerDisplayName,

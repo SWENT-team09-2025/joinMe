@@ -175,14 +175,6 @@ class ViewProfileScreenTest {
     scrollAndAssertText("F1 driver with a need for speed")
   }
 
-  @Test
-  fun viewProfileScreen_displaysCorrectBio() = runTest {
-    val repo = FakeProfileRepository(createTestProfile())
-    val viewModel = ProfileViewModel(repo)
-
-    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
-  }
-
   // ==================== NULL/EMPTY VALUES TESTS ====================
 
   @Test
@@ -576,5 +568,71 @@ class ViewProfileScreenTest {
 
     // 28,800,000 should be formatted as "28.8m"
     composeTestRule.onNodeWithText("28.8m").assertIsDisplayed()
+  }
+
+  // ==================== LAUNCHED EFFECT OPTIMIZATION TESTS ====================
+
+  @Test
+  fun viewProfileScreen_skipsReload_whenProfileAlreadyLoadedForSameUid() = runTest {
+    var loadCount = 0
+    val countingRepo =
+        object : ProfileRepository by FakeProfileRepository(createTestProfile()) {
+          override suspend fun getProfile(uid: String): Profile? {
+            loadCount++
+            return createTestProfile()
+          }
+        }
+
+    val viewModel = ProfileViewModel(countingRepo)
+    viewModel.loadProfile(testUid) // Pre-load profile
+    composeTestRule.waitForIdle()
+    loadCount = 0 // Reset after initial load
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+    composeTestRule.waitForIdle()
+
+    assert(loadCount == 0) { "Profile should not reload when already loaded for same UID" }
+  }
+
+  @Test
+  fun viewProfileScreen_reloadsProfile_whenUidIsDifferent() = runTest {
+    // Create a mutable repository that can handle multiple profiles
+    val profiles =
+        mutableMapOf<String, Profile>(
+            "user1" to createTestProfile().copy(uid = "user1", username = "User One"),
+            "user2" to createTestProfile().copy(uid = "user2", username = "User Two"))
+
+    val repo =
+        object : ProfileRepository by FakeProfileRepository() {
+          override suspend fun getProfile(uid: String): Profile? = profiles[uid]
+
+          override suspend fun createOrUpdateProfile(profile: Profile) {
+            profiles[profile.uid] = profile
+          }
+        }
+
+    val viewModel = ProfileViewModel(repo)
+    viewModel.loadProfile("user1")
+    composeTestRule.waitForIdle()
+
+    // Change to different user
+    composeTestRule.setContent { ViewProfileScreen(uid = "user2", profileViewModel = viewModel) }
+    composeTestRule.waitForIdle()
+
+    // Verify new profile loaded
+    composeTestRule.onNodeWithText("User Two").assertExists()
+  }
+
+  @Test
+  fun viewProfileScreen_loadsProfile_whenViewModelStateIsNull() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
+    val viewModel = ProfileViewModel(repo)
+    // Don't pre-load - profile state is null
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+    composeTestRule.waitForIdle()
+
+    // Verify profile loaded and displayed
+    composeTestRule.onNodeWithText("Max Verstappen").assertExists()
   }
 }

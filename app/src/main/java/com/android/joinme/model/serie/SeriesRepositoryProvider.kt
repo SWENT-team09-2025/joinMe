@@ -1,14 +1,15 @@
 package com.android.joinme.model.serie
 
+import android.content.Context
+import com.android.joinme.network.NetworkMonitor
 import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.firestore
 
 /**
- * Provides a singleton instance of the SeriesRepository for dependency injection.
- *
- * This provider follows the repository pattern and enables easy testing by allowing the repository
- * instance to be swapped with a mock or fake implementation. By default, it provides a Firestore-
- * backed implementation.
+ * Provides the correct [SeriesRepository] implementation depending on the environment.
+ * - Test environment: Uses local (in-memory) repository
+ * - Production: Uses cached repository with offline support
  */
 object SeriesRepositoryProvider {
   /** Lazily initialized private instance of the local (in-memory) repository for testing. */
@@ -17,22 +18,84 @@ object SeriesRepositoryProvider {
   /**
    * Lazily initialized private instance of the repository using Firebase Firestore as the backend.
    */
-  private val _firestoreRepository: SeriesRepository by lazy {
-    SeriesRepositoryFirestore(Firebase.firestore)
+  private var _firestoreRepository: SeriesRepository? = null
+
+  /** Cached repository (initialized lazily) */
+  private var _cachedRepository: SeriesRepository? = null
+
+  /**
+   * Returns the appropriate repository implementation.
+   *
+   * @param context Application context (required for production, optional for tests)
+   * @return SeriesRepository implementation
+   */
+  fun getRepository(context: Context? = null): SeriesRepository {
+    // Test environment: use local repository
+    if (isTestEnvironment()) return _localRepository
+
+    // Production: use cached repository with offline support
+    requireNotNull(context) { "Context is required for production repository" }
+    return getCachedRepo(context)
   }
 
   /**
    * The current repository instance used throughout the application. Automatically returns the
    * local repository in test environments, otherwise returns the Firestore repository.
+   *
+   * @deprecated Use getRepository(context) instead for offline support
    */
   val repository: SeriesRepository
     get() {
-      // ✅ detect instrumented test environment
-      val isTestEnv =
-          android.os.Build.FINGERPRINT == "robolectric" ||
-              android.os.Debug.isDebuggerConnected() ||
-              System.getProperty("IS_TEST_ENV") == "true"
+      if (isTestEnvironment()) return _localRepository
 
-      return if (isTestEnv) _localRepository else _firestoreRepository
+      // Try to get context from FirebaseApp
+      val context =
+          try {
+            FirebaseApp.getInstance().applicationContext
+          } catch (e: Exception) {
+            throw e
+          }
+
+      return getRepository(context)
     }
+
+  private fun getFirestoreRepo(): SeriesRepository {
+    if (_firestoreRepository == null) {
+      _firestoreRepository = SeriesRepositoryFirestore(Firebase.firestore)
+    }
+    return _firestoreRepository!!
+  }
+
+  private fun getCachedRepo(context: Context): SeriesRepository {
+    if (_cachedRepository == null) {
+      val firestore = getFirestoreRepo()
+      val networkMonitor = NetworkMonitor(context)
+      _cachedRepository = SeriesRepositoryCached(context, firestore, networkMonitor)
+    }
+    return _cachedRepository!!
+  }
+
+  /**
+   * Checks if the current environment is a test environment.
+   *
+   * @return true if running in a test environment, false otherwise
+   */
+  private fun isTestEnvironment(): Boolean {
+    return android.os.Build.FINGERPRINT == "robolectric" ||
+        android.os.Debug.isDebuggerConnected() ||
+        System.getProperty("IS_TEST_ENV") == "true" ||
+        try {
+          Class.forName("androidx.test.runner.AndroidJUnitRunner")
+          true
+        } catch (e: ClassNotFoundException) {
+          false
+        }
+  }
+
+  /** For testing only - allows resetting the singleton state. */
+  @androidx.annotation.VisibleForTesting
+  fun resetForTesting() {
+    _firestoreRepository = null
+    _cachedRepository = null
+  }
 }

@@ -16,6 +16,7 @@ import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.utils.Visibility
+import com.android.joinme.ui.components.ShareButtonTestTags
 import com.google.firebase.FirebaseApp
 import com.google.firebase.Timestamp
 import java.util.*
@@ -1206,5 +1207,49 @@ class SerieDetailsScreenTest {
     }
 
     composeTestRule.onNodeWithTag(SerieDetailsScreenTestTags.GROUP_INFO).assertDoesNotExist()
+  }
+
+  /** --- SHARE BUTTON TESTS --- */
+  private fun setupSerieDetailsScreen(serie: Serie) {
+    setup()
+    fakeSeriesRepo.setSerie(serie)
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      SerieDetailsScreen(serieId = serie.serieId, serieDetailsViewModel = viewModel)
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule
+          .onAllNodesWithTag(SerieDetailsScreenTestTags.SERIE_TITLE)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+  }
+
+  @Test
+  fun activeUpcomingSerie_displaysShareButton() {
+    val futureEndTime =
+        Timestamp(Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 7) }.time)
+    setupSerieDetailsScreen(createTestSerie(ownerId = "owner123", lastEventEndTime = futureEndTime))
+    composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun expiredSerie_hidesShareButton() {
+    val pastEndTime = Timestamp(Calendar.getInstance().apply { add(Calendar.HOUR, -2) }.time)
+    setupSerieDetailsScreen(createTestSerie(ownerId = "owner123", lastEventEndTime = pastEndTime))
+    composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertDoesNotExist()
+  }
+
+  @Test
+  fun groupSerie_hidesShareButton() {
+    val futureEndTime =
+        Timestamp(Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 7) }.time)
+    val groupSerie =
+        createTestSerie(ownerId = "owner123", lastEventEndTime = futureEndTime)
+            .copy(groupId = "group-123")
+    setupSerieDetailsScreen(groupSerie)
+    composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertDoesNotExist()
   }
 }
