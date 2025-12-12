@@ -17,6 +17,7 @@ class AppDatabaseTest {
   private lateinit var database: AppDatabase
   private lateinit var eventDao: EventDao
   private lateinit var serieDao: SerieDao
+  private lateinit var profileDao: ProfileDao
   private lateinit var context: Context
 
   @Before
@@ -28,6 +29,7 @@ class AppDatabaseTest {
             .build()
     eventDao = database.eventDao()
     serieDao = database.serieDao()
+    profileDao = database.profileDao()
   }
 
   @After
@@ -251,11 +253,12 @@ class AppDatabaseTest {
   }
 
   @Test
-  fun `database version is 2 with both entities`() {
-    // This test verifies that the database includes both EventEntity and SerieEntity
-    // by ensuring both DAOs are accessible and functional
+  fun `database version is 3 with all three entities`() {
+    // This test verifies that the database includes EventEntity, SerieEntity, and ProfileEntity
+    // by ensuring all three DAOs are accessible and functional
     assertNotNull(database.eventDao())
     assertNotNull(database.serieDao())
+    assertNotNull(database.profileDao())
   }
 
   @Test
@@ -287,5 +290,136 @@ class AppDatabaseTest {
     val retrieved = serie2Dao.getSerieById("test1")
     assertNotNull(retrieved)
     assertEquals("test1", retrieved?.serieId)
+  }
+
+  // ========== ProfileDao Integration Tests ==========
+
+  private fun createTestProfile(
+      uid: String,
+      username: String = "User $uid",
+      cachedAt: Long = System.currentTimeMillis()
+  ) =
+      ProfileEntity(
+          uid = uid,
+          photoUrl = "https://example.com/photo.jpg",
+          username = username,
+          email = "$uid@test.com",
+          dateOfBirth = "01/01/2000",
+          country = "Switzerland",
+          interestsJson = "[\"Coding\",\"Testing\"]",
+          bio = "Bio for $uid",
+          createdAtSeconds = 1234567890L,
+          createdAtNanoseconds = 123456789,
+          updatedAtSeconds = 1234567890L,
+          updatedAtNanoseconds = 123456789,
+          fcmToken = "fcm-token-$uid",
+          eventsJoinedCount = 5,
+          followersCount = 10,
+          followingCount = 15,
+          cachedAt = cachedAt)
+
+  @Test
+  fun `database provides profileDao instance`() {
+    assertNotNull(profileDao)
+  }
+
+  @Test
+  fun `profileDao can insert and retrieve profiles`() = runBlocking {
+    val profile = createTestProfile("user1")
+    profileDao.insertProfile(profile)
+
+    val retrieved = profileDao.getProfileById("user1")
+    assertNotNull(retrieved)
+    assertEquals("user1", retrieved?.uid)
+    assertEquals("User user1", retrieved?.username)
+  }
+
+  @Test
+  fun `eventDao serieDao and profileDao work independently`() = runBlocking {
+    val event = createTestEvent("event1")
+    val serie = createTestSerie("serie1")
+    val profile = createTestProfile("user1")
+
+    eventDao.insertEvent(event)
+    serieDao.insertSerie(serie)
+    profileDao.insertProfile(profile)
+
+    assertEquals(1, eventDao.getAllEvents().size)
+    assertEquals(1, serieDao.getAllSeries().size)
+    assertEquals(1, profileDao.getAllProfiles().size)
+  }
+
+  @Test
+  fun `clearing database removes events series and profiles`() = runBlocking {
+    eventDao.insertEvent(createTestEvent("event1"))
+    serieDao.insertSerie(createTestSerie("serie1"))
+    profileDao.insertProfile(createTestProfile("user1"))
+
+    database.clearAllTables()
+
+    assertEquals(0, eventDao.getAllEvents().size)
+    assertEquals(0, serieDao.getAllSeries().size)
+    assertEquals(0, profileDao.getAllProfiles().size)
+  }
+
+  @Test
+  fun `database singleton works with profiles`() = runBlocking {
+    // Set the current database as the test instance
+    AppDatabase.setTestInstance(database)
+
+    val profile = createTestProfile("user1")
+    profileDao.insertProfile(profile)
+
+    // Get another instance and verify it's the same singleton
+    val db2 = AppDatabase.getDatabase(context)
+    val profileDao2 = db2.profileDao()
+
+    // Should be the same instance
+    assertSame(database, db2)
+
+    val retrieved = profileDao2.getProfileById("user1")
+    assertNotNull(retrieved)
+    assertEquals("user1", retrieved?.uid)
+  }
+
+  @Test
+  fun `profileDao insertProfile replaces existing profile with same uid`() = runBlocking {
+    val profile = createTestProfile("user1", username = "Original Name")
+    profileDao.insertProfile(profile)
+
+    val updatedProfile = profile.copy(username = "Updated Name", bio = "New bio")
+    profileDao.insertProfile(updatedProfile)
+
+    val retrieved = profileDao.getProfileById("user1")
+    assertEquals("Updated Name", retrieved?.username)
+    assertEquals("New bio", retrieved?.bio)
+    assertEquals(1, profileDao.getAllProfiles().size) // Should still be only one profile
+  }
+
+  @Test
+  fun `profileDao deleteProfile removes profile from database`() = runBlocking {
+    profileDao.insertProfile(createTestProfile("user1"))
+    profileDao.insertProfile(createTestProfile("user2"))
+
+    assertEquals(2, profileDao.getAllProfiles().size)
+
+    profileDao.deleteProfile("user1")
+
+    assertNull(profileDao.getProfileById("user1"))
+    assertNotNull(profileDao.getProfileById("user2"))
+    assertEquals(1, profileDao.getAllProfiles().size)
+  }
+
+  @Test
+  fun `profileDao deleteOldProfiles removes profiles older than timestamp`() = runBlocking {
+    val currentTime = System.currentTimeMillis()
+    profileDao.insertProfile(createTestProfile("old", cachedAt = currentTime - 10000))
+    profileDao.insertProfile(createTestProfile("recent", cachedAt = currentTime))
+
+    profileDao.deleteOldProfiles(currentTime - 5000)
+
+    val remaining = profileDao.getAllProfiles()
+    assertEquals(1, remaining.size)
+    assertEquals("recent", remaining[0].uid)
   }
 }
