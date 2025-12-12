@@ -187,6 +187,10 @@
     <string name="success_joining_group">Successfully joined the group!</string>
     <string name="sign_in_to_join_group">Please sign in to join the group</string>
 
+    <!-- Group Detail Screen -->
+    <string name="open_chat">Open Chat</string>
+    <string name="group_activities">Group Activities</string>
+
     <!-- Group Leaderboard Screen -->
     <string name="leaderboard_title">Leaderboard</string>
     <string name="leaderboard_tab_current">Current</string>

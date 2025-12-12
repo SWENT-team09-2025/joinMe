@@ -14,14 +14,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.R
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.displayString
 import com.android.joinme.model.event.getColor
@@ -36,6 +39,7 @@ import com.android.joinme.ui.theme.customColors
 /** Test tags for GroupDetailScreen components. */
 object GroupDetailScreenTestTags {
   const val BUTTON_ACTIVITIES = "buttonActivities"
+  const val BUTTON_LEADERBOARD = "buttonLeaderboard"
 
   fun memberItemTag(userId: String) = "memberItem:$userId"
 }
@@ -50,6 +54,8 @@ object GroupDetailScreenTestTags {
  * @param onMemberClick Callback when a member profile is clicked, receives the member's UID.
  * @param onNavigateToChat Callback invoked when the user wants to navigate to the group chat,
  *   receives chatId and chatTitle.
+ * @param onNavigateToLeaderboard Callback invoked when the user wants to navigate to the group
+ *   leaderboard, receives groupId.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,7 +65,8 @@ fun GroupDetailScreen(
     onBackClick: () -> Unit = {},
     onActivityGroupClick: () -> Unit = {},
     onMemberClick: (String) -> Unit = {},
-    onNavigateToChat: (String, String, Int) -> Unit = { _, _, _ -> }
+    onNavigateToChat: (String, String, Int) -> Unit = { _, _, _ -> },
+    onNavigateToLeaderboard: (String) -> Unit = {}
 ) {
   LaunchedEffect(groupId) { viewModel.loadGroupDetails(groupId) }
 
@@ -112,7 +119,8 @@ fun GroupDetailScreen(
                   membersCount = uiState.group!!.membersCount,
                   onGroupEventsClick = onActivityGroupClick,
                   onMemberClick = onMemberClick,
-                  onNavigateToChat = onNavigateToChat)
+                  onNavigateToChat = onNavigateToChat,
+                  onNavigateToLeaderboard = onNavigateToLeaderboard)
             }
           }
         }
@@ -131,7 +139,8 @@ private fun GroupContent(
     membersCount: Int,
     onGroupEventsClick: () -> Unit,
     onMemberClick: (String) -> Unit,
-    onNavigateToChat: (String, String, Int) -> Unit
+    onNavigateToChat: (String, String, Int) -> Unit,
+    onNavigateToLeaderboard: (String) -> Unit
 ) {
   Column(modifier = Modifier.fillMaxSize().background(groupCategory.getColor())) {
     Column(modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.large)) {
@@ -192,7 +201,7 @@ private fun GroupContent(
     Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.Padding.large)) {
-      // Row to hold chat FAB and Group Activities button
+      // Row to hold chat FAB, Group Activities button, and Leaderboard FAB
       Row(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small),
@@ -206,11 +215,11 @@ private fun GroupContent(
                 modifier = Modifier.testTag("chatFabBottom")) {
                   Icon(
                       imageVector = Icons.AutoMirrored.Filled.Message,
-                      contentDescription = "Open Chat",
+                      contentDescription = stringResource(R.string.open_chat),
                   )
                 }
 
-            // Group Activities button - now using weight to fill remaining space
+            // Group Activities button - using weight to fill remaining space
             Button(
                 onClick = onGroupEventsClick,
                 colors = MaterialTheme.customColors.buttonColorsForEventType(groupCategory),
@@ -224,11 +233,24 @@ private fun GroupContent(
                         .testTag(GroupDetailScreenTestTags.BUTTON_ACTIVITIES),
             ) {
               Text(
-                  text = "Group Activities",
-                  style = MaterialTheme.typography.headlineSmall,
+                  text = stringResource(R.string.group_activities),
+                  style = MaterialTheme.typography.titleMedium,
                   color = groupCategory.getOnColor(),
                   fontWeight = FontWeight.Medium)
             }
+
+            // Leaderboard FAB positioned to the right
+            FloatingActionButton(
+                onClick = { onNavigateToLeaderboard(groupId) },
+                containerColor = groupCategory.getColor(),
+                contentColor = groupCategory.getOnColor(),
+                shape = RoundedCornerShape(Dimens.GroupDetail.eventsButtonCornerRadius),
+                modifier = Modifier.testTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD)) {
+                  Icon(
+                      imageVector = Icons.Filled.Leaderboard,
+                      contentDescription = stringResource(R.string.leaderboard_button),
+                  )
+                }
           }
 
       Spacer(modifier = Modifier.height(Dimens.Spacing.medium))

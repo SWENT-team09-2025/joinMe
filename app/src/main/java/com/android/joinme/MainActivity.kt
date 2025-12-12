@@ -1,6 +1,7 @@
 // Implemented with help of Claude AI
 package com.android.joinme
 
+import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -21,6 +22,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -43,6 +46,8 @@ import com.android.joinme.ui.groups.EditGroupScreen
 import com.android.joinme.ui.groups.GroupDetailScreen
 import com.android.joinme.ui.groups.GroupListScreen
 import com.android.joinme.ui.groups.GroupListViewModel
+import com.android.joinme.ui.groups.leaderboard.GroupLeaderboardScreen
+import com.android.joinme.ui.groups.leaderboard.GroupLeaderboardViewModel
 import com.android.joinme.ui.history.HistoryScreen
 import com.android.joinme.ui.map.MapScreen
 import com.android.joinme.ui.map.MapViewModel
@@ -359,7 +364,7 @@ fun JoinMe(
                   chatId = conversationId,
                   chatTitle = chatName,
                   totalParticipants = event.participants.size))
-        } catch (e: Exception) {
+        } catch (_: Exception) {
           // If we can't get event details, navigate with defaults
           navigationActions.navigateTo(
               Screen.Chat(chatId = conversationId, chatTitle = chatName, totalParticipants = 1))
@@ -786,6 +791,9 @@ fun JoinMe(
               },
               onNavigateToChat = { chatId, chatTitle, totalParticipants ->
                 navigationActions.navigateTo(Screen.Chat(chatId, chatTitle, totalParticipants))
+              },
+              onNavigateToLeaderboard = {
+                navigationActions.navigateTo(Screen.GroupLeaderboard(groupId))
               })
         }
       }
@@ -806,6 +814,29 @@ fun JoinMe(
         } ?: run { Toast.makeText(context, "Group ID is null", Toast.LENGTH_SHORT).show() }
       }
 
+      composable(route = Screen.GroupLeaderboard.route) { navBackStackEntry ->
+        val groupId = navBackStackEntry.arguments?.getString("groupId")
+
+        groupId?.let {
+          val leaderboardViewModel: GroupLeaderboardViewModel =
+              viewModel(
+                  factory =
+                      object : ViewModelProvider.Factory {
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                          @Suppress("UNCHECKED_CAST")
+                          return GroupLeaderboardViewModel(
+                              application = (context.applicationContext as Application))
+                              as T
+                        }
+                      })
+
+          GroupLeaderboardScreen(
+              groupId = groupId,
+              viewModel = leaderboardViewModel,
+              onNavigateBack = { navigationActions.goBack() })
+        } ?: run { Toast.makeText(context, "Group ID is null", Toast.LENGTH_SHORT).show() }
+      }
+
       composable(route = Screen.Chat.route) { navBackStackEntry ->
         val chatId = navBackStackEntry.arguments?.getString("chatId")
         val chatTitle = navBackStackEntry.arguments?.getString("chatTitle")
@@ -818,10 +849,8 @@ fun JoinMe(
           val chatViewModel: ChatViewModel =
               viewModel(
                   factory =
-                      object : androidx.lifecycle.ViewModelProvider.Factory {
-                        override fun <T : androidx.lifecycle.ViewModel> create(
-                            modelClass: Class<T>
-                        ): T {
+                      object : ViewModelProvider.Factory {
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
                           @Suppress("UNCHECKED_CAST")
                           return ChatViewModel(
                               ChatRepositoryProvider.repository,

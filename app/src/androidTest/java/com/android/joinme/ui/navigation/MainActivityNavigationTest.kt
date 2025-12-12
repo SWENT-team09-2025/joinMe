@@ -19,6 +19,7 @@ import com.android.joinme.model.utils.Visibility
 import com.android.joinme.ui.groups.GroupDetailScreenTestTags
 import com.android.joinme.ui.groups.GroupListScreenTestTags
 import com.android.joinme.ui.groups.GroupListScreenTestTags.cardTag
+import com.android.joinme.ui.groups.leaderboard.LeaderboardTestTags
 import com.android.joinme.ui.overview.CreateEventForSerieScreenTestTags
 import com.android.joinme.ui.overview.CreateEventScreenTestTags
 import com.android.joinme.ui.overview.EditSerieScreenTestTags
@@ -1639,6 +1640,49 @@ class MainActivityNavigationTest {
 
     // Step 5: Verify ActivityGroupScreen rendered with event
     composeTestRule.onNodeWithTag("eventItemtest-group-activity-1").assertExists()
+  }
+
+  @Test
+  fun leaderboardScreen_composable_navigateToLeaderboard() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.waitForIdle()
+
+    // Step 1: Navigate to Profile tab
+    composeTestRule.onNodeWithTag(NavigationTestTags.tabTag("Profile")).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Step 2: Click Groups button (content description)
+    composeTestRule.onNodeWithContentDescription("Group").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Step 3: Click on test group in GroupListScreen
+    composeTestRule.onNodeWithTag(cardTag("test-group-1")).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Step 4: Click Leaderboard button (content description)
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Step 5: Verify LeaderboardScreen rendered
+    composeTestRule.onNodeWithTag(LeaderboardTestTags.SCREEN).assertExists()
+
+    // Step 6: Click back button
+    composeTestRule.onNodeWithTag(LeaderboardTestTags.BACK_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(1000)
+    composeTestRule.waitForIdle()
+
+    // Step 7: Verify we're back on GroupDetailScreen
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).assertExists()
   }
 
   @Test

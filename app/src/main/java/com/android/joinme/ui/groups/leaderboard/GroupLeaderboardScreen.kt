@@ -55,6 +55,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
 import com.android.joinme.ui.profile.ProfilePhotoImage
 import com.android.joinme.ui.theme.Dimens
@@ -87,7 +88,7 @@ object LeaderboardTestTags {
 @Composable
 fun GroupLeaderboardScreen(
     groupId: String,
-    viewModel: GroupLeaderboardViewModel,
+    viewModel: GroupLeaderboardViewModel = viewModel(),
     onNavigateBack: () -> Unit
 ) {
   val uiState by viewModel.uiState.collectAsState()
@@ -199,7 +200,9 @@ private fun LeaderboardTabs(selectedTabIndex: Int, onTabSelected: (Int) -> Unit)
               .padding(horizontal = Dimens.Padding.large)
               .testTag(LeaderboardTestTags.TAB_ROW),
       containerColor = Color.Transparent,
-      contentColor = MaterialTheme.colorScheme.primary) {
+      contentColor = MaterialTheme.colorScheme.primary,
+      indicator = { /* No indicator */},
+      divider = { /* No divider */}) {
         tabs.forEachIndexed { index, title ->
           val testTag =
               if (index == 0) LeaderboardTestTags.TAB_CURRENT else LeaderboardTestTags.TAB_ALL_TIME

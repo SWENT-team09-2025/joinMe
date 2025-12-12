@@ -1,6 +1,6 @@
-// Implemented with help of Claude AI
-
 package com.android.joinme.ui.groups.leaderboard
+
+// Implemented with the help of AI tools, adapted and refined to follow project conventions.
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -68,7 +68,7 @@ fun StreakInfoDialog(onDismiss: () -> Unit) {
                               text = stringResource(R.string.leaderboard_rules_title_how),
                               style = MaterialTheme.typography.titleLarge,
                               fontWeight = FontWeight.Bold,
-                              color = MaterialTheme.colorScheme.onSurface,
+                              color = MaterialTheme.colorScheme.primary,
                               modifier =
                                   Modifier.weight(1f).testTag(StreakInfoDialogTestTags.TITLE_HOW))
                           IconButton(
@@ -79,14 +79,14 @@ fun StreakInfoDialog(onDismiss: () -> Unit) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = stringResource(R.string.close),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    tint = MaterialTheme.colorScheme.primary)
                               }
                         }
 
                     Text(
                         text = stringResource(R.string.leaderboard_rules_content_how),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = Dimens.Padding.small))
 
                     Spacer(modifier = Modifier.height(Dimens.Spacing.large))
@@ -96,13 +96,13 @@ fun StreakInfoDialog(onDismiss: () -> Unit) {
                         text = stringResource(R.string.leaderboard_rules_title_what),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.testTag(StreakInfoDialogTestTags.TITLE_WHAT))
 
                     Text(
                         text = stringResource(R.string.leaderboard_rules_content_what),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = Dimens.Padding.small))
 
                     Spacer(modifier = Modifier.height(Dimens.Spacing.large))
@@ -112,13 +112,13 @@ fun StreakInfoDialog(onDismiss: () -> Unit) {
                         text = stringResource(R.string.leaderboard_rules_title_why),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.testTag(StreakInfoDialogTestTags.TITLE_WHY))
 
                     Text(
                         text = stringResource(R.string.leaderboard_rules_content_why),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = Dimens.Padding.small))
                   }
             }

@@ -955,4 +955,74 @@ class NavigationActionsTest {
           eq("follow_list/$userId?initialTab=FOLLOWERS"), any<NavOptionsBuilder.() -> Unit>())
     }
   }
+
+  // ========== GroupLeaderboard Navigation Tests ==========
+
+  @Test
+  fun `navigateTo GroupLeaderboard with groupId navigates to correct route`() {
+    val groupId = "test-group-123"
+    every { navController.currentDestination?.route } returns Screen.GroupDetail(groupId).route
+
+    actions.navigateTo(Screen.GroupLeaderboard(groupId))
+
+    verify {
+      navController.navigate(
+          eq("group/$groupId/leaderboard"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            // GroupLeaderboard is not a top-level destination
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `GroupLeaderboard route companion object matches pattern`() {
+    assertEquals("group/{groupId}/leaderboard", Screen.GroupLeaderboard.Companion.route)
+  }
+
+  @Test
+  fun `GroupLeaderboard instance route contains groupId`() {
+    val groupId = "leaderboard-group-456"
+    val screen = Screen.GroupLeaderboard(groupId)
+    assertEquals("group/$groupId/leaderboard", screen.route)
+  }
+
+  @Test
+  fun `GroupLeaderboard screen has correct name`() {
+    val screen = Screen.GroupLeaderboard("test-id")
+    assertEquals("Group Leaderboard", screen.name)
+    assertFalse(screen.isTopLevelDestination)
+  }
+
+  @Test
+  fun `navigateTo GroupLeaderboard from GroupDetail works correctly`() {
+    val groupId = "group-789"
+    every { navController.currentDestination?.route } returns Screen.GroupDetail(groupId).route
+
+    actions.navigateTo(Screen.GroupLeaderboard(groupId))
+
+    verify {
+      navController.navigate(
+          eq("group/$groupId/leaderboard"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `navigateTo GroupLeaderboard with special characters in groupId`() {
+    val groupId = "group-123-abc-xyz"
+    every { navController.currentDestination?.route } returns Screen.GroupDetail(groupId).route
+
+    actions.navigateTo(Screen.GroupLeaderboard(groupId))
+
+    verify {
+      navController.navigate(eq("group/$groupId/leaderboard"), any<NavOptionsBuilder.() -> Unit>())
+    }
+  }
 }

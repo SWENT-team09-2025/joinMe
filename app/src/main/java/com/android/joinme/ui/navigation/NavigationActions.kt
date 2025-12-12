@@ -241,6 +241,18 @@ sealed class Screen(
     }
   }
 
+  /**
+   * Screen for viewing the group leaderboard with streak rankings
+   *
+   * @param groupId The ID of the group whose leaderboard to display
+   */
+  data class GroupLeaderboard(val groupId: String) :
+      Screen(route = "group/${groupId}/leaderboard", name = "Group Leaderboard") {
+    companion object {
+      const val route = "group/{groupId}/leaderboard"
+    }
+  }
+
   // ============================================================================
   // Chat
   // ============================================================================
