@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +16,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Directions
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
@@ -27,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -45,6 +51,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
@@ -73,6 +80,8 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import androidx.core.graphics.toColorInt
+import androidx.core.net.toUri
 
 object MapScreenTestTags {
   const val GOOGLE_MAP_SCREEN = "mapScreen"
@@ -87,8 +96,10 @@ object MapScreenTestTags {
   const val FILTER_PARTICIPATION_JOINED_EVENTS = "filterParticipationJoinedEvents"
   const val FILTER_PARTICIPATION_OTHER_EVENTS = "filterParticipationOtherEvents"
   const val FILTER_CLOSE_BUTTON = "filterCloseButton"
+  const val GROUPED_INFO_WINDOW = "groupedInfoWindow"
 
   fun getTestTagForMarker(id: String): String = "marker$id"
+  fun getTestTagForGroupedItem(index: Int): String = "groupedItem$index"
 }
 
 /** Diameter of the circle marker for shared locations */
@@ -199,6 +210,192 @@ internal fun createMarkerForColor(color: Color): BitmapDescriptor {
 }
 
 /**
+ * Creates a circular badge marker with a count number displayed in the center.
+ *
+ * @param count The number to display on the badge
+ * @return A BitmapDescriptor for the badge marker
+ */
+internal fun createBadgeMarker(count: Int): BitmapDescriptor {
+  val size = 80 // Reduced size of the badge
+  val bitmap = createBitmap(size, size)
+  val canvas = Canvas(bitmap)
+
+  // Draw the background circle
+  val backgroundPaint = Paint().apply {
+    isAntiAlias = true
+    color = "#2196F3".toColorInt() // Material Blue
+    style = Paint.Style.FILL
+  }
+  val radius = size / 2f
+  canvas.drawCircle(radius, radius, radius - 3f, backgroundPaint)
+
+  // Draw white border
+  val borderPaint = Paint().apply {
+    isAntiAlias = true
+    color = android.graphics.Color.WHITE
+    style = Paint.Style.STROKE
+    strokeWidth = 6f
+  }
+  canvas.drawCircle(radius, radius, radius - 3f, borderPaint)
+
+  // Draw the count text
+  val textPaint = Paint().apply {
+    isAntiAlias = true
+    color = android.graphics.Color.WHITE
+    textAlign = Paint.Align.CENTER
+    textSize = if (count > 99) 26f else 32f // Smaller text for 3+ digits
+    isFakeBoldText = true
+  }
+
+  val countText = if (count > 99) "99+" else count.toString()
+  val textY = radius - (textPaint.descent() + textPaint.ascent()) / 2
+  canvas.drawText(countText, radius, textY, textPaint)
+
+  return BitmapDescriptorFactory.fromBitmap(bitmap)
+}
+
+/**
+ * Displays a bottom sheet with a list of events/series at the same location.
+ *
+ * @param group The MapMarkerGroup containing items to display
+ * @param onItemClick Callback when an item is clicked
+ * @param onDismiss Callback when the bottom sheet is dismissed
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun GroupedItemsBottomSheet(
+    group: MapMarkerGroup,
+    onItemClick: (MapItem) -> Unit,
+    onDismiss: () -> Unit
+) {
+  val context = LocalContext.current
+  val sheetState = rememberModalBottomSheetState()
+
+  ModalBottomSheet(
+      onDismissRequest = onDismiss,
+      sheetState = sheetState,
+      modifier = Modifier.testTag(MapScreenTestTags.GROUPED_INFO_WINDOW)
+  ) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+      // Header
+      Text(
+          text = "${group.items.size} événements à cet emplacement",
+          style = MaterialTheme.typography.titleLarge,
+          color = MaterialTheme.colorScheme.onSurface,
+          modifier = Modifier.padding(bottom = 16.dp)
+      )
+
+      HorizontalDivider(modifier = Modifier.padding(bottom = 8.dp))
+
+      // List of all items
+      group.items.forEachIndexed { index, item ->
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp)
+                .testTag(MapScreenTestTags.getTestTagForGroupedItem(index)),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+          // Color indicator
+          Surface(
+              modifier = Modifier.size(16.dp),
+              shape = MaterialTheme.shapes.small,
+              color = item.color
+          ) {}
+
+          Spacer(modifier = Modifier.width(12.dp))
+
+          // Title and category - clickable to see details
+          Column(
+              modifier = Modifier
+                  .weight(1f)
+                  .clickable { onItemClick(item) }
+          ) {
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = when (item) {
+                  is MapItem.EventItem -> item.event.type.name.lowercase().replaceFirstChar { it.uppercase() }
+                  is MapItem.SerieItem -> "Série"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+          }
+
+          // Directions button (Navigation)
+          FloatingActionButton(
+              onClick = {
+                val uri = "google.navigation:q=${item.position.latitude},${item.position.longitude}"
+                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri.toUri())
+                intent.setPackage("com.google.android.apps.maps")
+                try {
+                  context.startActivity(intent)
+                } catch (e: android.content.ActivityNotFoundException) {
+                  // Fallback to generic directions
+                  val fallbackUri = "geo:${item.position.latitude},${item.position.longitude}?q=${item.position.latitude},${item.position.longitude}"
+                  val fallbackIntent = android.content.Intent(android.content.Intent.ACTION_VIEW,
+                      fallbackUri.toUri())
+                  context.startActivity(fallbackIntent)
+                }
+              },
+              modifier = Modifier.size(40.dp),
+              containerColor = MaterialTheme.colorScheme.secondaryContainer
+          ) {
+            Icon(
+                imageVector = Icons.Filled.Directions,
+                contentDescription = "Directions",
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+          }
+
+          Spacer(modifier = Modifier.width(8.dp))
+
+          // View in Maps button
+          FloatingActionButton(
+              onClick = {
+                val uri = "geo:${item.position.latitude},${item.position.longitude}?q=${item.position.latitude},${item.position.longitude}(${item.title})"
+                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri.toUri())
+                intent.setPackage("com.google.android.apps.maps")
+                try {
+                  context.startActivity(intent)
+                } catch (e: android.content.ActivityNotFoundException) {
+                  // If Google Maps is not installed, try with any map app
+                  intent.setPackage(null)
+                  context.startActivity(intent)
+                }
+              },
+              modifier = Modifier.size(40.dp),
+              containerColor = MaterialTheme.colorScheme.primaryContainer
+          ) {
+            Icon(
+                imageVector = Icons.Filled.Map,
+                contentDescription = "View in Maps",
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+          }
+        }
+
+        if (index < group.items.size - 1) {
+          HorizontalDivider()
+        }
+      }
+
+      Spacer(modifier = Modifier.height(16.dp))
+    }
+  }
+}
+
+/**
  * Handles camera positioning when centering on a specific location.
  *
  * This is used when navigating to a specific location (e.g., from a chat location message). It
@@ -215,7 +412,7 @@ internal fun createMarkerForColor(color: Color): BitmapDescriptor {
 private fun MapInitialLocationEffect(
     initialLatitude: Double?,
     initialLongitude: Double?,
-    cameraPositionState: com.google.maps.android.compose.CameraPositionState,
+    cameraPositionState: CameraPositionState,
     onProgrammaticMoveStart: () -> Unit,
     onProgrammaticMoveEnd: () -> Unit,
     onDisableFollowing: () -> Unit
@@ -534,6 +731,10 @@ fun MapScreen(
   // --- State for showing/hiding the filter bottom sheet ---
   var showFilterSheet by remember { mutableStateOf(false) }
 
+  // --- State for showing grouped items bottom sheet ---
+  var showGroupedItemsSheet by remember { mutableStateOf(false) }
+  var selectedGroup by remember { mutableStateOf<MapMarkerGroup?>(null) }
+
   // --- Enable following user on screen entry (unless returning from marker double click) ---
   LaunchedEffect(Unit) { handleInitialFollowing(viewModel, uiState.isReturningFromMarkerClick) }
 
@@ -637,36 +838,67 @@ fun MapScreen(
                   properties = mapProperties,
                   uiSettings =
                       MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = false)) {
-                    uiState.events.forEach { event ->
-                      event.location?.let { location ->
-                        val position = LatLng(location.latitude, location.longitude)
-                        val markerIcon = createMarkerForColor(event.type.getColor())
+
+                    // Group events and series by exact GPS position
+                    val serieColor = MaterialTheme.customColors.seriePinMark
+                    val allMapItems = buildList {
+                      // Add events
+                      uiState.events.forEach { event ->
+                        if (event.location != null) {
+                          add(MapItem.EventItem(event, event.type.getColor()))
+                        }
+                      }
+                      // Add series
+                      uiState.series.forEach { (location, serie) ->
+                        add(MapItem.SerieItem(serie, location, serieColor))
+                      }
+                    }
+
+                    // Group by position
+                    val markerGroups = allMapItems
+                        .groupBy { item -> item.position.latitude to item.position.longitude }
+                        .map { (_, items) ->
+                          MapMarkerGroup(
+                              position = items.first().position,
+                              items = items
+                          )
+                        }
+
+                    // Display markers
+                    markerGroups.forEach { group ->
+                      if (group.isSingle) {
+                        // Single item - regular colored marker
+                        val item = group.items.first()
+                        val markerIcon = createMarkerForColor(item.color)
 
                         Marker(
-                            state = MarkerState(position = position),
+                            state = MarkerState(position = group.position),
                             icon = markerIcon,
-                            tag = getTestTagForMarker(event.eventId),
-                            title = event.title,
+                            tag = getTestTagForMarker(item.id),
+                            title = item.title,
                             snippet = stringResource(R.string.snippet_message),
                             onInfoWindowClick = {
                               viewModel.onMarkerClick()
-                              navigationActions?.navigateTo(Screen.ShowEventScreen(event.eventId))
+                              when (item) {
+                                is MapItem.EventItem -> navigationActions?.navigateTo(Screen.ShowEventScreen(item.event.eventId))
+                                is MapItem.SerieItem -> navigationActions?.navigateTo(Screen.SerieDetails(item.serie.serieId))
+                              }
                             })
+                      } else {
+                        // Multiple items - badge marker with count
+                        val badgeIcon = createBadgeMarker(group.count)
+
+                        Marker(
+                            state = MarkerState(position = group.position),
+                            icon = badgeIcon,
+                            tag = "grouped_${group.position.latitude}_${group.position.longitude}",
+                            onClick = {
+                              selectedGroup = group
+                              showGroupedItemsSheet = true
+                              false // Allow default behavior (camera centering)
+                            }
+                        )
                       }
-                    }
-                    uiState.series.forEach { (location, serie) ->
-                      val position = LatLng(location.latitude, location.longitude)
-                      val markerIcon = createMarkerForColor(MaterialTheme.customColors.seriePinMark)
-                      Marker(
-                          state = MarkerState(position = position),
-                          icon = markerIcon,
-                          tag = getTestTagForMarker(serie.serieId),
-                          title = serie.title,
-                          snippet = stringResource(R.string.snippet_message),
-                          onInfoWindowClick = {
-                            viewModel.onMarkerClick()
-                            navigationActions?.navigateTo(Screen.SerieDetails(serie.serieId))
-                          })
                     }
 
                     // Show marker for initial location (e.g., from chat location messages)
@@ -720,5 +952,20 @@ fun MapScreen(
         onToggleOtherEvents = { viewModel.toggleOtherEvents() },
         onClearFilters = { viewModel.clearFilters() },
         onDismiss = { showFilterSheet = false })
+  }
+
+  if (showGroupedItemsSheet && selectedGroup != null) {
+    GroupedItemsBottomSheet(
+        group = selectedGroup!!,
+        onItemClick = { item ->
+          viewModel.onMarkerClick()
+          showGroupedItemsSheet = false
+          when (item) {
+            is MapItem.EventItem -> navigationActions?.navigateTo(Screen.ShowEventScreen(item.event.eventId))
+            is MapItem.SerieItem -> navigationActions?.navigateTo(Screen.SerieDetails(item.serie.serieId))
+          }
+        },
+        onDismiss = { showGroupedItemsSheet = false }
+    )
   }
 }
