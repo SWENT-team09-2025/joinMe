@@ -66,9 +66,10 @@ class GroupRepositoryCached(
     val userId =
         Firebase.auth.currentUser?.uid
             ?: throw Exception("GroupRepositoryCached: User not logged in.")
-    return groupDao.getAllGroups().map { it.toGroup() }.filter { group ->
-      group.memberIds.contains(userId)
-    }
+    return groupDao
+        .getAllGroups()
+        .map { it.toGroup() }
+        .filter { group -> group.memberIds.contains(userId) }
   }
 
   override suspend fun getGroup(groupId: String): Group {

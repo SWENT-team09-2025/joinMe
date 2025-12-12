@@ -18,6 +18,7 @@ class AppDatabaseTest {
   private lateinit var eventDao: EventDao
   private lateinit var serieDao: SerieDao
   private lateinit var profileDao: ProfileDao
+  private lateinit var groupDao: GroupDao
   private lateinit var context: Context
 
   @Before
@@ -30,6 +31,7 @@ class AppDatabaseTest {
     eventDao = database.eventDao()
     serieDao = database.serieDao()
     profileDao = database.profileDao()
+    groupDao = database.groupDao()
   }
 
   @After
@@ -253,12 +255,13 @@ class AppDatabaseTest {
   }
 
   @Test
-  fun `database version is 3 with all three entities`() {
-    // This test verifies that the database includes EventEntity, SerieEntity, and ProfileEntity
-    // by ensuring all three DAOs are accessible and functional
+  fun `database version is 4 with all four entities`() {
+    // This test verifies that the database includes EventEntity, SerieEntity, ProfileEntity, and
+    // GroupEntity by ensuring all four DAOs are accessible and functional
     assertNotNull(database.eventDao())
     assertNotNull(database.serieDao())
     assertNotNull(database.profileDao())
+    assertNotNull(database.groupDao())
   }
 
   @Test
@@ -335,31 +338,36 @@ class AppDatabaseTest {
   }
 
   @Test
-  fun `eventDao serieDao and profileDao work independently`() = runBlocking {
+  fun `all four DAOs work independently`() = runBlocking {
     val event = createTestEvent("event1")
     val serie = createTestSerie("serie1")
     val profile = createTestProfile("user1")
+    val group = createTestGroup("group1")
 
     eventDao.insertEvent(event)
     serieDao.insertSerie(serie)
     profileDao.insertProfile(profile)
+    groupDao.insertGroup(group)
 
     assertEquals(1, eventDao.getAllEvents().size)
     assertEquals(1, serieDao.getAllSeries().size)
     assertEquals(1, profileDao.getAllProfiles().size)
+    assertEquals(1, groupDao.getAllGroups().size)
   }
 
   @Test
-  fun `clearing database removes events series and profiles`() = runBlocking {
+  fun `clearing database removes all entities`() = runBlocking {
     eventDao.insertEvent(createTestEvent("event1"))
     serieDao.insertSerie(createTestSerie("serie1"))
     profileDao.insertProfile(createTestProfile("user1"))
+    groupDao.insertGroup(createTestGroup("group1"))
 
     database.clearAllTables()
 
     assertEquals(0, eventDao.getAllEvents().size)
     assertEquals(0, serieDao.getAllSeries().size)
     assertEquals(0, profileDao.getAllProfiles().size)
+    assertEquals(0, groupDao.getAllGroups().size)
   }
 
   @Test
@@ -421,5 +429,101 @@ class AppDatabaseTest {
     val remaining = profileDao.getAllProfiles()
     assertEquals(1, remaining.size)
     assertEquals("recent", remaining[0].uid)
+  }
+
+  // ========== GroupDao Integration Tests ==========
+
+  private fun createTestGroup(
+      id: String,
+      name: String = "Group $id",
+      cachedAt: Long = System.currentTimeMillis()
+  ) =
+      GroupEntity(
+          id = id,
+          name = name,
+          category = "SPORTS",
+          description = "Test group description",
+          ownerId = "owner1",
+          memberIdsJson = "[\"member1\",\"member2\"]",
+          eventIdsJson = "[\"event1\"]",
+          serieIdsJson = "[\"serie1\"]",
+          photoUrl = "https://example.com/group-photo.jpg",
+          cachedAt = cachedAt)
+
+  @Test
+  fun `database provides groupDao instance`() {
+    assertNotNull(groupDao)
+  }
+
+  @Test
+  fun `groupDao can insert and retrieve groups`() = runBlocking {
+    val group = createTestGroup("group1")
+    groupDao.insertGroup(group)
+
+    val retrieved = groupDao.getGroupById("group1")
+    assertNotNull(retrieved)
+    assertEquals("group1", retrieved?.id)
+    assertEquals("Group group1", retrieved?.name)
+  }
+
+  @Test
+  fun `database singleton works with groups`() = runBlocking {
+    // Set the current database as the test instance
+    AppDatabase.setTestInstance(database)
+
+    val group = createTestGroup("group1")
+    groupDao.insertGroup(group)
+
+    // Get another instance and verify it's the same singleton
+    val db2 = AppDatabase.getDatabase(context)
+    val groupDao2 = db2.groupDao()
+
+    // Should be the same instance
+    assertSame(database, db2)
+
+    val retrieved = groupDao2.getGroupById("group1")
+    assertNotNull(retrieved)
+    assertEquals("group1", retrieved?.id)
+  }
+
+  @Test
+  fun `groupDao insertGroup replaces existing group with same id`() = runBlocking {
+    val group = createTestGroup("group1", name = "Original Name")
+    groupDao.insertGroup(group)
+
+    val updatedGroup = group.copy(name = "Updated Name", description = "New description")
+    groupDao.insertGroup(updatedGroup)
+
+    val retrieved = groupDao.getGroupById("group1")
+    assertEquals("Updated Name", retrieved?.name)
+    assertEquals("New description", retrieved?.description)
+    assertEquals(1, groupDao.getAllGroups().size) // Should still be only one group
+  }
+
+  @Test
+  fun `groupDao deleteGroup removes group from database`() = runBlocking {
+    groupDao.insertGroup(createTestGroup("group1"))
+    groupDao.insertGroup(createTestGroup("group2"))
+
+    assertEquals(2, groupDao.getAllGroups().size)
+
+    groupDao.deleteGroup("group1")
+
+    assertNull(groupDao.getGroupById("group1"))
+    assertNotNull(groupDao.getGroupById("group2"))
+    assertEquals(1, groupDao.getAllGroups().size)
+  }
+
+  @Test
+  fun `groupDao deleteOldGroups removes groups older than timestamp`() = runBlocking {
+    val currentTime = System.currentTimeMillis()
+    groupDao.insertGroup(createTestGroup("old", cachedAt = currentTime - 10000))
+    groupDao.insertGroup(createTestGroup("recent", cachedAt = currentTime))
+
+    groupDao.deleteOldGroups(currentTime - 5000)
+
+    val remaining = groupDao.getAllGroups()
+    assertEquals(1, remaining.size)
+    assertEquals("recent", remaining[0].id)
   }
 }
