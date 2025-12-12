@@ -218,6 +218,7 @@
     <string name="leaderboard_rules_content_why">Streaks reward consistency. Stay active, keep
         your streak alive, and compete with your friends to reach the top. Every week is a
         chance to move up — don\'t lose the momentum!</string>
+
     <!-- Map constant -->
     <string name="type_object">Type</string>
     <string name="social_type">Social</string>
@@ -229,6 +230,10 @@
     <string name="other_events">Other Events</string>
     <string name="clear_filters">Clear Filters</string>
     <string name="snippet_message">Tap to see more and join me</string>
+    <string name="number_of_activities_with_same_location">%1$s activities in this place</string>
+    <string name="serie">Serie</string>
+    <string name="geo_query">geo:%1$s,%2$s?q=%1$s,%2$s</string>
+
 
     <!-- Group button -->
     <string name="delete_group_button">DELETE GROUP</string>

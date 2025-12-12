@@ -5,22 +5,18 @@ import com.android.joinme.model.event.Event
 import com.android.joinme.model.serie.Serie
 import com.google.android.gms.maps.model.LatLng
 
-/**
- * Represents an item (event or serie) at a specific location on the map.
- */
+/** Represents an item (event or serie) at a specific location on the map. */
 sealed class MapItem {
   abstract val id: String
   abstract val title: String
   abstract val color: Color
   abstract val position: LatLng
 
-  data class EventItem(
-      val event: Event,
-      override val color: Color
-  ) : MapItem() {
+  data class EventItem(val event: Event, override val color: Color) : MapItem() {
     override val id = event.eventId
     override val title = event.title
-    override val position = event.location?.let { LatLng(it.latitude, it.longitude) } ?: LatLng(0.0, 0.0)
+    override val position =
+        event.location?.let { LatLng(it.latitude, it.longitude) } ?: LatLng(0.0, 0.0)
   }
 
   data class SerieItem(
@@ -34,13 +30,8 @@ sealed class MapItem {
   }
 }
 
-/**
- * Groups items at the same GPS position.
- */
-data class MapMarkerGroup(
-    val position: LatLng,
-    val items: List<MapItem>
-) {
+/** Groups items at the same GPS position. */
+data class MapMarkerGroup(val position: LatLng, val items: List<MapItem>) {
   val isSingle = items.size == 1
   val count = items.size
 
