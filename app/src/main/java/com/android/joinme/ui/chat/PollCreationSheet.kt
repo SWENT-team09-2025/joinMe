@@ -290,7 +290,7 @@ private fun PollOptionsSection(
               modifier = Modifier.testTag(PollCreationTestTags.ADD_OPTION_BUTTON)) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.poll_add_option),
                     modifier = Modifier.size(Dimens.IconSize.small))
                 Spacer(modifier = Modifier.width(Dimens.Spacing.extraSmall))
                 Text(text = stringResource(R.string.poll_add_option))

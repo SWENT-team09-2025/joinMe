@@ -1,12 +1,12 @@
 package com.android.joinme.ui.chat
 
-import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import com.android.joinme.model.chat.ChatRepository
@@ -19,6 +19,9 @@ import com.android.joinme.model.profile.ProfileRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -54,76 +57,47 @@ class PollUITest {
   }
 
   // ============================================================================
-  // Poll Creation Sheet Tests
+  // Poll Creation Sheet Tests (Combined)
   // ============================================================================
 
   @Test
-  fun pollCreationSheet_displaysAllElements() {
+  fun pollCreationSheet_initialState_displaysElementsAndCreateButtonDisabled() {
     setupPollCreationSheet()
 
-    // Verify main elements are displayed (top elements should be visible)
+    // Verify main elements are displayed
     composeTestRule.onNodeWithTag(PollCreationTestTags.BOTTOM_SHEET).assertIsDisplayed()
     composeTestRule.onNodeWithTag(PollCreationTestTags.CLOSE_BUTTON).assertIsDisplayed()
     composeTestRule.onNodeWithTag(PollCreationTestTags.QUESTION_FIELD).assertIsDisplayed()
     composeTestRule.onNodeWithTag(PollCreationTestTags.getOptionFieldTag(0)).assertIsDisplayed()
     composeTestRule.onNodeWithTag(PollCreationTestTags.getOptionFieldTag(1)).assertIsDisplayed()
     composeTestRule.onNodeWithTag(PollCreationTestTags.ADD_OPTION_BUTTON).assertIsDisplayed()
-    // Note: ANONYMOUS_SWITCH, MULTIPLE_ANSWERS_SWITCH, and CREATE_BUTTON may be scrolled off-screen
-    // in small viewport sizes. Their functionality is tested in other tests.
-  }
-
-  @Test
-  fun pollCreationSheet_createButton_disabledInitially() {
-    setupPollCreationSheet()
 
     // Create button should be disabled when form is empty
     composeTestRule.onNodeWithTag(PollCreationTestTags.CREATE_BUTTON).assertIsNotEnabled()
   }
 
   @Test
-  fun pollCreationSheet_questionInput_updatesState() {
+  fun pollCreationSheet_inputFields_updateState() {
     setupPollCreationSheet()
 
+    // Test question input
     composeTestRule
         .onNodeWithTag(PollCreationTestTags.QUESTION_FIELD)
         .performTextInput("What is your favorite color?")
+    assertEquals("What is your favorite color?", pollViewModel.creationState.value.question)
 
-    // Verify state is updated
-    assert(pollViewModel.creationState.value.question == "What is your favorite color?")
-  }
-
-  @Test
-  fun pollCreationSheet_optionInput_updatesState() {
-    setupPollCreationSheet()
-
+    // Test option inputs
     composeTestRule.onNodeWithTag(PollCreationTestTags.getOptionFieldTag(0)).performTextInput("Red")
-
     composeTestRule
         .onNodeWithTag(PollCreationTestTags.getOptionFieldTag(1))
         .performTextInput("Blue")
 
-    // Verify state is updated
-    assert(pollViewModel.creationState.value.options[0] == "Red")
-    assert(pollViewModel.creationState.value.options[1] == "Blue")
+    assertEquals("Red", pollViewModel.creationState.value.options[0])
+    assertEquals("Blue", pollViewModel.creationState.value.options[1])
   }
 
   @Test
-  fun pollCreationSheet_addOption_addsNewField() {
-    setupPollCreationSheet()
-
-    // Initially 2 options
-    composeTestRule.onNodeWithTag(PollCreationTestTags.getOptionFieldTag(0)).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(PollCreationTestTags.getOptionFieldTag(1)).assertIsDisplayed()
-
-    // Click add option
-    composeTestRule.onNodeWithTag(PollCreationTestTags.ADD_OPTION_BUTTON).performClick()
-
-    // Now should have 3 options
-    composeTestRule.onNodeWithTag(PollCreationTestTags.getOptionFieldTag(2)).assertIsDisplayed()
-  }
-
-  @Test
-  fun pollCreationSheet_remainingOptionsCounter_updates() {
+  fun pollCreationSheet_addOption_addsFieldAndUpdatesCounter() {
     setupPollCreationSheet()
 
     // Initial remaining count
@@ -131,13 +105,69 @@ class PollUITest {
         .onNodeWithTag(PollCreationTestTags.REMAINING_OPTIONS_TEXT)
         .assertTextContains("${Poll.MAX_OPTIONS - 2}", substring = true)
 
-    // Add option
+    // Click add option
     composeTestRule.onNodeWithTag(PollCreationTestTags.ADD_OPTION_BUTTON).performClick()
+
+    // Should have 3 options now
+    composeTestRule.onNodeWithTag(PollCreationTestTags.getOptionFieldTag(2)).assertIsDisplayed()
 
     // Updated remaining count
     composeTestRule
         .onNodeWithTag(PollCreationTestTags.REMAINING_OPTIONS_TEXT)
         .assertTextContains("${Poll.MAX_OPTIONS - 3}", substring = true)
+  }
+
+  @Test
+  fun pollCreationSheet_removeOption_removesFieldAndUpdatesCounter() {
+    setupPollCreationSheet()
+
+    // Add a third option first
+    composeTestRule.onNodeWithTag(PollCreationTestTags.ADD_OPTION_BUTTON).performClick()
+    composeTestRule.onNodeWithTag(PollCreationTestTags.getOptionFieldTag(2)).assertIsDisplayed()
+
+    // Remove the third option
+    composeTestRule.onNodeWithTag(PollCreationTestTags.getRemoveOptionTag(2)).performClick()
+
+    // Should be back to 2 options
+    assertEquals(2, pollViewModel.creationState.value.options.size)
+    composeTestRule
+        .onNodeWithTag(PollCreationTestTags.REMAINING_OPTIONS_TEXT)
+        .assertTextContains("${Poll.MAX_OPTIONS - 2}", substring = true)
+  }
+
+  @Test
+  fun pollCreationSheet_maxOptions_disablesAddButton() {
+    setupPollCreationSheet()
+
+    // Add options until max
+    repeat(Poll.MAX_OPTIONS - 2) {
+      composeTestRule.onNodeWithTag(PollCreationTestTags.ADD_OPTION_BUTTON).performClick()
+    }
+
+    // Add button should be disabled at max
+    composeTestRule.onNodeWithTag(PollCreationTestTags.ADD_OPTION_BUTTON).assertIsNotEnabled()
+
+    // Remaining count should be 0
+    composeTestRule
+        .onNodeWithTag(PollCreationTestTags.REMAINING_OPTIONS_TEXT)
+        .assertTextContains("0", substring = true)
+  }
+
+  @Test
+  fun pollCreationSheet_toggles_updateState() {
+    setupPollCreationSheet()
+
+    // Initial state - both off
+    assertFalse(pollViewModel.creationState.value.isAnonymous)
+    assertFalse(pollViewModel.creationState.value.allowMultipleAnswers)
+
+    // Toggle anonymous
+    composeTestRule.onNodeWithTag(PollCreationTestTags.ANONYMOUS_SWITCH).performClick()
+    assertTrue(pollViewModel.creationState.value.isAnonymous)
+
+    // Toggle multiple answers
+    composeTestRule.onNodeWithTag(PollCreationTestTags.MULTIPLE_ANSWERS_SWITCH).performClick()
+    assertTrue(pollViewModel.creationState.value.allowMultipleAnswers)
   }
 
   @Test
@@ -148,11 +178,9 @@ class PollUITest {
     composeTestRule
         .onNodeWithTag(PollCreationTestTags.QUESTION_FIELD)
         .performTextInput("Test question?")
-
     composeTestRule
         .onNodeWithTag(PollCreationTestTags.getOptionFieldTag(0))
         .performTextInput("Option A")
-
     composeTestRule
         .onNodeWithTag(PollCreationTestTags.getOptionFieldTag(1))
         .performTextInput("Option B")
@@ -162,46 +190,78 @@ class PollUITest {
   }
 
   @Test
-  fun pollCreationSheet_anonymousToggle_togglesState() {
-    setupPollCreationSheet()
+  fun pollCreationSheet_createPoll_success() {
+    var pollCreated = false
+    composeTestRule.setContent {
+      PollCreationSheet(
+          viewModel = pollViewModel,
+          creatorName = testUserName,
+          onDismiss = {},
+          onPollCreated = { pollCreated = true })
+    }
 
-    assert(!pollViewModel.creationState.value.isAnonymous)
+    // Fill in valid form
+    composeTestRule
+        .onNodeWithTag(PollCreationTestTags.QUESTION_FIELD)
+        .performTextInput("Test question?")
+    composeTestRule
+        .onNodeWithTag(PollCreationTestTags.getOptionFieldTag(0))
+        .performTextInput("Option A")
+    composeTestRule
+        .onNodeWithTag(PollCreationTestTags.getOptionFieldTag(1))
+        .performTextInput("Option B")
 
-    composeTestRule.onNodeWithTag(PollCreationTestTags.ANONYMOUS_SWITCH).performClick()
+    // Click create
+    composeTestRule.onNodeWithTag(PollCreationTestTags.CREATE_BUTTON).performClick()
 
-    assert(pollViewModel.creationState.value.isAnonymous)
+    composeTestRule.waitForIdle()
+
+    // Verify poll was created
+    assertTrue(pollCreated)
+    assertTrue(fakePollRepository.createdPolls.isNotEmpty())
   }
 
   @Test
-  fun pollCreationSheet_multipleAnswersToggle_togglesState() {
-    setupPollCreationSheet()
+  fun pollCreationSheet_dismiss_resetsState() {
+    var dismissed = false
+    composeTestRule.setContent {
+      PollCreationSheet(
+          viewModel = pollViewModel,
+          creatorName = testUserName,
+          onDismiss = { dismissed = true },
+          onPollCreated = {})
+    }
 
-    assert(!pollViewModel.creationState.value.allowMultipleAnswers)
+    // Enter some data
+    composeTestRule
+        .onNodeWithTag(PollCreationTestTags.QUESTION_FIELD)
+        .performTextInput("Test question")
 
-    composeTestRule.onNodeWithTag(PollCreationTestTags.MULTIPLE_ANSWERS_SWITCH).performClick()
+    // Click close
+    composeTestRule.onNodeWithTag(PollCreationTestTags.CLOSE_BUTTON).performClick()
 
-    assert(pollViewModel.creationState.value.allowMultipleAnswers)
+    composeTestRule.waitForIdle()
+
+    // State should be reset
+    assertTrue(dismissed)
+    assertEquals("", pollViewModel.creationState.value.question)
   }
 
   // ============================================================================
-  // Poll Display Card Tests
+  // Poll Display Card Tests (Combined)
   // ============================================================================
 
   @Test
-  fun pollCard_displaysQuestion() {
+  fun pollCard_displaysQuestionAndOptions() {
     val poll = createSamplePoll("poll1", "What is your favorite color?")
     setupPollCard(poll)
 
+    // Verify question
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollQuestionTag("poll1"))
         .assertTextContains("What is your favorite color?")
-  }
 
-  @Test
-  fun pollCard_displaysOptions() {
-    val poll = createSamplePoll("poll1")
-    setupPollCard(poll)
-
+    // Verify options
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollOptionTag("poll1", 0))
         .assertIsDisplayed()
@@ -227,34 +287,116 @@ class PollUITest {
   }
 
   @Test
-  fun pollCard_closedPoll_showsBadge() {
-    val poll = createSamplePoll("poll1").copy(isClosed = true)
-    setupPollCard(poll)
-
+  fun pollCard_badges_displayCorrectly() {
+    // Test closed poll badge
+    val closedPoll = createSamplePoll("poll1").copy(isClosed = true)
+    setupPollCard(closedPoll)
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollClosedBadgeTag("poll1"))
         .assertIsDisplayed()
-  }
 
-  @Test
-  fun pollCard_anonymousPoll_showsBadge() {
-    val poll = createSamplePoll("poll1").copy(isAnonymous = true)
-    setupPollCard(poll)
-
+    // Test anonymous poll badge
+    val anonymousPoll = createSamplePoll("poll2").copy(isAnonymous = true)
+    composeTestRule.setContent {
+      PollCard(
+          poll = anonymousPoll,
+          currentUserId = testUserId,
+          voterProfiles = emptyMap(),
+          onVote = {},
+          onClosePoll = {},
+          onReopenPoll = {},
+          onDeletePoll = {})
+    }
     composeTestRule
-        .onNodeWithTag(PollDisplayTestTags.getPollAnonymousBadgeTag("poll1"))
+        .onNodeWithTag(PollDisplayTestTags.getPollAnonymousBadgeTag("poll2"))
         .assertIsDisplayed()
   }
 
   @Test
-  fun pollCard_creatorMenu_visible() {
+  fun pollCard_creatorMenu_visibleAndFunctional() {
+    var closeCalled = false
     val poll = createSamplePoll("poll1").copy(creatorId = testUserId)
-    setupPollCard(poll)
+
+    composeTestRule.setContent {
+      PollCard(
+          poll = poll,
+          currentUserId = testUserId,
+          voterProfiles = emptyMap(),
+          onVote = {},
+          onClosePoll = { closeCalled = true },
+          onReopenPoll = {},
+          onDeletePoll = {})
+    }
 
     // Menu button should be visible for creator
     composeTestRule
         .onNodeWithTag(PollDisplayTestTags.getPollMenuButtonTag("poll1"))
         .assertIsDisplayed()
+
+    // Open menu and click close
+    composeTestRule.onNodeWithTag(PollDisplayTestTags.getPollMenuButtonTag("poll1")).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Close poll", substring = true).performClick()
+
+    assertTrue(closeCalled)
+  }
+
+  @Test
+  fun pollCard_reopenPoll_fromMenu() {
+    var reopenCalled = false
+    val poll = createSamplePoll("poll1").copy(creatorId = testUserId, isClosed = true)
+
+    composeTestRule.setContent {
+      PollCard(
+          poll = poll,
+          currentUserId = testUserId,
+          voterProfiles = emptyMap(),
+          onVote = {},
+          onClosePoll = {},
+          onReopenPoll = { reopenCalled = true },
+          onDeletePoll = {})
+    }
+
+    // Open menu and click reopen
+    composeTestRule.onNodeWithTag(PollDisplayTestTags.getPollMenuButtonTag("poll1")).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Reopen poll", substring = true).performClick()
+
+    assertTrue(reopenCalled)
+  }
+
+  @Test
+  fun pollCard_deletePoll_callsCallback() {
+    var deleteCalled = false
+    val poll = createSamplePoll("poll1").copy(creatorId = testUserId)
+
+    composeTestRule.setContent {
+      PollCard(
+          poll = poll,
+          currentUserId = testUserId,
+          voterProfiles = emptyMap(),
+          onVote = {},
+          onClosePoll = {},
+          onReopenPoll = {},
+          onDeletePoll = { deleteCalled = true })
+    }
+
+    // Open menu and click delete
+    composeTestRule.onNodeWithTag(PollDisplayTestTags.getPollMenuButtonTag("poll1")).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Delete poll", substring = true).performClick()
+
+    // Click confirm in dialog (if present) or verify callback was called
+    composeTestRule.waitForIdle()
+
+    // Try to click confirm button if dialog is shown
+    try {
+      composeTestRule.onNodeWithText("Delete", substring = true).performClick()
+    } catch (_: AssertionError) {
+      // Dialog might auto-confirm or not be present
+    }
+
+    assertTrue(deleteCalled)
   }
 
   @Test
@@ -276,7 +418,55 @@ class PollUITest {
     // Click on first option
     composeTestRule.onNodeWithTag(PollDisplayTestTags.getPollOptionTag("poll1", 0)).performClick()
 
-    assert(votedOptionId == 0)
+    assertEquals(0, votedOptionId)
+  }
+
+  @Test
+  fun pollCard_closedPoll_votingDisabled() {
+    var voteCalled = false
+    val poll = createSamplePoll("poll1").copy(isClosed = true)
+
+    composeTestRule.setContent {
+      PollCard(
+          poll = poll,
+          currentUserId = testUserId,
+          voterProfiles = emptyMap(),
+          onVote = { voteCalled = true },
+          onClosePoll = {},
+          onReopenPoll = {},
+          onDeletePoll = {})
+    }
+
+    // Try to click on option - should not trigger vote on closed poll
+    composeTestRule.onNodeWithTag(PollDisplayTestTags.getPollOptionTag("poll1", 0)).performClick()
+
+    // Vote callback should not be called for closed polls
+    assertFalse(voteCalled)
+  }
+
+  @Test
+  fun pollCard_multipleAnswers_allowsMultipleSelections() {
+    val votedOptions = mutableListOf<Int>()
+    val poll = createSamplePoll("poll1").copy(allowMultipleAnswers = true)
+
+    composeTestRule.setContent {
+      PollCard(
+          poll = poll,
+          currentUserId = testUserId,
+          voterProfiles = emptyMap(),
+          onVote = { optionId -> votedOptions.add(optionId) },
+          onClosePoll = {},
+          onReopenPoll = {},
+          onDeletePoll = {})
+    }
+
+    // Click on both options
+    composeTestRule.onNodeWithTag(PollDisplayTestTags.getPollOptionTag("poll1", 0)).performClick()
+    composeTestRule.onNodeWithTag(PollDisplayTestTags.getPollOptionTag("poll1", 1)).performClick()
+
+    // Both votes should be recorded
+    assertTrue(votedOptions.contains(0))
+    assertTrue(votedOptions.contains(1))
   }
 
   // ============================================================================
@@ -329,6 +519,8 @@ class PollUITest {
     private val pollsFlows = mutableMapOf<String, MutableStateFlow<List<Poll>>>()
     private var counter = 0
 
+    val createdPolls = mutableListOf<Poll>()
+
     override fun getNewPollId(): String = "poll_${counter++}"
 
     override fun observePollsForConversation(conversationId: String): Flow<List<Poll>> {
@@ -341,6 +533,7 @@ class PollUITest {
     }
 
     override suspend fun createPoll(poll: Poll) {
+      createdPolls.add(poll)
       val chatPolls = pollsByConversation.getOrPut(poll.conversationId) { mutableListOf() }
       chatPolls.add(poll)
       val flow = pollsFlows.getOrPut(poll.conversationId) { MutableStateFlow(emptyList()) }
@@ -353,7 +546,23 @@ class PollUITest {
         optionId: Int,
         userId: String
     ) {
-      // Simplified implementation for tests
+      val polls = pollsByConversation[conversationId] ?: return
+      val pollIndex = polls.indexOfFirst { it.id == pollId }
+      if (pollIndex == -1) return
+
+      val poll = polls[pollIndex]
+      val updatedOptions =
+          poll.options.map { option ->
+            if (option.id == optionId && !option.voterIds.contains(userId)) {
+              option.copy(voterIds = option.voterIds + userId)
+            } else {
+              option
+            }
+          }
+      polls[pollIndex] = poll.copy(options = updatedOptions)
+
+      val flow = pollsFlows[conversationId]
+      flow?.value = polls.toList()
     }
 
     override suspend fun removeVote(
@@ -361,13 +570,52 @@ class PollUITest {
         pollId: String,
         optionId: Int,
         userId: String
-    ) {}
+    ) {
+      val polls = pollsByConversation[conversationId] ?: return
+      val pollIndex = polls.indexOfFirst { it.id == pollId }
+      if (pollIndex == -1) return
 
-    override suspend fun closePoll(conversationId: String, pollId: String, userId: String) {}
+      val poll = polls[pollIndex]
+      val updatedOptions =
+          poll.options.map { option ->
+            if (option.id == optionId) {
+              option.copy(voterIds = option.voterIds - userId)
+            } else {
+              option
+            }
+          }
+      polls[pollIndex] = poll.copy(options = updatedOptions)
 
-    override suspend fun reopenPoll(conversationId: String, pollId: String, userId: String) {}
+      val flow = pollsFlows[conversationId]
+      flow?.value = polls.toList()
+    }
 
-    override suspend fun deletePoll(conversationId: String, pollId: String, userId: String) {}
+    override suspend fun closePoll(conversationId: String, pollId: String, userId: String) {
+      val polls = pollsByConversation[conversationId] ?: return
+      val pollIndex = polls.indexOfFirst { it.id == pollId }
+      if (pollIndex == -1) return
+
+      polls[pollIndex] = polls[pollIndex].copy(isClosed = true)
+      val flow = pollsFlows[conversationId]
+      flow?.value = polls.toList()
+    }
+
+    override suspend fun reopenPoll(conversationId: String, pollId: String, userId: String) {
+      val polls = pollsByConversation[conversationId] ?: return
+      val pollIndex = polls.indexOfFirst { it.id == pollId }
+      if (pollIndex == -1) return
+
+      polls[pollIndex] = polls[pollIndex].copy(isClosed = false)
+      val flow = pollsFlows[conversationId]
+      flow?.value = polls.toList()
+    }
+
+    override suspend fun deletePoll(conversationId: String, pollId: String, userId: String) {
+      val polls = pollsByConversation[conversationId] ?: return
+      polls.removeAll { it.id == pollId }
+      val flow = pollsFlows[conversationId]
+      flow?.value = polls.toList()
+    }
   }
 
   private class FakeChatRepository : ChatRepository {
