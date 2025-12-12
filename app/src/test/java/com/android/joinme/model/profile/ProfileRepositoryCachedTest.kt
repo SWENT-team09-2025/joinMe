@@ -165,11 +165,10 @@ class ProfileRepositoryCachedTest {
   }
 
   @Test
-  fun `getProfile returns null when online and Firestore returns null and no cache`() = runTest {
+  fun `getProfile returns null when online and Firestore returns null`() = runTest {
     // Given
     every { mockNetworkMonitor.isOnline() } returns true
     coEvery { mockFirestoreRepo.getProfile(testUid) } returns null
-    coEvery { mockProfileDao.getProfileById(testUid) } returns null
 
     // When
     val result = cachedRepository.getProfile(testUid)
@@ -177,7 +176,8 @@ class ProfileRepositoryCachedTest {
     // Then
     assertNull(result)
     coVerify { mockFirestoreRepo.getProfile(testUid) }
-    coVerify { mockProfileDao.getProfileById(testUid) }
+    // Cache should NOT be called when Firestore successfully returns null
+    coVerify(exactly = 0) { mockProfileDao.getProfileById(any()) }
   }
 
   @Test
@@ -758,7 +758,11 @@ class ProfileRepositoryCachedTest {
     // Given
     val cachedEntity = testProfile.toEntity()
     every { mockNetworkMonitor.isOnline() } returns true
-    coEvery { mockFirestoreRepo.getProfile(testUid) } coAnswers { kotlinx.coroutines.delay(5000) }
+    coEvery { mockFirestoreRepo.getProfile(testUid) } coAnswers
+        {
+          kotlinx.coroutines.delay(5000)
+          null
+        }
     coEvery { mockProfileDao.getProfileById(testUid) } returns cachedEntity
 
     // When
