@@ -250,7 +250,6 @@ class AppDatabaseTest {
     assertEquals(0, profileDao.getAllProfiles().size)
   }
 
-
   // ========== ProfileDao Integration Tests ==========
 
   private fun createTestProfile(
@@ -288,7 +287,6 @@ class AppDatabaseTest {
     assertEquals("user1", retrieved?.uid)
     assertEquals("User user1", retrieved?.username)
   }
-
 
   @Test
   fun `profileDao insertProfile replaces existing profile with same uid`() = runBlocking {

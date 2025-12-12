@@ -399,7 +399,6 @@ class ProfileRepositoryCachedTest {
     // Then - exception is thrown
   }
 
-
   // ==================== deleteProfilePhoto Tests ====================
 
   @Test
@@ -468,7 +467,6 @@ class ProfileRepositoryCachedTest {
 
     // Then - exception is thrown
   }
-
 
   // ==================== unfollowUser Tests ====================
 

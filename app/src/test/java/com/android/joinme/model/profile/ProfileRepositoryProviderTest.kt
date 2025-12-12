@@ -68,7 +68,6 @@ class ProfileRepositoryProviderTest {
     }
   }
 
-
   // ==================== Context Handling Tests ====================
 
   @Test
