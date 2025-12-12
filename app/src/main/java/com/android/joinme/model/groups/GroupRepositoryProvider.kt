@@ -1,5 +1,6 @@
 package com.android.joinme.model.groups
 
+import com.android.joinme.util.TestEnvironmentDetector
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
 import com.google.firebase.storage.storage
@@ -22,12 +23,7 @@ object GroupRepositoryProvider {
   // For backward compatibility and explicit test injection
   var repository: GroupRepository
     get() {
-      val isTestEnv =
-          android.os.Build.FINGERPRINT == "robolectric" ||
-              android.os.Debug.isDebuggerConnected() ||
-              System.getProperty("IS_TEST_ENV") == "true"
-
-      return if (isTestEnv) localRepo else firestoreRepo
+      return if (TestEnvironmentDetector.isTestEnvironment()) localRepo else firestoreRepo
     }
     set(_) {
       // Allows tests to inject custom repository
