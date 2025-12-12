@@ -42,11 +42,9 @@ private const val MILLIS_PER_DAY = 24 * 60 * 60 * 1000.0
  * @return The current user's UID, or "test-user-id" in test environments
  */
 private fun getCurrentUserIdForSerieDetails(): String {
-  val firebaseUser = Firebase.auth.currentUser?.uid
-  if (firebaseUser != null) return firebaseUser
-
-  return if (TestEnvironmentDetector.isTestEnvironment()) TestEnvironmentDetector.getTestUserId()
-  else "unknown"
+  return Firebase.auth.currentUser?.uid
+      ?: if (TestEnvironmentDetector.isTestEnvironment()) TestEnvironmentDetector.getTestUserId()
+      else "unknown"
 }
 
 /**

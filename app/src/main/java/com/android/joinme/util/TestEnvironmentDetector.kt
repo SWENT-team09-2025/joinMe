@@ -15,20 +15,16 @@ object TestEnvironmentDetector {
    * - Robolectric test framework (Build.FINGERPRINT == "robolectric")
    * - Debugger connection (Debug.isDebuggerConnected())
    * - System property flag (IS_TEST_ENV)
-   * - Android instrumentation test runner
+   *
+   * Note: This does NOT detect pure unit tests (non-Robolectric) to allow them to properly test
+   * authentication failure scenarios.
    *
    * @return true if running in a test environment, false otherwise
    */
   fun isTestEnvironment(): Boolean {
     return android.os.Build.FINGERPRINT == "robolectric" ||
         android.os.Debug.isDebuggerConnected() ||
-        System.getProperty("IS_TEST_ENV") == "true" ||
-        try {
-          Class.forName("androidx.test.runner.AndroidJUnitRunner")
-          true
-        } catch (e: ClassNotFoundException) {
-          false
-        }
+        System.getProperty("IS_TEST_ENV") == "true"
   }
 
   /**

@@ -343,12 +343,10 @@ abstract class BaseSerieFormViewModel : ViewModel() {
    * @return The user ID if authenticated, null otherwise
    */
   protected fun getCurrentUserId(): String? {
-    // Return test user ID in test environments
-    if (TestEnvironmentDetector.isTestEnvironment()) {
-      return TestEnvironmentDetector.getTestUserId()
-    }
-
     return Firebase.auth.currentUser?.uid
+        ?: if (TestEnvironmentDetector.isTestEnvironment()) {
+          TestEnvironmentDetector.getTestUserId()
+        } else null
   }
 
   /**

@@ -90,8 +90,9 @@ private const val MEMBERS_ALPHA = 0.7f
  * @return The current user's UID, or "test-user-id" in test environments
  */
 private fun getCurrentUserId(): String? {
-  return if (TestEnvironmentDetector.isTestEnvironment()) TestEnvironmentDetector.getTestUserId()
-  else Firebase.auth.currentUser?.uid
+  return Firebase.auth.currentUser?.uid
+      ?: if (TestEnvironmentDetector.isTestEnvironment()) TestEnvironmentDetector.getTestUserId()
+      else null
 }
 
 /**
