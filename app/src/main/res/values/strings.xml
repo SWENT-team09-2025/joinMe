@@ -103,6 +103,10 @@
     <string name="read_by_all">Read by all</string>
     <string name="message_sent">Sent</string>
 
+    <!-- Chat Date Headers -->
+    <string name="date_header_today">Today</string>
+    <string name="date_header_yesterday">Yesterday</string>
+
     <!-- Edit Message Dialog -->
     <string name="edit_message_title">Edit Message</string>
     <string name="edit_message_placeholder">Enter new message</string>
