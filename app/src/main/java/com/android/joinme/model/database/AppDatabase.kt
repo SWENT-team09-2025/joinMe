@@ -6,15 +6,21 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 /**
- * Room database for offline caching. Stores events, series, profiles and groups locally for offline
- * viewing.
+ * Room database for offline caching. Stores events, series, profiles, groups, and messages locally
+ * for offline viewing.
  *
  * This is a singleton database - only one instance exists per application. Use
  * [AppDatabase.getDatabase] to get the instance.
  */
 @Database(
-    entities = [EventEntity::class, SerieEntity::class, GroupEntity::class, ProfileEntity::class],
-    version = 4,
+    entities =
+        [
+            EventEntity::class,
+            SerieEntity::class,
+            GroupEntity::class,
+            ProfileEntity::class,
+            MessageEntity::class],
+    version = 5,
     exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
   abstract fun eventDao(): EventDao
@@ -24,6 +30,8 @@ abstract class AppDatabase : RoomDatabase() {
   abstract fun groupDao(): GroupDao
 
   abstract fun profileDao(): ProfileDao
+
+  abstract fun messageDao(): MessageDao
 
   companion object {
     @Volatile private var INSTANCE: AppDatabase? = null
