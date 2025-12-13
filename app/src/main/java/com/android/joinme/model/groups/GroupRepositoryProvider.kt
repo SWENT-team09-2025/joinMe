@@ -32,7 +32,7 @@ object GroupRepositoryProvider {
    */
   fun getRepository(context: Context? = null): GroupRepository {
     // Test environment: use local repository
-    if (isTestEnvironment()) return localRepo
+    if (TestEnvironmentDetector.isTestEnvironment()) return localRepo
 
     // Production: use cached repository with offline support
     // Try to get context from Firebase if not provided
@@ -70,23 +70,6 @@ object GroupRepositoryProvider {
       cachedRepo = GroupRepositoryCached(context, firestore, networkMonitor)
     }
     return cachedRepo!!
-  }
-
-  /**
-   * Checks if the current environment is a test environment.
-   *
-   * @return true if running in a test environment, false otherwise
-   */
-  private fun isTestEnvironment(): Boolean {
-    return android.os.Build.FINGERPRINT == "robolectric" ||
-        android.os.Debug.isDebuggerConnected() ||
-        System.getProperty("IS_TEST_ENV") == "true" ||
-        try {
-          Class.forName("androidx.test.runner.AndroidJUnitRunner")
-          true
-        } catch (e: ClassNotFoundException) {
-          false
-        }
   }
 
   /** For testing only - allows resetting the singleton state. */
