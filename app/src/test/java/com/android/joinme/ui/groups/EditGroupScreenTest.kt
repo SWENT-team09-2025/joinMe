@@ -520,7 +520,7 @@ class EditGroupScreenTest {
   }
 
   @Test
-  fun deletePhotoButton_click_removesPhotoAndHidesButton() {
+  fun deletePhotoButton_click_marksPhotoForDeletionAndHidesButton() {
     val groupWithPhoto = createTestGroup(photoUrl = "https://example.com/existing.jpg")
     fakeRepository.addGroupForTest(groupWithPhoto)
     viewModel = EditGroupViewModel(fakeRepository)
@@ -528,14 +528,18 @@ class EditGroupScreenTest {
     setScreenContent()
     waitForFormLoaded()
 
+    // Click delete button - should mark for deletion but not persist yet
     composeTestRule.onNodeWithTag(EditGroupScreenTags.DELETE_PHOTO_BUTTON).performClick()
 
     waitForDeleteButtonGone()
 
-    // Verify placeholder is shown after deletion
+    // Verify placeholder is shown (pending delete preview)
     composeTestRule
         .onNodeWithTag(GroupPhotoImageTestTags.GROUP_PHOTO_PLACEHOLDER)
         .assertIsDisplayed()
+
+    // Photo should only be deleted when save is clicked
+    // The actual deletion is tested in EditGroupViewModelTest
   }
 
   @Test

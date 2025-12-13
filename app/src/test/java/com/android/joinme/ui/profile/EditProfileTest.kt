@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.test.core.app.ApplicationProvider
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import com.google.firebase.FirebaseApp
@@ -589,47 +588,41 @@ class EditProfileScreenTest {
   }
 
   @Test
-  fun editProfile_editPhotoButton_hidesDuringUpload() = runTest {
-    val repo = FakeProfileRepository(createTestProfile(), simulateUploadDelay = true)
+  fun editProfile_editPhotoButton_isVisibleWhenNotUploading() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
     val vm = ProfileViewModel(repo)
 
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
-    // Simulate starting an upload by directly calling the ViewModel
-    vm.uploadProfilePhoto(
-        context = ApplicationProvider.getApplicationContext(),
-        imageUri = Uri.parse("content://test/image.jpg"),
-        onSuccess = {},
-        onError = {})
+    // Edit button should be visible when not uploading
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertIsDisplayed()
 
-    // Wait a moment for state to update
+    // Set pending photo - button should still be visible (upload only happens on save)
+    vm.setPendingPhoto(Uri.parse("content://test/image.jpg"))
     composeTestRule.waitForIdle()
 
-    // During upload, the button should be hidden
-    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertDoesNotExist()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertIsDisplayed()
   }
 
   @Test
-  fun editProfile_photoUploadIndicator_showsDuringUpload() = runTest {
-    val repo = FakeProfileRepository(createTestProfile(), simulateUploadDelay = true)
+  fun editProfile_photoUploadIndicator_notShownWhenNotUploading() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
     val vm = ProfileViewModel(repo)
 
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
-    // Trigger upload via ViewModel
-    vm.uploadProfilePhoto(
-        context = ApplicationProvider.getApplicationContext(),
-        imageUri = Uri.parse("content://test/image.jpg"),
-        onSuccess = {},
-        onError = {})
+    // Upload indicator should not be visible when not uploading
+    composeTestRule
+        .onNodeWithTag(EditProfileTestTags.PHOTO_UPLOADING_INDICATOR)
+        .assertDoesNotExist()
 
+    // Set pending photo - still no upload indicator (upload only happens on save)
+    vm.setPendingPhoto(Uri.parse("content://test/image.jpg"))
     composeTestRule.waitForIdle()
 
-    // Upload indicator should be visible during upload
-    composeTestRule.onNodeWithTag(EditProfileTestTags.PHOTO_UPLOADING_INDICATOR).assertIsDisplayed()
-    // Buttons should be hidden
-    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertDoesNotExist()
-    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertDoesNotExist()
+    composeTestRule
+        .onNodeWithTag(EditProfileTestTags.PHOTO_UPLOADING_INDICATOR)
+        .assertDoesNotExist()
   }
 
   @Test
@@ -849,26 +842,23 @@ class EditProfileScreenTest {
   }
 
   @Test
-  fun editProfile_deletePhotoButton_hidesDuringUpload() = runTest {
+  fun editProfile_deletePhotoButton_behavesCorrectly() = runTest {
     val profileWithPhoto = createTestProfile().copy(photoUrl = "https://example.com/photo.jpg")
-    val repo = FakeProfileRepository(profileWithPhoto, simulateUploadDelay = true)
+    val repo = FakeProfileRepository(profileWithPhoto)
     val vm = ProfileViewModel(repo)
+    vm.loadProfile(testUid)
+    composeTestRule.waitForIdle()
 
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
-    // Delete button is visible and enabled
+    // Delete button is visible and enabled when there's a photo
+    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertIsDisplayed()
     composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertIsEnabled()
 
-    // Start upload
-    vm.uploadProfilePhoto(
-        context = ApplicationProvider.getApplicationContext(),
-        imageUri = Uri.parse("content://test/image.jpg"),
-        onSuccess = {},
-        onError = {})
-
+    // After marking for deletion, button should be hidden (pending delete shows no photo)
+    vm.markPhotoForDeletion()
     composeTestRule.waitForIdle()
 
-    // Delete button should now be hidden
     composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertDoesNotExist()
   }
 
