@@ -1,6 +1,7 @@
 package com.android.joinme.ui.overview
 
 import androidx.lifecycle.ViewModel
+import com.android.joinme.util.TestEnvironmentDetector
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
@@ -342,18 +343,10 @@ abstract class BaseSerieFormViewModel : ViewModel() {
    * @return The user ID if authenticated, null otherwise
    */
   protected fun getCurrentUserId(): String? {
-    // Detect test environment
-    val isTestEnv =
-        android.os.Build.FINGERPRINT == "robolectric" ||
-            android.os.Debug.isDebuggerConnected() ||
-            System.getProperty("IS_TEST_ENV") == "true"
-
-    // Return test user ID in test environments
-    if (isTestEnv) {
-      return "test-user-id"
-    }
-
     return Firebase.auth.currentUser?.uid
+        ?: if (TestEnvironmentDetector.shouldUseTestUserId()) {
+          TestEnvironmentDetector.getTestUserId()
+        } else null
   }
 
   /**
