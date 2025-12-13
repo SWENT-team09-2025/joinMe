@@ -82,11 +82,13 @@ class GroupRepositoryFirestoreTest {
     // Mock Repositories
     mockEventsRepository = mockk(relaxed = true)
     mockSeriesRepository = mockk(relaxed = true)
+
     every { mockDb.collection(GROUPS_COLLECTION_PATH) } returns mockCollection
     every { mockCollection.document(any()) } returns mockDocument
     every { mockCollection.document() } returns mockDocument
     every { mockDocument.id } returns testGroupId
 
+    repository = GroupRepositoryFirestore(mockDb, mockStorage)
     repository =
         GroupRepositoryFirestore(
             mockDb,
@@ -192,6 +194,7 @@ class GroupRepositoryFirestoreTest {
 
     // Mock repository deletions
     coEvery { mockEventsRepository.deleteEvent(any()) } returns Unit
+
     // Mock delete operation
     every { mockDocument.delete() } returns Tasks.forResult(null)
 
@@ -327,8 +330,10 @@ class GroupRepositoryFirestoreTest {
     every { mockSnapshot.get("eventIds") } returns group.eventIds
     every { mockSnapshot.get("serieIds") } returns emptyList<String>()
     every { mockSnapshot.getString("photoUrl") } returns null
+
     // Mock repository deletions
     coEvery { mockEventsRepository.deleteEvent(any()) } returns Unit
+
     every { mockDocument.delete() } returns Tasks.forResult(null)
 
     // When
@@ -1147,15 +1152,18 @@ class GroupRepositoryFirestoreTest {
     // Then
     verify { mockDocument.update("photoUrl", null) }
   }
+
   // =======================================
   // Cascade Deletion Tests
   // =======================================
+
   /** Helper to setup group with events and series for cascade deletion tests. */
   private fun setupGroupDeletionMocks(
       eventIds: List<String> = listOf("event1", "event2"),
       serieIds: List<String> = listOf("serie1")
   ) {
     val group = createTestGroup().copy(eventIds = eventIds, serieIds = serieIds)
+
     // Mock getGroup
     every { mockSnapshot.id } returns testGroupId
     every { mockSnapshot.getString("name") } returns group.name
@@ -1167,9 +1175,11 @@ class GroupRepositoryFirestoreTest {
     every { mockSnapshot.get("serieIds") } returns serieIds
     every { mockSnapshot.getString("photoUrl") } returns null
     every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+
     // Mock repository deletions
     coEvery { mockEventsRepository.deleteEvent(any()) } returns Unit
     coEvery { mockSeriesRepository.deleteSerie(any()) } returns Unit
+
     every { mockDocument.delete() } returns Tasks.forResult(null)
   }
 
@@ -1177,8 +1187,10 @@ class GroupRepositoryFirestoreTest {
   fun deleteGroup_cascadesEventsAndSeriesDeletion() = runTest {
     // Given
     setupGroupDeletionMocks()
+
     // When
     repository.deleteGroup(testGroupId, testUserId)
+
     // Then
     coVerify { mockEventsRepository.deleteEvent("event1") }
     coVerify { mockEventsRepository.deleteEvent("event2") }
@@ -1190,11 +1202,42 @@ class GroupRepositoryFirestoreTest {
   fun deleteGroup_withNoEventsOrSeries_deletesGroupOnly() = runTest {
     // Given
     setupGroupDeletionMocks(eventIds = emptyList(), serieIds = emptyList())
+
     // When
     repository.deleteGroup(testGroupId, testUserId)
+
     // Then
     verify { mockDocument.delete() }
     coVerify(exactly = 0) { mockEventsRepository.deleteEvent(any()) }
     coVerify(exactly = 0) { mockSeriesRepository.deleteSerie(any()) }
+  }
+
+  @Test
+  fun deleteGroup_eventDeletionFails_logsWarningAndContinues() = runTest {
+    // Covers lines 61-62: catch block when event deletion fails
+    setupGroupDeletionMocks()
+    coEvery { mockEventsRepository.deleteEvent("event1") } throws Exception("Event delete failed")
+
+    // When
+    repository.deleteGroup(testGroupId, testUserId)
+
+    // Then - group is still deleted despite event deletion failure
+    verify { mockDocument.delete() }
+    coVerify { mockEventsRepository.deleteEvent("event1") }
+    coVerify { mockEventsRepository.deleteEvent("event2") }
+  }
+
+  @Test
+  fun deleteGroup_serieDeletionFails_logsWarningAndContinues() = runTest {
+    // Covers lines 70-71: catch block when serie deletion fails
+    setupGroupDeletionMocks()
+    coEvery { mockSeriesRepository.deleteSerie("serie1") } throws Exception("Serie delete failed")
+
+    // When
+    repository.deleteGroup(testGroupId, testUserId)
+
+    // Then - group is still deleted despite serie deletion failure
+    verify { mockDocument.delete() }
+    coVerify { mockSeriesRepository.deleteSerie("serie1") }
   }
 }
