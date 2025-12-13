@@ -91,6 +91,24 @@ sealed class ChatTimelineItem {
   }
 }
 
+/** Configuration for the chat screen appearance and user context. */
+data class ChatScreenConfig(
+    val chatId: String,
+    val chatTitle: String,
+    val currentUserId: String,
+    val currentUserName: String,
+    val chatColor: Color? = null,
+    val onChatColor: Color? = null
+)
+
+/** Callbacks for poll actions. */
+private data class PollCallbacks(
+    val onVote: (String, Int) -> Unit,
+    val onClosePoll: (String) -> Unit,
+    val onReopenPoll: (String) -> Unit,
+    val onDeletePoll: (String) -> Unit
+)
+
 /**
  * Enhanced chat screen that includes poll functionality.
  *
@@ -99,30 +117,18 @@ sealed class ChatTimelineItem {
  * - Poll display in the chat timeline (interleaved with messages)
  * - Real-time poll updates and voting
  *
- * @param chatId The unique identifier of the conversation
- * @param chatTitle The title to display in the top bar
- * @param currentUserId The ID of the current user
- * @param currentUserName The display name of the current user
+ * @param config Configuration for the chat screen including IDs, title, and colors
  * @param chatViewModel The ViewModel for chat message operations
  * @param pollViewModel The ViewModel for poll operations
  * @param onLeaveClick Callback when leaving the chat
- * @param chatColor Optional theme color for the chat
- * @param onChatColor Optional contrast color for text on chatColor
- * @param totalParticipants Total number of participants in the chat
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreenWithPolls(
-    chatId: String,
-    chatTitle: String,
-    currentUserId: String,
-    currentUserName: String,
+    config: ChatScreenConfig,
     chatViewModel: ChatViewModel,
     pollViewModel: PollViewModel,
-    onLeaveClick: () -> Unit = {},
-    chatColor: Color? = null,
-    onChatColor: Color? = null,
-    totalParticipants: Int = 1
+    onLeaveClick: () -> Unit = {}
 ) {
   val chatUiState by chatViewModel.uiState.collectAsState()
   val pollsState by pollViewModel.pollsState.collectAsState()
@@ -130,15 +136,15 @@ fun ChatScreenWithPolls(
   val coroutineScope = rememberCoroutineScope()
   val context = LocalContext.current
 
-  val effectiveChatColor = chatColor ?: MaterialTheme.customColors.chatDefault
-  val effectiveOnChatColor = onChatColor ?: MaterialTheme.customColors.onChatDefault
+  val effectiveChatColor = config.chatColor ?: MaterialTheme.customColors.chatDefault
+  val effectiveOnChatColor = config.onChatColor ?: MaterialTheme.customColors.onChatDefault
 
   var showPollCreationSheet by remember { mutableStateOf(false) }
 
   // Initialize both ViewModels
-  LaunchedEffect(chatId, currentUserId) {
-    chatViewModel.initializeChat(chatId, currentUserId)
-    pollViewModel.initialize(chatId, currentUserId)
+  LaunchedEffect(config.chatId, config.currentUserId) {
+    chatViewModel.initializeChat(config.chatId, config.currentUserId)
+    pollViewModel.initialize(config.chatId, config.currentUserId)
   }
 
   // Show chat error messages
@@ -165,7 +171,7 @@ fun ChatScreenWithPolls(
       modifier = Modifier.fillMaxSize().testTag(ChatScreenTestTags.SCREEN),
       topBar = {
         ChatTopBarWithPolls(
-            chatTitle = chatTitle,
+            chatTitle = config.chatTitle,
             onLeaveClick = onLeaveClick,
             topBarColor = effectiveChatColor,
             onTopBarColor = effectiveOnChatColor)
@@ -182,17 +188,22 @@ fun ChatScreenWithPolls(
                     color = effectiveChatColor)
               }
         } else {
+          val pollCallbacks =
+              PollCallbacks(
+                  onVote = { pollId, optionId -> pollViewModel.vote(pollId, optionId) },
+                  onClosePoll = { pollId -> pollViewModel.closePoll(pollId) },
+                  onReopenPoll = { pollId -> pollViewModel.reopenPoll(pollId) },
+                  onDeletePoll = { pollId -> pollViewModel.deletePoll(pollId) })
           ChatContentWithPolls(
               messages = chatUiState.messages,
               polls = pollsState.polls,
-              currentUserId = currentUserId,
+              currentUserId = config.currentUserId,
               senderProfiles = chatUiState.senderProfiles,
               voterProfiles = pollsState.voterProfiles,
-              onSendMessage = { content -> chatViewModel.sendMessage(content, currentUserName) },
-              onVote = { pollId, optionId -> pollViewModel.vote(pollId, optionId) },
-              onClosePoll = { pollId -> pollViewModel.closePoll(pollId) },
-              onReopenPoll = { pollId -> pollViewModel.reopenPoll(pollId) },
-              onDeletePoll = { pollId -> pollViewModel.deletePoll(pollId) },
+              onSendMessage = { content ->
+                chatViewModel.sendMessage(content, config.currentUserName)
+              },
+              pollCallbacks = pollCallbacks,
               onOpenPollCreation = { showPollCreationSheet = true },
               paddingValues = paddingValues,
               chatColor = effectiveChatColor,
@@ -204,7 +215,7 @@ fun ChatScreenWithPolls(
   if (showPollCreationSheet) {
     PollCreationSheet(
         viewModel = pollViewModel,
-        creatorName = currentUserName,
+        creatorName = config.currentUserName,
         onDismiss = { showPollCreationSheet = false },
         onPollCreated = { showPollCreationSheet = false })
   }
@@ -259,10 +270,7 @@ private fun ChatContentWithPolls(
     senderProfiles: Map<String, Profile>,
     voterProfiles: Map<String, Profile>,
     onSendMessage: (String) -> Unit,
-    onVote: (String, Int) -> Unit,
-    onClosePoll: (String) -> Unit,
-    onReopenPoll: (String) -> Unit,
-    onDeletePoll: (String) -> Unit,
+    pollCallbacks: PollCallbacks,
     onOpenPollCreation: () -> Unit,
     paddingValues: PaddingValues,
     chatColor: Color,
@@ -271,24 +279,7 @@ private fun ChatContentWithPolls(
   var messageText by remember { mutableStateOf("") }
   val listState = rememberLazyListState()
 
-  // Create a map of poll IDs to polls for quick lookup
-  val pollsMap = remember(polls) { polls.associateBy { it.id } }
-
-  // Create timeline from messages only (polls are now embedded in messages via POLL type)
-  // Filter out POLL type messages that don't have a corresponding poll (e.g., deleted polls)
-  val timelineItems =
-      remember(messages, pollsMap) {
-        messages
-            .mapNotNull { message ->
-              if (message.type == MessageType.POLL) {
-                // For POLL messages, content is the poll ID
-                pollsMap[message.content]?.let { ChatTimelineItem.PollItem(it) }
-              } else {
-                ChatTimelineItem.MessageItem(message)
-              }
-            }
-            .sortedBy { it.timestamp }
-      }
+  val timelineItems = rememberTimelineItems(messages, polls)
 
   // Auto-scroll to bottom when new items arrive
   LaunchedEffect(timelineItems.size) {
@@ -300,56 +291,14 @@ private fun ChatContentWithPolls(
   Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
     Column(modifier = Modifier.fillMaxSize()) {
       // Timeline list (messages and polls)
-      LazyColumn(
-          modifier = Modifier.weight(1f).fillMaxWidth().testTag(ChatScreenTestTags.MESSAGE_LIST),
-          state = listState,
-          contentPadding = PaddingValues(Dimens.Padding.medium),
-          verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
-            if (timelineItems.isEmpty()) {
-              item {
-                Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                  Text(
-                      text = stringResource(R.string.empty_chat_message),
-                      style = MaterialTheme.typography.bodyMedium,
-                      color = MaterialTheme.colorScheme.onSurfaceVariant,
-                      textAlign = TextAlign.Center,
-                      modifier = Modifier.testTag(ChatScreenTestTags.EMPTY_MESSAGE))
-                }
-              }
-            } else {
-              items(
-                  items = timelineItems,
-                  key = { item ->
-                    when (item) {
-                      is ChatTimelineItem.MessageItem -> "msg_${item.message.id}"
-                      is ChatTimelineItem.PollItem -> "poll_${item.poll.id}"
-                    }
-                  }) { item ->
-                    when (item) {
-                      is ChatTimelineItem.MessageItem -> {
-                        val userColors = getUserColor(item.message.senderId)
-                        MessageItemWithPolls(
-                            message = item.message,
-                            isCurrentUser = item.message.senderId == currentUserId,
-                            senderPhotoUrl = senderProfiles[item.message.senderId]?.photoUrl,
-                            currentUserPhotoUrl = senderProfiles[currentUserId]?.photoUrl,
-                            bubbleColor = userColors.first,
-                            onBubbleColor = userColors.second)
-                      }
-                      is ChatTimelineItem.PollItem -> {
-                        PollCard(
-                            poll = item.poll,
-                            currentUserId = currentUserId,
-                            voterProfiles = voterProfiles,
-                            onVote = { optionId -> onVote(item.poll.id, optionId) },
-                            onClosePoll = { onClosePoll(item.poll.id) },
-                            onReopenPoll = { onReopenPoll(item.poll.id) },
-                            onDeletePoll = { onDeletePoll(item.poll.id) })
-                      }
-                    }
-                  }
-            }
-          }
+      ChatTimeline(
+          timelineItems = timelineItems,
+          listState = listState,
+          currentUserId = currentUserId,
+          senderProfiles = senderProfiles,
+          voterProfiles = voterProfiles,
+          pollCallbacks = pollCallbacks,
+          modifier = Modifier.weight(1f))
 
       // Message input with poll support
       MessageInputWithPolls(
@@ -364,6 +313,106 @@ private fun ChatContentWithPolls(
           onOpenPollCreation = onOpenPollCreation,
           sendButtonColor = chatColor,
           onSendButtonColor = onChatColor)
+    }
+  }
+}
+
+/** Creates timeline items from messages and polls. */
+@Composable
+private fun rememberTimelineItems(
+    messages: List<Message>,
+    polls: List<Poll>
+): List<ChatTimelineItem> {
+  val pollsMap = remember(polls) { polls.associateBy { it.id } }
+  return remember(messages, pollsMap) {
+    messages
+        .mapNotNull { message ->
+          if (message.type == MessageType.POLL) {
+            pollsMap[message.content]?.let { ChatTimelineItem.PollItem(it) }
+          } else {
+            ChatTimelineItem.MessageItem(message)
+          }
+        }
+        .sortedBy { it.timestamp }
+  }
+}
+
+/** Displays the chat timeline with messages and polls. */
+@Composable
+private fun ChatTimeline(
+    timelineItems: List<ChatTimelineItem>,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    currentUserId: String,
+    senderProfiles: Map<String, Profile>,
+    voterProfiles: Map<String, Profile>,
+    pollCallbacks: PollCallbacks,
+    modifier: Modifier = Modifier
+) {
+  LazyColumn(
+      modifier = modifier.fillMaxWidth().testTag(ChatScreenTestTags.MESSAGE_LIST),
+      state = listState,
+      contentPadding = PaddingValues(Dimens.Padding.medium),
+      verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
+        if (timelineItems.isEmpty()) {
+          item {
+            Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+              Text(
+                  text = stringResource(R.string.empty_chat_message),
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                  textAlign = TextAlign.Center,
+                  modifier = Modifier.testTag(ChatScreenTestTags.EMPTY_MESSAGE))
+            }
+          }
+        } else {
+          items(items = timelineItems, key = { it.getKey() }) { item ->
+            TimelineItemContent(
+                item = item,
+                currentUserId = currentUserId,
+                senderProfiles = senderProfiles,
+                voterProfiles = voterProfiles,
+                pollCallbacks = pollCallbacks)
+          }
+        }
+      }
+}
+
+/** Returns a unique key for this timeline item. */
+private fun ChatTimelineItem.getKey(): String =
+    when (this) {
+      is ChatTimelineItem.MessageItem -> "msg_${message.id}"
+      is ChatTimelineItem.PollItem -> "poll_${poll.id}"
+    }
+
+/** Renders the content for a single timeline item. */
+@Composable
+private fun TimelineItemContent(
+    item: ChatTimelineItem,
+    currentUserId: String,
+    senderProfiles: Map<String, Profile>,
+    voterProfiles: Map<String, Profile>,
+    pollCallbacks: PollCallbacks
+) {
+  when (item) {
+    is ChatTimelineItem.MessageItem -> {
+      val userColors = getUserColor(item.message.senderId)
+      MessageItemWithPolls(
+          message = item.message,
+          isCurrentUser = item.message.senderId == currentUserId,
+          senderPhotoUrl = senderProfiles[item.message.senderId]?.photoUrl,
+          currentUserPhotoUrl = senderProfiles[currentUserId]?.photoUrl,
+          bubbleColor = userColors.first,
+          onBubbleColor = userColors.second)
+    }
+    is ChatTimelineItem.PollItem -> {
+      PollCard(
+          poll = item.poll,
+          currentUserId = currentUserId,
+          voterProfiles = voterProfiles,
+          onVote = { optionId -> pollCallbacks.onVote(item.poll.id, optionId) },
+          onClosePoll = { pollCallbacks.onClosePoll(item.poll.id) },
+          onReopenPoll = { pollCallbacks.onReopenPoll(item.poll.id) },
+          onDeletePoll = { pollCallbacks.onDeletePoll(item.poll.id) })
     }
   }
 }

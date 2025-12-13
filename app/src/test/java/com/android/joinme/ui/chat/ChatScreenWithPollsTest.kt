@@ -365,14 +365,15 @@ class ChatScreenWithPollsTest {
   private fun setupChatScreenWithPolls() {
     composeTestRule.setContent {
       ChatScreenWithPolls(
-          chatId = testChatId,
-          chatTitle = testChatTitle,
-          currentUserId = testUserId,
-          currentUserName = testUserName,
+          config =
+              ChatScreenConfig(
+                  chatId = testChatId,
+                  chatTitle = testChatTitle,
+                  currentUserId = testUserId,
+                  currentUserName = testUserName),
           chatViewModel = chatViewModel,
           pollViewModel = pollViewModel,
-          onLeaveClick = {},
-          totalParticipants = 2)
+          onLeaveClick = {})
     }
   }
 
