@@ -1,6 +1,7 @@
 package com.android.joinme.model.event
 
 import android.content.Context
+import com.android.joinme.model.chat.ConversationCleanupService
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.notification.NotificationScheduler
 import com.google.firebase.Firebase
@@ -128,6 +129,9 @@ class EventsRepositoryFirestore(
 
     // Cancel notifications when event is deleted
     context?.let { NotificationScheduler.cancelEventNotification(it, eventId) }
+
+    // Delete the associated conversation (messages, polls, images)
+    ConversationCleanupService.cleanupConversation(conversationId = eventId)
   }
 
   override suspend fun getCommonEvents(userIds: List<String>): List<Event> {

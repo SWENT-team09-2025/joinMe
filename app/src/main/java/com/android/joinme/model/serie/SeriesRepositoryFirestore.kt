@@ -1,5 +1,6 @@
 package com.android.joinme.model.serie
 
+import com.android.joinme.model.chat.ConversationCleanupService
 import com.android.joinme.model.event.EVENTS_COLLECTION_PATH
 import com.android.joinme.model.event.isActive
 import com.android.joinme.model.event.isExpired
@@ -155,6 +156,9 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
     }
     // Delete serie
     db.collection(SERIES_COLLECTION_PATH).document(serieId).delete().await()
+
+    // Delete the associated conversation (messages, polls, images)
+    ConversationCleanupService.cleanupConversation(conversationId = serieId)
   }
 
   /**

@@ -25,7 +25,11 @@ object ConversationCleanupService {
    *
    * This method performs a complete cleanup including:
    * - All messages in the conversation
+<<<<<<< HEAD
    * - All polls in the conversations
+=======
+   * - All polls in the conversation
+>>>>>>> parent of ce71eb51 (Revert "Feature : add ConversationCleanupService to delete conversations")
    * - All images stored in Firebase Storage for this conversation
    * - The conversation node itself
    *
