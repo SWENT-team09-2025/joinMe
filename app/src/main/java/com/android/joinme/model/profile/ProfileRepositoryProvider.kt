@@ -1,5 +1,6 @@
 package com.android.joinme.model.profile
 
+import com.android.joinme.model.chat.ChatRepositoryProvider
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
 import com.google.firebase.storage.FirebaseStorage
@@ -13,7 +14,11 @@ object ProfileRepositoryProvider {
   private val localRepo: ProfileRepository by lazy { ProfileRepositoryLocal() }
 
   private val firestoreRepo: ProfileRepository by lazy {
-    ProfileRepositoryFirestore(db = Firebase.firestore, storage = FirebaseStorage.getInstance())
+    val chatRepository = ChatRepositoryProvider.repository
+    ProfileRepositoryFirestore(
+        db = Firebase.firestore,
+        storage = FirebaseStorage.getInstance(),
+        chatRepository = chatRepository)
   }
 
   // For backward compatibility and explicit test injection

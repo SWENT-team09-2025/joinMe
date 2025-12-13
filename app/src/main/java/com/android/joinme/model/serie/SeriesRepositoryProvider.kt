@@ -1,6 +1,7 @@
 package com.android.joinme.model.serie
 
 import android.content.Context
+import com.android.joinme.model.chat.ChatRepositoryProvider
 import com.android.joinme.network.NetworkMonitor
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
@@ -61,7 +62,9 @@ object SeriesRepositoryProvider {
 
   private fun getFirestoreRepo(): SeriesRepository {
     if (_firestoreRepository == null) {
-      _firestoreRepository = SeriesRepositoryFirestore(Firebase.firestore)
+      val chatRepository = ChatRepositoryProvider.repository
+      _firestoreRepository =
+          SeriesRepositoryFirestore(db = Firebase.firestore, chatRepository = chatRepository)
     }
     return _firestoreRepository!!
   }

@@ -583,4 +583,279 @@ class ChatRepositoryRealtimeDatabaseTest {
     assertEquals("Zurich HB", locationMap["name"])
     assertEquals("LOCATION", capturedData.captured["type"])
   }
+
+  // ============================================================================
+  // deleteConversation Tests
+  // ============================================================================
+
+  @Test
+  fun deleteConversation_deletesMessagesAndConversationNode() = runTest {
+    // Given
+    val mockSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockGetTask = Tasks.forResult(mockSnapshot)
+    val mockRemoveTask = Tasks.forResult<Void>(null)
+
+    every { mockMessagesRef.get() } returns mockGetTask
+    every { mockSnapshot.children } returns emptyList() // No messages
+    every { mockConversationRef.removeValue() } returns mockRemoveTask
+
+    // When
+    repository.deleteConversation(testConversationId)
+
+    // Then
+    verify { mockMessagesRef.get() }
+    verify { mockConversationRef.removeValue() }
+  }
+
+  @Test
+  fun deleteConversation_deletesImageMessages() = runTest {
+    // Given
+    val mockSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockImageMessage = mockk<DataSnapshot>(relaxed = true)
+    val mockGetTask = Tasks.forResult(mockSnapshot)
+    val mockRemoveTask = Tasks.forResult<Void>(null)
+    val mockDeleteTask = Tasks.forResult<Void>(null)
+    val mockImageRef = mockk<StorageReference>(relaxed = true)
+
+    // Setup image message
+    every { mockImageMessage.key } returns "image-msg-1"
+    every { mockImageMessage.child("type").getValue(String::class.java) } returns "IMAGE"
+    every { mockSnapshot.children } returns listOf(mockImageMessage)
+
+    // Setup storage references
+    every { mockStorageRef.child("conversations") } returns mockStorageRef
+    every { mockStorageRef.child(testConversationId) } returns mockStorageRef
+    every { mockStorageRef.child("images") } returns mockStorageRef
+    every { mockStorageRef.child("image-msg-1.jpg") } returns mockImageRef
+    every { mockImageRef.delete() } returns mockDeleteTask
+
+    every { mockMessagesRef.get() } returns mockGetTask
+    every { mockConversationRef.removeValue() } returns mockRemoveTask
+
+    // When
+    repository.deleteConversation(testConversationId)
+
+    // Then
+    verify { mockImageRef.delete() }
+    verify { mockConversationRef.removeValue() }
+  }
+
+  @Test
+  fun deleteConversation_handlesMultipleImageMessages() = runTest {
+    // Given
+    val mockSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockImageMsg1 = mockk<DataSnapshot>(relaxed = true)
+    val mockImageMsg2 = mockk<DataSnapshot>(relaxed = true)
+    val mockTextMsg = mockk<DataSnapshot>(relaxed = true)
+    val mockGetTask = Tasks.forResult(mockSnapshot)
+    val mockRemoveTask = Tasks.forResult<Void>(null)
+    val mockDeleteTask = Tasks.forResult<Void>(null)
+    val mockImageRef1 = mockk<StorageReference>(relaxed = true)
+    val mockImageRef2 = mockk<StorageReference>(relaxed = true)
+
+    // Setup messages
+    every { mockImageMsg1.key } returns "img-1"
+    every { mockImageMsg1.child("type").getValue(String::class.java) } returns "IMAGE"
+    every { mockImageMsg2.key } returns "img-2"
+    every { mockImageMsg2.child("type").getValue(String::class.java) } returns "IMAGE"
+    every { mockTextMsg.key } returns "text-1"
+    every { mockTextMsg.child("type").getValue(String::class.java) } returns "TEXT"
+    every { mockSnapshot.children } returns listOf(mockImageMsg1, mockTextMsg, mockImageMsg2)
+
+    // Setup storage references
+    every { mockStorageRef.child("conversations") } returns mockStorageRef
+    every { mockStorageRef.child(testConversationId) } returns mockStorageRef
+    every { mockStorageRef.child("images") } returns mockStorageRef
+    every { mockStorageRef.child("img-1.jpg") } returns mockImageRef1
+    every { mockStorageRef.child("img-2.jpg") } returns mockImageRef2
+    every { mockImageRef1.delete() } returns mockDeleteTask
+    every { mockImageRef2.delete() } returns mockDeleteTask
+
+    every { mockMessagesRef.get() } returns mockGetTask
+    every { mockConversationRef.removeValue() } returns mockRemoveTask
+
+    // When
+    repository.deleteConversation(testConversationId)
+
+    // Then
+    verify { mockImageRef1.delete() }
+    verify { mockImageRef2.delete() }
+    verify(exactly = 0) { mockStorageRef.child("text-1.jpg") } // Text message doesn't delete image
+    verify { mockConversationRef.removeValue() }
+  }
+
+  @Test
+  fun deleteConversation_continuesWhenImageDeleteFails() = runTest {
+    // Given
+    val mockSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockImageMessage = mockk<DataSnapshot>(relaxed = true)
+    val mockGetTask = Tasks.forResult(mockSnapshot)
+    val mockRemoveTask = Tasks.forResult<Void>(null)
+    val mockDeleteTask = Tasks.forException<Void>(Exception("Image not found"))
+    val mockImageRef = mockk<StorageReference>(relaxed = true)
+
+    every { mockImageMessage.key } returns "image-msg-1"
+    every { mockImageMessage.child("type").getValue(String::class.java) } returns "IMAGE"
+    every { mockSnapshot.children } returns listOf(mockImageMessage)
+
+    every { mockStorageRef.child("conversations") } returns mockStorageRef
+    every { mockStorageRef.child(testConversationId) } returns mockStorageRef
+    every { mockStorageRef.child("images") } returns mockStorageRef
+    every { mockStorageRef.child("image-msg-1.jpg") } returns mockImageRef
+    every { mockImageRef.delete() } returns mockDeleteTask
+
+    every { mockMessagesRef.get() } returns mockGetTask
+    every { mockConversationRef.removeValue() } returns mockRemoveTask
+
+    // When
+    repository.deleteConversation(testConversationId)
+
+    // Then - Should still delete conversation even if image delete fails
+    verify { mockImageRef.delete() }
+    verify { mockConversationRef.removeValue() }
+  }
+
+  // ============================================================================
+  // deleteAllUserConversations Tests
+  // ============================================================================
+
+  @Test
+  fun deleteAllUserConversations_findsAndDeletesUserDMConversations() = runTest {
+    // Given
+    val userId = "user1"
+    val mockAllConversationsSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockConv1 = mockk<DataSnapshot>(relaxed = true)
+    val mockConv2 = mockk<DataSnapshot>(relaxed = true)
+    val mockConv3 = mockk<DataSnapshot>(relaxed = true)
+    val mockConv4 = mockk<DataSnapshot>(relaxed = true)
+
+    // Setup conversation snapshots
+    every { mockConv1.key } returns "dm_alice_user1"
+    every { mockConv2.key } returns "dm_user1_bob"
+    every { mockConv3.key } returns "dm_charlie_david" // Not involving user1
+    every { mockConv4.key } returns "event123" // Not a DM
+
+    every { mockAllConversationsSnapshot.children } returns
+        listOf(mockConv1, mockConv2, mockConv3, mockConv4)
+
+    val mockGetTask = Tasks.forResult(mockAllConversationsSnapshot)
+    every { mockConversationsRef.get() } returns mockGetTask
+
+    // Mock deleteConversation calls
+    val mockMessagesSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockMessagesGetTask = Tasks.forResult(mockMessagesSnapshot)
+    val mockRemoveTask = Tasks.forResult<Void>(null)
+    every { mockMessagesSnapshot.children } returns emptyList()
+    every { mockMessagesRef.get() } returns mockMessagesGetTask
+    every { mockConversationRef.removeValue() } returns mockRemoveTask
+
+    // When
+    repository.deleteAllUserConversations(userId)
+
+    // Then
+    verify { mockConversationsRef.get() }
+    // Should attempt to delete conversations involving user1
+    verify(atLeast = 2) { mockConversationRef.removeValue() }
+  }
+
+  @Test
+  fun deleteAllUserConversations_handlesUserWithNoDMs() = runTest {
+    // Given
+    val userId = "user1"
+    val mockAllConversationsSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockConv1 = mockk<DataSnapshot>(relaxed = true)
+    val mockConv2 = mockk<DataSnapshot>(relaxed = true)
+
+    every { mockConv1.key } returns "dm_alice_bob" // Not involving user1
+    every { mockConv2.key } returns "event123" // Not a DM
+    every { mockAllConversationsSnapshot.children } returns listOf(mockConv1, mockConv2)
+
+    val mockGetTask = Tasks.forResult(mockAllConversationsSnapshot)
+    every { mockConversationsRef.get() } returns mockGetTask
+
+    // When
+    repository.deleteAllUserConversations(userId)
+
+    // Then
+    verify { mockConversationsRef.get() }
+    // Should not attempt to delete any conversations
+    verify(exactly = 0) { mockConversationRef.removeValue() }
+  }
+
+  @Test
+  fun deleteAllUserConversations_ignoresInvalidDMFormat() = runTest {
+    // Given
+    val userId = "user1"
+    val mockAllConversationsSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockConv1 = mockk<DataSnapshot>(relaxed = true)
+    val mockConv2 = mockk<DataSnapshot>(relaxed = true)
+    val mockConv3 = mockk<DataSnapshot>(relaxed = true)
+
+    every { mockConv1.key } returns "dm_user1" // Invalid (only 2 parts)
+    every { mockConv2.key } returns "dm_user1_alice_extra" // Invalid (4 parts)
+    every { mockConv3.key } returns "dm_alice_user1" // Valid
+    every { mockAllConversationsSnapshot.children } returns listOf(mockConv1, mockConv2, mockConv3)
+
+    val mockGetTask = Tasks.forResult(mockAllConversationsSnapshot)
+    every { mockConversationsRef.get() } returns mockGetTask
+
+    // Mock deleteConversation call for valid conversation
+    val mockMessagesSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockMessagesGetTask = Tasks.forResult(mockMessagesSnapshot)
+    val mockRemoveTask = Tasks.forResult<Void>(null)
+    every { mockMessagesSnapshot.children } returns emptyList()
+    every { mockMessagesRef.get() } returns mockMessagesGetTask
+    every { mockConversationRef.removeValue() } returns mockRemoveTask
+
+    // When
+    repository.deleteAllUserConversations(userId)
+
+    // Then
+    verify { mockConversationsRef.get() }
+    // Should only delete the valid DM conversation
+    verify(atLeast = 1) { mockConversationRef.removeValue() }
+  }
+
+  @Test
+  fun deleteAllUserConversations_deletesConversationsWithImages() = runTest {
+    // Given
+    val userId = "user1"
+    val mockAllConversationsSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockConv = mockk<DataSnapshot>(relaxed = true)
+
+    every { mockConv.key } returns "dm_alice_user1"
+    every { mockAllConversationsSnapshot.children } returns listOf(mockConv)
+
+    val mockGetTask = Tasks.forResult(mockAllConversationsSnapshot)
+    every { mockConversationsRef.get() } returns mockGetTask
+
+    // Mock conversation with image messages
+    val mockMessagesSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockImageMessage = mockk<DataSnapshot>(relaxed = true)
+    every { mockImageMessage.key } returns "img-1"
+    every { mockImageMessage.child("type").getValue(String::class.java) } returns "IMAGE"
+    every { mockMessagesSnapshot.children } returns listOf(mockImageMessage)
+
+    val mockMessagesGetTask = Tasks.forResult(mockMessagesSnapshot)
+    val mockRemoveTask = Tasks.forResult<Void>(null)
+    val mockDeleteTask = Tasks.forResult<Void>(null)
+    val mockImageRef = mockk<StorageReference>(relaxed = true)
+
+    every { mockStorageRef.child("conversations") } returns mockStorageRef
+    every { mockStorageRef.child("dm_alice_user1") } returns mockStorageRef
+    every { mockStorageRef.child("images") } returns mockStorageRef
+    every { mockStorageRef.child("img-1.jpg") } returns mockImageRef
+    every { mockImageRef.delete() } returns mockDeleteTask
+
+    every { mockMessagesRef.get() } returns mockMessagesGetTask
+    every { mockConversationRef.removeValue() } returns mockRemoveTask
+
+    // When
+    repository.deleteAllUserConversations(userId)
+
+    // Then
+    verify { mockConversationsRef.get() }
+    verify { mockImageRef.delete() }
+    verify { mockConversationRef.removeValue() }
+  }
 }

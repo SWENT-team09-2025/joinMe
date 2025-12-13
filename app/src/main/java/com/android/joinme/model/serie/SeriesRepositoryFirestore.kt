@@ -1,5 +1,6 @@
 package com.android.joinme.model.serie
 
+import com.android.joinme.model.chat.ChatRepository
 import com.android.joinme.model.event.EVENTS_COLLECTION_PATH
 import com.android.joinme.model.event.isActive
 import com.android.joinme.model.event.isExpired
@@ -61,7 +62,10 @@ enum class SerieFilter {
  *
  * @property db The FirebaseFirestore instance used for database operations
  */
-class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepository {
+class SeriesRepositoryFirestore(
+    private val db: FirebaseFirestore,
+    private val chatRepository: ChatRepository? = null
+) : SeriesRepository {
   /**
    * Generates and returns a new unique identifier for a Serie item.
    *
@@ -150,8 +154,11 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
     serie.eventIds.forEach { eventId ->
       db.collection(EVENTS_COLLECTION_PATH).document(eventId).delete().await()
     }
-    // Delete serie
+    // Delete the serie from Firestore
     db.collection(SERIES_COLLECTION_PATH).document(serieId).delete().await()
+
+    // Delete the associated conversation (messages, polls, images)
+    chatRepository?.deleteConversation(conversationId = serieId)
   }
 
   /**

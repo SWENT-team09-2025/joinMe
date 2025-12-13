@@ -1,6 +1,7 @@
 package com.android.joinme.model.event
 
 import android.content.Context
+import com.android.joinme.model.chat.ChatRepository
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.notification.NotificationScheduler
 import com.google.firebase.Firebase
@@ -59,7 +60,8 @@ enum class EventFilter {
  */
 class EventsRepositoryFirestore(
     private val db: FirebaseFirestore,
-    private val context: Context? = null
+    private val context: Context? = null,
+    private val chatRepository: ChatRepository? = null
 ) : EventsRepository {
 
   override fun getNewEventId(): String {
@@ -124,10 +126,14 @@ class EventsRepositoryFirestore(
   }
 
   override suspend fun deleteEvent(eventId: String) {
+    // Delete the event from Firestore
     db.collection(EVENTS_COLLECTION_PATH).document(eventId).delete().await()
 
     // Cancel notification when event is deleted
     context?.let { NotificationScheduler.cancelEventNotification(it, eventId) }
+
+    // Delete the associated conversation (messages, polls, images)
+    chatRepository?.deleteConversation(conversationId = eventId)
   }
 
   override suspend fun getCommonEvents(userIds: List<String>): List<Event> {

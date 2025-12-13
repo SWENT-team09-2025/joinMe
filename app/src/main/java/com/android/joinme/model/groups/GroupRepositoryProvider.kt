@@ -1,5 +1,6 @@
 package com.android.joinme.model.groups
 
+import com.android.joinme.model.chat.ChatRepositoryProvider
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
 import com.google.firebase.storage.storage
@@ -16,7 +17,9 @@ object GroupRepositoryProvider {
 
   // Firestore-backed repository
   private val firestoreRepo: GroupRepository by lazy {
-    GroupRepositoryFirestore(Firebase.firestore, Firebase.storage)
+    val chatRepository = ChatRepositoryProvider.repository
+    GroupRepositoryFirestore(
+        db = Firebase.firestore, storage = Firebase.storage, chatRepository = chatRepository)
   }
 
   // For backward compatibility and explicit test injection

@@ -4,6 +4,7 @@ package com.android.joinme.model.groups
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.android.joinme.model.chat.ChatRepository
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.utils.ImageProcessor
 import com.google.firebase.Firebase
@@ -24,7 +25,8 @@ private const val F_PHOTO_URL = "photoUrl"
 class GroupRepositoryFirestore(
     private val db: FirebaseFirestore,
     private val storage: FirebaseStorage = FirebaseStorage.getInstance(),
-    private val imageProcessorFactory: (Context) -> ImageProcessor = { ImageProcessor(it) }
+    private val imageProcessorFactory: (Context) -> ImageProcessor = { ImageProcessor(it) },
+    private val chatRepository: ChatRepository? = null
 ) : GroupRepository {
 
   companion object {
@@ -82,7 +84,11 @@ class GroupRepositoryFirestore(
       throw Exception("GroupRepositoryFirestore: Only the group owner can delete this group")
     }
 
+    // Delete the group from Firestore
     db.collection(GROUPS_COLLECTION_PATH).document(groupId).delete().await()
+
+    // Delete the associated conversation (messages, polls, images)
+    chatRepository?.deleteConversation(conversationId = groupId)
   }
 
   override suspend fun leaveGroup(groupId: String, userId: String) {

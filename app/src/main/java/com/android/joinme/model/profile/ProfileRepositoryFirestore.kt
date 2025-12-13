@@ -3,6 +3,7 @@ package com.android.joinme.model.profile
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.android.joinme.model.chat.ChatRepository
 import com.android.joinme.model.utils.ImageProcessor
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentSnapshot
@@ -50,7 +51,8 @@ private const val F_FOLLOWED_ID = "followedId"
  */
 class ProfileRepositoryFirestore(
     private val db: FirebaseFirestore,
-    private val storage: FirebaseStorage
+    private val storage: FirebaseStorage,
+    private val chatRepository: ChatRepository? = null
 ) : ProfileRepository {
 
   private val profilesCollection = db.collection(PROFILES_COLLECTION_PATH)
@@ -126,7 +128,11 @@ class ProfileRepositoryFirestore(
   }
 
   override suspend fun deleteProfile(uid: String) {
+    // Delete the profile from Firestore
     profilesCollection.document(uid).delete().await()
+
+    // Delete all direct message conversations involving this user
+    chatRepository?.deleteAllUserConversations(uid)
   }
 
   /**

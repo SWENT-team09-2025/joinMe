@@ -433,4 +433,183 @@ class ChatRepositoryLocalTest {
     Assert.assertEquals(MessageType.TEXT, retrieved.type)
     Assert.assertNull(retrieved.location)
   }
+
+  // ---------------- DELETE CONVERSATION ----------------
+
+  @Test
+  fun deleteConversation_removesAllMessagesForConversation() = runTest {
+    // Add messages to two different conversations
+    val msg1 = sampleMessage.copy(id = "1", conversationId = "conv1", content = "Conv1 Msg1")
+    val msg2 = sampleMessage.copy(id = "2", conversationId = "conv1", content = "Conv1 Msg2")
+    val msg3 = sampleMessage.copy(id = "3", conversationId = "conv2", content = "Conv2 Msg1")
+
+    repo.addMessage(msg1)
+    repo.addMessage(msg2)
+    repo.addMessage(msg3)
+
+    // Delete conversation 1
+    repo.deleteConversation("conv1")
+
+    // Verify conversation 1 messages are gone
+    val conv1Messages = repo.observeMessagesForConversation("conv1").first()
+    Assert.assertTrue(conv1Messages.isEmpty())
+
+    // Verify conversation 2 messages still exist
+    val conv2Messages = repo.observeMessagesForConversation("conv2").first()
+    Assert.assertEquals(1, conv2Messages.size)
+    Assert.assertEquals("Conv2 Msg1", conv2Messages[0].content)
+  }
+
+  @Test
+  fun deleteConversation_emptyConversation_completesSuccessfully() = runTest {
+    // Delete a conversation that doesn't exist or is empty
+    repo.deleteConversation("nonexistent")
+
+    // Should complete without error
+    val messages = repo.observeMessagesForConversation("nonexistent").first()
+    Assert.assertTrue(messages.isEmpty())
+  }
+
+  @Test
+  fun deleteConversation_withMultipleMessageTypes() = runTest {
+    // Add messages of different types
+    val textMsg = sampleMessage.copy(id = "1", conversationId = "conv1", type = MessageType.TEXT)
+    val imageMsg =
+        sampleMessage.copy(
+            id = "2",
+            conversationId = "conv1",
+            type = MessageType.IMAGE,
+            content = "https://example.com/image.jpg")
+    val locationMsg =
+        sampleMessage.copy(
+            id = "3",
+            conversationId = "conv1",
+            type = MessageType.LOCATION,
+            location = Location(46.5197, 6.6323, "EPFL"))
+
+    repo.addMessage(textMsg)
+    repo.addMessage(imageMsg)
+    repo.addMessage(locationMsg)
+
+    // Delete the conversation
+    repo.deleteConversation("conv1")
+
+    // Verify all messages are deleted
+    val messages = repo.observeMessagesForConversation("conv1").first()
+    Assert.assertTrue(messages.isEmpty())
+  }
+
+  // ---------------- DELETE ALL USER CONVERSATIONS ----------------
+
+  @Test
+  fun deleteAllUserConversations_removesAllDMConversationsForUser() = runTest {
+    // Create DM conversations involving user1
+    val dm1 =
+        sampleMessage.copy(id = "1", conversationId = "dm_alice_user1", content = "DM with alice")
+    val dm2 = sampleMessage.copy(id = "2", conversationId = "dm_bob_user1", content = "DM with bob")
+    val dm3 = sampleMessage.copy(id = "3", conversationId = "dm_user1_zoe", content = "DM with zoe")
+
+    // Create DM conversation not involving user1
+    val dm4 =
+        sampleMessage.copy(id = "4", conversationId = "dm_alice_bob", content = "Alice and Bob")
+
+    // Create non-DM conversations
+    val groupMsg = sampleMessage.copy(id = "5", conversationId = "group123", content = "Group msg")
+    val eventMsg = sampleMessage.copy(id = "6", conversationId = "event456", content = "Event msg")
+
+    repo.addMessage(dm1)
+    repo.addMessage(dm2)
+    repo.addMessage(dm3)
+    repo.addMessage(dm4)
+    repo.addMessage(groupMsg)
+    repo.addMessage(eventMsg)
+
+    // Delete all conversations for user1
+    repo.deleteAllUserConversations("user1")
+
+    // Verify user1's DM conversations are deleted
+    val dm1Messages = repo.observeMessagesForConversation("dm_alice_user1").first()
+    val dm2Messages = repo.observeMessagesForConversation("dm_bob_user1").first()
+    val dm3Messages = repo.observeMessagesForConversation("dm_user1_zoe").first()
+    Assert.assertTrue(dm1Messages.isEmpty())
+    Assert.assertTrue(dm2Messages.isEmpty())
+    Assert.assertTrue(dm3Messages.isEmpty())
+
+    // Verify other conversations remain
+    val dm4Messages = repo.observeMessagesForConversation("dm_alice_bob").first()
+    val groupMessages = repo.observeMessagesForConversation("group123").first()
+    val eventMessages = repo.observeMessagesForConversation("event456").first()
+    Assert.assertEquals(1, dm4Messages.size)
+    Assert.assertEquals(1, groupMessages.size)
+    Assert.assertEquals(1, eventMessages.size)
+  }
+
+  @Test
+  fun deleteAllUserConversations_handlesUserWithNoDMs() = runTest {
+    // Add messages not involving user1
+    val dm1 = sampleMessage.copy(id = "1", conversationId = "dm_alice_bob", content = "Alice Bob")
+    val groupMsg = sampleMessage.copy(id = "2", conversationId = "group123", content = "Group")
+
+    repo.addMessage(dm1)
+    repo.addMessage(groupMsg)
+
+    // Delete conversations for user with no DMs
+    repo.deleteAllUserConversations("user1")
+
+    // Verify other messages remain
+    val dm1Messages = repo.observeMessagesForConversation("dm_alice_bob").first()
+    val groupMessages = repo.observeMessagesForConversation("group123").first()
+    Assert.assertEquals(1, dm1Messages.size)
+    Assert.assertEquals(1, groupMessages.size)
+  }
+
+  @Test
+  fun deleteAllUserConversations_handlesMultipleMessagesPerConversation() = runTest {
+    // Add multiple messages to DM conversations involving user1
+    val msg1 = sampleMessage.copy(id = "1", conversationId = "dm_alice_user1", content = "Msg 1")
+    val msg2 = sampleMessage.copy(id = "2", conversationId = "dm_alice_user1", content = "Msg 2")
+    val msg3 = sampleMessage.copy(id = "3", conversationId = "dm_alice_user1", content = "Msg 3")
+    val msg4 = sampleMessage.copy(id = "4", conversationId = "dm_bob_user1", content = "Msg 4")
+    val msg5 = sampleMessage.copy(id = "5", conversationId = "dm_bob_user1", content = "Msg 5")
+
+    repo.addMessage(msg1)
+    repo.addMessage(msg2)
+    repo.addMessage(msg3)
+    repo.addMessage(msg4)
+    repo.addMessage(msg5)
+
+    // Delete all conversations for user1
+    repo.deleteAllUserConversations("user1")
+
+    // Verify all messages in both conversations are deleted
+    val aliceMessages = repo.observeMessagesForConversation("dm_alice_user1").first()
+    val bobMessages = repo.observeMessagesForConversation("dm_bob_user1").first()
+    Assert.assertTrue(aliceMessages.isEmpty())
+    Assert.assertTrue(bobMessages.isEmpty())
+  }
+
+  @Test
+  fun deleteAllUserConversations_ignoresInvalidDMFormat() = runTest {
+    // Add message with invalid DM format
+    val invalidDm1 = sampleMessage.copy(id = "1", conversationId = "dm_user1", content = "Invalid")
+    val invalidDm2 =
+        sampleMessage.copy(id = "2", conversationId = "dm_user1_alice_extra", content = "Invalid")
+    val validDm = sampleMessage.copy(id = "3", conversationId = "dm_alice_user1", content = "Valid")
+
+    repo.addMessage(invalidDm1)
+    repo.addMessage(invalidDm2)
+    repo.addMessage(validDm)
+
+    // Delete conversations for user1
+    repo.deleteAllUserConversations("user1")
+
+    // Verify only valid DM format is deleted
+    val invalid1Messages = repo.observeMessagesForConversation("dm_user1").first()
+    val invalid2Messages = repo.observeMessagesForConversation("dm_user1_alice_extra").first()
+    val validMessages = repo.observeMessagesForConversation("dm_alice_user1").first()
+
+    Assert.assertEquals(1, invalid1Messages.size) // Not deleted (invalid format)
+    Assert.assertEquals(1, invalid2Messages.size) // Not deleted (invalid format)
+    Assert.assertTrue(validMessages.isEmpty()) // Deleted (valid format)
+  }
 }

@@ -1060,5 +1060,16 @@ class ChatScreenTest {
     ): String {
       return "mock://chat-image/$conversationId/$messageId.jpg"
     }
+
+    override suspend fun deleteConversation(
+        conversationId: String,
+        pollRepository: com.android.joinme.model.chat.PollRepository?
+    ) {
+      // No-op for testing
+    }
+
+    override suspend fun deleteAllUserConversations(userId: String) {
+      // No-op for testing
+    }
   }
 }

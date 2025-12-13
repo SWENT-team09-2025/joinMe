@@ -1,6 +1,7 @@
 package com.android.joinme.model.event
 
 import android.content.Context
+import com.android.joinme.model.chat.ChatRepositoryProvider
 import com.android.joinme.network.NetworkMonitor
 import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.ktx.firestore
@@ -65,7 +66,10 @@ object EventsRepositoryProvider {
       if (apps.isEmpty()) {
         FirebaseApp.initializeApp(context)
       }
-      firestoreRepo = EventsRepositoryFirestore(Firebase.firestore, context)
+      val chatRepository = ChatRepositoryProvider.repository
+      firestoreRepo =
+          EventsRepositoryFirestore(
+              db = Firebase.firestore, context = context, chatRepository = chatRepository)
     }
     return firestoreRepo!!
   }

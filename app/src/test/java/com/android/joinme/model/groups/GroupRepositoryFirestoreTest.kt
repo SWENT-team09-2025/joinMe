@@ -961,7 +961,9 @@ class GroupRepositoryFirestoreTest {
 
     // Mock Image Processor
     every { mockImageProcessor.processImage(mockUri) } returns processedBytes
-    repository = GroupRepositoryFirestore(mockDb, mockStorage) { mockImageProcessor }
+    repository =
+        GroupRepositoryFirestore(
+            db = mockDb, storage = mockStorage, imageProcessorFactory = { mockImageProcessor })
 
     // Mock Storage (using the fix for ClassCastException)
     val photoRef = setupStorageMocksForPhoto()
@@ -1002,7 +1004,9 @@ class GroupRepositoryFirestoreTest {
     val mockDownloadUri = mockk<Uri>()
 
     every { mockImageProcessor.processImage(mockUri) } returns processedBytes
-    repository = GroupRepositoryFirestore(mockDb, mockStorage) { mockImageProcessor }
+    repository =
+        GroupRepositoryFirestore(
+            db = mockDb, storage = mockStorage, imageProcessorFactory = { mockImageProcessor })
 
     // Mock Storage Success
     val photoRef = setupStorageMocksForPhoto()
@@ -1055,7 +1059,9 @@ class GroupRepositoryFirestoreTest {
     every { mockImageProcessor.processImage(mockUri) } throws Exception("Corrupt image")
 
     // Re-initialize repository
-    repository = GroupRepositoryFirestore(mockDb, mockStorage) { mockImageProcessor }
+    repository =
+        GroupRepositoryFirestore(
+            db = mockDb, storage = mockStorage, imageProcessorFactory = { mockImageProcessor })
 
     // When/Then
     val exception =

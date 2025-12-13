@@ -191,6 +191,77 @@ class ChatRepositoryRealtimeDatabase(
     }
   }
 
+  override suspend fun deleteConversation(conversationId: String, pollRepository: PollRepository?) {
+    try {
+      // Step 1: Get all messages to find IMAGE type messages that need storage cleanup
+      val messagesSnapshot =
+          conversationsRef.child(conversationId).child(MESSAGES_PATH).get().await()
+
+      val imageMessageIds = mutableListOf<String>()
+      messagesSnapshot.children.forEach { messageSnapshot ->
+        val typeString =
+            messageSnapshot.child(FIELD_TYPE).getValue(String::class.java) ?: DEFAULT_MESSAGE_TYPE
+        if (typeString == MessageType.IMAGE.name) {
+          messageSnapshot.key?.let { messageId -> imageMessageIds.add(messageId) }
+        }
+      }
+
+      // Step 2: Delete all images from Firebase Storage
+      val imagesRef =
+          storage.reference.child(CONVERSATIONS_PATH).child(conversationId).child(IMAGES_PATH)
+
+      imageMessageIds.forEach { messageId ->
+        try {
+          imagesRef.child("$messageId.jpg").delete().await()
+        } catch (e: Exception) {
+          // Image might not exist, continue with other deletions
+        }
+      }
+
+      // Step 3: Delete all polls if pollRepository is provided (polls are under the conversation
+      // node)
+      // Since we delete the entire conversation node at the end, polls will be deleted
+      // automatically
+      // The pollRepository parameter is kept for future use if we need individual poll cleanup
+
+      // Step 4: Delete the entire conversation node (includes messages, polls, and any other data)
+      conversationsRef.child(conversationId).removeValue().await()
+    } catch (e: Exception) {
+      throw Exception("Failed to delete conversation $conversationId: ${e.message}", e)
+    }
+  }
+
+  override suspend fun deleteAllUserConversations(userId: String) {
+    try {
+      // Get all conversation nodes from Firebase Realtime Database
+      val allConversationsSnapshot = conversationsRef.get().await()
+
+      // Find all conversations that are DMs involving this user
+      // DM conversation IDs follow the pattern: dm_{userId1}_{userId2}
+      val conversationsToDelete = mutableListOf<String>()
+
+      allConversationsSnapshot.children.forEach { conversationSnapshot ->
+        val conversationId = conversationSnapshot.key ?: return@forEach
+
+        // Check if this is a DM conversation involving the user
+        if (conversationId.startsWith("dm_")) {
+          val parts = conversationId.split("_")
+          if (parts.size == 3) {
+            // parts[0] = "dm", parts[1] = userId1, parts[2] = userId2
+            if (parts[1] == userId || parts[2] == userId) {
+              conversationsToDelete.add(conversationId)
+            }
+          }
+        }
+      }
+
+      // Delete each conversation
+      conversationsToDelete.forEach { conversationId -> deleteConversation(conversationId) }
+    } catch (e: Exception) {
+      throw Exception("Failed to delete conversations for user $userId: ${e.message}", e)
+    }
+  }
+
   /**
    * Converts a [Message] object to a map for storing in Realtime Database.
    *

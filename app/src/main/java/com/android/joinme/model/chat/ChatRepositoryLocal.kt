@@ -100,4 +100,35 @@ class ChatRepositoryLocal : ChatRepository {
     // For local/testing implementation, return a mock URL
     return "mock://chat-image/$conversationId/$messageId.jpg"
   }
+
+  override suspend fun deleteConversation(conversationId: String, pollRepository: PollRepository?) {
+    mutex.withLock {
+      // Remove all messages for this conversation
+      messages.removeAll { it.conversationId == conversationId }
+      messagesFlow.value = messages.toList()
+    }
+  }
+
+  override suspend fun deleteAllUserConversations(userId: String) {
+    mutex.withLock {
+      // Find all DM conversations involving this user
+      // DM conversation IDs follow the pattern: dm_{userId1}_{userId2}
+      val conversationsToDelete =
+          messages
+              .map { it.conversationId }
+              .distinct()
+              .filter { conversationId ->
+                if (conversationId.startsWith("dm_")) {
+                  val parts = conversationId.split("_")
+                  parts.size == 3 && (parts[1] == userId || parts[2] == userId)
+                } else {
+                  false
+                }
+              }
+
+      // Remove all messages from those conversations
+      messages.removeAll { conversationsToDelete.contains(it.conversationId) }
+      messagesFlow.value = messages.toList()
+    }
+  }
 }

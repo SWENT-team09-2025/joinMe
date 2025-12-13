@@ -87,4 +87,41 @@ interface ChatRepository {
       messageId: String,
       imageUri: Uri
   ): String
+
+  /**
+   * Deletes an entire conversation and all its associated data.
+   *
+   * This method performs a complete cleanup of a conversation including:
+   * - All messages in the conversation
+   * - All polls in the conversation (if PollRepository is provided)
+   * - All images stored in Firebase Storage for this conversation
+   * - The conversation node itself
+   *
+   * This operation is irreversible and should be called when entities (events, groups, series) that
+   * own conversations are deleted.
+   *
+   * @param conversationId The unique identifier of the conversation to delete.
+   * @param pollRepository Optional PollRepository instance to also delete polls. If null, only
+   *   messages and images will be deleted.
+   * @throws Exception if the deletion fails at any step.
+   */
+  suspend fun deleteConversation(conversationId: String, pollRepository: PollRepository? = null)
+
+  /**
+   * Deletes all direct message conversations involving a specific user.
+   *
+   * This method finds and deletes all conversations where the user is a participant in a direct
+   * message. Direct message conversation IDs follow the pattern "dm_{userId1}_{userId2}" where
+   * userIds are sorted alphabetically.
+   *
+   * This should be called when a user profile is deleted to clean up all their private
+   * conversations.
+   *
+   * Note: This method only works with Firebase Realtime Database implementation as it requires
+   * querying conversation nodes. The local implementation is a no-op.
+   *
+   * @param userId The unique identifier of the user whose conversations should be deleted.
+   * @throws Exception if the deletion fails.
+   */
+  suspend fun deleteAllUserConversations(userId: String)
 }
