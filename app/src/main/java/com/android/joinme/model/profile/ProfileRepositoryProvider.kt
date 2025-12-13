@@ -50,7 +50,7 @@ object ProfileRepositoryProvider {
   // For backward compatibility and explicit test injection
   var repository: ProfileRepository
     get() {
-      return if (TestEnvironmentDetector.isTestEnvironment()) localRepo else firestoreRepo
+      return if (TestEnvironmentDetector.isTestEnvironment()) localRepo else getRepository()
     }
     set(value) {
       // Allows tests to inject custom repository
