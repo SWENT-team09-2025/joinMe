@@ -663,11 +663,11 @@ class ChatScreenAndroidTest {
 
     composeTestRule.waitForIdle()
 
-    // Verify attachment menu is displayed with all options
+    // Verify attachment menu is displayed with Photo and Location options
+    // Note: Poll option is only available in ChatScreenWithPolls (for group/event chats)
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertIsDisplayed()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_PHOTO).assertExists()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_LOCATION).assertExists()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_POLL).assertExists()
 
     // Verify location option is displayed with proper icon and label, and is clickable
     composeTestRule
