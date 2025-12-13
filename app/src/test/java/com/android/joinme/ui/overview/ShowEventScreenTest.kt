@@ -866,4 +866,62 @@ class ShowEventScreenTest {
     setupShowEventScreen(createTestEvent().copy(partOfASerie = false, groupId = "group-123"))
     composeTestRule.onNodeWithTag(ShareButtonTestTags.SHARE_BUTTON).assertDoesNotExist()
   }
+
+  /** --- LOCATION NAVIGATION TESTS --- */
+  @Test
+  fun clickingLocation_callsOnNavigateToMapWithCorrectLocation() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent()
+    runBlocking { repo.addEvent(event) }
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
+
+    var capturedLocation: Location? = null
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          currentUserId = "user1",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {},
+          onNavigateToMap = { capturedLocation = it })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_LOCATION).performClick()
+    composeTestRule.waitForIdle()
+
+    assert(capturedLocation?.name == "EPFL")
+    assert(capturedLocation?.latitude == 46.5197)
+    assert(capturedLocation?.longitude == 6.6323)
+  }
+
+  @Test
+  fun eventWithoutLocation_clickingLocationDoesNotNavigate() {
+    val repo = EventsRepositoryLocal()
+    val event = createTestEvent().copy(location = null)
+    runBlocking { repo.addEvent(event) }
+    val groupRepo = mock(GroupRepository::class.java)
+    val viewModel = ShowEventViewModel(repo, groupRepository = groupRepo)
+
+    var navigateToMapCalled = false
+
+    composeTestRule.setContent {
+      ShowEventScreen(
+          eventId = event.eventId,
+          currentUserId = "user1",
+          showEventViewModel = viewModel,
+          onGoBack = {},
+          onEditEvent = {},
+          onNavigateToMap = { navigateToMapCalled = true })
+    }
+
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(2000)
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_LOCATION).performClick()
+
+    assert(!navigateToMapCalled)
+  }
 }

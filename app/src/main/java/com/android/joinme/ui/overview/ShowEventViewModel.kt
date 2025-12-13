@@ -12,6 +12,7 @@ import com.android.joinme.model.event.isUpcoming
 import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.groups.streaks.StreakService
+import com.android.joinme.model.map.Location
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import com.android.joinme.model.profile.ProfileRepositoryProvider
@@ -29,6 +30,7 @@ data class ShowEventUIState(
     val title: String = "",
     val description: String = "",
     val location: String = "",
+    val locationObject: Location? = null,
     val maxParticipants: String = "",
     val participantsCount: String = "",
     val duration: String = "",
@@ -114,6 +116,7 @@ class ShowEventViewModel(
                 title = event.title,
                 description = event.description,
                 location = event.location?.name ?: "",
+                locationObject = event.location,
                 maxParticipants = event.maxParticipants.toString(),
                 participantsCount = event.participants.size.toString(),
                 duration = event.duration.toString(),

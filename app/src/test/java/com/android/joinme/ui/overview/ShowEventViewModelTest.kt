@@ -138,6 +138,10 @@ class ShowEventViewModelTest {
     assertEquals("Basketball Game", state.title)
     assertEquals("Friendly 3v3 basketball match", state.description)
     assertEquals("EPFL", state.location)
+    assertNotNull(state.locationObject)
+    assertEquals(46.5197, state.locationObject?.latitude ?: 0.0, 0.001)
+    assertEquals(6.6323, state.locationObject?.longitude ?: 0.0, 0.001)
+    assertEquals("EPFL", state.locationObject?.name)
     assertEquals("10", state.maxParticipants)
     assertEquals("3", state.participantsCount)
     assertEquals("90", state.duration)
@@ -800,6 +804,7 @@ class ShowEventViewModelTest {
     assertEquals("", state.title)
     assertEquals("", state.description)
     assertEquals("", state.location)
+    assertNull(state.locationObject)
     assertEquals("", state.maxParticipants)
     assertEquals("", state.participantsCount)
     assertEquals("", state.duration)
@@ -894,6 +899,7 @@ class ShowEventViewModelTest {
 
     val state = viewModel.uiState.first()
     assertEquals("", state.location)
+    assertNull(state.locationObject)
   }
 
   @Test
@@ -909,6 +915,8 @@ class ShowEventViewModelTest {
 
     val state = viewModel.uiState.first()
     assertEquals("EPFL", state.location)
+    assertNotNull(state.locationObject)
+    assertEquals("EPFL", state.locationObject?.name)
   }
 
   /** --- EVENT TYPE TESTS --- */

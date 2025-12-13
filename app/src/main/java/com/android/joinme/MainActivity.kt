@@ -534,6 +534,9 @@ fun JoinMe(
               },
               onNavigateToChat = { chatId, chatTitle, totalParticipants ->
                 navigationActions.navigateTo(Screen.Chat(chatId, chatTitle, totalParticipants))
+              },
+              onNavigateToMap = { location ->
+                navigationActions.navigateTo(Screen.Map(location.latitude, location.longitude))
               })
         } ?: run { Toast.makeText(context, "Event UID is null", Toast.LENGTH_SHORT).show() }
       }
