@@ -6,10 +6,6 @@ import android.net.Uri
 import android.util.Log
 import com.android.joinme.model.chat.ConversationCleanupService
 import com.android.joinme.model.event.EventType
-import com.android.joinme.model.event.EventsRepository
-import com.android.joinme.model.event.EventsRepositoryProvider
-import com.android.joinme.model.serie.SeriesRepository
-import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.model.utils.ImageProcessor
 import com.android.joinme.util.TestEnvironmentDetector
 import com.google.firebase.Firebase
@@ -30,9 +26,7 @@ private const val F_PHOTO_URL = "photoUrl"
 class GroupRepositoryFirestore(
     private val db: FirebaseFirestore,
     private val storage: FirebaseStorage = FirebaseStorage.getInstance(),
-    private val imageProcessorFactory: (Context) -> ImageProcessor = { ImageProcessor(it) },
-    private val eventsRepository: EventsRepository = EventsRepositoryProvider.getRepository(),
-    private val seriesRepository: SeriesRepository = SeriesRepositoryProvider.repository
+    private val imageProcessorFactory: (Context) -> ImageProcessor = { ImageProcessor(it) }
 ) : GroupRepository {
 
   companion object {
@@ -85,25 +79,6 @@ class GroupRepositoryFirestore(
       throw Exception("GroupRepositoryFirestore: Only the group owner can delete this group")
     }
 
-    // Delete all events associated with this group
-    group.eventIds.forEach { eventId ->
-      try {
-        eventsRepository.deleteEvent(eventId)
-      } catch (e: Exception) {
-        Log.w(TAG, "Failed to delete event $eventId for group $groupId", e)
-      }
-    }
-
-    // Delete all series associated with this group (which will also delete their events)
-    group.serieIds.forEach { serieId ->
-      try {
-        seriesRepository.deleteSerie(serieId)
-      } catch (e: Exception) {
-        Log.w(TAG, "Failed to delete serie $serieId for group $groupId", e)
-      }
-    }
-
-    // Finally, delete the group itself
     db.collection(GROUPS_COLLECTION_PATH).document(groupId).delete().await()
 
     // Delete the associated conversation (messages, polls, images)
