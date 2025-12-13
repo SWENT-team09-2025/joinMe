@@ -156,9 +156,6 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
     }
     // Delete serie
     db.collection(SERIES_COLLECTION_PATH).document(serieId).delete().await()
-
-    // Delete the associated conversation (messages, polls, images)
-    ConversationCleanupService.cleanupConversation(conversationId = serieId)
   }
 
   /**

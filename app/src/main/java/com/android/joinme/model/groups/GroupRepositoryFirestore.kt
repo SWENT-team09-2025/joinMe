@@ -20,8 +20,7 @@ const val GROUPS_COLLECTION_PATH = "groups"
 private const val F_PHOTO_URL = "photoUrl"
 
 /**
- * Firestore-backed implementation of [GroupRepository]. Manages CRUD operation for [Group]
- * objects.
+ * Firestore-backed implementation of [GroupRepository]. Manages CRUD operation for [Group] objects.
  */
 class GroupRepositoryFirestore(
     private val db: FirebaseFirestore,
