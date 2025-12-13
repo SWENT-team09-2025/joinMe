@@ -249,7 +249,7 @@ private fun ChatTopBarWithPolls(
                   onClick = onLeaveClick,
                   modifier =
                       Modifier.size(Dimens.IconSize.medium)
-                          .background(topBarColor.copy(alpha = 0.8f), CircleShape)
+                          .background(topBarColor.copy(alpha = SENDER_NAME_ALPHA), CircleShape)
                           .testTag(ChatScreenTestTags.LEAVE_BUTTON)) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,
