@@ -109,11 +109,9 @@ object ConversationCleanupService {
         // Check if this is a DM conversation involving the user
         if (conversationId.startsWith("dm_")) {
           val parts = conversationId.split("_")
-          if (parts.size == 3) {
-            // parts[0] = "dm", parts[1] = userId1, parts[2] = userId2
-            if (parts[1] == userId || parts[2] == userId) {
-              conversationsToDelete.add(conversationId)
-            }
+          // parts[0] = "dm", parts[1] = userId1, parts[2] = userId2
+          if ((parts.size == 3) && (parts[1] == userId || parts[2] == userId)) {
+            conversationsToDelete.add(conversationId)
           }
         }
       }
