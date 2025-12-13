@@ -90,7 +90,7 @@ class CalendarViewModel(
         _uiState.value.copy(
             currentMonth = month,
             currentYear = year,
-            daysWithItems = getDaysWithItemsForCurrentMonth())
+            daysWithItems = getDaysWithItemsForMonth(month, year))
   }
 
   /** Navigates to the next month. */
@@ -145,7 +145,11 @@ class CalendarViewModel(
 
         // Update UI state with filtered items and days with items
         updateItemsForSelectedDate()
-        _uiState.value = _uiState.value.copy(daysWithItems = getDaysWithItemsForCurrentMonth())
+        val currentState = _uiState.value
+        _uiState.value =
+            _uiState.value.copy(
+                daysWithItems =
+                    getDaysWithItemsForMonth(currentState.currentMonth, currentState.currentYear))
       } catch (e: Exception) {
         Log.e(TAG, "Error loading items", e)
         _uiState.value =
@@ -164,17 +168,18 @@ class CalendarViewModel(
   }
 
   /**
-   * Gets the set of day numbers in the current month that have items.
+   * Gets the set of day numbers in the specified month that have items.
    *
+   * @param month The month (0-11)
+   * @param year The year
    * @return Set of day numbers (1-31) that have events or series
    */
-  private fun getDaysWithItemsForCurrentMonth(): Set<Int> {
-    val currentState = _uiState.value
+  private fun getDaysWithItemsForMonth(month: Int, year: Int): Set<Int> {
     return cachedItems
         .mapNotNull { item ->
           val itemCalendar = Calendar.getInstance().apply { timeInMillis = item.date.toDate().time }
-          if (itemCalendar.get(Calendar.MONTH) == currentState.currentMonth &&
-              itemCalendar.get(Calendar.YEAR) == currentState.currentYear) {
+          if (itemCalendar.get(Calendar.MONTH) == month &&
+              itemCalendar.get(Calendar.YEAR) == year) {
             itemCalendar.get(Calendar.DAY_OF_MONTH)
           } else null
         }

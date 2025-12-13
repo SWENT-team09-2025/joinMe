@@ -29,7 +29,7 @@ object EventsRepositoryProvider {
    * @param context Application context (required for production, optional for tests)
    * @return EventsRepository implementation
    */
-  private fun getRepository(context: Context? = null): EventsRepository {
+  fun getRepository(context: Context? = null): EventsRepository {
     // Test environment: use local repository
     if (TestEnvironmentDetector.isTestEnvironment()) return localRepo
 

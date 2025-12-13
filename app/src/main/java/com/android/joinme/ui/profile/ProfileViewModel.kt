@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.authentification.AuthRepository
 import com.android.joinme.model.authentification.AuthRepositoryProvider
+import com.android.joinme.model.event.OfflineException
+import com.android.joinme.model.invitation.InvitationRepositoryProvider
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import com.android.joinme.model.profile.ProfileRepositoryProvider
@@ -49,6 +51,8 @@ class ProfileViewModel(
     private val authRepository: AuthRepository = AuthRepositoryProvider.repository,
 ) : ViewModel() {
 
+  val invitationalRepo = InvitationRepositoryProvider.repository
+
   private val _profile = MutableStateFlow<Profile?>(null)
   val profile: StateFlow<Profile?> = _profile.asStateFlow()
 
@@ -64,7 +68,6 @@ class ProfileViewModel(
 
   private val _photoUploadError = MutableStateFlow<String?>(null)
   val photoUploadError: StateFlow<String?> = _photoUploadError.asStateFlow()
-
   /**
    * Loads a user profile by UID, with automatic profile creation if it doesn't exist.
    *
@@ -158,7 +161,6 @@ class ProfileViewModel(
 
   /** Handles general errors during profile loading. */
   private fun handleLoadError(e: Exception) {
-    Log.e(TAG, "Error loading profile", e)
     _profile.value = null
     _error.value = "Failed to load profile: ${e.message}"
   }
@@ -192,6 +194,10 @@ class ProfileViewModel(
         val errorMsg = ERROR_CONNECTION_TIMEOUT
         _error.value = errorMsg
         onError(errorMsg)
+      } catch (_: OfflineException) {
+        // This operation cannot be done offline just displaying a TOAST is good
+        onError(ERROR_OFFLINE_OPERATION)
+        _isLoading.value = false
       } catch (e: Exception) {
         Log.e(TAG, "Error creating/updating profile", e)
         val errorMsg = ERROR_SAVE_PROFILE_FAILED.format(e.message)
@@ -226,7 +232,6 @@ class ProfileViewModel(
     val currentProfile = _profile.value
     if (currentProfile == null) {
       val errorMsg = "No profile loaded"
-      Log.e(TAG, errorMsg)
       _photoUploadError.value = errorMsg
       onError(errorMsg)
       return
@@ -237,16 +242,12 @@ class ProfileViewModel(
         _isUploadingPhoto.value = true
         _photoUploadError.value = null
 
-        Log.d(TAG, "Starting photo upload for user ${currentProfile.uid}")
-
         // Upload photo and get download URL
         // The repository handles image processing, upload, and Firestore update
         val downloadUrl =
             withTimeout(30000L) { // 30 second timeout for upload
               repository.uploadProfilePhoto(context, currentProfile.uid, imageUri)
             }
-
-        Log.d(TAG, "Photo uploaded successfully: $downloadUrl")
 
         // Update local profile state with new photo URL
         val updatedProfile = currentProfile.copy(photoUrl = downloadUrl)
@@ -284,7 +285,6 @@ class ProfileViewModel(
     val currentProfile = _profile.value
     if (currentProfile == null) {
       val errorMsg = "No profile loaded"
-      Log.e(TAG, errorMsg)
       _photoUploadError.value = errorMsg
       onError(errorMsg)
       return
@@ -295,11 +295,7 @@ class ProfileViewModel(
         _isUploadingPhoto.value = true
         _photoUploadError.value = null
 
-        Log.d(TAG, "Deleting photo for user ${currentProfile.uid}")
-
         withTimeout(10000L) { repository.deleteProfilePhoto(currentProfile.uid) }
-
-        Log.d(TAG, "Photo deleted successfully")
 
         // Update local profile state to remove photo URL
         val updatedProfile = currentProfile.copy(photoUrl = null)
@@ -337,7 +333,8 @@ class ProfileViewModel(
         _error.value = null
 
         withTimeout(10000L) { repository.deleteProfile(uid) }
-
+        val invitationsId = invitationalRepo.getInvitationsByUser(userId = uid).getOrNull()
+        invitationsId?.forEach { invitationalRepo.revokeInvitation(it.token) }
         _profile.value = null
       } catch (e: TimeoutCancellationException) {
         Log.e(TAG, "Timeout deleting profile", e)
@@ -451,5 +448,6 @@ class ProfileViewModel(
     private const val TAG = "ProfileViewModel"
     private const val ERROR_CONNECTION_TIMEOUT = "Connection timeout. Please try again."
     private const val ERROR_SAVE_PROFILE_FAILED = "Failed to save profile: %s"
+    private const val ERROR_OFFLINE_OPERATION = "This operation requires an internet connection"
   }
 }
