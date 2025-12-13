@@ -70,6 +70,11 @@ import com.android.joinme.ui.theme.getUserColor
 import com.android.joinme.ui.theme.outlinedTextField
 import kotlinx.coroutines.launch
 
+private const val SENDER_NAME_ALPHA = 0.8f
+private const val TIMESTAMP_ALPHA = 0.7f
+private const val MESSAGE_INPUT_MAX_LINES = 4
+private const val TIMESTAMP_FORMAT = "HH:mm"
+
 /**
  * Data class representing an item that can appear in the chat timeline. This allows interleaving
  * messages and polls based on their timestamps.
@@ -412,7 +417,7 @@ private fun MessageItemWithPolls(
                       text = message.senderName,
                       style = MaterialTheme.typography.labelSmall,
                       fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                      color = onBubbleColor.copy(alpha = 0.8f))
+                      color = onBubbleColor.copy(alpha = SENDER_NAME_ALPHA))
                   Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
                 }
 
@@ -426,7 +431,7 @@ private fun MessageItemWithPolls(
                 Text(
                     text = formatMessageTimestamp(message.timestamp),
                     style = MaterialTheme.typography.labelSmall,
-                    color = onBubbleColor.copy(alpha = 0.7f))
+                    color = onBubbleColor.copy(alpha = TIMESTAMP_ALPHA))
               }
             }
 
@@ -489,7 +494,7 @@ private fun MessageInputWithPolls(
               },
               shape = RoundedCornerShape(Dimens.CornerRadius.pill),
               colors = MaterialTheme.customColors.outlinedTextField(),
-              maxLines = 4)
+              maxLines = MESSAGE_INPUT_MAX_LINES)
 
           // Send/Mic button
           if (text.isEmpty()) {
@@ -498,7 +503,7 @@ private fun MessageInputWithPolls(
                 modifier =
                     Modifier.size(Dimens.TouchTarget.minimum)
                         .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                        .testTag("micButton")) {
+                        .testTag(ChatScreenTestTags.MIC_BUTTON)) {
                   Icon(
                       imageVector = Icons.Default.Mic,
                       contentDescription = stringResource(R.string.record_audio),
@@ -602,6 +607,6 @@ private fun AttachmentOptionWithPolls(
 }
 
 private fun formatMessageTimestamp(timestamp: Long): String {
-  val dateFormat = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+  val dateFormat = java.text.SimpleDateFormat(TIMESTAMP_FORMAT, java.util.Locale.getDefault())
   return dateFormat.format(java.util.Date(timestamp))
 }

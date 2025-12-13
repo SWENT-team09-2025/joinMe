@@ -137,6 +137,7 @@ object ChatScreenTestTags {
   const val MESSAGE_LIST = "messageList"
   const val MESSAGE_INPUT = "messageInput"
   const val SEND_BUTTON = "sendButton"
+  const val MIC_BUTTON = "micButton"
   const val ATTACHMENT_BUTTON = "attachmentButton"
   const val ATTACHMENT_MENU = "attachmentMenu"
   const val ATTACHMENT_PHOTO = "attachmentPhoto"
