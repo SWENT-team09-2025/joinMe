@@ -6,8 +6,11 @@ import android.graphics.Path
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.createBitmap
-import androidx.core.graphics.toColorInt
 import com.android.joinme.ui.theme.Dimens
+import com.android.joinme.ui.theme.badgeMarkerColor
+import com.android.joinme.ui.theme.black
+import com.android.joinme.ui.theme.gray
+import com.android.joinme.ui.theme.white
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 
@@ -17,7 +20,6 @@ private const val CIRCLE_MARKER_SIZE = 48
 private const val LOW_SATURATION_THRESHOLD = 0.1f
 private const val LOW_VALUE_THRESHOLD = 0.1f
 
-private const val BADGE_MARKER_COLOR = "#2196F3"
 private const val MAX_NUMBER_ELEMENTS_COUNTER = 99
 private const val MAX_NUMBER_ELEMENTS_COUNTER_TEXT = "99+"
 private const val BADGE_SIZE = 80
@@ -44,7 +46,7 @@ internal fun createCircleMarker(color: Color): BitmapDescriptor {
   // Draw white border
   val borderPaint = Paint()
   borderPaint.isAntiAlias = true
-  borderPaint.color = android.graphics.Color.WHITE
+  borderPaint.color = white.toArgb()
   borderPaint.style = Paint.Style.STROKE
   borderPaint.strokeWidth = 4f
   canvas.drawCircle(radius, radius, radius - 4f, borderPaint)
@@ -78,7 +80,7 @@ internal fun createMarkerForColor(color: Color): BitmapDescriptor {
     // Create the pin shape with black paint
     val blackPaint = Paint()
     blackPaint.isAntiAlias = true
-    blackPaint.color = android.graphics.Color.BLACK
+    blackPaint.color = black.toArgb()
     blackPaint.style = Paint.Style.FILL
 
     // Draw the pin circle (top part)
@@ -98,7 +100,7 @@ internal fun createMarkerForColor(color: Color): BitmapDescriptor {
     // Draw white circle in the middle
     val whitePaint = Paint()
     whitePaint.isAntiAlias = true
-    whitePaint.color = android.graphics.Color.GRAY
+    whitePaint.color = gray.toArgb()
     whitePaint.style = Paint.Style.FILL
     canvas.drawCircle(width / 2f, circleRadius + 4f, circleRadius / 2.5f, whitePaint)
 
@@ -123,7 +125,7 @@ internal fun createBadgeMarker(count: Int): BitmapDescriptor {
   val backgroundPaint =
       Paint().apply {
         isAntiAlias = true
-        color = BADGE_MARKER_COLOR.toColorInt()
+        color = badgeMarkerColor.toArgb()
         style = Paint.Style.FILL
       }
   val radius = BADGE_SIZE / 2f
@@ -133,7 +135,7 @@ internal fun createBadgeMarker(count: Int): BitmapDescriptor {
   val borderPaint =
       Paint().apply {
         isAntiAlias = true
-        color = android.graphics.Color.WHITE
+        color = white.toArgb()
         style = Paint.Style.STROKE
         strokeWidth = 6f
       }
@@ -143,7 +145,7 @@ internal fun createBadgeMarker(count: Int): BitmapDescriptor {
   val textPaint =
       Paint().apply {
         isAntiAlias = true
-        color = android.graphics.Color.WHITE
+        color = white.toArgb()
         textAlign = Paint.Align.CENTER
         textSize = if (count > MAX_NUMBER_ELEMENTS_COUNTER) 26f else 32f
         isFakeBoldText = true
