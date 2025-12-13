@@ -1,0 +1,120 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user owns the resource
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Helper function to check if user is a member of a group
+    function isGroupMember(groupId) {
+      return isAuthenticated() &&
+             request.auth.uid in firestore.get(/databases/(default)/documents/groups/$(groupId)).data.memberIds;
+    }
+
+    // Helper function to check if user is the group owner
+    function isGroupOwner(groupId) {
+      return isAuthenticated() &&
+             request.auth.uid == firestore.get(/databases/(default)/documents/groups/$(groupId)).data.ownerId;
+    }
+
+    // Helper function to check if user is an event participant
+    function isEventParticipant(eventId) {
+      return isAuthenticated() &&
+             request.auth.uid in firestore.get(/databases/(default)/documents/events/$(eventId)).data.participants;
+    }
+
+    // Helper function to validate image file
+    function isValidImage() {
+      return request.resource.size < 10 * 1024 * 1024 && // Max 10MB
+             request.resource.contentType.matches('image/.*'); // Must be an image
+    }
+
+    // =============================================================================
+    // USER PROFILE PHOTOS
+    // Path: users/{userId}/profile.jpg
+    // =============================================================================
+    match /users/{userId}/profile.jpg {
+      // Only the user can read their own profile photo
+      // Public read access could be added here if needed
+      allow read: if isAuthenticated();
+
+      // Only the user can upload/update their own profile photo
+      allow write: if isOwner(userId) && isValidImage();
+
+      // Only the user can delete their own profile photo
+      allow delete: if isOwner(userId);
+    }
+
+    // Catch-all for any other files in users directory
+    match /users/{userId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId) && isValidImage();
+      allow delete: if isOwner(userId);
+    }
+
+    // =============================================================================
+    // GROUP PHOTOS
+    // Path: groups/{groupId}/group.jpg
+    // =============================================================================
+    match /groups/{groupId}/group.jpg {
+      // Group members can read the group photo
+      allow read: if isGroupMember(groupId);
+
+      // Only the group owner can upload/update the group photo
+      allow write: if isGroupOwner(groupId) && isValidImage();
+
+      // Only the group owner can delete the group photo
+      allow delete: if isGroupOwner(groupId);
+    }
+
+    // Catch-all for any other files in groups directory
+    match /groups/{groupId}/{allPaths=**} {
+      allow read: if isGroupMember(groupId);
+      allow write: if isGroupOwner(groupId) && isValidImage();
+      allow delete: if isGroupOwner(groupId);
+    }
+
+    // =============================================================================
+    // CHAT IMAGES (for both group and event conversations)
+    // Path: conversations/{conversationId}/images/{imageId}.jpg
+    // =============================================================================
+    match /conversations/{conversationId}/images/{imageId} {
+      // Allow read if user is a participant of the group or event
+      allow read: if isAuthenticated() && (
+        isGroupMember(conversationId) ||
+        isEventParticipant(conversationId)
+      );
+
+      // Allow write if user is a participant of the group or event
+      allow write: if isAuthenticated() &&
+                      isValidImage() && (
+                        isGroupMember(conversationId) ||
+                        isEventParticipant(conversationId)
+                      );
+
+      // Allow delete if user is a participant
+      // Note: In a real app, you might want to restrict deletion to message sender only
+      allow delete: if isAuthenticated() && (
+        isGroupMember(conversationId) ||
+        isEventParticipant(conversationId)
+      );
+    }
+
+    // =============================================================================
+    // DEFAULT DENY
+    // =============================================================================
+    // Deny all other paths by default
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
