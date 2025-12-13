@@ -80,7 +80,6 @@ class GroupRepositoryFirestoreTest {
     mockStorage = mockk(relaxed = true)
     mockStorageRef = mockk(relaxed = true)
 
-
     // Mock Firebase Realtime Database and Storage for ConversationCleanupService
     mockkStatic(FirebaseDatabase::class)
     mockkStatic(FirebaseStorage::class)
