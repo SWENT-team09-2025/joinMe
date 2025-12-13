@@ -84,6 +84,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import com.android.joinme.R
+import com.android.joinme.model.chat.ChatListItem
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
 import com.android.joinme.model.map.Location
@@ -452,6 +453,7 @@ private fun ChatContent(
               },
               onImageClick = { imageUrl -> fullScreenImageUrl = imageUrl },
               onLocationClick = { location, senderId -> onNavigateToMap(location, senderId) },
+              chatColor = chatColor,
               modifier = Modifier.weight(1f))
 
           // Message input
@@ -519,6 +521,7 @@ private fun ChatContent(
  * @param onMessageLongPress Callback when a message is long-pressed
  * @param onImageClick Callback when an image message is clicked
  * @param onLocationClick Callback when a location message is clicked
+ * @param chatColor The chat color for the date headers (matches topbar)
  * @param modifier Modifier for the LazyColumn
  */
 @Composable
@@ -531,8 +534,12 @@ private fun MessageList(
     onMessageLongPress: (Message) -> Unit,
     onImageClick: (String) -> Unit,
     onLocationClick: (Location, String) -> Unit,
+    chatColor: Color,
     modifier: Modifier = Modifier
 ) {
+  // Group messages by date and insert date headers
+  val listItems = remember(messages) { groupMessagesByDate(messages) }
+
   LazyColumn(
       modifier = modifier.fillMaxWidth().testTag(ChatScreenTestTags.MESSAGE_LIST),
       state = listState,
@@ -550,21 +557,36 @@ private fun MessageList(
             }
           }
         } else {
-          items(messages, key = { it.id }) { message ->
-            // Get user-specific color for this message sender
-            val userColors = getUserColor(message.senderId)
-            MessageItem(
-                message = message,
-                isCurrentUser = message.senderId == currentUserId,
-                senderPhotoUrl = senderProfiles[message.senderId]?.photoUrl,
-                currentUserPhotoUrl = senderProfiles[currentUserId]?.photoUrl,
-                bubbleColor = userColors.first,
-                onBubbleColor = userColors.second,
-                totalUsersInChat = totalParticipants,
-                onLongPress = { onMessageLongPress(message) },
-                onImageClick = onImageClick,
-                onLocationClick = onLocationClick)
-          }
+          items(
+              listItems,
+              key = { item ->
+                when (item) {
+                  is ChatListItem.MessageItem -> item.message.id
+                  is ChatListItem.DateHeader -> "date_${item.timestamp}"
+                }
+              }) { item ->
+                when (item) {
+                  is ChatListItem.DateHeader -> {
+                    DateHeader(timestamp = item.timestamp, chatColor = chatColor)
+                  }
+                  is ChatListItem.MessageItem -> {
+                    val message = item.message
+                    // Get user-specific color for this message sender
+                    val userColors = getUserColor(message.senderId)
+                    MessageItem(
+                        message = message,
+                        isCurrentUser = message.senderId == currentUserId,
+                        senderPhotoUrl = senderProfiles[message.senderId]?.photoUrl,
+                        currentUserPhotoUrl = senderProfiles[currentUserId]?.photoUrl,
+                        bubbleColor = userColors.first,
+                        onBubbleColor = userColors.second,
+                        totalUsersInChat = totalParticipants,
+                        onLongPress = { onMessageLongPress(message) },
+                        onImageClick = onImageClick,
+                        onLocationClick = onLocationClick)
+                  }
+                }
+              }
         }
       }
 }
@@ -602,6 +624,43 @@ private data class DialogCallbacks(
     val onDismissDeleteDialog: () -> Unit,
     val onDismissWhoReadDialog: () -> Unit
 )
+
+/**
+ * Date header component displaying a clean divider with centered date text.
+ *
+ * Shows a subtle horizontal line with the date centered on top, separating messages from different
+ * days. The date text uses the chat color to match the topbar.
+ *
+ * @param timestamp The timestamp representing the start of the day
+ * @param chatColor The color to use for the date text (matches topbar)
+ */
+@Composable
+private fun DateHeader(timestamp: Long, chatColor: Color) {
+  val context = LocalContext.current
+  val dateText = formatDateHeader(context, timestamp)
+
+  Box(
+      modifier = Modifier.fillMaxWidth().padding(vertical = Dimens.Spacing.medium),
+      contentAlignment = Alignment.Center) {
+        // Horizontal divider line
+        androidx.compose.material3.Divider(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.Padding.large),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+            thickness = Dimens.BorderWidth.thin)
+
+        // Date text centered on white background
+        Surface(
+            shape = RoundedCornerShape(Dimens.CornerRadius.small),
+            color = MaterialTheme.colorScheme.background) {
+              Text(
+                  text = dateText,
+                  style = MaterialTheme.typography.labelMedium,
+                  fontWeight = FontWeight.SemiBold,
+                  color = chatColor,
+                  modifier = Modifier.padding(horizontal = Dimens.Padding.medium))
+            }
+      }
+}
 
 /**
  * Manages all message interaction overlays (context menu and dialogs).

@@ -6,6 +6,7 @@ import android.net.Uri
 import android.util.Log
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.utils.ImageProcessor
+import com.android.joinme.util.TestEnvironmentDetector
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.DocumentSnapshot
@@ -44,13 +45,8 @@ class GroupRepositoryFirestore(
         if (firebaseUserId != null) {
           firebaseUserId
         } else {
-          // Detect test environment
-          val isTestEnv =
-              android.os.Build.FINGERPRINT == "robolectric" ||
-                  android.os.Debug.isDebuggerConnected() ||
-                  System.getProperty("IS_TEST_ENV") == "true"
           // Return test user ID in test environments only if Firebase auth is not available
-          if (isTestEnv) "test-user-id"
+          if (TestEnvironmentDetector.shouldUseTestUserId()) TestEnvironmentDetector.getTestUserId()
           else throw Exception("GroupRepositoryFirestore: User not logged in.")
         }
 

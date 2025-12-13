@@ -9,6 +9,7 @@ import com.android.joinme.model.event.EventType
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.model.groups.GroupRepositoryProvider
+import com.android.joinme.util.TestEnvironmentDetector
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -159,15 +160,11 @@ class CreateGroupViewModel(
           state.copy(isLoading = true, errorMsg = null, createdGroupId = null, photoError = null)
 
       try {
-        val isTestEnv =
-            android.os.Build.FINGERPRINT == "robolectric" ||
-                android.os.Debug.isDebuggerConnected() ||
-                System.getProperty("IS_TEST_ENV") == "true"
         val uid =
-            if (isTestEnv) "test-user-id"
-            else
-                Firebase.auth.currentUser?.uid
-                    ?: throw IllegalStateException("User not authenticated")
+            Firebase.auth.currentUser?.uid
+                ?: if (TestEnvironmentDetector.shouldUseTestUserId())
+                    TestEnvironmentDetector.getTestUserId()
+                else error("User not authenticated")
 
         val groupId = repository.getNewGroupId()
 

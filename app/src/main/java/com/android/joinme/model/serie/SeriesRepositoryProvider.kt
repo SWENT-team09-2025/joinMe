@@ -2,6 +2,7 @@ package com.android.joinme.model.serie
 
 import android.content.Context
 import com.android.joinme.network.NetworkMonitor
+import com.android.joinme.util.TestEnvironmentDetector
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.firestore
@@ -31,7 +32,7 @@ object SeriesRepositoryProvider {
    */
   fun getRepository(context: Context? = null): SeriesRepository {
     // Test environment: use local repository
-    if (isTestEnvironment()) return _localRepository
+    if (TestEnvironmentDetector.isTestEnvironment()) return _localRepository
 
     // Production: use cached repository with offline support
     requireNotNull(context) { "Context is required for production repository" }
@@ -46,7 +47,7 @@ object SeriesRepositoryProvider {
    */
   val repository: SeriesRepository
     get() {
-      if (isTestEnvironment()) return _localRepository
+      if (TestEnvironmentDetector.isTestEnvironment()) return _localRepository
 
       // Try to get context from FirebaseApp
       val context =
@@ -73,23 +74,6 @@ object SeriesRepositoryProvider {
       _cachedRepository = SeriesRepositoryCached(context, firestore, networkMonitor)
     }
     return _cachedRepository!!
-  }
-
-  /**
-   * Checks if the current environment is a test environment.
-   *
-   * @return true if running in a test environment, false otherwise
-   */
-  private fun isTestEnvironment(): Boolean {
-    return android.os.Build.FINGERPRINT == "robolectric" ||
-        android.os.Debug.isDebuggerConnected() ||
-        System.getProperty("IS_TEST_ENV") == "true" ||
-        try {
-          Class.forName("androidx.test.runner.AndroidJUnitRunner")
-          true
-        } catch (e: ClassNotFoundException) {
-          false
-        }
   }
 
   /** For testing only - allows resetting the singleton state. */

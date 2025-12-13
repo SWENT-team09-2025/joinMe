@@ -17,7 +17,7 @@ enum class InvitationType {
    */
   companion object {
     fun fromString(value: String): InvitationType? {
-      return values().find { it.name == value.uppercase() }
+      return InvitationType.entries.find { it.name == value.uppercase() }
     }
   }
 

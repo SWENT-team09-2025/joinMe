@@ -2,6 +2,7 @@ package com.android.joinme.model.event
 
 import android.content.Context
 import com.android.joinme.network.NetworkMonitor
+import com.android.joinme.util.TestEnvironmentDetector
 import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -30,7 +31,7 @@ object EventsRepositoryProvider {
    */
   fun getRepository(context: Context? = null): EventsRepository {
     // Test environment: use local repository
-    if (isTestEnvironment()) return localRepo
+    if (TestEnvironmentDetector.isTestEnvironment()) return localRepo
 
     // Production: use cached repository with offline support
     requireNotNull(context) { "Context is required for production repository" }
@@ -45,7 +46,7 @@ object EventsRepositoryProvider {
    * @return EventsRepository implementation
    */
   fun getRepository(isOnline: Boolean, context: Context? = null): EventsRepository {
-    if (isTestEnvironment()) return localRepo
+    if (TestEnvironmentDetector.isTestEnvironment()) return localRepo
 
     // Try to get context from Firebase if not provided
     val ctx =
@@ -77,23 +78,6 @@ object EventsRepositoryProvider {
       cachedRepo = EventsRepositoryCached(context, firestore, networkMonitor)
     }
     return cachedRepo!!
-  }
-
-  /**
-   * Checks if the current environment is a test environment.
-   *
-   * @return true if running in a test environment, false otherwise
-   */
-  private fun isTestEnvironment(): Boolean {
-    return android.os.Build.FINGERPRINT == "robolectric" ||
-        android.os.Debug.isDebuggerConnected() ||
-        System.getProperty("IS_TEST_ENV") == "true" ||
-        try {
-          Class.forName("androidx.test.runner.AndroidJUnitRunner")
-          true
-        } catch (e: ClassNotFoundException) {
-          false
-        }
   }
 
   /** For testing only - allows resetting the singleton state. */
