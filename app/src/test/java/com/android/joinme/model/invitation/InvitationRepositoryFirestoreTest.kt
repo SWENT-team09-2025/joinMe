@@ -59,7 +59,7 @@ class InvitationRepositoryFirestoreTest {
             type = InvitationType.GROUP,
             targetId = testTargetId,
             createdBy = testCreatedBy,
-            expiresInDays = 7)
+            expiresInDays = 7.0)
 
     assertTrue(result.isSuccess)
     val token = result.getOrNull()

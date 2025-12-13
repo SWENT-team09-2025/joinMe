@@ -17,7 +17,7 @@ interface InvitationsRepository {
       type: InvitationType,
       targetId: String,
       createdBy: String,
-      expiresInDays: Int? = null
+      expiresInDays: Double? = null
   ): Result<String>
 
   /**

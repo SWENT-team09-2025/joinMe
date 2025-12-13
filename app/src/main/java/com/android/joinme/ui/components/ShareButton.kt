@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 const val SHARE_SHEET_TYPE = "text/plain"
-const val SEVEN_DAYS = 7
+const val SEVEN_DAYS = 7.0
 
 /** Test tags for ShareButton UI elements. */
 object ShareButtonTestTags {
@@ -47,7 +47,7 @@ fun ShareButton(
     invitationType: InvitationType,
     targetId: String,
     createdBy: String,
-    expiresInDays: Int? = SEVEN_DAYS,
+    expiresInDays: Double? = SEVEN_DAYS,
     onError: (String) -> Unit = {}
 ) {
   val context = LocalContext.current
@@ -81,7 +81,7 @@ suspend fun shareInvitation(
     invitationType: InvitationType,
     targetId: String,
     createdBy: String,
-    expiresInDays: Int? = SEVEN_DAYS,
+    expiresInDays: Double? = SEVEN_DAYS,
     context: Context,
     onError: (String) -> Unit = {}
 ) {
