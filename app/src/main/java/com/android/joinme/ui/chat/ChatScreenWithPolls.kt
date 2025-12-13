@@ -109,6 +109,28 @@ private data class PollCallbacks(
     val onDeletePoll: (String) -> Unit
 )
 
+/** Data displayed in the chat content area. */
+private data class ChatContentData(
+    val messages: List<Message>,
+    val polls: List<Poll>,
+    val senderProfiles: Map<String, Profile>,
+    val voterProfiles: Map<String, Profile>
+)
+
+/** All action callbacks for chat content. */
+private data class ChatContentActions(
+    val onSendMessage: (String) -> Unit,
+    val pollCallbacks: PollCallbacks,
+    val onOpenPollCreation: () -> Unit
+)
+
+/** Styling configuration for chat content. */
+private data class ChatContentStyling(
+    val paddingValues: PaddingValues,
+    val chatColor: Color,
+    val onChatColor: Color
+)
+
 /**
  * Enhanced chat screen that includes poll functionality.
  *
@@ -195,19 +217,25 @@ fun ChatScreenWithPolls(
                   onReopenPoll = { pollId -> pollViewModel.reopenPoll(pollId) },
                   onDeletePoll = { pollId -> pollViewModel.deletePoll(pollId) })
           ChatContentWithPolls(
-              messages = chatUiState.messages,
-              polls = pollsState.polls,
+              data =
+                  ChatContentData(
+                      messages = chatUiState.messages,
+                      polls = pollsState.polls,
+                      senderProfiles = chatUiState.senderProfiles,
+                      voterProfiles = pollsState.voterProfiles),
               currentUserId = config.currentUserId,
-              senderProfiles = chatUiState.senderProfiles,
-              voterProfiles = pollsState.voterProfiles,
-              onSendMessage = { content ->
-                chatViewModel.sendMessage(content, config.currentUserName)
-              },
-              pollCallbacks = pollCallbacks,
-              onOpenPollCreation = { showPollCreationSheet = true },
-              paddingValues = paddingValues,
-              chatColor = effectiveChatColor,
-              onChatColor = effectiveOnChatColor)
+              actions =
+                  ChatContentActions(
+                      onSendMessage = { content ->
+                        chatViewModel.sendMessage(content, config.currentUserName)
+                      },
+                      pollCallbacks = pollCallbacks,
+                      onOpenPollCreation = { showPollCreationSheet = true }),
+              styling =
+                  ChatContentStyling(
+                      paddingValues = paddingValues,
+                      chatColor = effectiveChatColor,
+                      onChatColor = effectiveOnChatColor))
         }
       }
 
@@ -264,22 +292,15 @@ private fun ChatTopBarWithPolls(
 /** Chat content with interleaved messages and polls. */
 @Composable
 private fun ChatContentWithPolls(
-    messages: List<Message>,
-    polls: List<Poll>,
+    data: ChatContentData,
     currentUserId: String,
-    senderProfiles: Map<String, Profile>,
-    voterProfiles: Map<String, Profile>,
-    onSendMessage: (String) -> Unit,
-    pollCallbacks: PollCallbacks,
-    onOpenPollCreation: () -> Unit,
-    paddingValues: PaddingValues,
-    chatColor: Color,
-    onChatColor: Color
+    actions: ChatContentActions,
+    styling: ChatContentStyling
 ) {
   var messageText by remember { mutableStateOf("") }
   val listState = rememberLazyListState()
 
-  val timelineItems = rememberTimelineItems(messages, polls)
+  val timelineItems = rememberTimelineItems(data.messages, data.polls)
 
   // Auto-scroll to bottom when new items arrive
   LaunchedEffect(timelineItems.size) {
@@ -288,16 +309,16 @@ private fun ChatContentWithPolls(
     }
   }
 
-  Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+  Box(modifier = Modifier.fillMaxSize().padding(styling.paddingValues)) {
     Column(modifier = Modifier.fillMaxSize()) {
       // Timeline list (messages and polls)
       ChatTimeline(
           timelineItems = timelineItems,
           listState = listState,
           currentUserId = currentUserId,
-          senderProfiles = senderProfiles,
-          voterProfiles = voterProfiles,
-          pollCallbacks = pollCallbacks,
+          senderProfiles = data.senderProfiles,
+          voterProfiles = data.voterProfiles,
+          pollCallbacks = actions.pollCallbacks,
           modifier = Modifier.weight(1f))
 
       // Message input with poll support
@@ -306,13 +327,13 @@ private fun ChatContentWithPolls(
           onTextChange = { messageText = it },
           onSendClick = {
             if (messageText.isNotBlank()) {
-              onSendMessage(messageText)
+              actions.onSendMessage(messageText)
               messageText = ""
             }
           },
-          onOpenPollCreation = onOpenPollCreation,
-          sendButtonColor = chatColor,
-          onSendButtonColor = onChatColor)
+          onOpenPollCreation = actions.onOpenPollCreation,
+          sendButtonColor = styling.chatColor,
+          onSendButtonColor = styling.onChatColor)
     }
   }
 }
