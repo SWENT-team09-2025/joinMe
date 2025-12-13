@@ -68,6 +68,14 @@ class ProfileViewModel(
 
   private val _photoUploadError = MutableStateFlow<String?>(null)
   val photoUploadError: StateFlow<String?> = _photoUploadError.asStateFlow()
+
+  // Pending photo changes (deferred until save)
+  private val _pendingPhotoUri = MutableStateFlow<Uri?>(null)
+  val pendingPhotoUri: StateFlow<Uri?> = _pendingPhotoUri.asStateFlow()
+
+  private val _pendingPhotoDelete = MutableStateFlow(false)
+  val pendingPhotoDelete: StateFlow<Boolean> = _pendingPhotoDelete.asStateFlow()
+
   /**
    * Loads a user profile by UID, with automatic profile creation if it doesn't exist.
    *
@@ -98,7 +106,7 @@ class ProfileViewModel(
         val fetched = fetchProfileWithTimeout(uid)
         _profile.value = fetched ?: bootstrapNewProfile(uid)
       } catch (e: TimeoutCancellationException) {
-        handleLoadTimeout(e)
+        handleLoadTimeout()
       } catch (e: Exception) {
         handleLoadError(e)
       } finally {
@@ -153,8 +161,7 @@ class ProfileViewModel(
   }
 
   /** Handles timeout during profile loading. */
-  private fun handleLoadTimeout(e: TimeoutCancellationException) {
-    Log.e(TAG, "Timeout loading profile", e)
+  private fun handleLoadTimeout() {
     _profile.value = null
     _error.value = "Connection timeout. Please check your internet connection and try again."
   }
@@ -171,12 +178,18 @@ class ProfileViewModel(
    * This method persists profile changes and updates the local state upon success. The operation
    * has a 10-second timeout to prevent indefinite waiting.
    *
+   * If there are pending photo changes (upload or delete), they are applied here after the profile
+   * update. This ensures photo operations only persist when the user clicks "Save Changes".
+   *
    * @param profile The [Profile] object to create or update.
+   * @param context Android context needed for photo upload (image processing). Required if there's
+   *   a pending photo upload.
    * @param onSuccess Callback invoked after successful profile update.
    * @param onError Callback invoked if update fails, receives error message.
    */
   fun createOrUpdateProfile(
       profile: Profile,
+      context: Context? = null,
       onSuccess: () -> Unit = {},
       onError: (String) -> Unit = {}
   ) {
@@ -187,10 +200,50 @@ class ProfileViewModel(
 
         withTimeout(10000L) { repository.createOrUpdateProfile(profile) }
 
-        _profile.value = profile
+        // Handle pending photo changes
+        var photoError: String? = null
+        var updatedProfile = profile
+        when {
+          // Upload pending photo if selected
+          _pendingPhotoUri.value != null && context != null -> {
+            try {
+              _isUploadingPhoto.value = true
+
+              val downloadUrl =
+                  withTimeout(30000L) {
+                    repository.uploadProfilePhoto(context, profile.uid, _pendingPhotoUri.value!!)
+                  }
+
+              updatedProfile = profile.copy(photoUrl = downloadUrl)
+              _isUploadingPhoto.value = false
+            } catch (e: Exception) {
+              photoError = ERROR_PHOTO_UPLOAD_FAILED.format(e.message)
+              _isUploadingPhoto.value = false
+            }
+          }
+          // Delete photo if marked for deletion
+          _pendingPhotoDelete.value -> {
+            try {
+              _isUploadingPhoto.value = true
+
+              withTimeout(10000L) { repository.deleteProfilePhoto(profile.uid) }
+
+              updatedProfile = profile.copy(photoUrl = null)
+              _isUploadingPhoto.value = false
+            } catch (e: Exception) {
+              photoError = ERROR_PHOTO_DELETE_FAILED.format(e.message)
+              _isUploadingPhoto.value = false
+            }
+          }
+        }
+
+        _profile.value = updatedProfile
+        _pendingPhotoUri.value = null
+        _pendingPhotoDelete.value = false
+        _photoUploadError.value = photoError
+
         onSuccess()
       } catch (e: TimeoutCancellationException) {
-        Log.e(TAG, "Timeout updating profile", e)
         val errorMsg = ERROR_CONNECTION_TIMEOUT
         _error.value = errorMsg
         onError(errorMsg)
@@ -199,7 +252,6 @@ class ProfileViewModel(
         onError(ERROR_OFFLINE_OPERATION)
         _isLoading.value = false
       } catch (e: Exception) {
-        Log.e(TAG, "Error creating/updating profile", e)
         val errorMsg = ERROR_SAVE_PROFILE_FAILED.format(e.message)
         _error.value = errorMsg
         onError(errorMsg)
@@ -210,112 +262,44 @@ class ProfileViewModel(
   }
 
   /**
-   * Uploads a profile photo for the current user.
+   * Sets the pending photo URI for local preview.
    *
-   * This method handles the complete photo upload flow:
-   * 1. Validates that a profile is loaded
-   * 2. Uploads the photo to Firebase Storage (with compression and orientation correction)
-   * 3. Updates the profile's photoUrl in Firestore
-   * 4. Refreshes the local profile state
+   * The photo is NOT uploaded immediately - it's stored locally and displayed as a preview. The
+   * actual upload happens only when createOrUpdateProfile() is called with the context parameter.
+   * This prevents persisting changes until the user clicks "Save Changes".
    *
-   * @param context Android context needed for image processing
-   * @param imageUri The URI of the image to upload
-   * @param onSuccess Callback invoked after successful upload
-   * @param onError Callback invoked if upload fails, receives error message
+   * @param uri The URI of the selected photo
    */
-  fun uploadProfilePhoto(
-      context: Context,
-      imageUri: Uri,
-      onSuccess: () -> Unit = {},
-      onError: (String) -> Unit = {}
-  ) {
-    val currentProfile = _profile.value
-    if (currentProfile == null) {
-      val errorMsg = "No profile loaded"
-      _photoUploadError.value = errorMsg
-      onError(errorMsg)
-      return
-    }
-
-    viewModelScope.launch {
-      try {
-        _isUploadingPhoto.value = true
-        _photoUploadError.value = null
-
-        // Upload photo and get download URL
-        // The repository handles image processing, upload, and Firestore update
-        val downloadUrl =
-            withTimeout(30000L) { // 30 second timeout for upload
-              repository.uploadProfilePhoto(context, currentProfile.uid, imageUri)
-            }
-
-        // Update local profile state with new photo URL
-        val updatedProfile = currentProfile.copy(photoUrl = downloadUrl)
-        _profile.value = updatedProfile
-
-        onSuccess()
-      } catch (e: TimeoutCancellationException) {
-        val errorMsg = "Upload timeout. Please check your connection and try again."
-        Log.e(TAG, "Timeout uploading photo", e)
-        _photoUploadError.value = errorMsg
-        onError(errorMsg)
-      } catch (e: Exception) {
-        val errorMsg = "Failed to upload photo: ${e.message}"
-        Log.e(TAG, "Error uploading photo", e)
-        _photoUploadError.value = errorMsg
-        onError(errorMsg)
-      } finally {
-        _isUploadingPhoto.value = false
-      }
-    }
+  fun setPendingPhoto(uri: Uri) {
+    _pendingPhotoUri.value = uri
+    _pendingPhotoDelete.value = false
+    _photoUploadError.value = null
   }
 
   /**
-   * Deletes the current user's profile photo.
+   * Marks the photo for deletion (deferred until save).
    *
-   * This method:
-   * 1. Deletes the photo from Firebase Storage
-   * 2. Clears the photoUrl field in Firestore
-   * 3. Updates the local profile state
-   *
-   * @param onSuccess Callback invoked after successful deletion
-   * @param onError Callback invoked if deletion fails, receives error message
+   * This method does NOT immediately delete the photo from Firebase Storage. Instead, it marks the
+   * photo for deletion and clears any pending upload. The actual deletion happens only when
+   * createOrUpdateProfile() is called. This allows users to cancel the deletion by navigating back
+   * without saving.
    */
-  fun deleteProfilePhoto(onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
-    val currentProfile = _profile.value
-    if (currentProfile == null) {
-      val errorMsg = "No profile loaded"
-      _photoUploadError.value = errorMsg
-      onError(errorMsg)
-      return
-    }
+  fun markPhotoForDeletion() {
+    _pendingPhotoDelete.value = true
+    _pendingPhotoUri.value = null
+    _photoUploadError.value = null
+  }
 
-    viewModelScope.launch {
-      try {
-        _isUploadingPhoto.value = true
-        _photoUploadError.value = null
-
-        withTimeout(10000L) { repository.deleteProfilePhoto(currentProfile.uid) }
-
-        // Update local profile state to remove photo URL
-        val updatedProfile = currentProfile.copy(photoUrl = null)
-        _profile.value = updatedProfile
-
-        onSuccess()
-      } catch (e: TimeoutCancellationException) {
-        val errorMsg = "Delete timeout. Please try again."
-        Log.e(TAG, "Timeout deleting photo", e)
-        _photoUploadError.value = errorMsg
-        onError(errorMsg)
-      } catch (e: Exception) {
-        val errorMsg = "Failed to delete photo: ${e.message}"
-        Log.e(TAG, "Error deleting photo", e)
-        _photoUploadError.value = errorMsg
-        onError(errorMsg)
-      } finally {
-        _isUploadingPhoto.value = false
-      }
-    }
+  /**
+   * Clears any pending photo changes (upload or delete).
+   *
+   * This method is called when the user navigates back without saving, discarding any pending photo
+   * changes.
+   */
+  fun clearPendingPhotoChanges() {
+    _pendingPhotoUri.value = null
+    _pendingPhotoDelete.value = false
+    _photoUploadError.value = null
   }
 
   /**
@@ -449,5 +433,7 @@ class ProfileViewModel(
     private const val ERROR_CONNECTION_TIMEOUT = "Connection timeout. Please try again."
     private const val ERROR_SAVE_PROFILE_FAILED = "Failed to save profile: %s"
     private const val ERROR_OFFLINE_OPERATION = "This operation requires an internet connection"
+    private const val ERROR_PHOTO_UPLOAD_FAILED = "Profile updated but photo upload failed: %s"
+    private const val ERROR_PHOTO_DELETE_FAILED = "Profile updated but photo deletion failed: %s"
   }
 }
