@@ -7,9 +7,6 @@ import android.net.Uri
 import com.android.joinme.model.utils.ImageProcessor
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.*
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageMetadata
@@ -58,22 +55,6 @@ class ProfileRepositoryFirestoreTest {
     mockQuery = mockk(relaxed = true)
     mockBatch = mockk(relaxed = true)
 
-    // Mock Firebase Realtime Database and Storage for ConversationCleanupService
-    mockkStatic(FirebaseDatabase::class)
-    mockkStatic(FirebaseStorage::class)
-    val mockDatabase = mockk<FirebaseDatabase>(relaxed = true)
-    val mockConversationsRef = mockk<DatabaseReference>(relaxed = true)
-    val mockConversationRef = mockk<DatabaseReference>(relaxed = true)
-    val mockAllConversationsSnapshot = mockk<DataSnapshot>(relaxed = true)
-    val mockStorageRef = mockk<StorageReference>(relaxed = true)
-
-    every { FirebaseDatabase.getInstance() } returns mockDatabase
-    every { FirebaseStorage.getInstance() } returns mockStorage
-    every { mockDatabase.getReference("conversations") } returns mockConversationsRef
-    every { mockConversationsRef.get() } returns Tasks.forResult(mockAllConversationsSnapshot)
-    every { mockAllConversationsSnapshot.children } returns emptyList()
-    every { mockStorage.reference } returns mockStorageRef
-
     every { mockFirestore.collection(PROFILES_COLLECTION_PATH) } returns mockCollection
     every { mockCollection.document(any()) } returns mockDocument
     every { mockFirestore.collection(FOLLOWS_COLLECTION_PATH) } returns mockFollowsCollection
@@ -94,7 +75,6 @@ class ProfileRepositoryFirestoreTest {
     unmockkConstructor(ImageProcessor::class)
     // Unmock the static await extension
     unmockkStatic("kotlinx.coroutines.tasks.TasksKt")
-    unmockkAll()
   }
 
   // ==================== GET & CRUD TESTS ====================
