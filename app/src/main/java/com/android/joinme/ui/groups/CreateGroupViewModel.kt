@@ -164,7 +164,7 @@ class CreateGroupViewModel(
             Firebase.auth.currentUser?.uid
                 ?: if (TestEnvironmentDetector.shouldUseTestUserId())
                     TestEnvironmentDetector.getTestUserId()
-                else throw IllegalStateException("User not authenticated")
+                else error("User not authenticated")
 
         val groupId = repository.getNewGroupId()
 
