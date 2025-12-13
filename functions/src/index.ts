@@ -19,11 +19,76 @@ const TIME_ZONE = "UTC";
 const SERIES = "series";
 const EVENTS = "events";
 const INVITATIONS = "invitations";
+const CONVERSATIONS_PATH = "conversations";
+const MESSAGES_PATH = "messages";
+const IMAGES_PATH = "images";
+const FIELD_TYPE = "type";
+const MESSAGE_TYPE_IMAGE = "IMAGE";
 
 
 // Notification type constants
 const NOTIFICATION_TYPE_EVENT_CHAT_MESSAGE = "event_chat_message";
 const NOTIFICATION_TYPE_GROUP_CHAT_MESSAGE = "group_chat_message";
+
+/**
+ * Helper function to cleanup a conversation (messages and images).
+ * This function deletes all images from Storage and removes the conversation
+ * from Realtime Database.
+ * @param {string} conversationId - The ID of the conversation to cleanup
+ */
+async function cleanupConversation(conversationId: string): Promise<void> {
+  try {
+    const database = admin.database();
+    const storage = admin.storage();
+    const bucket = storage.bucket();
+    const conversationRef = database.ref(CONVERSATIONS_PATH).child(conversationId);
+
+    // Step 1: Get all messages to find IMAGE type messages
+    const messagesSnapshot = await conversationRef.child(MESSAGES_PATH).get();
+
+    const imageMessageIds: string[] = [];
+    messagesSnapshot.forEach((messageSnapshot) => {
+      const messageData = messageSnapshot.val();
+      if (messageData && messageData[FIELD_TYPE] === MESSAGE_TYPE_IMAGE) {
+        const messageId = messageSnapshot.key;
+        if (messageId) {
+          imageMessageIds.push(messageId);
+        }
+      }
+    });
+
+    // Step 2: Delete all images from Firebase Storage in parallel
+    const imagesPath = `${CONVERSATIONS_PATH}/${conversationId}/${IMAGES_PATH}`;
+
+    await Promise.all(
+      imageMessageIds.map(async (messageId) => {
+        try {
+          // Delete all files with this prefix (handles different formats)
+          await bucket.deleteFiles({
+            prefix: `${imagesPath}/${messageId}`,
+          });
+        } catch (err) {
+          // Image might not exist, continue with other deletions
+          console.warn("cleanup_image_skipped", {
+            conversationId,
+            messageId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      })
+    );
+
+    // Step 3: Delete the entire conversation node
+    await conversationRef.remove();
+    console.info("cleanup_conversation_success", {conversationId});
+  } catch (error) {
+    console.error("cleanup_conversation_failed", {
+      conversationId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    // Don't throw - we want to continue with other deletions
+  }
+}
 
 /**
  * Helper function to send FCM notification to a user
@@ -282,23 +347,46 @@ export const onEventDeleted = functions.firestore
   });
 
 /**
+ * Helper function to process items in parallel with concurrency limit.
+ * @param {T[]} items - Array of items to process
+ * @param {number} concurrency - Maximum number of parallel operations
+ * @param {Function} fn - Async function to apply to each item
+ */
+async function processConcurrently<T>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<void>
+): Promise<void> {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += concurrency) {
+    chunks.push(items.slice(i, i + concurrency));
+  }
+
+  for (const chunk of chunks) {
+    await Promise.all(chunk.map(fn));
+  }
+}
+
+/**
  * Scheduled function that runs daily at midnight (UTC).
  * Cleans up old events and series that are expired for more than 30 days.
  *
  * Logic:
  * 1. Fetch all series
  * 2. If lastEventEndTime < now - 30 days, mark series and its events for deletion
- * 3. Delete all marked series
- * 4. Delete all events from those series
- * 5. Fetch remaining events and check if they are expired (date + duration < now - 30 days)
- * 6. Delete expired standalone events
+ * 3. Delete all marked series (batched)
+ * 4. Cleanup conversations for all events from expired series (parallel with limit)
+ * 5. Delete all events from those series (batched)
+ * 6. Fetch remaining events and check if they are expired (date + duration < now - 30 days)
+ * 7. Cleanup conversations for expired standalone events (parallel with limit)
+ * 8. Delete expired standalone events (batched)
  */
 export const cleanupOldEventsAndSeries = functions.pubsub
   .schedule(RECURRENCE)
   .timeZone(TIME_ZONE)
   .onRun(async (context) => {
-    const now = Date.now(); // Current time in milliseconds
-    const thirtyDaysInMs = NUMBER_OF_DAYS * DAY_TO_HOUR * HOUR_TO_MIN * MIN_TO_S * S_TO_MS; // 30 days
+    const now = Date.now();
+    const thirtyDaysInMs = NUMBER_OF_DAYS * DAY_TO_HOUR * HOUR_TO_MIN * MIN_TO_S * S_TO_MS;
     const cutoffTime = now - thirtyDaysInMs;
 
     try {
@@ -307,6 +395,7 @@ export const cleanupOldEventsAndSeries = functions.pubsub
 
       // Step 1: Fetch all series
       const seriesSnapshot = await db.collection(SERIES).get();
+      console.info("cleanup_series_fetched", {count: seriesSnapshot.size});
 
       // Step 2: Check each series
       for (const serieDoc of seriesSnapshot.docs) {
@@ -316,7 +405,6 @@ export const cleanupOldEventsAndSeries = functions.pubsub
         if (lastEventEndTime && lastEventEndTime.seconds) {
           const lastEventEndMs = lastEventEndTime.seconds * S_TO_MS;
 
-          // If series is expired, mark it and its events for deletion
           if (lastEventEndMs < cutoffTime) {
             seriesToDelete.push(serieDoc.id);
             const eventIds: string[] = serieData.eventIds || [];
@@ -325,33 +413,68 @@ export const cleanupOldEventsAndSeries = functions.pubsub
         }
       }
 
-      // Step 3: Delete all marked series
-      for (const serieId of seriesToDelete) {
+      console.info("cleanup_expired_series_identified", {
+        seriesCount: seriesToDelete.length,
+        eventsCount: seriesEventsToDelete.length,
+      });
+
+      // Step 3: Delete all marked series (batched)
+      const BATCH_SIZE = 500; // Firestore batch limit
+      for (let i = 0; i < seriesToDelete.length; i += BATCH_SIZE) {
+        const batch = db.batch();
+        const chunk = seriesToDelete.slice(i, i + BATCH_SIZE);
+
+        chunk.forEach((serieId) => {
+          batch.delete(db.collection(SERIES).doc(serieId));
+        });
+
         try {
-          await db.collection(SERIES).doc(serieId).delete();
+          await batch.commit();
+          console.info("cleanup_series_batch_deleted", {count: chunk.length});
         } catch (err) {
-          console.error(`Failed to delete series ${serieId}:`, err);
+          console.error("cleanup_series_batch_failed", {
+            count: chunk.length,
+            error: err instanceof Error ? err.message : String(err),
+          });
         }
       }
 
-      // Step 4: Delete all events from expired series
-      for (const eventId of seriesEventsToDelete) {
+      // Step 4: Cleanup conversations for all events from expired series (parallel with limit)
+      const CONCURRENCY_LIMIT = 10;
+      await processConcurrently(
+        seriesEventsToDelete,
+        CONCURRENCY_LIMIT,
+        cleanupConversation
+      );
+
+      // Step 5: Delete all events from expired series (batched)
+      for (let i = 0; i < seriesEventsToDelete.length; i += BATCH_SIZE) {
+        const batch = db.batch();
+        const chunk = seriesEventsToDelete.slice(i, i + BATCH_SIZE);
+
+        chunk.forEach((eventId) => {
+          batch.delete(db.collection(EVENTS).doc(eventId));
+        });
+
         try {
-          await db.collection(EVENTS).doc(eventId).delete();
+          await batch.commit();
+          console.info("cleanup_series_events_batch_deleted", {count: chunk.length});
         } catch (err) {
-          console.error(`Failed to delete event ${eventId}:`, err);
+          console.error("cleanup_series_events_batch_failed", {
+            count: chunk.length,
+            error: err instanceof Error ? err.message : String(err),
+          });
         }
       }
 
-      // Step 5: Fetch remaining events and check if they are expired
+      // Step 6: Fetch remaining events and check if they are expired
       const eventsSnapshot = await db.collection(EVENTS).get();
       const standaloneEventsToDelete: string[] = [];
 
+      console.info("cleanup_events_fetched", {count: eventsSnapshot.size});
+
       for (const eventDoc of eventsSnapshot.docs) {
         const eventData = eventDoc.data();
-        const eventId = eventDoc.id;
-
-        // Calculate event end time (start date + duration)
         const eventDate = eventData.date;
         const durationMinutes = eventData.duration || 0;
 
@@ -360,24 +483,55 @@ export const cleanupOldEventsAndSeries = functions.pubsub
           const durationMs = durationMinutes * MIN_TO_S * S_TO_MS;
           const eventEndMs = eventStartMs + durationMs;
 
-          // If event is expired, mark it for deletion
           if (eventEndMs < cutoffTime) {
-            standaloneEventsToDelete.push(eventId);
+            standaloneEventsToDelete.push(eventDoc.id);
           }
         }
       }
 
-      // Step 6: Delete expired standalone events
-      for (const eventId of standaloneEventsToDelete) {
+      console.info("cleanup_expired_standalone_events_identified", {
+        count: standaloneEventsToDelete.length,
+      });
+
+      // Step 7: Cleanup conversations for expired standalone events (parallel with limit)
+      await processConcurrently(
+        standaloneEventsToDelete,
+        CONCURRENCY_LIMIT,
+        cleanupConversation
+      );
+
+      // Step 8: Delete expired standalone events (batched)
+      for (let i = 0; i < standaloneEventsToDelete.length; i += BATCH_SIZE) {
+        const batch = db.batch();
+        const chunk = standaloneEventsToDelete.slice(i, i + BATCH_SIZE);
+
+        chunk.forEach((eventId) => {
+          batch.delete(db.collection(EVENTS).doc(eventId));
+        });
+
         try {
-          await db.collection(EVENTS).doc(eventId).delete();
+          await batch.commit();
+          console.info("cleanup_standalone_events_batch_deleted", {count: chunk.length});
         } catch (err) {
-          console.error(`Failed to delete event ${eventId}:`, err);
+          console.error("cleanup_standalone_events_batch_failed", {
+            count: chunk.length,
+            error: err instanceof Error ? err.message : String(err),
+          });
         }
       }
 
+      console.info("cleanup_completed", {
+        seriesDeleted: seriesToDelete.length,
+        seriesEventsDeleted: seriesEventsToDelete.length,
+        standaloneEventsDeleted: standaloneEventsToDelete.length,
+        totalEventsDeleted: seriesEventsToDelete.length + standaloneEventsToDelete.length,
+      });
+
       return null;
     } catch (error) {
+      console.error("cleanup_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   });
@@ -392,7 +546,6 @@ export const onUserFollowed = functions.firestore
     try {
       const followData = snap.data();
       const followerId = followData.followerId;
-      const followedId = followData.followedId;
 
       console.log(`User ${followerId} followed user ${followedId}`);
 
