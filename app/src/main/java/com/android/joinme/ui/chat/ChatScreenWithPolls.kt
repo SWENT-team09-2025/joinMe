@@ -2,6 +2,7 @@ package com.android.joinme.ui.chat
 
 // Implemented with help of Claude AI
 
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,9 +29,10 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -43,6 +45,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -63,6 +66,7 @@ import com.android.joinme.R
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
 import com.android.joinme.model.chat.Poll
+import com.android.joinme.model.map.UserLocation
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.customColors
@@ -121,7 +125,9 @@ private data class ChatContentData(
 private data class ChatContentActions(
     val onSendMessage: (String) -> Unit,
     val pollCallbacks: PollCallbacks,
-    val onOpenPollCreation: () -> Unit
+    val onOpenPollCreation: () -> Unit,
+    val chatViewModel: ChatViewModel,
+    val currentUserName: String
 )
 
 /** Styling configuration for chat content. */
@@ -138,10 +144,12 @@ private data class ChatContentStyling(
  * - Poll creation via the attachment menu
  * - Poll display in the chat timeline (interleaved with messages)
  * - Real-time poll updates and voting
+ * - Online users count display
  *
  * @param config Configuration for the chat screen including IDs, title, and colors
  * @param chatViewModel The ViewModel for chat message operations
  * @param pollViewModel The ViewModel for poll operations
+ * @param presenceViewModel Optional ViewModel for presence/online tracking
  * @param onLeaveClick Callback when leaving the chat
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -150,6 +158,7 @@ fun ChatScreenWithPolls(
     config: ChatScreenConfig,
     chatViewModel: ChatViewModel,
     pollViewModel: PollViewModel,
+    presenceViewModel: PresenceViewModel? = null,
     onLeaveClick: () -> Unit = {}
 ) {
   val chatUiState by chatViewModel.uiState.collectAsState()
@@ -157,6 +166,9 @@ fun ChatScreenWithPolls(
   val snackbarHostState = remember { SnackbarHostState() }
   val coroutineScope = rememberCoroutineScope()
   val context = LocalContext.current
+
+  // Collect presence state if available
+  val presenceState = presenceViewModel?.presenceState?.collectAsState()
 
   val effectiveChatColor = config.chatColor ?: MaterialTheme.customColors.chatDefault
   val effectiveOnChatColor = config.onChatColor ?: MaterialTheme.customColors.onChatDefault
@@ -167,6 +179,11 @@ fun ChatScreenWithPolls(
   LaunchedEffect(config.chatId, config.currentUserId) {
     chatViewModel.initializeChat(config.chatId, config.currentUserId)
     pollViewModel.initialize(config.chatId, config.currentUserId)
+  }
+
+  // Initialize presence tracking when screen loads
+  LaunchedEffect(config.chatId, config.currentUserId, presenceViewModel) {
+    presenceViewModel?.initialize(config.chatId, config.currentUserId)
   }
 
   // Show chat error messages
@@ -196,7 +213,8 @@ fun ChatScreenWithPolls(
             chatTitle = config.chatTitle,
             onLeaveClick = onLeaveClick,
             topBarColor = effectiveChatColor,
-            onTopBarColor = effectiveOnChatColor)
+            onTopBarColor = effectiveOnChatColor,
+            onlineUsersCount = presenceState?.value?.onlineUsersCount ?: 0)
       },
       snackbarHost = { SnackbarHost(snackbarHostState) },
       contentWindowInsets = WindowInsets.systemBars,
@@ -230,7 +248,9 @@ fun ChatScreenWithPolls(
                         chatViewModel.sendMessage(content, config.currentUserName)
                       },
                       pollCallbacks = pollCallbacks,
-                      onOpenPollCreation = { showPollCreationSheet = true }),
+                      onOpenPollCreation = { showPollCreationSheet = true },
+                      chatViewModel = chatViewModel,
+                      currentUserName = config.currentUserName),
               styling =
                   ChatContentStyling(
                       paddingValues = paddingValues,
@@ -255,8 +275,13 @@ private fun ChatTopBarWithPolls(
     chatTitle: String,
     onLeaveClick: () -> Unit,
     topBarColor: Color,
-    onTopBarColor: Color
+    onTopBarColor: Color,
+    onlineUsersCount: Int = 0
 ) {
+  // Define colors for the online indicator dot
+  val onlineIndicatorColor = Color(0xFF4CAF50) // Green
+  val offlineIndicatorColor = Color(0xFFF44336) // Red
+
   Surface(
       modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.TOP_BAR),
       color = topBarColor,
@@ -266,12 +291,44 @@ private fun ChatTopBarWithPolls(
                 Modifier.fillMaxWidth()
                     .padding(horizontal = Dimens.Padding.medium, vertical = Dimens.Padding.small),
             verticalAlignment = Alignment.CenterVertically) {
-              Text(
-                  text = chatTitle,
-                  style = MaterialTheme.typography.titleMedium,
-                  fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                  color = onTopBarColor,
-                  modifier = Modifier.weight(1f).testTag(ChatScreenTestTags.TITLE))
+              // Title and online status column
+              Column(modifier = Modifier.weight(1f)) {
+                // Title
+                Text(
+                    text = chatTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    color = onTopBarColor,
+                    modifier = Modifier.testTag(ChatScreenTestTags.TITLE))
+
+                // Online users count with indicator dot
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.extraSmall),
+                    modifier = Modifier.testTag("onlineUsersRow")) {
+                      // Colored indicator dot
+                      Box(
+                          modifier =
+                              Modifier.size(Dimens.Spacing.small)
+                                  .background(
+                                      if (onlineUsersCount > 0) onlineIndicatorColor
+                                      else offlineIndicatorColor,
+                                      shape = CircleShape)
+                                  .testTag("onlineIndicatorDot"))
+
+                      // Online users count text
+                      Text(
+                          text =
+                              when (onlineUsersCount) {
+                                0 -> stringResource(R.string.online_users_zero)
+                                1 -> stringResource(R.string.online_users_one)
+                                else -> stringResource(R.string.online_users_many, onlineUsersCount)
+                              },
+                          style = MaterialTheme.typography.bodySmall,
+                          color = onTopBarColor.copy(alpha = SENDER_NAME_ALPHA),
+                          modifier = Modifier.testTag("onlineUsersCount"))
+                    }
+              }
 
               IconButton(
                   onClick = onLeaveClick,
@@ -333,7 +390,9 @@ private fun ChatContentWithPolls(
           },
           onOpenPollCreation = actions.onOpenPollCreation,
           sendButtonColor = styling.chatColor,
-          onSendButtonColor = styling.onChatColor)
+          onSendButtonColor = styling.onChatColor,
+          viewModel = actions.chatViewModel,
+          currentUserName = actions.currentUserName)
     }
   }
 }
@@ -527,11 +586,11 @@ private fun MessageInputWithPolls(
     onSendClick: () -> Unit,
     onOpenPollCreation: () -> Unit,
     sendButtonColor: Color,
-    onSendButtonColor: Color
+    onSendButtonColor: Color,
+    viewModel: ChatViewModel,
+    currentUserName: String
 ) {
   var showAttachmentMenu by remember { mutableStateOf(false) }
-  val context = LocalContext.current
-  val notImplementedMsg = stringResource(R.string.not_yet_implemented)
 
   Surface(shadowElevation = Dimens.Elevation.small, color = MaterialTheme.colorScheme.surface) {
     Row(
@@ -566,20 +625,23 @@ private fun MessageInputWithPolls(
               colors = MaterialTheme.customColors.outlinedTextField(),
               maxLines = MESSAGE_INPUT_MAX_LINES)
 
-          // Send/Mic button
+          // Dynamic send button - disabled appearance when no text
           if (text.isEmpty()) {
+            // Disabled send button appearance when no text
             IconButton(
-                onClick = { Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show() },
+                onClick = {},
+                enabled = false,
                 modifier =
                     Modifier.size(Dimens.TouchTarget.minimum)
                         .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                        .testTag(ChatScreenTestTags.MIC_BUTTON)) {
+                        .testTag(ChatScreenTestTags.SEND_BUTTON)) {
                   Icon(
-                      imageVector = Icons.Default.Mic,
-                      contentDescription = stringResource(R.string.record_audio),
+                      imageVector = Icons.AutoMirrored.Filled.Send,
+                      contentDescription = stringResource(R.string.send_message),
                       tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
           } else {
+            // Active send button
             IconButton(
                 onClick = onSendClick,
                 modifier =
@@ -602,17 +664,66 @@ private fun MessageInputWithPolls(
         onPollClick = {
           showAttachmentMenu = false
           onOpenPollCreation()
-        })
+        },
+        viewModel = viewModel,
+        currentUserName = currentUserName)
   }
 }
 
-/** Attachment menu that includes poll creation option. */
+/** Attachment menu that includes photo, location, and poll options. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AttachmentMenuWithPolls(onDismiss: () -> Unit, onPollClick: () -> Unit) {
+private fun AttachmentMenuWithPolls(
+    onDismiss: () -> Unit,
+    onPollClick: () -> Unit,
+    viewModel: ChatViewModel,
+    currentUserName: String
+) {
   val sheetState = rememberModalBottomSheetState()
   val context = LocalContext.current
-  val notImplementedMsg = stringResource(R.string.not_yet_implemented)
+
+  // State to hold the camera image URI
+  var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
+
+  // State to show photo source selection dialog
+  var showPhotoSourceDialog by remember { mutableStateOf(false) }
+
+  // State for location preview
+  var showLocationPreview by remember { mutableStateOf(false) }
+  var currentUserLocation by remember { mutableStateOf<UserLocation?>(null) }
+
+  // Image picker launcher for gallery
+  val imagePickerLauncher =
+      rememberImagePickerLauncher(viewModel = viewModel, currentUserName = currentUserName) {
+        onDismiss()
+      }
+
+  // Camera launcher
+  val cameraLauncher =
+      rememberCameraLauncher(
+          viewModel = viewModel,
+          currentUserName = currentUserName,
+          cameraImageUri = { cameraImageUri }) {
+            onDismiss()
+          }
+
+  // Camera permission launcher
+  val cameraPermissionLauncher =
+      rememberCameraPermissionLauncher(
+          cameraLauncher = cameraLauncher,
+          onCameraImageUriSet = {
+            val uri = createImageUri(context)
+            cameraImageUri = uri
+            uri
+          })
+
+  // Location permission launcher
+  val locationPermissionsLauncher =
+      rememberLocationPermissionsLauncher(
+          onLocationRetrieved = { location ->
+            currentUserLocation = location
+            showLocationPreview = true
+          })
 
   ModalBottomSheet(
       onDismissRequest = onDismiss,
@@ -620,27 +731,26 @@ private fun AttachmentMenuWithPolls(onDismiss: () -> Unit, onPollClick: () -> Un
       modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_MENU)) {
         Column(modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.large)) {
           Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            // Gallery
+            // Photo option
             AttachmentOptionWithPolls(
                 icon = Icons.Default.Image,
-                label = stringResource(R.string.gallery),
-                onClick = {
-                  Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show()
-                  onDismiss()
-                },
-                modifier = Modifier.testTag(ChatScreenTestTags.PHOTO_SOURCE_GALLERY))
+                label = stringResource(R.string.photo),
+                onClick = { showPhotoSourceDialog = true },
+                modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_PHOTO))
 
-            // Location
+            // Location option
             AttachmentOptionWithPolls(
                 icon = Icons.Default.LocationOn,
                 label = stringResource(R.string.location),
                 onClick = {
-                  Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show()
-                  onDismiss()
+                  locationPermissionsLauncher.launch(
+                      arrayOf(
+                          android.Manifest.permission.ACCESS_FINE_LOCATION,
+                          android.Manifest.permission.ACCESS_COARSE_LOCATION))
                 },
                 modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_LOCATION))
 
-            // Poll - Now functional!
+            // Poll option
             AttachmentOptionWithPolls(
                 icon = Icons.Default.BarChart,
                 label = stringResource(R.string.poll),
@@ -651,6 +761,80 @@ private fun AttachmentMenuWithPolls(onDismiss: () -> Unit, onPollClick: () -> Un
           Spacer(modifier = Modifier.height(Dimens.Padding.large))
         }
       }
+
+  // Photo source selection dialog
+  if (showPhotoSourceDialog) {
+    PhotoSourceDialogWithPolls(
+        onDismiss = { showPhotoSourceDialog = false },
+        onGalleryClick = {
+          showPhotoSourceDialog = false
+          imagePickerLauncher.launch("image/*")
+        },
+        onCameraClick = {
+          showPhotoSourceDialog = false
+          cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+        })
+  }
+
+  // Location preview dialog
+  if (showLocationPreview && currentUserLocation != null) {
+    LocationPreviewDialog(
+        userLocation = currentUserLocation!!,
+        onDismiss = {
+          showLocationPreview = false
+          currentUserLocation = null
+        },
+        onSendLocation = {
+          viewModel.sendCurrentLocation(
+              context = context,
+              userLocation = currentUserLocation!!,
+              senderName = currentUserName,
+              onSuccess = {
+                showLocationPreview = false
+                currentUserLocation = null
+                onDismiss()
+              },
+              onError = { error -> Toast.makeText(context, error, Toast.LENGTH_SHORT).show() })
+        })
+  }
+}
+
+/** Dialog for selecting photo source (gallery or camera). */
+@Composable
+private fun PhotoSourceDialogWithPolls(
+    onDismiss: () -> Unit,
+    onGalleryClick: () -> Unit,
+    onCameraClick: () -> Unit
+) {
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      title = { Text(stringResource(R.string.choose_photo_source)) },
+      text = {
+        Column {
+          TextButton(
+              onClick = onGalleryClick,
+              modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_GALLERY)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
+                      Icon(Icons.Default.Image, contentDescription = null)
+                      Text(stringResource(R.string.gallery))
+                    }
+              }
+          TextButton(
+              onClick = onCameraClick,
+              modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_CAMERA)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
+                      Icon(Icons.Default.CameraAlt, contentDescription = null)
+                      Text(stringResource(R.string.camera))
+                    }
+              }
+        }
+      },
+      confirmButton = {},
+      dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } })
 }
 
 @Composable

@@ -321,30 +321,29 @@ class ChatScreenTest {
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
     composeTestRule.waitForIdle()
 
-    // Verify all options are displayed with their labels
+    // Verify Photo and Location options are displayed with their labels
+    // Note: Poll option is only available in ChatScreenWithPolls (for groups/events)
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_PHOTO).assertIsDisplayed()
     composeTestRule.onNodeWithText("Photo").assertIsDisplayed()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_LOCATION).assertIsDisplayed()
     composeTestRule.onNodeWithText("Location").assertIsDisplayed()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_POLL).assertIsDisplayed()
-    composeTestRule.onNodeWithText("Poll").assertIsDisplayed()
   }
 
   @Test
-  fun attachmentMenu_optionsCloseMenu_whenClicked() {
+  fun attachmentMenu_photoOption_opensSourceDialog() {
     setupChatScreen()
 
-    // Note: Gallery option does NOT close immediately (waits for image picker result)
-    // This is by design to keep the launcher alive
-
-    // Test Poll option closes menu
+    // Open attachment menu
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_POLL).performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertDoesNotExist()
 
-    // Note: Location option no longer closes menu immediately - it requests permissions first
+    // Click Photo option
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_PHOTO).performClick()
+    composeTestRule.waitForIdle()
+
+    // Photo source dialog should be displayed with Gallery and Camera options
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_GALLERY).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_CAMERA).assertIsDisplayed()
   }
 
   @Test
@@ -356,10 +355,13 @@ class ChatScreenTest {
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertIsDisplayed()
 
-    // Close by clicking an option (use Location, not Gallery which doesn't close immediately)
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_POLL).performClick()
+    // Click Photo to open source dialog (menu transforms to dialog)
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_PHOTO).performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertDoesNotExist()
+
+    // Cancel the dialog to close
+    composeTestRule.onNodeWithText("Cancel").performClick()
+    composeTestRule.waitForIdle()
 
     // Reopen the menu
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()

@@ -30,16 +30,22 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
 import com.android.joinme.model.chat.ChatRepositoryProvider
+import com.android.joinme.model.chat.PollRepositoryProvider
 import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.invitation.InvitationRepositoryProvider
 import com.android.joinme.model.invitation.InvitationType
 import com.android.joinme.model.invitation.deepLink.DeepLinkService
 import com.android.joinme.model.notification.FCMTokenManager
+import com.android.joinme.model.presence.PresenceRepositoryProvider
 import com.android.joinme.model.profile.ProfileRepositoryProvider
 import com.android.joinme.ui.calendar.CalendarScreen
 import com.android.joinme.ui.chat.ChatScreen
+import com.android.joinme.ui.chat.ChatScreenConfig
+import com.android.joinme.ui.chat.ChatScreenWithPolls
 import com.android.joinme.ui.chat.ChatViewModel
+import com.android.joinme.ui.chat.PollViewModel
+import com.android.joinme.ui.chat.PresenceViewModel
 import com.android.joinme.ui.groups.ActivityGroupScreen
 import com.android.joinme.ui.groups.CreateGroupScreen
 import com.android.joinme.ui.groups.EditGroupScreen
@@ -833,11 +839,11 @@ fun JoinMe(
         val chatId = navBackStackEntry.arguments?.getString("chatId")
         val chatTitle = navBackStackEntry.arguments?.getString("chatTitle")
         val totalParticipants =
-            navBackStackEntry.arguments?.getString("totalParticipants")?.toIntOrNull() ?: 1
+            navBackStackEntry.arguments?.getString("totalParticipants")?.toIntOrNull() ?: 2
 
         if (chatId != null && chatTitle != null) {
-          // Use viewModel() factory pattern to get a properly scoped ViewModel
-          // that survives recompositions
+          // Use viewModel() factory pattern to get properly scoped ViewModels
+          // that survive recompositions
           val chatViewModel: ChatViewModel =
               viewModel(
                   factory =
@@ -853,25 +859,76 @@ fun JoinMe(
 
           val currentUserName = currentUser?.displayName ?: "Unknown User"
 
-          ChatScreen(
-              chatId = chatId,
-              chatTitle = chatTitle,
-              currentUserId = currentUserId,
-              currentUserName = currentUserName,
-              viewModel = chatViewModel,
-              totalParticipants = totalParticipants,
-              onLeaveClick = { navigationActions.goBack() },
-              onNavigateToMap = { location, senderId ->
-                // Navigate to map screen centered on the location with a marker
-                navigationActions.navigateTo(
-                    Screen.Map(
-                        location.latitude,
-                        location.longitude,
-                        showMarker = true,
-                        userId = senderId))
-                Toast.makeText(context, "Viewing location: ${location.name}", Toast.LENGTH_SHORT)
-                    .show()
-              })
+          // Route based on chat type:
+          // - Individual chats (2 participants): Use ChatScreen (no polls)
+          // - Group/event chats (>2 participants): Use ChatScreenWithPolls (with polls)
+          if (totalParticipants <= 2) {
+            // Individual/private chat - use ChatScreen without polls
+            val presenceViewModel: PresenceViewModel =
+                viewModel(
+                    factory =
+                        object : ViewModelProvider.Factory {
+                          override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            @Suppress("UNCHECKED_CAST")
+                            return PresenceViewModel(PresenceRepositoryProvider.repository) as T
+                          }
+                        })
+
+            ChatScreen(
+                chatId = chatId,
+                chatTitle = chatTitle,
+                currentUserId = currentUserId,
+                currentUserName = currentUserName,
+                viewModel = chatViewModel,
+                onLeaveClick = { navigationActions.goBack() },
+                totalParticipants = totalParticipants,
+                presenceViewModel = presenceViewModel,
+                onNavigateToMap = { location, senderId ->
+                  navigationActions.navigateTo(
+                      Screen.Map(
+                          latitude = location.latitude,
+                          longitude = location.longitude,
+                          showMarker = true,
+                          userId = senderId))
+                })
+          } else {
+            // Group/event chat - use ChatScreenWithPolls
+            val pollViewModel: PollViewModel =
+                viewModel(
+                    factory =
+                        object : ViewModelProvider.Factory {
+                          override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            @Suppress("UNCHECKED_CAST")
+                            return PollViewModel(
+                                PollRepositoryProvider.repository,
+                                ChatRepositoryProvider.repository,
+                                ProfileRepositoryProvider.repository)
+                                as T
+                          }
+                        })
+
+            val presenceViewModelForPolls: PresenceViewModel =
+                viewModel(
+                    factory =
+                        object : ViewModelProvider.Factory {
+                          override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            @Suppress("UNCHECKED_CAST")
+                            return PresenceViewModel(PresenceRepositoryProvider.repository) as T
+                          }
+                        })
+
+            ChatScreenWithPolls(
+                config =
+                    ChatScreenConfig(
+                        chatId = chatId,
+                        chatTitle = chatTitle,
+                        currentUserId = currentUserId,
+                        currentUserName = currentUserName),
+                chatViewModel = chatViewModel,
+                pollViewModel = pollViewModel,
+                presenceViewModel = presenceViewModelForPolls,
+                onLeaveClick = { navigationActions.goBack() })
+          }
         } else {
           Toast.makeText(context, "Chat ID or title is null", Toast.LENGTH_SHORT).show()
         }

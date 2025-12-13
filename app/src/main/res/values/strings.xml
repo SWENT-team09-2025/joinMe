@@ -128,6 +128,8 @@
     <string name="online_users_zero">0 users online</string>
     <string name="online_users_one">1 user online</string>
     <string name="online_users_many">%d users online</string>
+    <string name="status_online">online</string>
+    <string name="status_offline">offline</string>
 
     <!-- Context Menu -->
     <string name="copy">Copy</string>

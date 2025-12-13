@@ -16,6 +16,7 @@ import com.android.joinme.model.chat.MessageType
 import com.android.joinme.model.chat.Poll
 import com.android.joinme.model.chat.PollOption
 import com.android.joinme.model.chat.PollRepository
+import com.android.joinme.model.presence.PresenceRepository
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import kotlinx.coroutines.flow.Flow
@@ -190,8 +191,10 @@ class ChatScreenWithPollsTest {
 
     composeTestRule.waitForIdle()
 
-    // After sending, the mic button should be shown (indicating empty input)
-    composeTestRule.onNodeWithTag("micButton").assertIsDisplayed()
+    // After sending, the send button should still be visible (but disabled when empty)
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertIsDisplayed()
+    // Verify message was actually sent through repository
+    assertTrue(fakeChatRepository.sentMessages.any { it.content == "Test message" })
   }
 
   @Test
@@ -229,13 +232,30 @@ class ChatScreenWithPollsTest {
   }
 
   @Test
-  fun chatScreenWithPolls_attachmentMenu_showsGalleryOption() {
+  fun chatScreenWithPolls_attachmentMenu_showsPhotoOption() {
     setupChatScreenWithPolls()
 
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
     composeTestRule.waitForIdle()
 
+    // Photo option should be in the attachment menu
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_PHOTO).assertIsDisplayed()
+  }
+
+  @Test
+  fun chatScreenWithPolls_photoOption_opensSourceDialog() {
+    setupChatScreenWithPolls()
+
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Click on Photo option to open source dialog
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_PHOTO).performClick()
+    composeTestRule.waitForIdle()
+
+    // Gallery and Camera options should be visible in the dialog
     composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_GALLERY).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.PHOTO_SOURCE_CAMERA).assertIsDisplayed()
   }
 
   @Test
@@ -359,6 +379,49 @@ class ChatScreenWithPollsTest {
   }
 
   // ============================================================================
+  // Online Users Count Tests
+  // ============================================================================
+
+  @Test
+  fun chatScreenWithPolls_displaysOnlineUsersCount_zeroUsers() {
+    val fakePresenceRepository = FakePresenceRepository()
+    fakePresenceRepository.setOnlineCount(0)
+    val presenceViewModel = PresenceViewModel(fakePresenceRepository)
+
+    setupChatScreenWithPollsWithPresence(presenceViewModel)
+
+    composeTestRule.waitForIdle()
+    // "0 users online" text should be displayed
+    composeTestRule.onNodeWithText("0 users online").assertIsDisplayed()
+  }
+
+  @Test
+  fun chatScreenWithPolls_displaysOnlineUsersCount_oneUser() {
+    val fakePresenceRepository = FakePresenceRepository()
+    fakePresenceRepository.setOnlineCount(1)
+    val presenceViewModel = PresenceViewModel(fakePresenceRepository)
+
+    setupChatScreenWithPollsWithPresence(presenceViewModel)
+
+    composeTestRule.waitForIdle()
+    // "1 user online" text should be displayed
+    composeTestRule.onNodeWithText("1 user online").assertIsDisplayed()
+  }
+
+  @Test
+  fun chatScreenWithPolls_displaysOnlineUsersCount_multipleUsers() {
+    val fakePresenceRepository = FakePresenceRepository()
+    fakePresenceRepository.setOnlineCount(5)
+    val presenceViewModel = PresenceViewModel(fakePresenceRepository)
+
+    setupChatScreenWithPollsWithPresence(presenceViewModel)
+
+    composeTestRule.waitForIdle()
+    // "5 users online" text should be displayed
+    composeTestRule.onNodeWithText("5 users online").assertIsDisplayed()
+  }
+
+  // ============================================================================
   // Helper Methods
   // ============================================================================
 
@@ -373,6 +436,22 @@ class ChatScreenWithPollsTest {
                   currentUserName = testUserName),
           chatViewModel = chatViewModel,
           pollViewModel = pollViewModel,
+          onLeaveClick = {})
+    }
+  }
+
+  private fun setupChatScreenWithPollsWithPresence(presenceViewModel: PresenceViewModel) {
+    composeTestRule.setContent {
+      ChatScreenWithPolls(
+          config =
+              ChatScreenConfig(
+                  chatId = testChatId,
+                  chatTitle = testChatTitle,
+                  currentUserId = testUserId,
+                  currentUserName = testUserName),
+          chatViewModel = chatViewModel,
+          pollViewModel = pollViewModel,
+          presenceViewModel = presenceViewModel,
           onLeaveClick = {})
     }
   }
@@ -563,5 +642,30 @@ class ChatScreenWithPollsTest {
 
     override suspend fun getMutualFollowing(userId1: String, userId2: String): List<Profile> =
         emptyList()
+  }
+
+  private class FakePresenceRepository : PresenceRepository {
+    private val onlineCountFlow = MutableStateFlow(0)
+    private val onlineUserIdsFlow = MutableStateFlow<List<String>>(emptyList())
+
+    fun setOnlineCount(count: Int) {
+      onlineCountFlow.value = count
+    }
+
+    fun setOnlineUserIds(userIds: List<String>) {
+      onlineUserIdsFlow.value = userIds
+    }
+
+    override suspend fun setUserOnline(userId: String, contextIds: List<String>) {}
+
+    override suspend fun setUserOffline(userId: String) {}
+
+    override fun observeOnlineUsersCount(contextId: String, currentUserId: String): Flow<Int> =
+        onlineCountFlow
+
+    override fun observeOnlineUserIds(
+        contextId: String,
+        currentUserId: String
+    ): Flow<List<String>> = onlineUserIdsFlow
   }
 }

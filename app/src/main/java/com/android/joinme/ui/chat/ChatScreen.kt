@@ -32,7 +32,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
@@ -346,14 +345,11 @@ private fun ChatTopBar(
                                       shape = CircleShape)
                                   .testTag("onlineIndicatorDot"))
 
-                      // Online users count text
+                      // For individual chats, show simple "online" / "offline"
                       Text(
                           text =
-                              when (onlineUsersCount) {
-                                0 -> stringResource(R.string.online_users_zero)
-                                1 -> stringResource(R.string.online_users_one)
-                                else -> stringResource(R.string.online_users_many, onlineUsersCount)
-                              },
+                              if (onlineUsersCount > 0) stringResource(R.string.status_online)
+                              else stringResource(R.string.status_offline),
                           style = MaterialTheme.typography.bodySmall,
                           color = onTopBarColor.copy(alpha = 0.8f),
                           modifier = Modifier.testTag("onlineUsersCount"))
@@ -1219,10 +1215,11 @@ private fun MessageInput(
 /**
  * Bottom sheet menu for attachment options.
  *
- * Displays three options in a horizontal row:
+ * Displays two options in a horizontal row:
  * - Photo: For taking photos or selecting from gallery (opens dialog to choose)
  * - Location: For sharing current location (shows preview before sending)
- * - Poll: For creating polls (not yet implemented)
+ *
+ * Note: Polls are only available in group/event chats via ChatScreenWithPolls.
  *
  * @param onDismiss Callback when the menu should be dismissed
  * @param viewModel ChatViewModel for handling image uploads and location messages
@@ -1237,7 +1234,6 @@ private fun AttachmentMenu(
 ) {
   val sheetState = rememberModalBottomSheetState()
   val context = LocalContext.current
-  val notImplementedMsg = stringResource(R.string.not_yet_implemented)
 
   // State to hold the camera image URI
   var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -1307,17 +1303,6 @@ private fun AttachmentMenu(
                           android.Manifest.permission.ACCESS_COARSE_LOCATION))
                 },
                 modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_LOCATION))
-
-            // Poll option
-            // TODO (#363): Implement poll creation
-            AttachmentOption(
-                icon = Icons.Default.BarChart,
-                label = stringResource(R.string.poll),
-                onClick = {
-                  Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show()
-                  onDismiss()
-                },
-                modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_POLL))
           }
 
           Spacer(modifier = Modifier.height(Dimens.Padding.large))
