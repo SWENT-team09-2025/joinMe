@@ -250,6 +250,22 @@ class ProfileViewModelTest {
   }
 
   @Test
+  fun `createOrUpdateProfile handles OfflineException correctly`() = runTest {
+    coEvery { mockProfileRepository.createOrUpdateProfile(testProfile) } throws
+        com.android.joinme.model.event.OfflineException(
+            "This operation requires an internet connection")
+    var errorMessage = ""
+
+    viewModel.createOrUpdateProfile(
+        profile = testProfile, onSuccess = {}, onError = { errorMessage = it })
+    testScheduler.advanceUntilIdle()
+
+    // Should call onError with offline message
+    assertEquals("This operation requires an internet connection", errorMessage)
+    assertFalse(viewModel.isLoading.value)
+  }
+
+  @Test
   fun `createOrUpdateProfile works with default parameters`() = runTest {
     coEvery { mockProfileRepository.createOrUpdateProfile(testProfile) } just Runs
 

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.authentification.AuthRepository
 import com.android.joinme.model.authentification.AuthRepositoryProvider
+import com.android.joinme.model.event.OfflineException
 import com.android.joinme.model.invitation.InvitationRepositoryProvider
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
@@ -246,6 +247,10 @@ class ProfileViewModel(
         val errorMsg = ERROR_CONNECTION_TIMEOUT
         _error.value = errorMsg
         onError(errorMsg)
+      } catch (_: OfflineException) {
+        // This operation cannot be done offline just displaying a TOAST is good
+        onError(ERROR_OFFLINE_OPERATION)
+        _isLoading.value = false
       } catch (e: Exception) {
         val errorMsg = ERROR_SAVE_PROFILE_FAILED.format(e.message)
         _error.value = errorMsg
@@ -427,5 +432,6 @@ class ProfileViewModel(
     private const val TAG = "ProfileViewModel"
     private const val ERROR_CONNECTION_TIMEOUT = "Connection timeout. Please try again."
     private const val ERROR_SAVE_PROFILE_FAILED = "Failed to save profile: %s"
+    private const val ERROR_OFFLINE_OPERATION = "This operation requires an internet connection"
   }
 }
