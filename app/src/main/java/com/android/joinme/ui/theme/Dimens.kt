@@ -317,6 +317,9 @@ object Dimens {
 
     /** 12dp - Standard button corner radius */
     val cornerRadius: Dp = 12.dp
+
+    val googleMapButtonBackGround: Dp = 40.dp
+    val googleMapButtonIcon: Dp = 20.dp
   }
 
   /**
