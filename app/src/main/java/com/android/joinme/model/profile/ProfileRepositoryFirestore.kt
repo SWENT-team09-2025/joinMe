@@ -3,6 +3,7 @@ package com.android.joinme.model.profile
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.android.joinme.model.chat.ConversationCleanupService
 import com.android.joinme.model.utils.ImageProcessor
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentSnapshot
@@ -127,6 +128,9 @@ class ProfileRepositoryFirestore(
 
   override suspend fun deleteProfile(uid: String) {
     profilesCollection.document(uid).delete().await()
+
+    // Delete all direct message conversations involving this user
+    ConversationCleanupService.cleanupUserConversations(userId = uid)
   }
 
   /**
