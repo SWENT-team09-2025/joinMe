@@ -1,5 +1,6 @@
 package com.android.joinme.model.serie
 
+import com.android.joinme.model.chat.ConversationCleanupService
 import com.android.joinme.model.event.EVENTS_COLLECTION_PATH
 import com.android.joinme.model.event.isActive
 import com.android.joinme.model.event.isExpired
@@ -132,7 +133,7 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
    *
    * Replaces the entire Serie document with the new value.
    *
-   * @param serieId The unique identifier of the Serie item to edit
+   * @param serieId The unique identifier of the Serie items to edit
    * @param newValue The new value for the Serie item
    */
   override suspend fun editSerie(serieId: String, newValue: Serie) {
@@ -146,8 +147,11 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
    */
   override suspend fun deleteSerie(serieId: String) {
     val serie = getSerie(serieId)
-    // Delete all events related to the serie
+    // Delete all events related to the serie and their conversations
     serie.eventIds.forEach { eventId ->
+      // Delete the event's conversation (messages, polls, images)
+      ConversationCleanupService.cleanupConversation(conversationId = eventId)
+      // Then delete the event document
       db.collection(EVENTS_COLLECTION_PATH).document(eventId).delete().await()
     }
     // Delete serie

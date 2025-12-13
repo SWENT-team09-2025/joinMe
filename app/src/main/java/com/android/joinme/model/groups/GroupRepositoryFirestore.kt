@@ -4,6 +4,7 @@ package com.android.joinme.model.groups
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.android.joinme.model.chat.ConversationCleanupService
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
@@ -23,8 +24,7 @@ const val GROUPS_COLLECTION_PATH = "groups"
 private const val F_PHOTO_URL = "photoUrl"
 
 /**
- * Firestore-backed implementation of [GroupRepository]. Manages CRUD operations for [Group]
- * objects.
+ * Firestore-backed implementation of [GroupRepository]. Manages CRUD operation for [Group] objects.
  */
 class GroupRepositoryFirestore(
     private val db: FirebaseFirestore,
@@ -105,6 +105,9 @@ class GroupRepositoryFirestore(
 
     // Finally, delete the group itself
     db.collection(GROUPS_COLLECTION_PATH).document(groupId).delete().await()
+
+    // Delete the associated conversation (messages, polls, images)
+    ConversationCleanupService.cleanupConversation(conversationId = groupId)
   }
 
   override suspend fun leaveGroup(groupId: String, userId: String) {

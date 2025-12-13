@@ -8,6 +8,9 @@ import com.android.joinme.model.utils.ImageProcessor
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
@@ -23,10 +26,12 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.unmockkAll
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertThrows
@@ -83,6 +88,26 @@ class GroupRepositoryFirestoreTest {
     mockEventsRepository = mockk(relaxed = true)
     mockSeriesRepository = mockk(relaxed = true)
 
+    // Mock Firebase Realtime Database and Storage for ConversationCleanupService
+    mockkStatic(FirebaseDatabase::class)
+    mockkStatic(FirebaseStorage::class)
+    val mockDatabase = mockk<FirebaseDatabase>(relaxed = true)
+    val mockConversationsRef = mockk<DatabaseReference>(relaxed = true)
+    val mockConversationRef = mockk<DatabaseReference>(relaxed = true)
+    val mockMessagesRef = mockk<DatabaseReference>(relaxed = true)
+    val mockMessagesSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockCleanupStorageRef = mockk<StorageReference>(relaxed = true)
+
+    every { FirebaseDatabase.getInstance() } returns mockDatabase
+    every { FirebaseStorage.getInstance() } returns mockStorage
+    every { mockDatabase.getReference("conversations") } returns mockConversationsRef
+    every { mockConversationsRef.child(any()) } returns mockConversationRef
+    every { mockConversationRef.child("messages") } returns mockMessagesRef
+    every { mockMessagesRef.get() } returns Tasks.forResult(mockMessagesSnapshot)
+    every { mockMessagesSnapshot.children } returns emptyList()
+    every { mockStorage.reference } returns mockCleanupStorageRef
+    every { mockConversationRef.removeValue() } returns Tasks.forResult(null)
+
     every { mockDb.collection(GROUPS_COLLECTION_PATH) } returns mockCollection
     every { mockCollection.document(any()) } returns mockDocument
     every { mockCollection.document() } returns mockDocument
@@ -95,6 +120,11 @@ class GroupRepositoryFirestoreTest {
             mockStorage,
             eventsRepository = mockEventsRepository,
             seriesRepository = mockSeriesRepository)
+  }
+
+  @After
+  fun teardown() {
+    unmockkAll()
   }
 
   @Test
