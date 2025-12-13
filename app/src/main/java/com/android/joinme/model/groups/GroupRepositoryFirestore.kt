@@ -4,6 +4,7 @@ package com.android.joinme.model.groups
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.android.joinme.model.chat.ConversationCleanupService
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.utils.ImageProcessor
 import com.android.joinme.util.TestEnvironmentDetector
@@ -79,6 +80,9 @@ class GroupRepositoryFirestore(
     }
 
     db.collection(GROUPS_COLLECTION_PATH).document(groupId).delete().await()
+
+    // Delete the associated conversation (messages, polls, images)
+    ConversationCleanupService.cleanupConversation(conversationId = groupId)
   }
 
   override suspend fun leaveGroup(groupId: String, userId: String) {
