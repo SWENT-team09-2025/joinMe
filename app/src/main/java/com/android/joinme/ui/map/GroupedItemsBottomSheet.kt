@@ -1,6 +1,8 @@
 package com.android.joinme.ui.map
 
+import android.content.Context
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,6 +35,95 @@ import com.android.joinme.ui.theme.Dimens
 
 private const val GOOGLE_MAPS_PACKAGE = "com.google.android.apps.maps"
 private const val COLUMN_WEIGHT = 1f
+
+/**
+ * Displays a single item row in the grouped items list.
+ *
+ * @param item The map item to display
+ * @param onItemClick Callback when the item is clicked
+ * @param context The Android context for starting activities
+ */
+@Composable
+internal fun GroupedItemRow(item: MapItem, onItemClick: (MapItem) -> Unit, context: Context) {
+  Row(
+      modifier = Modifier.fillMaxWidth().padding(vertical = Dimens.Padding.smallMedium),
+      verticalAlignment = Alignment.CenterVertically) {
+        // Color indicator
+        Surface(
+            modifier = Modifier.size(Dimens.Padding.medium),
+            shape = MaterialTheme.shapes.small,
+            color = item.color) {}
+
+        Spacer(modifier = Modifier.width(Dimens.Padding.smallMedium))
+
+        // Title and category - clickable to see details
+        Column(modifier = Modifier.weight(COLUMN_WEIGHT).clickable { onItemClick(item) }) {
+          Text(
+              text = item.title,
+              style = MaterialTheme.typography.bodyLarge,
+              color = MaterialTheme.colorScheme.onSurface)
+          Text(
+              text =
+                  when (item) {
+                    is MapItem.EventItem ->
+                        item.event.type.name.lowercase().replaceFirstChar { it.uppercase() }
+                    is MapItem.SerieItem -> stringResource(R.string.serie)
+                  },
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        // Directions button (Navigation)
+        FloatingActionButton(
+            onClick = {
+              val uri = "google.navigation:q=${item.position.latitude},${item.position.longitude}"
+              val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri.toUri())
+              intent.setPackage(GOOGLE_MAPS_PACKAGE)
+              try {
+                context.startActivity(intent)
+              } catch (e: android.content.ActivityNotFoundException) {
+                val fallbackUri =
+                    "geo:${item.position.latitude},${item.position.longitude}?q=${item.position.latitude},${item.position.longitude}"
+                val fallbackIntent =
+                    android.content.Intent(android.content.Intent.ACTION_VIEW, fallbackUri.toUri())
+                context.startActivity(fallbackIntent)
+              }
+            },
+            modifier = Modifier.size(Dimens.Button.googleMapButtonBackGround),
+            containerColor = MaterialTheme.colorScheme.secondaryContainer) {
+              Icon(
+                  imageVector = Icons.Filled.Directions,
+                  contentDescription = "Directions",
+                  modifier = Modifier.size(Dimens.Button.googleMapButtonIcon),
+                  tint = MaterialTheme.colorScheme.onSecondaryContainer)
+            }
+
+        Spacer(modifier = Modifier.width(Dimens.Spacing.small))
+
+        // View in Maps button
+        FloatingActionButton(
+            onClick = {
+              val uri =
+                  "geo:${item.position.latitude},${item.position.longitude}?q=${item.position.latitude},${item.position.longitude}(${item.title})"
+              val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri.toUri())
+              intent.setPackage(GOOGLE_MAPS_PACKAGE)
+              try {
+                context.startActivity(intent)
+              } catch (e: android.content.ActivityNotFoundException) {
+                intent.setPackage(null)
+                context.startActivity(intent)
+              }
+            },
+            modifier = Modifier.size(Dimens.Button.googleMapButtonBackGround),
+            containerColor = MaterialTheme.colorScheme.primaryContainer) {
+              Icon(
+                  imageVector = Icons.Filled.Map,
+                  contentDescription = "View in Maps",
+                  modifier = Modifier.size(Dimens.Button.googleMapButtonIcon),
+                  tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+      }
+}
 
 /**
  * Displays a bottom sheet with a list of events/series at the same location.
@@ -68,94 +159,9 @@ internal fun GroupedItemsBottomSheet(
 
           // List of all items
           group.items.forEachIndexed { index, item ->
-            Row(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .padding(vertical = Dimens.Padding.smallMedium)
-                        .testTag(MapScreenTestTags.getTestTagForGroupedItem(index)),
-                verticalAlignment = Alignment.CenterVertically) {
-                  // Color indicator
-                  Surface(
-                      modifier = Modifier.size(Dimens.Padding.medium),
-                      shape = MaterialTheme.shapes.small,
-                      color = item.color) {}
-
-                  Spacer(modifier = Modifier.width(Dimens.Padding.smallMedium))
-
-                  // Title and category - clickable to see details
-                  Column(
-                      modifier = Modifier.weight(COLUMN_WEIGHT).clickable { onItemClick(item) }) {
-                        Text(
-                            text = item.title,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface)
-                        Text(
-                            text =
-                                when (item) {
-                                  is MapItem.EventItem ->
-                                      item.event.type.name.lowercase().replaceFirstChar {
-                                        it.uppercase()
-                                      }
-                                  is MapItem.SerieItem -> stringResource(R.string.serie)
-                                },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                      }
-
-                  // Directions button (Navigation)
-                  FloatingActionButton(
-                      onClick = {
-                        val uri =
-                            "google.navigation:q=${item.position.latitude},${item.position.longitude}"
-                        val intent =
-                            android.content.Intent(android.content.Intent.ACTION_VIEW, uri.toUri())
-                        intent.setPackage(GOOGLE_MAPS_PACKAGE)
-                        try {
-                          context.startActivity(intent)
-                        } catch (e: android.content.ActivityNotFoundException) {
-                          val fallbackUri =
-                              "geo:${item.position.latitude},${item.position.longitude}?q=${item.position.latitude},${item.position.longitude}"
-                          val fallbackIntent =
-                              android.content.Intent(
-                                  android.content.Intent.ACTION_VIEW, fallbackUri.toUri())
-                          context.startActivity(fallbackIntent)
-                        }
-                      },
-                      modifier = Modifier.size(Dimens.Button.googleMapButtonBackGround),
-                      containerColor = MaterialTheme.colorScheme.secondaryContainer) {
-                        Icon(
-                            imageVector = Icons.Filled.Directions,
-                            contentDescription = "Directions",
-                            modifier = Modifier.size(Dimens.Button.googleMapButtonIcon),
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                      }
-
-                  Spacer(modifier = Modifier.width(Dimens.Spacing.small))
-
-                  // View in Maps button
-                  FloatingActionButton(
-                      onClick = {
-                        val uri =
-                            "geo:${item.position.latitude},${item.position.longitude}?q=${item.position.latitude},${item.position.longitude}(${item.title})"
-                        val intent =
-                            android.content.Intent(android.content.Intent.ACTION_VIEW, uri.toUri())
-                        intent.setPackage(GOOGLE_MAPS_PACKAGE)
-                        try {
-                          context.startActivity(intent)
-                        } catch (e: android.content.ActivityNotFoundException) {
-                          intent.setPackage(null)
-                          context.startActivity(intent)
-                        }
-                      },
-                      modifier = Modifier.size(Dimens.Button.googleMapButtonBackGround),
-                      containerColor = MaterialTheme.colorScheme.primaryContainer) {
-                        Icon(
-                            imageVector = Icons.Filled.Map,
-                            contentDescription = "View in Maps",
-                            modifier = Modifier.size(Dimens.Button.googleMapButtonIcon),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                      }
-                }
+            Box(modifier = Modifier.testTag(MapScreenTestTags.getTestTagForGroupedItem(index))) {
+              GroupedItemRow(item = item, onItemClick = onItemClick, context = context)
+            }
 
             if (index < group.items.size - 1) {
               HorizontalDivider()

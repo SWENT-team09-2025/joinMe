@@ -86,43 +86,88 @@ const val CONTAINER_COLOR = true
 const val NOT_CONTAINER_COLOR = false
 
 /**
- * Handles camera positioning when centering on a specific location.
+ * Renders all markers on the map including event/serie markers and location marker.
  *
- * This is used when navigating to a specific location (e.g., from a chat location message). It
- * centers the map on the provided coordinates and disables user following.
- *
- * @param initialLatitude Optional latitude to center on
- * @param initialLongitude Optional longitude to center on
- * @param cameraPositionState Camera position state to animate
- * @param onProgrammaticMoveStart Callback when programmatic move starts
- * @param onProgrammaticMoveEnd Callback when programmatic move ends
- * @param onDisableFollowing Callback to disable user following
+ * @param uiState The current UI state containing events and series
+ * @param viewModel The MapViewModel for marker click handling
+ * @param navigationActions Navigation actions for navigating to event/serie details
+ * @param onGroupClick Callback when a grouped marker is clicked
+ * @param showLocationMarker Whether to show the location marker
+ * @param initialLatitude Latitude for location marker
+ * @param initialLongitude Longitude for location marker
+ * @param sharedLocationUserId User ID for shared location
+ * @param currentUserId Current user's ID
  */
 @Composable
-private fun MapInitialLocationEffect(
+private fun MapMarkersContent(
+    uiState: MapUIState,
+    viewModel: MapViewModel,
+    navigationActions: NavigationActions?,
+    onGroupClick: (MapMarkerGroup) -> Unit,
+    showLocationMarker: Boolean,
     initialLatitude: Double?,
     initialLongitude: Double?,
-    cameraPositionState: CameraPositionState,
-    onProgrammaticMoveStart: () -> Unit,
-    onProgrammaticMoveEnd: () -> Unit,
-    onDisableFollowing: () -> Unit
+    sharedLocationUserId: String?,
+    currentUserId: String?
 ) {
-  LaunchedEffect(initialLatitude, initialLongitude) {
-    if (initialLatitude != null && initialLongitude != null) {
-      try {
-        onProgrammaticMoveStart()
-        onDisableFollowing() // Don't follow user when viewing specific location
-        cameraPositionState.animate(
-            update =
-                CameraUpdateFactory.newLatLngZoom(LatLng(initialLatitude, initialLongitude), 16f),
-            durationMs = 1000)
-      } catch (e: Exception) {
-        Log.e("MapInitialLocationEffect", e.message ?: "Unknown error")
-      } finally {
-        onProgrammaticMoveEnd()
+  val serieColor = MaterialTheme.customColors.seriePinMark
+  val allMapItems = buildList {
+    uiState.events.forEach { event ->
+      if (event.location != null) {
+        add(MapItem.EventItem(event, event.type.getColor()))
       }
     }
+    uiState.series.forEach { (location, serie) ->
+      add(MapItem.SerieItem(serie, location, serieColor))
+    }
   }
+
+  val markerGroups =
+      allMapItems
+          .groupBy { item -> item.position.latitude to item.position.longitude }
+          .map { (_, items) -> MapMarkerGroup(position = items.first().position, items = items) }
+
+  // Display markers
+  markerGroups.forEach { group ->
+    if (group.isSingle) {
+      val item = group.items.first()
+      val markerIcon = createMarkerForColor(item.color)
+
+      Marker(
+          state = MarkerState(position = group.position),
+          icon = markerIcon,
+          tag = getTestTagForMarker(item.id),
+          title = item.title,
+          snippet = stringResource(R.string.snippet_message),
+          onInfoWindowClick = {
+            viewModel.onMarkerClick()
+            when (item) {
+              is MapItem.EventItem ->
+                  navigationActions?.navigateTo(Screen.ShowEventScreen(item.event.eventId))
+              is MapItem.SerieItem ->
+                  navigationActions?.navigateTo(Screen.SerieDetails(item.serie.serieId))
+            }
+          })
+    } else {
+      val badgeIcon = createBadgeMarker(group.count)
+
+      Marker(
+          state = MarkerState(position = group.position),
+          icon = badgeIcon,
+          tag = getTestTagForGroupMarker(group),
+          onClick = {
+            onGroupClick(group)
+            false
+          })
+    }
+  }
+
+  ShowLocationMarker(
+      showLocationMarker = showLocationMarker,
+      initialLatitude = initialLatitude,
+      initialLongitude = initialLongitude,
+      userId = sharedLocationUserId,
+      currentUserId = currentUserId)
 }
 
 /** Checks if the camera should follow the user location. */
@@ -251,6 +296,46 @@ private fun ShowLocationMarker(
         tag = "locationMarker",
         title = context.getString(R.string.shared_location_marker_title),
         snippet = context.getString(R.string.shared_location_marker_snippet))
+  }
+}
+
+/**
+ * Handles camera positioning when centering on a specific location.
+ *
+ * This is used when navigating to a specific location (e.g., from a chat location message). It
+ * centers the map on the provided coordinates and disables user following.
+ *
+ * @param initialLatitude Optional latitude to center on
+ * @param initialLongitude Optional longitude to center on
+ * @param cameraPositionState Camera position state to animate
+ * @param onProgrammaticMoveStart Callback when programmatic move starts
+ * @param onProgrammaticMoveEnd Callback when programmatic move ends
+ * @param onDisableFollowing Callback to disable user following
+ */
+@Composable
+private fun MapInitialLocationEffect(
+    initialLatitude: Double?,
+    initialLongitude: Double?,
+    cameraPositionState: CameraPositionState,
+    onProgrammaticMoveStart: () -> Unit,
+    onProgrammaticMoveEnd: () -> Unit,
+    onDisableFollowing: () -> Unit
+) {
+  LaunchedEffect(initialLatitude, initialLongitude) {
+    if (initialLatitude != null && initialLongitude != null) {
+      try {
+        onProgrammaticMoveStart()
+        onDisableFollowing() // Don't follow user when viewing specific location
+        cameraPositionState.animate(
+            update =
+                CameraUpdateFactory.newLatLngZoom(LatLng(initialLatitude, initialLongitude), 16f),
+            durationMs = 1000)
+      } catch (e: Exception) {
+        Log.e("MapInitialLocationEffect", e.message ?: "Unknown error")
+      } finally {
+        onProgrammaticMoveEnd()
+      }
+    }
   }
 }
 
@@ -406,68 +491,18 @@ fun MapScreen(
                   properties = mapProperties,
                   uiSettings =
                       MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = false)) {
-                    val serieColor = MaterialTheme.customColors.seriePinMark
-                    val allMapItems = buildList {
-                      uiState.events.forEach { event ->
-                        if (event.location != null) {
-                          add(MapItem.EventItem(event, event.type.getColor()))
-                        }
-                      }
-
-                      uiState.series.forEach { (location, serie) ->
-                        add(MapItem.SerieItem(serie, location, serieColor))
-                      }
-                    }
-
-                    val markerGroups =
-                        allMapItems
-                            .groupBy { item -> item.position.latitude to item.position.longitude }
-                            .map { (_, items) ->
-                              MapMarkerGroup(position = items.first().position, items = items)
-                            }
-
-                    // Display markers
-                    markerGroups.forEach { group ->
-                      if (group.isSingle) {
-                        val item = group.items.first()
-                        val markerIcon = createMarkerForColor(item.color)
-
-                        Marker(
-                            state = MarkerState(position = group.position),
-                            icon = markerIcon,
-                            tag = getTestTagForMarker(item.id),
-                            title = item.title,
-                            snippet = stringResource(R.string.snippet_message),
-                            onInfoWindowClick = {
-                              viewModel.onMarkerClick()
-                              when (item) {
-                                is MapItem.EventItem ->
-                                    navigationActions?.navigateTo(
-                                        Screen.ShowEventScreen(item.event.eventId))
-                                is MapItem.SerieItem ->
-                                    navigationActions?.navigateTo(
-                                        Screen.SerieDetails(item.serie.serieId))
-                              }
-                            })
-                      } else {
-                        val badgeIcon = createBadgeMarker(group.count)
-
-                        Marker(
-                            state = MarkerState(position = group.position),
-                            icon = badgeIcon,
-                            tag = getTestTagForGroupMarker(group),
-                            onClick = {
-                              selectedGroup = group
-                              showGroupedItemsSheet = true
-                              false
-                            })
-                      }
-                    }
-                    ShowLocationMarker(
+                    MapMarkersContent(
+                        uiState = uiState,
+                        viewModel = viewModel,
+                        navigationActions = navigationActions,
+                        onGroupClick = { group ->
+                          selectedGroup = group
+                          showGroupedItemsSheet = true
+                        },
                         showLocationMarker = showLocationMarker,
                         initialLatitude = initialLatitude,
                         initialLongitude = initialLongitude,
-                        userId = sharedLocationUserId,
+                        sharedLocationUserId = sharedLocationUserId,
                         currentUserId = currentUserId)
                   }
 
