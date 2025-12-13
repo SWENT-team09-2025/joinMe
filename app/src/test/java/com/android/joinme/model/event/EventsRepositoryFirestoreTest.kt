@@ -5,25 +5,18 @@ import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
-import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.StorageReference
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
-import io.mockk.unmockkAll
 import io.mockk.verify
 import java.util.Date
 import kotlinx.coroutines.test.runTest
 import org.bouncycastle.util.test.SimpleTest.runTest
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Before
@@ -65,38 +58,12 @@ class EventsRepositoryFirestoreTest {
     mockAuth = mockk(relaxed = true)
     mockUser = mockk(relaxed = true)
 
-    // Mock Firebase Realtime Database and Storage for ConversationCleanupService
-    mockkStatic(FirebaseDatabase::class)
-    mockkStatic(FirebaseStorage::class)
-    val mockDatabase = mockk<FirebaseDatabase>(relaxed = true)
-    val mockStorage = mockk<FirebaseStorage>(relaxed = true)
-    val mockConversationsRef = mockk<DatabaseReference>(relaxed = true)
-    val mockConversationRef = mockk<DatabaseReference>(relaxed = true)
-    val mockMessagesRef = mockk<DatabaseReference>(relaxed = true)
-    val mockMessagesSnapshot = mockk<DataSnapshot>(relaxed = true)
-    val mockStorageRef = mockk<StorageReference>(relaxed = true)
-
-    every { FirebaseDatabase.getInstance() } returns mockDatabase
-    every { FirebaseStorage.getInstance() } returns mockStorage
-    every { mockDatabase.getReference("conversations") } returns mockConversationsRef
-    every { mockConversationsRef.child(any()) } returns mockConversationRef
-    every { mockConversationRef.child("messages") } returns mockMessagesRef
-    every { mockMessagesRef.get() } returns Tasks.forResult(mockMessagesSnapshot)
-    every { mockMessagesSnapshot.children } returns emptyList()
-    every { mockStorage.reference } returns mockStorageRef
-    every { mockConversationRef.removeValue() } returns Tasks.forResult(null)
-
     every { mockDb.collection(EVENTS_COLLECTION_PATH) } returns mockCollection
     every { mockCollection.document(any()) } returns mockDocument
     every { mockCollection.document() } returns mockDocument
     every { mockDocument.id } returns testEventId
 
     repository = EventsRepositoryFirestore(mockDb)
-  }
-
-  @After
-  fun teardown() {
-    unmockkAll()
   }
 
   @Test

@@ -1,6 +1,5 @@
 package com.android.joinme.model.serie
 
-import com.android.joinme.model.chat.ConversationCleanupService
 import com.android.joinme.model.event.EVENTS_COLLECTION_PATH
 import com.android.joinme.model.event.isActive
 import com.android.joinme.model.event.isExpired
