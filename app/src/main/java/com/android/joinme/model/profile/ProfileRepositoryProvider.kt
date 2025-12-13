@@ -2,6 +2,7 @@ package com.android.joinme.model.profile
 
 import android.content.Context
 import com.android.joinme.network.NetworkMonitor
+import com.android.joinme.util.TestEnvironmentDetector
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.firestore
@@ -48,7 +49,9 @@ object ProfileRepositoryProvider {
 
   // For backward compatibility and explicit test injection
   var repository: ProfileRepository
-    get() = getRepository()
+    get() {
+      return if (TestEnvironmentDetector.isTestEnvironment()) localRepo else getRepository()
+    }
     set(value) {
       // Allows tests to inject custom repository
     }

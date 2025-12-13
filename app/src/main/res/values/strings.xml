@@ -103,6 +103,10 @@
     <string name="read_by_all">Read by all</string>
     <string name="message_sent">Sent</string>
 
+    <!-- Chat Date Headers -->
+    <string name="date_header_today">Today</string>
+    <string name="date_header_yesterday">Yesterday</string>
+
     <!-- Edit Message Dialog -->
     <string name="edit_message_title">Edit Message</string>
     <string name="edit_message_placeholder">Enter new message</string>
@@ -157,15 +161,15 @@
         <item>December</item>
     </string-array>
 
-    <!-- Weekday Abbreviations Array (Monday through Sunday) -->
+    <!-- Weekday Abbreviations Array (Sunday through Saturday) -->
     <string-array name="weekday_abbreviations">
+        <item>Sun</item>
         <item>Mon</item>
         <item>Tue</item>
         <item>Wed</item>
         <item>Thu</item>
         <item>Fri</item>
         <item>Sat</item>
-        <item>Sun</item>
     </string-array>
     <!-- Notification Types -->
     <string name="notification_type_event_chat_message">event_chat_message</string>

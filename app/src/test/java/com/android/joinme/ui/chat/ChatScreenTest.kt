@@ -918,6 +918,58 @@ class ChatScreenTest {
   }
 
   // ============================================================================
+  // Date Header Tests
+  // ============================================================================
+
+  @Test
+  fun chatScreen_sameDayMessages_displaysSingleDateHeader() {
+    val now = System.currentTimeMillis()
+    val messages =
+        listOf(
+            createMessage(
+                id = "msg1", content = "Good morning!", timestampOffset = 3600000), // 1 hour ago
+            createMessage(
+                id = "msg2", content = "How are you?", timestampOffset = 1800000), // 30 min ago
+            createMessage(id = "msg3", content = "Great!", timestampOffset = 0))
+    fakeChatRepository.setMessages(messages)
+
+    setupChatScreen()
+    composeTestRule.waitForIdle()
+
+    // Verify all messages are displayed
+    composeTestRule.onNodeWithText("Good morning!", useUnmergedTree = true).assertExists()
+    composeTestRule.onNodeWithText("How are you?", useUnmergedTree = true).assertExists()
+    composeTestRule.onNodeWithText("Great!", useUnmergedTree = true).assertExists()
+
+    // Verify "Today" header appears exactly once
+    composeTestRule.onNodeWithText("Today", useUnmergedTree = true).assertIsDisplayed()
+  }
+
+  @Test
+  fun chatScreen_multipleDayMessages_displaysMultipleDateHeaders() {
+    val now = System.currentTimeMillis()
+    val oneDayMs = 24 * 60 * 60 * 1000L
+    val messages =
+        listOf(
+            createMessage(id = "msg1", content = "Yesterday message", timestampOffset = oneDayMs),
+            createMessage(id = "msg2", content = "Today message 1", timestampOffset = 3600000),
+            createMessage(id = "msg3", content = "Today message 2", timestampOffset = 0))
+    fakeChatRepository.setMessages(messages)
+
+    setupChatScreen()
+    composeTestRule.waitForIdle()
+
+    // Verify messages are displayed
+    composeTestRule.onNodeWithText("Yesterday message", useUnmergedTree = true).assertExists()
+    composeTestRule.onNodeWithText("Today message 1", useUnmergedTree = true).assertExists()
+    composeTestRule.onNodeWithText("Today message 2", useUnmergedTree = true).assertExists()
+
+    // Verify both date headers appear
+    composeTestRule.onNodeWithText("Today", useUnmergedTree = true).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Yesterday", useUnmergedTree = true).assertIsDisplayed()
+  }
+
+  // ============================================================================
   // Fake Repository for Testing
   // ============================================================================
 

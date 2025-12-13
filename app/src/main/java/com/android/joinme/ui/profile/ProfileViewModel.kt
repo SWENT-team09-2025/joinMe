@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.authentification.AuthRepository
 import com.android.joinme.model.authentification.AuthRepositoryProvider
 import com.android.joinme.model.event.OfflineException
+import com.android.joinme.model.invitation.InvitationRepositoryProvider
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import com.android.joinme.model.profile.ProfileRepositoryProvider
@@ -49,6 +50,8 @@ class ProfileViewModel(
     private val repository: ProfileRepository = ProfileRepositoryProvider.repository,
     private val authRepository: AuthRepository = AuthRepositoryProvider.repository,
 ) : ViewModel() {
+
+  val invitationalRepo = InvitationRepositoryProvider.repository
 
   private val _profile = MutableStateFlow<Profile?>(null)
   val profile: StateFlow<Profile?> = _profile.asStateFlow()
@@ -158,7 +161,6 @@ class ProfileViewModel(
 
   /** Handles general errors during profile loading. */
   private fun handleLoadError(e: Exception) {
-    Log.e(TAG, "Error loading profile", e)
     _profile.value = null
     _error.value = "Failed to load profile: ${e.message}"
   }
@@ -230,7 +232,6 @@ class ProfileViewModel(
     val currentProfile = _profile.value
     if (currentProfile == null) {
       val errorMsg = "No profile loaded"
-      Log.e(TAG, errorMsg)
       _photoUploadError.value = errorMsg
       onError(errorMsg)
       return
@@ -241,16 +242,12 @@ class ProfileViewModel(
         _isUploadingPhoto.value = true
         _photoUploadError.value = null
 
-        Log.d(TAG, "Starting photo upload for user ${currentProfile.uid}")
-
         // Upload photo and get download URL
         // The repository handles image processing, upload, and Firestore update
         val downloadUrl =
             withTimeout(30000L) { // 30 second timeout for upload
               repository.uploadProfilePhoto(context, currentProfile.uid, imageUri)
             }
-
-        Log.d(TAG, "Photo uploaded successfully: $downloadUrl")
 
         // Update local profile state with new photo URL
         val updatedProfile = currentProfile.copy(photoUrl = downloadUrl)
@@ -288,7 +285,6 @@ class ProfileViewModel(
     val currentProfile = _profile.value
     if (currentProfile == null) {
       val errorMsg = "No profile loaded"
-      Log.e(TAG, errorMsg)
       _photoUploadError.value = errorMsg
       onError(errorMsg)
       return
@@ -299,11 +295,7 @@ class ProfileViewModel(
         _isUploadingPhoto.value = true
         _photoUploadError.value = null
 
-        Log.d(TAG, "Deleting photo for user ${currentProfile.uid}")
-
         withTimeout(10000L) { repository.deleteProfilePhoto(currentProfile.uid) }
-
-        Log.d(TAG, "Photo deleted successfully")
 
         // Update local profile state to remove photo URL
         val updatedProfile = currentProfile.copy(photoUrl = null)
@@ -341,7 +333,8 @@ class ProfileViewModel(
         _error.value = null
 
         withTimeout(10000L) { repository.deleteProfile(uid) }
-
+        val invitationsId = invitationalRepo.getInvitationsByUser(userId = uid).getOrNull()
+        invitationsId?.forEach { invitationalRepo.revokeInvitation(it.token) }
         _profile.value = null
       } catch (e: TimeoutCancellationException) {
         Log.e(TAG, "Timeout deleting profile", e)

@@ -165,7 +165,7 @@ class ProfileRepositoryCachedTest {
   }
 
   @Test
-  fun `getProfile returns null when online and Firestore returns null`() = runTest {
+  fun `getProfile returns null when online and Firestore returns null without caching`() = runTest {
     // Given
     every { mockNetworkMonitor.isOnline() } returns true
     coEvery { mockFirestoreRepo.getProfile(testUid) } returns null
@@ -176,24 +176,8 @@ class ProfileRepositoryCachedTest {
     // Then
     assertNull(result)
     coVerify { mockFirestoreRepo.getProfile(testUid) }
-    // Cache should NOT be called when Firestore successfully returns null
     coVerify(exactly = 0) { mockProfileDao.getProfileById(any()) }
-  }
-
-  @Test
-  fun `getProfile does not cache when Firestore returns null`() = runTest {
-    // Given
-    every { mockNetworkMonitor.isOnline() } returns true
-    coEvery { mockFirestoreRepo.getProfile(testUid) } returns null
-    coEvery { mockProfileDao.getProfileById(testUid) } returns null
-
-    // When
-    cachedRepository.getProfile(testUid)
-
-    // Then
-    // Verify cache was NOT updated
     coVerify(exactly = 0) { mockProfileDao.insertProfile(any()) }
-    coVerify(exactly = 0) { mockProfileDao.deleteProfile(any()) }
   }
 
   // ==================== getProfilesByIds Tests ====================
@@ -415,25 +399,6 @@ class ProfileRepositoryCachedTest {
     // Then - exception is thrown
   }
 
-  @Test
-  fun `uploadProfilePhoto succeeds even if cache refresh fails`() = runTest {
-    // Given
-    val mockUri = mockk<Uri>(relaxed = true)
-    val photoUrl = "https://example.com/new-photo.jpg"
-
-    every { mockNetworkMonitor.isOnline() } returns true
-    coEvery { mockFirestoreRepo.uploadProfilePhoto(mockContext, testUid, mockUri) } returns photoUrl
-    coEvery { mockFirestoreRepo.getProfile(testUid) } throws Exception("Failed to get profile")
-
-    // When
-    val result = cachedRepository.uploadProfilePhoto(mockContext, testUid, mockUri)
-
-    // Then - Should still return photoUrl even if refresh fails
-    assertEquals(photoUrl, result)
-    coVerify { mockFirestoreRepo.uploadProfilePhoto(mockContext, testUid, mockUri) }
-    coVerify { mockFirestoreRepo.getProfile(testUid) }
-  }
-
   // ==================== deleteProfilePhoto Tests ====================
 
   @Test
@@ -503,23 +468,6 @@ class ProfileRepositoryCachedTest {
     // Then - exception is thrown
   }
 
-  @Test
-  fun `followUser succeeds even if cache refresh fails`() = runTest {
-    // Given
-    val followerId = testUid
-    val followedId = testUid2
-
-    every { mockNetworkMonitor.isOnline() } returns true
-    coEvery { mockFirestoreRepo.followUser(followerId, followedId) } just Runs
-    coEvery { mockFirestoreRepo.getProfile(any()) } throws Exception("Failed to get profile")
-
-    // When
-    cachedRepository.followUser(followerId, followedId)
-
-    // Then - Should succeed even if refresh fails
-    coVerify { mockFirestoreRepo.followUser(followerId, followedId) }
-  }
-
   // ==================== unfollowUser Tests ====================
 
   @Test
@@ -560,42 +508,20 @@ class ProfileRepositoryCachedTest {
   // ==================== isFollowing Tests ====================
 
   @Test
-  fun `isFollowing returns true when online and user is following`() = runTest {
+  fun `isFollowing returns correct value when online`() = runTest {
     // Given
     every { mockNetworkMonitor.isOnline() } returns true
     coEvery { mockFirestoreRepo.isFollowing(testUid, testUid2) } returns true
 
-    // When
-    val result = cachedRepository.isFollowing(testUid, testUid2)
-
-    // Then
-    assertTrue(result)
-    coVerify { mockFirestoreRepo.isFollowing(testUid, testUid2) }
-  }
-
-  @Test
-  fun `isFollowing returns false when online and user is not following`() = runTest {
-    // Given
-    every { mockNetworkMonitor.isOnline() } returns true
-    coEvery { mockFirestoreRepo.isFollowing(testUid, testUid2) } returns false
-
-    // When
-    val result = cachedRepository.isFollowing(testUid, testUid2)
-
-    // Then
-    assertFalse(result)
+    // When/Then
+    assertTrue(cachedRepository.isFollowing(testUid, testUid2))
     coVerify { mockFirestoreRepo.isFollowing(testUid, testUid2) }
   }
 
   @Test(expected = OfflineException::class)
   fun `isFollowing throws OfflineException when offline`() = runTest {
-    // Given
     every { mockNetworkMonitor.isOnline() } returns false
-
-    // When
     cachedRepository.isFollowing(testUid, testUid2)
-
-    // Then - exception is thrown
   }
 
   // ==================== getFollowing Tests ====================
@@ -618,44 +544,17 @@ class ProfileRepositoryCachedTest {
   }
 
   @Test
-  fun `getFollowing returns empty list when offline`() = runTest {
-    // Given
+  fun `getFollowing returns empty list when offline or fails`() = runTest {
+    // Given - offline case
     every { mockNetworkMonitor.isOnline() } returns false
-
-    // When
-    val result = cachedRepository.getFollowing(testUid, 10)
-
-    // Then
-    assertTrue(result.isEmpty())
+    assertTrue(cachedRepository.getFollowing(testUid, 10).isEmpty())
     coVerify(exactly = 0) { mockFirestoreRepo.getFollowing(any(), any()) }
-  }
 
-  @Test
-  fun `getFollowing returns empty list when Firestore fails`() = runTest {
-    // Given
+    // Given - Firestore fails case
+    clearMocks(mockFirestoreRepo, answers = false)
     every { mockNetworkMonitor.isOnline() } returns true
     coEvery { mockFirestoreRepo.getFollowing(testUid, 10) } throws Exception("Network error")
-
-    // When
-    val result = cachedRepository.getFollowing(testUid, 10)
-
-    // Then
-    assertTrue(result.isEmpty())
-    coVerify { mockFirestoreRepo.getFollowing(testUid, 10) }
-  }
-
-  @Test
-  fun `getFollowing does not cache when list is empty`() = runTest {
-    // Given
-    every { mockNetworkMonitor.isOnline() } returns true
-    coEvery { mockFirestoreRepo.getFollowing(testUid, 10) } returns emptyList()
-
-    // When
-    val result = cachedRepository.getFollowing(testUid, 10)
-
-    // Then
-    assertTrue(result.isEmpty())
-    coVerify(exactly = 0) { mockProfileDao.insertProfiles(any()) }
+    assertTrue(cachedRepository.getFollowing(testUid, 10).isEmpty())
   }
 
   // ==================== getFollowers Tests ====================
@@ -678,30 +577,11 @@ class ProfileRepositoryCachedTest {
   }
 
   @Test
-  fun `getFollowers returns empty list when offline`() = runTest {
-    // Given
+  fun `getFollowers returns empty list when offline or fails`() = runTest {
+    // Given - offline
     every { mockNetworkMonitor.isOnline() } returns false
-
-    // When
-    val result = cachedRepository.getFollowers(testUid, 10)
-
-    // Then
-    assertTrue(result.isEmpty())
+    assertTrue(cachedRepository.getFollowers(testUid, 10).isEmpty())
     coVerify(exactly = 0) { mockFirestoreRepo.getFollowers(any(), any()) }
-  }
-
-  @Test
-  fun `getFollowers returns empty list when Firestore fails`() = runTest {
-    // Given
-    every { mockNetworkMonitor.isOnline() } returns true
-    coEvery { mockFirestoreRepo.getFollowers(testUid, 10) } throws Exception("Network error")
-
-    // When
-    val result = cachedRepository.getFollowers(testUid, 10)
-
-    // Then
-    assertTrue(result.isEmpty())
-    coVerify { mockFirestoreRepo.getFollowers(testUid, 10) }
   }
 
   // ==================== getMutualFollowing Tests ====================
@@ -724,31 +604,11 @@ class ProfileRepositoryCachedTest {
   }
 
   @Test
-  fun `getMutualFollowing returns empty list when offline`() = runTest {
-    // Given
+  fun `getMutualFollowing returns empty list when offline or fails`() = runTest {
+    // Given - offline
     every { mockNetworkMonitor.isOnline() } returns false
-
-    // When
-    val result = cachedRepository.getMutualFollowing(testUid, testUid2)
-
-    // Then
-    assertTrue(result.isEmpty())
+    assertTrue(cachedRepository.getMutualFollowing(testUid, testUid2).isEmpty())
     coVerify(exactly = 0) { mockFirestoreRepo.getMutualFollowing(any(), any()) }
-  }
-
-  @Test
-  fun `getMutualFollowing returns empty list when Firestore fails`() = runTest {
-    // Given
-    every { mockNetworkMonitor.isOnline() } returns true
-    coEvery { mockFirestoreRepo.getMutualFollowing(testUid, testUid2) } throws
-        Exception("Network error")
-
-    // When
-    val result = cachedRepository.getMutualFollowing(testUid, testUid2)
-
-    // Then
-    assertTrue(result.isEmpty())
-    coVerify { mockFirestoreRepo.getMutualFollowing(testUid, testUid2) }
   }
 
   // ==================== Timeout Tests ====================

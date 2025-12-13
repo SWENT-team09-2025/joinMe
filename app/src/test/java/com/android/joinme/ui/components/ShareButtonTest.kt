@@ -78,7 +78,7 @@ class ShareButtonTest {
           invitationType = InvitationType.GROUP,
           targetId = "test-id",
           createdBy = "user-123",
-          expiresInDays = 7)
+          expiresInDays = 7.0)
     }
 
     // Verify button is rendered
@@ -89,7 +89,7 @@ class ShareButtonTest {
         invitationType = InvitationType.SERIE,
         targetId = "serie-id",
         createdBy = "user-123",
-        expiresInDays = 7,
+        expiresInDays = 7.0,
         context = mockContext,
         onError = {})
   }
@@ -111,7 +111,7 @@ class ShareButtonTest {
         invitationType = InvitationType.EVENT,
         targetId = "id-2",
         createdBy = "user-2",
-        expiresInDays = 3,
+        expiresInDays = 3.0,
         context = context,
         onError = { errorCalled = true })
 

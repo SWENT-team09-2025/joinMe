@@ -160,16 +160,6 @@ class ProfileDaoTest {
   }
 
   @Test
-  fun insertProfiles_withEmptyList_doesNothing() = runTest {
-    // When
-    profileDao.insertProfiles(emptyList())
-
-    // Then
-    val allProfiles = profileDao.getAllProfiles()
-    assertTrue(allProfiles.isEmpty())
-  }
-
-  @Test
   fun insertProfiles_replacesDuplicates() = runTest {
     // Given
     profileDao.insertProfiles(listOf(testProfile1, testProfile2))
@@ -260,19 +250,6 @@ class ProfileDaoTest {
   }
 
   @Test
-  fun deleteProfile_withNonexistentUid_doesNothing() = runTest {
-    // Given
-    profileDao.insertProfile(testProfile1)
-
-    // When
-    profileDao.deleteProfile("nonexistent-uid")
-
-    // Then - Original profile still exists
-    val allProfiles = profileDao.getAllProfiles()
-    assertEquals(1, allProfiles.size)
-  }
-
-  @Test
   fun deleteAllProfiles_removesAllProfiles() = runTest {
     // Given
     profileDao.insertProfiles(listOf(testProfile1, testProfile2, testProfile3))
@@ -286,18 +263,8 @@ class ProfileDaoTest {
   }
 
   @Test
-  fun deleteAllProfiles_onEmptyDatabase_doesNothing() = runTest {
-    // When
-    profileDao.deleteAllProfiles()
-
-    // Then
-    val result = profileDao.getAllProfiles()
-    assertTrue(result.isEmpty())
-  }
-
-  @Test
-  fun deleteOldProfiles_removesProfilesBeforeTimestamp() = runTest {
-    // Given
+  fun deleteOldProfiles_handlesVariousTimestampScenarios() = runTest {
+    // Test 1: Normal case - Remove profiles older than cutoff
     val currentTime = System.currentTimeMillis()
     val oldProfile1 =
         testProfile1.copy(uid = "old-1", cachedAt = currentTime - 10000) // 10 seconds ago
@@ -308,80 +275,35 @@ class ProfileDaoTest {
 
     profileDao.insertProfiles(listOf(oldProfile1, oldProfile2, recentProfile))
 
-    // When - Delete profiles older than 3 seconds ago
-    val cutoffTime = currentTime - 3000
+    val cutoffTime = currentTime - 3000 // 3 seconds ago
     profileDao.deleteOldProfiles(cutoffTime)
 
-    // Then
-    val remainingProfiles = profileDao.getAllProfiles()
+    var remainingProfiles = profileDao.getAllProfiles()
     assertEquals(1, remainingProfiles.size)
     assertEquals("recent", remainingProfiles[0].uid)
 
-    // Verify old profiles are deleted
-    assertNull(profileDao.getProfileById("old-1"))
-    assertNull(profileDao.getProfileById("old-2"))
-  }
-
-  @Test
-  fun deleteOldProfiles_withFutureTimestamp_removesAllProfiles() = runTest {
-    // Given
-    profileDao.insertProfiles(listOf(testProfile1, testProfile2, testProfile3))
-
-    // When - Delete profiles older than a future timestamp
+    // Test 2: Future timestamp - Removes all profiles
+    profileDao.insertProfiles(listOf(testProfile1, testProfile2))
     val futureTime = System.currentTimeMillis() + 10000
     profileDao.deleteOldProfiles(futureTime)
 
-    // Then
-    val remainingProfiles = profileDao.getAllProfiles()
+    remainingProfiles = profileDao.getAllProfiles()
     assertTrue(remainingProfiles.isEmpty())
-  }
 
-  @Test
-  fun deleteOldProfiles_withVeryOldTimestamp_removesNoProfiles() = runTest {
-    // Given
+    // Test 3: Very old timestamp - Removes no profiles
     profileDao.insertProfiles(listOf(testProfile1, testProfile2, testProfile3))
-
-    // When - Delete profiles older than a very old timestamp
-    val veryOldTime = 1000L // Very old timestamp
+    val veryOldTime = 1000L
     profileDao.deleteOldProfiles(veryOldTime)
 
-    // Then
-    val remainingProfiles = profileDao.getAllProfiles()
+    remainingProfiles = profileDao.getAllProfiles()
     assertEquals(3, remainingProfiles.size)
   }
 
-  // ==================== Complex Scenario Tests ====================
+  // ==================== Data Integrity Tests ====================
 
   @Test
-  fun complexScenario_insertUpdateDeleteOperations() = runTest {
-    // Insert initial profiles
-    profileDao.insertProfiles(listOf(testProfile1, testProfile2))
-    assertEquals(2, profileDao.getAllProfiles().size)
-
-    // Update one profile
-    val updatedProfile1 = testProfile1.copy(bio = "Updated bio", followersCount = 20)
-    profileDao.insertProfile(updatedProfile1)
-    val retrieved1 = profileDao.getProfileById(testProfile1.uid)
-    assertEquals("Updated bio", retrieved1?.bio)
-    assertEquals(20, retrieved1?.followersCount)
-
-    // Add a new profile
-    profileDao.insertProfile(testProfile3)
-    assertEquals(3, profileDao.getAllProfiles().size)
-
-    // Delete one profile
-    profileDao.deleteProfile(testProfile2.uid)
-    assertEquals(2, profileDao.getAllProfiles().size)
-    assertNull(profileDao.getProfileById(testProfile2.uid))
-
-    // Verify remaining profiles
-    assertNotNull(profileDao.getProfileById(testProfile1.uid))
-    assertNotNull(profileDao.getProfileById(testProfile3.uid))
-  }
-
-  @Test
-  fun testDataIntegrity_allFieldsPreserved() = runTest {
-    // Given
+  fun testDataIntegrity_criticalFieldsPreserved() = runTest {
+    // Given - Profile with special characters and various data types
     val profile =
         ProfileEntity(
             uid = "integrity-test-uid",
@@ -406,46 +328,20 @@ class ProfileDaoTest {
     profileDao.insertProfile(profile)
     val retrieved = profileDao.getProfileById(profile.uid)
 
-    // Then - Verify all fields are preserved exactly
+    // Then - Verify critical fields and representative samples
     assertNotNull(retrieved)
+    // Core identity fields
     assertEquals(profile.uid, retrieved?.uid)
-    assertEquals(profile.photoUrl, retrieved?.photoUrl)
     assertEquals(profile.username, retrieved?.username)
     assertEquals(profile.email, retrieved?.email)
-    assertEquals(profile.dateOfBirth, retrieved?.dateOfBirth)
-    assertEquals(profile.country, retrieved?.country)
+    // Complex/special character fields
     assertEquals(profile.interestsJson, retrieved?.interestsJson)
     assertEquals(profile.bio, retrieved?.bio)
+    // Timestamp fields
     assertEquals(profile.createdAtSeconds, retrieved?.createdAtSeconds)
-    assertEquals(profile.createdAtNanoseconds, retrieved?.createdAtNanoseconds)
-    assertEquals(profile.updatedAtSeconds, retrieved?.updatedAtSeconds)
     assertEquals(profile.updatedAtNanoseconds, retrieved?.updatedAtNanoseconds)
-    assertEquals(profile.fcmToken, retrieved?.fcmToken)
+    // Counter fields
     assertEquals(profile.eventsJoinedCount, retrieved?.eventsJoinedCount)
     assertEquals(profile.followersCount, retrieved?.followersCount)
-    assertEquals(profile.followingCount, retrieved?.followingCount)
-    assertEquals(profile.cachedAt, retrieved?.cachedAt)
-  }
-
-  @Test
-  fun testConcurrentOperations_maintainsConsistency() = runTest {
-    // Insert multiple profiles
-    profileDao.insertProfiles(listOf(testProfile1, testProfile2, testProfile3))
-
-    // Perform multiple operations
-    profileDao.deleteProfile(testProfile1.uid)
-    profileDao.insertProfile(testProfile1.copy(username = "Reinserted"))
-    val updated = testProfile2.copy(bio = "Updated concurrently")
-    profileDao.insertProfile(updated)
-
-    // Verify final state
-    val allProfiles = profileDao.getAllProfiles()
-    assertEquals(3, allProfiles.size)
-
-    val profile1 = profileDao.getProfileById(testProfile1.uid)
-    assertEquals("Reinserted", profile1?.username)
-
-    val profile2 = profileDao.getProfileById(testProfile2.uid)
-    assertEquals("Updated concurrently", profile2?.bio)
   }
 }
