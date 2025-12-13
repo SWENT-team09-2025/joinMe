@@ -39,7 +39,7 @@ class InvitationRepositoryProviderTest {
         type: InvitationType,
         targetId: String,
         createdBy: String,
-        expiresInDays: Int?
+        expiresInDays: Double?
     ): Result<String> {
       return Result.success("fake-token")
     }

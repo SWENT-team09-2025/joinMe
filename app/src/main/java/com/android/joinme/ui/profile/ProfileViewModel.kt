@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.joinme.model.authentification.AuthRepository
 import com.android.joinme.model.authentification.AuthRepositoryProvider
+import com.android.joinme.model.invitation.InvitationRepositoryProvider
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import com.android.joinme.model.profile.ProfileRepositoryProvider
@@ -48,6 +49,8 @@ class ProfileViewModel(
     private val repository: ProfileRepository = ProfileRepositoryProvider.repository,
     private val authRepository: AuthRepository = AuthRepositoryProvider.repository,
 ) : ViewModel() {
+
+  val invitationalRepo = InvitationRepositoryProvider.repository
 
   private val _profile = MutableStateFlow<Profile?>(null)
   val profile: StateFlow<Profile?> = _profile.asStateFlow()
@@ -158,14 +161,12 @@ class ProfileViewModel(
 
   /** Handles timeout during profile loading. */
   private fun handleLoadTimeout(e: TimeoutCancellationException) {
-    Log.e(TAG, "Timeout loading profile", e)
     _profile.value = null
     _error.value = "Connection timeout. Please check your internet connection and try again."
   }
 
   /** Handles general errors during profile loading. */
   private fun handleLoadError(e: Exception) {
-    Log.e(TAG, "Error loading profile", e)
     _profile.value = null
     _error.value = "Failed to load profile: ${e.message}"
   }
@@ -206,19 +207,16 @@ class ProfileViewModel(
           _pendingPhotoUri.value != null && context != null -> {
             try {
               _isUploadingPhoto.value = true
-              Log.d(TAG, "Starting photo upload for user ${profile.uid}")
 
               val downloadUrl =
                   withTimeout(30000L) {
                     repository.uploadProfilePhoto(context, profile.uid, _pendingPhotoUri.value!!)
                   }
 
-              Log.d(TAG, "Photo uploaded successfully: $downloadUrl")
               updatedProfile = profile.copy(photoUrl = downloadUrl)
               _isUploadingPhoto.value = false
             } catch (e: Exception) {
               photoError = "Profile updated but photo upload failed: ${e.message}"
-              Log.e(TAG, "Error uploading photo", e)
               _isUploadingPhoto.value = false
             }
           }
@@ -226,16 +224,13 @@ class ProfileViewModel(
           _pendingPhotoDelete.value -> {
             try {
               _isUploadingPhoto.value = true
-              Log.d(TAG, "Deleting photo for user ${profile.uid}")
 
               withTimeout(10000L) { repository.deleteProfilePhoto(profile.uid) }
 
-              Log.d(TAG, "Photo deleted successfully")
               updatedProfile = profile.copy(photoUrl = null)
               _isUploadingPhoto.value = false
             } catch (e: Exception) {
               photoError = "Profile updated but photo deletion failed: ${e.message}"
-              Log.e(TAG, "Error deleting photo", e)
               _isUploadingPhoto.value = false
             }
           }
@@ -248,12 +243,10 @@ class ProfileViewModel(
 
         onSuccess()
       } catch (e: TimeoutCancellationException) {
-        Log.e(TAG, "Timeout updating profile", e)
         val errorMsg = ERROR_CONNECTION_TIMEOUT
         _error.value = errorMsg
         onError(errorMsg)
       } catch (e: Exception) {
-        Log.e(TAG, "Error creating/updating profile", e)
         val errorMsg = ERROR_SAVE_PROFILE_FAILED.format(e.message)
         _error.value = errorMsg
         onError(errorMsg)
@@ -319,7 +312,8 @@ class ProfileViewModel(
         _error.value = null
 
         withTimeout(10000L) { repository.deleteProfile(uid) }
-
+        val invitationsId = invitationalRepo.getInvitationsByUser(userId = uid).getOrNull()
+        invitationsId?.forEach { invitationalRepo.revokeInvitation(it.token) }
         _profile.value = null
       } catch (e: TimeoutCancellationException) {
         Log.e(TAG, "Timeout deleting profile", e)

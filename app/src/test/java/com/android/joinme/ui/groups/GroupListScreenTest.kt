@@ -691,6 +691,6 @@ class GroupListScreenTest {
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.SHARE_GROUP_BUBBLE).performClick()
 
     // Verify shareInvitation is called with correct params
-    coVerify { shareInvitation(InvitationType.GROUP, "group1", testUserId, 7, any(), any()) }
+    coVerify { shareInvitation(InvitationType.GROUP, "group1", testUserId, 7.0, any(), any()) }
   }
 }

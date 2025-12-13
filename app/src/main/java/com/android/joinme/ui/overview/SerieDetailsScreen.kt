@@ -25,10 +25,10 @@ import com.android.joinme.ui.components.ShareButton
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
+import com.android.joinme.util.TestEnvironmentDetector
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
-import kotlin.math.ceil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -41,15 +41,9 @@ private const val MILLIS_PER_DAY = 24 * 60 * 60 * 1000.0
  * @return The current user's UID, or "test-user-id" in test environments
  */
 private fun getCurrentUserIdForSerieDetails(): String {
-  val firebaseUser = Firebase.auth.currentUser?.uid
-  if (firebaseUser != null) return firebaseUser
-
-  val isTestEnv =
-      android.os.Build.FINGERPRINT == "robolectric" ||
-          android.os.Debug.isDebuggerConnected() ||
-          System.getProperty("IS_TEST_ENV") == "true"
-
-  return if (isTestEnv) "test-user-id" else "unknown"
+  return Firebase.auth.currentUser?.uid
+      ?: if (TestEnvironmentDetector.shouldUseTestUserId()) TestEnvironmentDetector.getTestUserId()
+      else "unknown"
 }
 
 /**
@@ -263,9 +257,8 @@ private fun SerieDetailsTopBar(
         actions = {
           if (serieDate != null && !isPastSerie && groupId == null) {
             val daysUntilSerie =
-                ceil((serieDate.toDate().time - System.currentTimeMillis()) / MILLIS_PER_DAY)
-                    .toInt()
-                    .coerceAtLeast(0)
+                ((serieDate.toDate().time - System.currentTimeMillis()) / MILLIS_PER_DAY)
+                    .coerceAtLeast(0.0)
 
             ShareButton(
                 invitationType = InvitationType.SERIE,

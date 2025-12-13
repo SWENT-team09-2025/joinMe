@@ -32,7 +32,7 @@ class ShareButtonInstrumentedTest {
           invitationType = InvitationType.GROUP,
           targetId = "test-group-id",
           createdBy = "test-user-id",
-          expiresInDays = 7)
+          expiresInDays = 7.0)
     }
 
     // Verify button exists and is clickable
