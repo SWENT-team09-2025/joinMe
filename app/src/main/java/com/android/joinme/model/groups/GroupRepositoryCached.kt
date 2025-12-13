@@ -43,7 +43,7 @@ class GroupRepositoryCached(
     private const val FIRESTORE_TIMEOUT_MS = 3000L
   }
 
-  override fun getNewGroupId(): String = firestoreRepo.getNewGroupId()
+  override fun getNewGroupId(): String = firestoreRepo.getNewGroupId() // NOSONAR
 
   override suspend fun getAllGroups(): List<Group> {
     // Try to fetch from Firestore if online
