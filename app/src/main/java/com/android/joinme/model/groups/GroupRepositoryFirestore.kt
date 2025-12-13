@@ -30,7 +30,8 @@ class GroupRepositoryFirestore(
     private val db: FirebaseFirestore,
     private val storage: FirebaseStorage = FirebaseStorage.getInstance(),
     private val imageProcessorFactory: (Context) -> ImageProcessor = { ImageProcessor(it) },
-    private val eventsRepository: EventsRepository = EventsRepositoryProvider.getRepository(),
+    private val eventsRepository: EventsRepository =
+        EventsRepositoryProvider.getRepository(isOnline = true),
     private val seriesRepository: SeriesRepository = SeriesRepositoryProvider.repository
 ) : GroupRepository {
 
