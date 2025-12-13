@@ -768,7 +768,7 @@ class MapScreenTest {
   }
 
   @Test
-  fun mapScreen_userLocationFollowing_disablesWhenReturningFromMarkerClick() {
+  fun mapScreen_userLocationFollowing_preservesStateWhenReturningFromMarkerClick() {
     // Set initial state to returning from marker click with following enabled
     mutableState.value = MapUIState(isFollowingUser = true, isReturningFromMarkerClick = true)
 
@@ -778,8 +778,8 @@ class MapScreenTest {
 
     // Verify that marker click flag is cleared
     assert(!testViewModel.uiState.value.isReturningFromMarkerClick)
-    // Verify that following user is disabled when returning from marker click
-    assert(!testViewModel.uiState.value.isFollowingUser)
+    // Verify that following user state is preserved (not modified)
+    assert(testViewModel.uiState.value.isFollowingUser)
   }
 
   @Test
