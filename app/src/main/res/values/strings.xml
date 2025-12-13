@@ -161,15 +161,15 @@
         <item>December</item>
     </string-array>
 
-    <!-- Weekday Abbreviations Array (Monday through Sunday) -->
+    <!-- Weekday Abbreviations Array (Sunday through Saturday) -->
     <string-array name="weekday_abbreviations">
+        <item>Sun</item>
         <item>Mon</item>
         <item>Tue</item>
         <item>Wed</item>
         <item>Thu</item>
         <item>Fri</item>
         <item>Sat</item>
-        <item>Sun</item>
     </string-array>
     <!-- Notification Types -->
     <string name="notification_type_event_chat_message">event_chat_message</string>
