@@ -25,7 +25,7 @@ object ConversationCleanupService {
    *
    * This method performs a complete cleanup including:
    * - All messages in the conversation
-   * - All polls in the conversation
+   * - All polls in the conversations
    * - All images stored in Firebase Storage for this conversation
    * - The conversation node itself
    *

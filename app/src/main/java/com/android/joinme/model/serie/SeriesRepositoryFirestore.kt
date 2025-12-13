@@ -133,7 +133,7 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
    *
    * Replaces the entire Serie document with the new value.
    *
-   * @param serieId The unique identifier of the Serie item to edit
+   * @param serieId The unique identifier of the Serie items to edit
    * @param newValue The new value for the Serie item
    */
   override suspend fun editSerie(serieId: String, newValue: Serie) {

@@ -38,7 +38,7 @@ private const val F_FOLLOWED_ID = "followedId"
 
 /**
  * Firestore implementation of [ProfileRepository] that manages user profile data in Firebase
- * Firestore and profile photos in Firebase Storage.
+ * Firestore and profile photo in Firebase Storage.
  *
  * This repository provides CRUD operations for user profiles, storing them in a Firestore
  * collection. Each profile document is keyed by the user's UID. All operations are asynchronous and

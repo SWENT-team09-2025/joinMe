@@ -127,7 +127,7 @@ class EventsRepositoryFirestore(
   override suspend fun deleteEvent(eventId: String) {
     db.collection(EVENTS_COLLECTION_PATH).document(eventId).delete().await()
 
-    // Cancel notification when event is deleted
+    // Cancel notifications when event is deleted
     context?.let { NotificationScheduler.cancelEventNotification(it, eventId) }
 
     // Delete the associated conversation (messages, polls, images)
