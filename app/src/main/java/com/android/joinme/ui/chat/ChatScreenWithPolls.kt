@@ -79,6 +79,9 @@ private const val TIMESTAMP_ALPHA = 0.7f
 private const val MESSAGE_INPUT_MAX_LINES = 4
 private const val TIMESTAMP_FORMAT = "HH:mm"
 
+/** Colors for the send button in the message input. */
+private data class SendButtonColors(val containerColor: Color, val contentColor: Color)
+
 /**
  * Data class representing an item that can appear in the chat timeline. This allows interleaving
  * messages and polls based on their timestamps.
@@ -389,8 +392,9 @@ private fun ChatContentWithPolls(
             }
           },
           onOpenPollCreation = actions.onOpenPollCreation,
-          sendButtonColor = styling.chatColor,
-          onSendButtonColor = styling.onChatColor,
+          sendButtonColors =
+              SendButtonColors(
+                  containerColor = styling.chatColor, contentColor = styling.onChatColor),
           viewModel = actions.chatViewModel,
           currentUserName = actions.currentUserName)
     }
@@ -585,8 +589,7 @@ private fun MessageInputWithPolls(
     onTextChange: (String) -> Unit,
     onSendClick: () -> Unit,
     onOpenPollCreation: () -> Unit,
-    sendButtonColor: Color,
-    onSendButtonColor: Color,
+    sendButtonColors: SendButtonColors,
     viewModel: ChatViewModel,
     currentUserName: String
 ) {
@@ -646,12 +649,12 @@ private fun MessageInputWithPolls(
                 onClick = onSendClick,
                 modifier =
                     Modifier.size(Dimens.TouchTarget.minimum)
-                        .background(sendButtonColor, CircleShape)
+                        .background(sendButtonColors.containerColor, CircleShape)
                         .testTag(ChatScreenTestTags.SEND_BUTTON)) {
                   Icon(
                       imageVector = Icons.AutoMirrored.Filled.Send,
                       contentDescription = stringResource(R.string.send_message),
-                      tint = onSendButtonColor)
+                      tint = sendButtonColors.contentColor)
                 }
           }
         }
