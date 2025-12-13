@@ -24,7 +24,9 @@ import kotlinx.coroutines.launch
  * @property isLoading Whether a load/update operation is in progress
  * @property editedGroupId The ID of the successfully edited group, null otherwise
  * @property errorMsg Error message to display
- * @property photoUrl Current photo URL of the group
+ * @property photoUrl Current photo URL of the group (from Firestore)
+ * @property pendingPhotoUri URI of the selected photo to upload (not yet uploaded)
+ * @property pendingPhotoDelete Whether photo deletion is pending (not yet persisted)
  * @property isUploadingPhoto Whether a photo upload/delete operation is in progress
  * @property photoError Error message for photo operations
  */
@@ -39,6 +41,8 @@ data class EditGroupUIState(
     val editedGroupId: String? = null,
     override val errorMsg: String? = null,
     val photoUrl: String? = null,
+    val pendingPhotoUri: Uri? = null,
+    val pendingPhotoDelete: Boolean = false,
     val isUploadingPhoto: Boolean = false,
     val photoError: String? = null
 ) : GroupFormUIState
@@ -145,6 +149,9 @@ class EditGroupViewModel(
    * UI state (name, description, category), and saves it back. Other properties like ownerId,
    * memberIds, and eventIds are preserved unchanged.
    *
+   * If there are pending photo changes (upload or delete), they are applied here after the group
+   * update. This ensures photo operations only persist when the user clicks "Save Changes".
+   *
    * State transitions:
    * - Before: isLoading=false, editedGroupId=null, errorMsg=null
    * - During: isLoading=true
@@ -152,8 +159,10 @@ class EditGroupViewModel(
    * - Error: isLoading=false, errorMsg set with failure message
    *
    * @param groupId The ID of the group to update
+   * @param context Android context needed for photo upload (image processing). Required if there's
+   *   a pending photo upload.
    */
-  fun updateGroup(groupId: String) {
+  fun updateGroup(groupId: String, context: Context? = null) {
     viewModelScope.launch {
       if (!_uiState.value.isValid) return@launch
 
@@ -172,7 +181,42 @@ class EditGroupViewModel(
 
         repository.editGroup(groupId, updatedGroup)
 
-        _uiState.value = _uiState.value.copy(isLoading = false, editedGroupId = groupId)
+        // Handle pending photo changes
+        var photoError: String? = null
+        when {
+          // Upload pending photo if selected
+          currentState.pendingPhotoUri != null && context != null -> {
+            try {
+              _uiState.value = _uiState.value.copy(isUploadingPhoto = true)
+              repository.uploadGroupPhoto(context, groupId, currentState.pendingPhotoUri)
+              _uiState.value = _uiState.value.copy(isUploadingPhoto = false)
+            } catch (e: Exception) {
+              photoError = "Group updated but photo upload failed: ${e.message ?: ERROR_UNKNOWN}"
+              Log.e(TAG, "Error uploading photo", e)
+              _uiState.value = _uiState.value.copy(isUploadingPhoto = false)
+            }
+          }
+          // Delete photo if marked for deletion
+          currentState.pendingPhotoDelete -> {
+            try {
+              _uiState.value = _uiState.value.copy(isUploadingPhoto = true)
+              repository.deleteGroupPhoto(groupId)
+              _uiState.value = _uiState.value.copy(isUploadingPhoto = false)
+            } catch (e: Exception) {
+              photoError = "Group updated but photo deletion failed: ${e.message ?: ERROR_UNKNOWN}"
+              Log.e(TAG, "Error deleting photo", e)
+              _uiState.value = _uiState.value.copy(isUploadingPhoto = false)
+            }
+          }
+        }
+
+        _uiState.value =
+            _uiState.value.copy(
+                isLoading = false,
+                editedGroupId = groupId,
+                pendingPhotoUri = null,
+                pendingPhotoDelete = false,
+                photoError = photoError)
       } catch (e: Exception) {
         _uiState.value =
             _uiState.value.copy(
@@ -182,78 +226,40 @@ class EditGroupViewModel(
   }
 
   /**
-   * Uploads a photo for the group.
+   * Sets the pending photo URI for local preview.
    *
-   * This method handles the complete photo upload flow:
-   * 1. Uploads the photo to Firebase Storage (with compression and orientation correction)
-   * 2. Updates the group's photoUrl in Firestore
-   * 3. Updates the local UI state with the new photo URL
+   * The photo is NOT uploaded immediately - it's stored locally and displayed as a preview. The
+   * actual upload happens only when updateGroup() is called with the context parameter. This
+   * prevents persisting changes until the user clicks "Save Changes".
    *
-   * @param context Android context needed for image processing
-   * @param groupId The ID of the group to upload the photo for
-   * @param imageUri The URI of the image to upload
-   * @param onSuccess Callback invoked after successful upload
-   * @param onError Callback invoked if upload fails, receives error message
+   * @param uri The URI of the selected photo
    */
-  fun uploadGroupPhoto(
-      context: Context,
-      groupId: String,
-      imageUri: Uri,
-      onSuccess: () -> Unit = {},
-      onError: (String) -> Unit = {}
-  ) {
-    viewModelScope.launch {
-      _uiState.value = _uiState.value.copy(isUploadingPhoto = true, photoError = null)
-
-      try {
-        Log.d(TAG, "Starting photo upload for group $groupId")
-
-        val downloadUrl = repository.uploadGroupPhoto(context, groupId, imageUri)
-
-        _uiState.value = _uiState.value.copy(isUploadingPhoto = false, photoUrl = downloadUrl)
-
-        onSuccess()
-      } catch (e: Exception) {
-        val errorMsg = "Failed to upload photo: ${e.message ?: ERROR_UNKNOWN}"
-        Log.e(TAG, "Error uploading photo", e)
-        _uiState.value = _uiState.value.copy(isUploadingPhoto = false, photoError = errorMsg)
-        onError(errorMsg)
-      }
-    }
+  fun setPendingPhoto(uri: Uri) {
+    _uiState.value =
+        _uiState.value.copy(pendingPhotoUri = uri, pendingPhotoDelete = false, photoError = null)
   }
 
   /**
-   * Deletes the group's photo.
+   * Marks the photo for deletion (deferred until save).
    *
-   * This method:
-   * 1. Deletes the photo from Firebase Storage
-   * 2. Clears the photoUrl field in Firestore
-   * 3. Updates the local UI state to remove the photo URL
-   *
-   * @param groupId The ID of the group to delete the photo for
-   * @param onSuccess Callback invoked after successful deletion
-   * @param onError Callback invoked if deletion fails, receives error message
+   * This method does NOT immediately delete the photo from Firebase Storage. Instead, it marks the
+   * photo for deletion and clears any pending upload. The actual deletion happens only when
+   * updateGroup() is called. This allows users to cancel the deletion by navigating back without
+   * saving.
    */
-  fun deleteGroupPhoto(
-      groupId: String,
-      onSuccess: () -> Unit = {},
-      onError: (String) -> Unit = {}
-  ) {
-    viewModelScope.launch {
-      _uiState.value = _uiState.value.copy(isUploadingPhoto = true, photoError = null)
+  fun markPhotoForDeletion() {
+    _uiState.value =
+        _uiState.value.copy(pendingPhotoDelete = true, pendingPhotoUri = null, photoError = null)
+  }
 
-      try {
-        repository.deleteGroupPhoto(groupId)
-
-        _uiState.value = _uiState.value.copy(isUploadingPhoto = false, photoUrl = null)
-
-        onSuccess()
-      } catch (e: Exception) {
-        val errorMsg = "Failed to delete photo: ${e.message ?: ERROR_UNKNOWN}"
-        Log.e(TAG, "Error deleting photo", e)
-        _uiState.value = _uiState.value.copy(isUploadingPhoto = false, photoError = errorMsg)
-        onError(errorMsg)
-      }
-    }
+  /**
+   * Clears any pending photo changes (upload or delete).
+   *
+   * This method is called when the user navigates back without saving, discarding any pending photo
+   * changes.
+   */
+  fun clearPendingPhotoChanges() {
+    _uiState.value =
+        _uiState.value.copy(pendingPhotoUri = null, pendingPhotoDelete = false, photoError = null)
   }
 }

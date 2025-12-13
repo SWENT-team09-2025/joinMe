@@ -288,267 +288,231 @@ class ProfileViewModelTest {
     assertFalse(viewModel.isLoading.value)
   }
 
-  // ==================== PHOTO UPLOAD TESTS ====================
+  // ==================== PENDING PHOTO TESTS ====================
 
   @Test
-  fun `uploadProfilePhoto successful upload updates state correctly`() = runTest {
-    // Given
-    val mockContext = mockk<Context>()
-    val mockUri = mockk<Uri>()
-    val expectedUrl = "https://firebase.storage/test-uid/profile.jpg"
-
-    // Load profile first
-    coEvery { mockProfileRepository.getProfile("test-uid") } returns testProfile
-    viewModel.loadProfile("test-uid")
-    testScheduler.advanceUntilIdle()
-
-    // Mock upload with delay to capture loading state
-    coEvery { mockProfileRepository.uploadProfilePhoto(mockContext, "test-uid", mockUri) } coAnswers
-        {
-          kotlinx.coroutines.delay(100) // Small delay to keep loading state true
-          expectedUrl
-        }
-
-    var successCalled = false
-    var errorCalled = false
-
-    // When
-    viewModel.uploadProfilePhoto(
-        context = mockContext,
-        imageUri = mockUri,
-        onSuccess = { successCalled = true },
-        onError = { errorCalled = true })
-
-    // Run current coroutine to set loading state
-    testScheduler.runCurrent()
-
-    // Then: Check loading state is true
-    assertTrue("isUploadingPhoto should be true during upload", viewModel.isUploadingPhoto.value)
-
-    // Complete the upload
-    testScheduler.advanceUntilIdle()
-
-    // Then: Check final state
-    assertFalse("isUploadingPhoto should be false after upload", viewModel.isUploadingPhoto.value)
-    assertNull("photoUploadError should be null on success", viewModel.photoUploadError.value)
-    assertEquals(
-        "Profile photoUrl should be updated", expectedUrl, viewModel.profile.value?.photoUrl)
-    assertTrue("onSuccess callback should be called", successCalled)
-    assertFalse("onError callback should not be called", errorCalled)
-
-    coVerify { mockProfileRepository.uploadProfilePhoto(mockContext, "test-uid", mockUri) }
-  }
-
-  @Test
-  fun `uploadProfilePhoto failure sets error and keeps state`() = runTest {
-    // Given
-    val mockContext = mockk<Context>()
-    val mockUri = mockk<Uri>()
-    val testProfile =
-        Profile(
-            uid = "test-uid",
-            username = "TestUser",
-            email = "test@example.com",
-            photoUrl = "https://old-url.com/photo.jpg")
-
-    // Load profile first
-    coEvery { mockProfileRepository.getProfile("test-uid") } returns testProfile
-    viewModel.loadProfile("test-uid")
-    testScheduler.advanceUntilIdle()
-
-    val originalPhotoUrl = viewModel.profile.value?.photoUrl
-
-    // Mock upload failure
-    coEvery { mockProfileRepository.uploadProfilePhoto(mockContext, "test-uid", mockUri) } throws
-        Exception("Upload failed")
-
-    var successCalled = false
-    var errorMessage: String? = null
-
-    // When
-    viewModel.uploadProfilePhoto(
-        context = mockContext,
-        imageUri = mockUri,
-        onSuccess = { successCalled = true },
-        onError = { errorMessage = it })
-
-    testScheduler.advanceUntilIdle()
-
-    // Then
-    assertFalse(
-        "isUploadingPhoto should be false after failed upload", viewModel.isUploadingPhoto.value)
-    assertNotNull(
-        "photoUploadError should not be null on failure", viewModel.photoUploadError.value)
-    assertTrue(
-        "photoUploadError should contain error message",
-        viewModel.photoUploadError.value?.contains("Failed to upload photo") == true)
-    assertEquals(
-        "Profile photoUrl should remain unchanged",
-        originalPhotoUrl,
-        viewModel.profile.value?.photoUrl)
-    assertFalse("onSuccess callback should not be called", successCalled)
-    assertNotNull("onError callback should be called with message", errorMessage)
-    assertTrue(
-        "Error message should contain failure info",
-        errorMessage?.contains("Failed to upload photo") == true)
-  }
-
-  @Test
-  fun `uploadProfilePhoto with no profile loaded does not call repository`() = runTest {
-    // Given: No profile loaded
-    val mockContext = mockk<Context>()
+  fun `setPendingPhoto stores photo URI locally without uploading`() = runTest {
     val mockUri = mockk<Uri>()
 
-    var successCalled = false
-    var errorMessage: String? = null
+    viewModel.setPendingPhoto(mockUri)
 
-    // When
-    viewModel.uploadProfilePhoto(
-        context = mockContext,
-        imageUri = mockUri,
-        onSuccess = { successCalled = true },
-        onError = { errorMessage = it })
+    assertEquals(mockUri, viewModel.pendingPhotoUri.value)
+    assertFalse(viewModel.pendingPhotoDelete.value)
+    assertNull(viewModel.photoUploadError.value)
 
-    testScheduler.advanceUntilIdle()
-
-    // Then
-    assertFalse("onSuccess should not be called", successCalled)
-    assertNotNull("onError should be called with error message", errorMessage)
-    assertEquals(
-        "Error message should indicate no profile loaded", "No profile loaded", errorMessage)
+    // Verify no upload happened
     coVerify(exactly = 0) { mockProfileRepository.uploadProfilePhoto(any(), any(), any()) }
   }
 
   @Test
-  fun `uploadProfilePhoto timeout sets appropriate error`() = runTest {
-    // Given
-    val mockContext = mockk<Context>()
+  fun `setPendingPhoto clears pending delete flag`() = runTest {
     val mockUri = mockk<Uri>()
-    val testProfile = Profile(uid = "test-uid", username = "TestUser", email = "test@example.com")
 
-    coEvery { mockProfileRepository.getProfile("test-uid") } returns testProfile
-    viewModel.loadProfile("test-uid")
-    testScheduler.advanceUntilIdle()
+    // First mark for deletion
+    viewModel.markPhotoForDeletion()
+    assertTrue(viewModel.pendingPhotoDelete.value)
 
-    // Mock timeout
-    coEvery { mockProfileRepository.uploadProfilePhoto(mockContext, "test-uid", mockUri) } coAnswers
-        {
-          kotlinx.coroutines.delay(35000) // Longer than 30s timeout
-          "should-not-reach"
-        }
+    // Then set pending photo
+    viewModel.setPendingPhoto(mockUri)
 
-    var errorMessage: String? = null
-
-    // When
-    viewModel.uploadProfilePhoto(
-        context = mockContext, imageUri = mockUri, onError = { errorMessage = it })
-
-    testScheduler.advanceUntilIdle()
-
-    // Then
-    assertNotNull("Error message should be set", errorMessage)
-    assertTrue("Error should mention timeout", errorMessage?.contains("timeout") == true)
+    assertEquals(mockUri, viewModel.pendingPhotoUri.value)
+    assertFalse(viewModel.pendingPhotoDelete.value)
   }
 
   @Test
-  fun `deleteProfilePhoto successful deletion updates state`() = runTest {
-    // Given
-    val testProfile =
-        Profile(
-            uid = "test-uid",
-            username = "TestUser",
-            email = "test@example.com",
-            photoUrl = "https://firebase.storage/test-uid/profile.jpg")
+  fun `markPhotoForDeletion sets delete flag without deleting from storage`() = runTest {
+    viewModel.markPhotoForDeletion()
 
-    coEvery { mockProfileRepository.getProfile("test-uid") } returns testProfile
-    viewModel.loadProfile("test-uid")
-    testScheduler.advanceUntilIdle()
+    assertTrue(viewModel.pendingPhotoDelete.value)
+    assertNull(viewModel.pendingPhotoUri.value)
+    assertNull(viewModel.photoUploadError.value)
 
-    coEvery { mockProfileRepository.deleteProfilePhoto("test-uid") } just Runs
-
-    var successCalled = false
-    var errorCalled = false
-
-    // When
-    viewModel.deleteProfilePhoto(
-        onSuccess = { successCalled = true }, onError = { errorCalled = true })
-
-    testScheduler.advanceUntilIdle()
-
-    // Then
-    assertFalse("isUploadingPhoto should be false after deletion", viewModel.isUploadingPhoto.value)
-    assertNull("photoUploadError should be null on success", viewModel.photoUploadError.value)
-    assertNull("Profile photoUrl should be null after deletion", viewModel.profile.value?.photoUrl)
-    assertTrue("onSuccess callback should be called", successCalled)
-    assertFalse("onError callback should not be called", errorCalled)
-
-    coVerify { mockProfileRepository.deleteProfilePhoto("test-uid") }
-  }
-
-  @Test
-  fun `deleteProfilePhoto failure sets error`() = runTest {
-    // Given
-    val testProfile =
-        Profile(
-            uid = "test-uid",
-            username = "TestUser",
-            email = "test@example.com",
-            photoUrl = "https://firebase.storage/test-uid/profile.jpg")
-
-    coEvery { mockProfileRepository.getProfile("test-uid") } returns testProfile
-    viewModel.loadProfile("test-uid")
-    testScheduler.advanceUntilIdle()
-
-    val originalPhotoUrl = viewModel.profile.value?.photoUrl
-
-    coEvery { mockProfileRepository.deleteProfilePhoto("test-uid") } throws
-        Exception("Delete failed")
-
-    var errorMessage: String? = null
-
-    // When
-    viewModel.deleteProfilePhoto(onError = { errorMessage = it })
-
-    testScheduler.advanceUntilIdle()
-
-    // Then
-    assertNotNull("photoUploadError should be set", viewModel.photoUploadError.value)
-    assertTrue(
-        "Error should mention deletion failure",
-        viewModel.photoUploadError.value?.contains("Failed to delete photo") == true)
-    assertEquals(
-        "photoUrl should remain unchanged on failure",
-        originalPhotoUrl,
-        viewModel.profile.value?.photoUrl)
-    assertNotNull("onError callback should receive message", errorMessage)
-  }
-
-  @Test
-  fun `deleteProfilePhoto with no profile loaded does not call repository`() = runTest {
-    // Given: No profile loaded
-    var errorMessage: String? = null
-
-    // When
-    viewModel.deleteProfilePhoto(onError = { errorMessage = it })
-
-    testScheduler.advanceUntilIdle()
-
-    // Then
-    assertNotNull("onError should be called", errorMessage)
-    assertEquals("Error should indicate no profile", "No profile loaded", errorMessage)
+    // Verify no deletion happened
     coVerify(exactly = 0) { mockProfileRepository.deleteProfilePhoto(any()) }
   }
 
   @Test
-  fun `clearPhotoUploadError clears error state`() {
-    // Given
-    viewModel.uploadProfilePhoto(context = mockk(), imageUri = mockk(), onError = {})
+  fun `markPhotoForDeletion clears pending photo URI`() = runTest {
+    val mockUri = mockk<Uri>()
 
-    // When
+    // First set pending photo
+    viewModel.setPendingPhoto(mockUri)
+    assertEquals(mockUri, viewModel.pendingPhotoUri.value)
+
+    // Then mark for deletion
+    viewModel.markPhotoForDeletion()
+
+    assertTrue(viewModel.pendingPhotoDelete.value)
+    assertNull(viewModel.pendingPhotoUri.value)
+  }
+
+  @Test
+  fun `clearPendingPhotoChanges clears both pending upload and delete`() = runTest {
+    val mockUri = mockk<Uri>()
+
+    // Set pending photo
+    viewModel.setPendingPhoto(mockUri)
+    viewModel.clearPendingPhotoChanges()
+
+    assertNull(viewModel.pendingPhotoUri.value)
+    assertFalse(viewModel.pendingPhotoDelete.value)
+
+    // Mark for deletion
+    viewModel.markPhotoForDeletion()
+    viewModel.clearPendingPhotoChanges()
+
+    assertNull(viewModel.pendingPhotoUri.value)
+    assertFalse(viewModel.pendingPhotoDelete.value)
+  }
+
+  @Test
+  fun `clearPhotoUploadError clears error state`() {
+    viewModel.setPendingPhoto(mockk())
+
     viewModel.clearPhotoUploadError()
 
-    // Then
-    assertNull("photoUploadError should be null after clear", viewModel.photoUploadError.value)
+    assertNull(viewModel.photoUploadError.value)
+  }
+
+  // ==================== CREATE/UPDATE PROFILE WITH PHOTO TESTS ====================
+
+  @Test
+  fun `createOrUpdateProfile uploads pending photo when context provided`() = runTest {
+    val mockContext = mockk<Context>()
+    val mockUri = mockk<Uri>()
+    val downloadUrl = "https://firebase.storage/test-uid/profile.jpg"
+
+    coEvery { mockProfileRepository.createOrUpdateProfile(testProfile) } just Runs
+    coEvery {
+      mockProfileRepository.uploadProfilePhoto(mockContext, testProfile.uid, mockUri)
+    } returns downloadUrl
+
+    viewModel.setPendingPhoto(mockUri)
+    var successCalled = false
+
+    viewModel.createOrUpdateProfile(
+        profile = testProfile, context = mockContext, onSuccess = { successCalled = true })
+    testScheduler.advanceUntilIdle()
+
+    // Verify photo was uploaded
+    coVerify { mockProfileRepository.uploadProfilePhoto(mockContext, testProfile.uid, mockUri) }
+
+    assertEquals(downloadUrl, viewModel.profile.value?.photoUrl)
+    assertNull(viewModel.pendingPhotoUri.value) // Cleared after upload
+    assertFalse(viewModel.pendingPhotoDelete.value)
+    assertNull(viewModel.photoUploadError.value)
+    assertTrue(successCalled)
+  }
+
+  @Test
+  fun `createOrUpdateProfile deletes photo when marked for deletion`() = runTest {
+    coEvery { mockProfileRepository.createOrUpdateProfile(testProfile) } just Runs
+    coEvery { mockProfileRepository.deleteProfilePhoto(testProfile.uid) } just Runs
+
+    viewModel.markPhotoForDeletion()
+    var successCalled = false
+
+    viewModel.createOrUpdateProfile(profile = testProfile, onSuccess = { successCalled = true })
+    testScheduler.advanceUntilIdle()
+
+    // Verify photo was deleted
+    coVerify { mockProfileRepository.deleteProfilePhoto(testProfile.uid) }
+
+    assertNull(viewModel.profile.value?.photoUrl)
+    assertNull(viewModel.pendingPhotoUri.value)
+    assertFalse(viewModel.pendingPhotoDelete.value) // Cleared after delete
+    assertNull(viewModel.photoUploadError.value)
+    assertTrue(successCalled)
+  }
+
+  @Test
+  fun `createOrUpdateProfile without pending photo changes does not call photo operations`() =
+      runTest {
+        coEvery { mockProfileRepository.createOrUpdateProfile(testProfile) } just Runs
+
+        var successCalled = false
+        viewModel.createOrUpdateProfile(profile = testProfile, onSuccess = { successCalled = true })
+        testScheduler.advanceUntilIdle()
+
+        // Verify no photo operations
+        coVerify(exactly = 0) { mockProfileRepository.uploadProfilePhoto(any(), any(), any()) }
+        coVerify(exactly = 0) { mockProfileRepository.deleteProfilePhoto(any()) }
+
+        assertEquals(testProfile, viewModel.profile.value)
+        assertTrue(successCalled)
+      }
+
+  @Test
+  fun `createOrUpdateProfile handles photo upload failure gracefully`() = runTest {
+    val mockContext = mockk<Context>()
+    val mockUri = mockk<Uri>()
+
+    coEvery { mockProfileRepository.createOrUpdateProfile(testProfile) } just Runs
+    coEvery {
+      mockProfileRepository.uploadProfilePhoto(mockContext, testProfile.uid, mockUri)
+    } throws Exception("Upload failed")
+
+    viewModel.setPendingPhoto(mockUri)
+    var successCalled = false
+
+    viewModel.createOrUpdateProfile(
+        profile = testProfile, context = mockContext, onSuccess = { successCalled = true })
+    testScheduler.advanceUntilIdle()
+
+    // Profile should still be updated
+    assertEquals(testProfile.uid, viewModel.profile.value?.uid)
+    // But photo error should be set
+    assertNotNull(viewModel.photoUploadError.value)
+    assertTrue(viewModel.photoUploadError.value!!.contains("photo upload failed"))
+    // Pending state should be cleared
+    assertNull(viewModel.pendingPhotoUri.value)
+    assertFalse(viewModel.pendingPhotoDelete.value)
+    assertTrue(successCalled)
+  }
+
+  @Test
+  fun `createOrUpdateProfile handles photo deletion failure gracefully`() = runTest {
+    coEvery { mockProfileRepository.createOrUpdateProfile(testProfile) } just Runs
+    coEvery { mockProfileRepository.deleteProfilePhoto(testProfile.uid) } throws
+        Exception("Delete failed")
+
+    viewModel.markPhotoForDeletion()
+    var successCalled = false
+
+    viewModel.createOrUpdateProfile(profile = testProfile, onSuccess = { successCalled = true })
+    testScheduler.advanceUntilIdle()
+
+    // Profile should still be updated
+    assertEquals(testProfile.uid, viewModel.profile.value?.uid)
+    // But photo error should be set
+    assertNotNull(viewModel.photoUploadError.value)
+    assertTrue(viewModel.photoUploadError.value!!.contains("photo deletion failed"))
+    // Pending state should be cleared
+    assertNull(viewModel.pendingPhotoUri.value)
+    assertFalse(viewModel.pendingPhotoDelete.value)
+    assertTrue(successCalled)
+  }
+
+  @Test
+  fun `createOrUpdateProfile without context does not upload pending photo`() = runTest {
+    val mockUri = mockk<Uri>()
+
+    coEvery { mockProfileRepository.createOrUpdateProfile(testProfile) } just Runs
+
+    viewModel.setPendingPhoto(mockUri)
+    var successCalled = false
+
+    viewModel.createOrUpdateProfile(
+        profile = testProfile, onSuccess = { successCalled = true }) // No context
+    testScheduler.advanceUntilIdle()
+
+    // Verify photo was NOT uploaded
+    coVerify(exactly = 0) { mockProfileRepository.uploadProfilePhoto(any(), any(), any()) }
+
+    assertEquals(testProfile, viewModel.profile.value)
+    assertTrue(successCalled)
+    // Pending photo should be cleared even though upload didn't happen
+    assertNull(viewModel.pendingPhotoUri.value)
   }
 
   // ==================== USERNAME VALIDATION TESTS ====================
