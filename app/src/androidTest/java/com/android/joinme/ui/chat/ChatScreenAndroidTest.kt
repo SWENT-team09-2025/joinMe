@@ -215,7 +215,7 @@ class ChatScreenAndroidTest {
    * conditional) and (FullScreenImageViewer composable).
    */
   @Test
-  fun chatScreen_imageMessage_opensFullScreenViewer() = runTest {
+  fun chatScreen_imageMessage_opensFullScreenViewer() {
     val messages =
         listOf(
             Message(
@@ -434,7 +434,7 @@ class ChatScreenAndroidTest {
    * full-screen image fails to load).
    */
   @Test
-  fun chatScreen_fullScreenImageViewer_displaysErrorState() = runTest {
+  fun chatScreen_fullScreenImageViewer_displaysErrorState() {
     // Use an invalid URL that will fail to load in Coil
     val messages =
         listOf(
@@ -490,7 +490,7 @@ class ChatScreenAndroidTest {
    * for images, Maps for locations) work together.
    */
   @Test
-  fun chatScreen_locationAndMixedMessages_renderCorrectlyWithMaps() = runTest {
+  fun chatScreen_locationAndMixedMessages_renderCorrectlyWithMaps() {
     val messages =
         listOf(
             // Image message
@@ -587,7 +587,7 @@ class ChatScreenAndroidTest {
    * chatScreen_locationAndMixedMessages_renderCorrectlyWithMaps.
    */
   @Test
-  fun chatScreen_locationMessage_clickTriggersNavigation() = runTest {
+  fun chatScreen_locationMessage_clickTriggersNavigation() {
     var navigationCallbackInvoked = false
     var navigatedLocation: com.android.joinme.model.map.Location? = null
 
