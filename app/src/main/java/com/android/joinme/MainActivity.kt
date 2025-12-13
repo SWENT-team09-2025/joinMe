@@ -69,6 +69,7 @@ import com.android.joinme.ui.profile.PublicProfileScreen
 import com.android.joinme.ui.profile.ViewProfileScreen
 import com.android.joinme.ui.signIn.SignInScreen
 import com.android.joinme.ui.theme.JoinMeTheme
+import com.android.joinme.util.TestEnvironmentDetector
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -187,24 +188,15 @@ private suspend fun processInvitation(
 }
 
 /**
- * Checks if the current environment is a test environment.
- *
- * @return true if running in a test environment, false otherwise
- */
-private fun isTestEnvironment(): Boolean {
-  return android.os.Build.FINGERPRINT == "robolectric" ||
-      android.os.Debug.isDebuggerConnected() ||
-      System.getProperty("IS_TEST_ENV") == "true"
-}
-
-/**
  * Gets the current user ID, with support for test environments.
  *
  * @param currentUser The current Firebase user
  * @return The user ID (test ID in test environments, Firebase UID otherwise)
  */
 private fun getCurrentUserId(currentUser: com.google.firebase.auth.FirebaseUser?): String {
-  return if (isTestEnvironment()) "test-user-id" else (currentUser?.uid ?: "")
+  return currentUser?.uid
+      ?: if (TestEnvironmentDetector.shouldUseTestUserId()) TestEnvironmentDetector.getTestUserId()
+      else ""
 }
 
 /**

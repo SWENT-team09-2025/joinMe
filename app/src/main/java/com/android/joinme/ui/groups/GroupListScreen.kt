@@ -72,6 +72,7 @@ import com.android.joinme.ui.profile.ProfileScreen
 import com.android.joinme.ui.profile.ProfileTopBar
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.customColors
+import com.android.joinme.util.TestEnvironmentDetector
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.launch
@@ -89,11 +90,9 @@ private const val MEMBERS_ALPHA = 0.7f
  * @return The current user's UID, or "test-user-id" in test environments
  */
 private fun getCurrentUserId(): String? {
-  val isTestEnv =
-      android.os.Build.FINGERPRINT == "robolectric" ||
-          android.os.Debug.isDebuggerConnected() ||
-          System.getProperty("IS_TEST_ENV") == "true"
-  return if (isTestEnv) "test-user-id" else Firebase.auth.currentUser?.uid
+  return Firebase.auth.currentUser?.uid
+      ?: if (TestEnvironmentDetector.shouldUseTestUserId()) TestEnvironmentDetector.getTestUserId()
+      else null
 }
 
 /**
@@ -520,7 +519,6 @@ private fun GroupCardMenuOverlay(
                           invitationType = InvitationType.GROUP,
                           targetId = group.id,
                           createdBy = currentUserId ?: "",
-                          expiresInDays = 7,
                           context = context)
                       onDismiss()
                     }

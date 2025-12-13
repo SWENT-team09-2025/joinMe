@@ -1,6 +1,7 @@
 package com.android.joinme.model.groups.streaks
 
 import android.content.Context
+import com.android.joinme.util.TestEnvironmentDetector
 import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -23,7 +24,7 @@ object GroupStreakRepositoryProvider {
    * @return A [GroupStreakRepository] instance.
    */
   fun getRepository(context: Context? = null): GroupStreakRepository {
-    return if (isTestEnvironment()) {
+    return if (TestEnvironmentDetector.isTestEnvironment()) {
       localRepo
     } else {
       getFirestoreRepo(context)
@@ -46,19 +47,5 @@ object GroupStreakRepositoryProvider {
       firestoreRepo = GroupStreakRepositoryFirestore(FirebaseFirestore.getInstance())
     }
     return firestoreRepo!!
-  }
-
-  /**
-   * Detects if the code is running in a test environment.
-   *
-   * @return True if running in a test environment, false otherwise.
-   */
-  private fun isTestEnvironment(): Boolean {
-    return try {
-      Class.forName("org.junit.Test")
-      true
-    } catch (_: ClassNotFoundException) {
-      System.getProperty("IS_TEST_ENV") == "true"
-    }
   }
 }

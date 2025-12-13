@@ -18,6 +18,8 @@ const TIME_ZONE = "UTC";
 
 const SERIES = "series";
 const EVENTS = "events";
+const INVITATIONS = "invitations";
+
 
 // Notification type constants
 const NOTIFICATION_TYPE_EVENT_CHAT_MESSAGE = "event_chat_message";
@@ -590,5 +592,54 @@ export const onChatMessageCreated = functions.database
     } catch (error) {
       console.error("Error in onChatMessageCreated:", error);
       return null;
+    }
+  });
+
+/**
+ * Scheduled function that runs daily at midnight (UTC).
+ * Cleans up expired invitations from the database.
+ *
+ * Logic:
+ * 1. Fetch all invitations
+ * 2. Check each invitation's expiresAt timestamp
+ * 3. Delete invitations where expiresAt < now
+ */
+export const cleanupExpiredInvitations = functions.pubsub
+  .schedule(RECURRENCE)
+  .timeZone(TIME_ZONE)
+  .onRun(async (context) => {
+    const now = Date.now();
+
+    try {
+      const expiredInvitations: string[] = [];
+
+      // Step 1: Fetch all invitations
+      const invitationsSnapshot = await db.collection(INVITATIONS).get();
+
+      // Step 2: Check each invitation
+      for (const invitationDoc of invitationsSnapshot.docs) {
+        const invitationData = invitationDoc.data();
+        const expiresAt = invitationData.expiresAt;
+
+        if (expiresAt && expiresAt.seconds) {
+          const expiresAtMs = expiresAt.seconds * S_TO_MS;
+
+          if (expiresAtMs < now) {
+            expiredInvitations.push(invitationDoc.id);
+          }
+        }
+      }
+
+      // Step 3: Delete all expired invitations
+      for (const token of expiredInvitations) {
+        try {
+          await db.collection(INVITATIONS).doc(token).delete();
+        } catch (err) {
+          console.error(`Failed to delete invitation ${token}:`, err);
+        }
+      }
+      return null;
+    } catch (error) {
+      throw error;
     }
   });
