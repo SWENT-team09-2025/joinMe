@@ -5,7 +5,6 @@ package com.android.joinme.ui.chat
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,10 +28,8 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -45,7 +42,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -73,11 +69,6 @@ import com.android.joinme.ui.theme.customColors
 import com.android.joinme.ui.theme.getUserColor
 import com.android.joinme.ui.theme.outlinedTextField
 import kotlinx.coroutines.launch
-
-private const val SENDER_NAME_ALPHA = 0.8f
-private const val TIMESTAMP_ALPHA = 0.7f
-private const val MESSAGE_INPUT_MAX_LINES = 4
-private const val TIMESTAMP_FORMAT = "HH:mm"
 
 /** Colors for the send button in the message input. */
 private data class SendButtonColors(val containerColor: Color, val contentColor: Color)
@@ -328,7 +319,7 @@ private fun ChatTopBarWithPolls(
                                 else -> stringResource(R.string.online_users_many, onlineUsersCount)
                               },
                           style = MaterialTheme.typography.bodySmall,
-                          color = onTopBarColor.copy(alpha = SENDER_NAME_ALPHA),
+                          color = onTopBarColor.copy(alpha = ChatConstants.SENDER_NAME_ALPHA),
                           modifier = Modifier.testTag("onlineUsersCount"))
                     }
               }
@@ -337,7 +328,9 @@ private fun ChatTopBarWithPolls(
                   onClick = onLeaveClick,
                   modifier =
                       Modifier.size(Dimens.IconSize.medium)
-                          .background(topBarColor.copy(alpha = SENDER_NAME_ALPHA), CircleShape)
+                          .background(
+                              topBarColor.copy(alpha = ChatConstants.SENDER_NAME_ALPHA),
+                              CircleShape)
                           .testTag(ChatScreenTestTags.LEAVE_BUTTON)) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,
@@ -550,7 +543,7 @@ private fun MessageItemWithPolls(
                       text = message.senderName,
                       style = MaterialTheme.typography.labelSmall,
                       fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                      color = onBubbleColor.copy(alpha = SENDER_NAME_ALPHA))
+                      color = onBubbleColor.copy(alpha = ChatConstants.SENDER_NAME_ALPHA))
                   Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
                 }
 
@@ -562,9 +555,9 @@ private fun MessageItemWithPolls(
                 Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
 
                 Text(
-                    text = formatMessageTimestamp(message.timestamp),
+                    text = formatTimestamp(message.timestamp),
                     style = MaterialTheme.typography.labelSmall,
-                    color = onBubbleColor.copy(alpha = TIMESTAMP_ALPHA))
+                    color = onBubbleColor.copy(alpha = ChatConstants.TIMESTAMP_ALPHA))
               }
             }
 
@@ -626,7 +619,7 @@ private fun MessageInputWithPolls(
               },
               shape = RoundedCornerShape(Dimens.CornerRadius.pill),
               colors = MaterialTheme.customColors.outlinedTextField(),
-              maxLines = MESSAGE_INPUT_MAX_LINES)
+              maxLines = ChatConstants.MESSAGE_INPUT_MAX_LINES)
 
           // Dynamic send button - disabled appearance when no text
           if (text.isEmpty()) {
@@ -735,14 +728,14 @@ private fun AttachmentMenuWithPolls(
         Column(modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.large)) {
           Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             // Photo option
-            AttachmentOptionWithPolls(
+            AttachmentOption(
                 icon = Icons.Default.Image,
                 label = stringResource(R.string.photo),
                 onClick = { showPhotoSourceDialog = true },
                 modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_PHOTO))
 
             // Location option
-            AttachmentOptionWithPolls(
+            AttachmentOption(
                 icon = Icons.Default.LocationOn,
                 label = stringResource(R.string.location),
                 onClick = {
@@ -754,7 +747,7 @@ private fun AttachmentMenuWithPolls(
                 modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_LOCATION))
 
             // Poll option
-            AttachmentOptionWithPolls(
+            AttachmentOption(
                 icon = Icons.Default.BarChart,
                 label = stringResource(R.string.poll),
                 onClick = onPollClick,
@@ -767,7 +760,7 @@ private fun AttachmentMenuWithPolls(
 
   // Photo source selection dialog
   if (showPhotoSourceDialog) {
-    PhotoSourceDialogWithPolls(
+    PhotoSourceDialog(
         onDismiss = { showPhotoSourceDialog = false },
         onGalleryClick = {
           showPhotoSourceDialog = false
@@ -800,70 +793,4 @@ private fun AttachmentMenuWithPolls(
               onError = { error -> Toast.makeText(context, error, Toast.LENGTH_SHORT).show() })
         })
   }
-}
-
-/** Dialog for selecting photo source (gallery or camera). */
-@Composable
-private fun PhotoSourceDialogWithPolls(
-    onDismiss: () -> Unit,
-    onGalleryClick: () -> Unit,
-    onCameraClick: () -> Unit
-) {
-  AlertDialog(
-      onDismissRequest = onDismiss,
-      title = { Text(stringResource(R.string.choose_photo_source)) },
-      text = {
-        Column {
-          TextButton(
-              onClick = onGalleryClick,
-              modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_GALLERY)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
-                      Icon(Icons.Default.Image, contentDescription = null)
-                      Text(stringResource(R.string.gallery))
-                    }
-              }
-          TextButton(
-              onClick = onCameraClick,
-              modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_CAMERA)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
-                      Icon(Icons.Default.CameraAlt, contentDescription = null)
-                      Text(stringResource(R.string.camera))
-                    }
-              }
-        }
-      },
-      confirmButton = {},
-      dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } })
-}
-
-@Composable
-private fun AttachmentOptionWithPolls(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-  Column(
-      modifier = modifier.clickable(onClick = onClick).padding(Dimens.Padding.medium),
-      horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(Dimens.IconSize.large))
-        Spacer(modifier = Modifier.height(Dimens.Spacing.small))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface)
-      }
-}
-
-private fun formatMessageTimestamp(timestamp: Long): String {
-  val dateFormat = java.text.SimpleDateFormat(TIMESTAMP_FORMAT, java.util.Locale.getDefault())
-  return dateFormat.format(java.util.Date(timestamp))
 }

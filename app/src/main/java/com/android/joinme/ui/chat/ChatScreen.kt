@@ -33,7 +33,6 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.BrokenImage
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
@@ -103,9 +102,6 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlinx.coroutines.launch
 
 /**
@@ -639,7 +635,7 @@ private fun DateHeader(timestamp: Long, chatColor: Color) {
       modifier = Modifier.fillMaxWidth().padding(vertical = Dimens.Spacing.medium),
       contentAlignment = Alignment.Center) {
         // Horizontal divider line
-        androidx.compose.material3.Divider(
+        androidx.compose.material3.HorizontalDivider(
             modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.Padding.large),
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
             thickness = Dimens.BorderWidth.thin)
@@ -1423,99 +1419,6 @@ internal fun LocationPreviewDialog(
 }
 
 /**
- * Dialog for choosing photo source (Gallery or Camera).
- *
- * @param onDismiss Callback when dialog is dismissed
- * @param onGalleryClick Callback when gallery option is selected
- * @param onCameraClick Callback when camera option is selected
- */
-@Composable
-private fun PhotoSourceDialog(
-    onDismiss: () -> Unit,
-    onGalleryClick: () -> Unit,
-    onCameraClick: () -> Unit
-) {
-  AlertDialog(
-      onDismissRequest = onDismiss,
-      title = { Text(text = stringResource(R.string.choose_photo_source)) },
-      text = {
-        Column(modifier = Modifier.fillMaxWidth()) {
-          // Gallery option
-          TextButton(
-              onClick = onGalleryClick,
-              modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_GALLERY)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start) {
-                      Icon(
-                          imageVector = Icons.Default.Image,
-                          contentDescription = stringResource(R.string.gallery),
-                          modifier = Modifier.padding(end = Dimens.Padding.medium))
-                      Text(text = stringResource(R.string.gallery))
-                    }
-              }
-
-          // Camera option
-          TextButton(
-              onClick = onCameraClick,
-              modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_CAMERA)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start) {
-                      Icon(
-                          imageVector = Icons.Default.CameraAlt,
-                          contentDescription = stringResource(R.string.camera),
-                          modifier = Modifier.padding(end = Dimens.Padding.medium))
-                      Text(text = stringResource(R.string.camera))
-                    }
-              }
-        }
-      },
-      confirmButton = {},
-      dismissButton = {
-        TextButton(onClick = onDismiss) { Text(text = stringResource(R.string.cancel)) }
-      },
-      modifier = Modifier.testTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG))
-}
-
-/**
- * Individual attachment option with icon and label.
- *
- * @param icon The icon to display
- * @param label The text label below the icon
- * @param onClick Callback when the option is clicked
- * @param modifier Modifier for the component
- */
-@Composable
-private fun AttachmentOption(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-  Column(
-      modifier = modifier.clickable(onClick = onClick).padding(Dimens.Padding.medium),
-      horizontalAlignment = Alignment.CenterHorizontally) {
-        // Icon
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(Dimens.IconSize.large))
-
-        Spacer(modifier = Modifier.height(Dimens.Spacing.small))
-
-        // Label
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface)
-      }
-}
-
-/**
  * Dialog for editing a message.
  *
  * @param message The message to edit
@@ -1773,15 +1676,4 @@ private fun MessageContextMenu(
               }
             }
       }
-}
-
-/**
- * Formats a Unix timestamp into a readable time string.
- *
- * @param timestamp Unix timestamp in milliseconds
- * @return Formatted time string (e.g., "14:32")
- */
-private fun formatTimestamp(timestamp: Long): String {
-  val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-  return dateFormat.format(Date(timestamp))
 }
