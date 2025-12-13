@@ -76,14 +76,12 @@ class ChatRepositoryCached(
             // Online: Subscribe to real-time Firebase updates
             try {
               withTimeout(TIMEOUT_MS) {
-                realtimeDbRepo
-                    .observeMessagesForConversation(conversationId)
-                    .collect { messages ->
-                      // Update cache in background
-                      launch { messageDao.insertMessages(messages.map { it.toEntity() }) }
-                      // Emit to UI
-                      send(messages)
-                    }
+                realtimeDbRepo.observeMessagesForConversation(conversationId).collect { messages ->
+                  // Update cache in background
+                  launch { messageDao.insertMessages(messages.map { it.toEntity() }) }
+                  // Emit to UI
+                  send(messages)
+                }
               }
             } catch (e: TimeoutCancellationException) {
               Log.w(TAG, "Firebase timeout, falling back to cache", e)

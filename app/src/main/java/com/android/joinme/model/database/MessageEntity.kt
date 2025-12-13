@@ -28,9 +28,7 @@ import com.android.joinme.model.map.Location
  * @property locationName Location name (only for LOCATION type messages)
  * @property cachedAt Timestamp when this message was cached locally
  */
-@Entity(
-    tableName = "messages",
-    indices = [Index(value = ["conversationId", "timestamp"])])
+@Entity(tableName = "messages", indices = [Index(value = ["conversationId", "timestamp"])])
 data class MessageEntity(
     @PrimaryKey val id: String,
     val conversationId: String,
@@ -51,7 +49,6 @@ data class MessageEntity(
 
 /**
  * Converts a Message to a MessageEntity for Room storage.
- *
  * - Serializes readBy list as JSON array: ["uid1", "uid2"]
  * - Stores MessageType as String (type.name)
  * - Flattens Location object into three nullable columns
@@ -67,7 +64,8 @@ fun Message.toEntity(): MessageEntity {
       content = content,
       timestamp = timestamp,
       type = type.name,
-      readByJson = readBy.joinToString(",") { "\"$it\"" }.let { if (it.isEmpty()) "[]" else "[$it]" },
+      readByJson =
+          readBy.joinToString(",") { "\"$it\"" }.let { if (it.isEmpty()) "[]" else "[$it]" },
       isPinned = isPinned,
       isEdited = isEdited,
       locationLatitude = location?.latitude,
@@ -77,7 +75,6 @@ fun Message.toEntity(): MessageEntity {
 
 /**
  * Converts a MessageEntity back to a Message domain model.
- *
  * - Deserializes readByJson from JSON array format
  * - Converts type String back to MessageType enum (defaults to TEXT if invalid)
  * - Reconstructs Location object only if all three fields are non-null
@@ -108,6 +105,7 @@ fun MessageEntity.toMessage(): Message {
       isEdited = isEdited,
       location =
           if (locationLatitude != null && locationLongitude != null && locationName != null) {
-            Location(latitude = locationLatitude, longitude = locationLongitude, name = locationName)
+            Location(
+                latitude = locationLatitude, longitude = locationLongitude, name = locationName)
           } else null)
 }
