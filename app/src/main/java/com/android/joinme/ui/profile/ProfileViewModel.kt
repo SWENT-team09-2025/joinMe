@@ -106,7 +106,7 @@ class ProfileViewModel(
         val fetched = fetchProfileWithTimeout(uid)
         _profile.value = fetched ?: bootstrapNewProfile(uid)
       } catch (e: TimeoutCancellationException) {
-        handleLoadTimeout(e)
+        handleLoadTimeout()
       } catch (e: Exception) {
         handleLoadError(e)
       } finally {
@@ -161,7 +161,7 @@ class ProfileViewModel(
   }
 
   /** Handles timeout during profile loading. */
-  private fun handleLoadTimeout(e: TimeoutCancellationException) {
+  private fun handleLoadTimeout() {
     _profile.value = null
     _error.value = "Connection timeout. Please check your internet connection and try again."
   }
@@ -217,7 +217,7 @@ class ProfileViewModel(
               updatedProfile = profile.copy(photoUrl = downloadUrl)
               _isUploadingPhoto.value = false
             } catch (e: Exception) {
-              photoError = "Profile updated but photo upload failed: ${e.message}"
+              photoError = ERROR_PHOTO_UPLOAD_FAILED.format(e.message)
               _isUploadingPhoto.value = false
             }
           }
@@ -231,7 +231,7 @@ class ProfileViewModel(
               updatedProfile = profile.copy(photoUrl = null)
               _isUploadingPhoto.value = false
             } catch (e: Exception) {
-              photoError = "Profile updated but photo deletion failed: ${e.message}"
+              photoError = ERROR_PHOTO_DELETE_FAILED.format(e.message)
               _isUploadingPhoto.value = false
             }
           }
@@ -433,5 +433,7 @@ class ProfileViewModel(
     private const val ERROR_CONNECTION_TIMEOUT = "Connection timeout. Please try again."
     private const val ERROR_SAVE_PROFILE_FAILED = "Failed to save profile: %s"
     private const val ERROR_OFFLINE_OPERATION = "This operation requires an internet connection"
+    private const val ERROR_PHOTO_UPLOAD_FAILED = "Profile updated but photo upload failed: %s"
+    private const val ERROR_PHOTO_DELETE_FAILED = "Profile updated but photo deletion failed: %s"
   }
 }

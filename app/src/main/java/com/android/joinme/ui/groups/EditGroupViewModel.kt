@@ -77,6 +77,8 @@ class EditGroupViewModel(
     private const val ERROR_LOAD_FAILED = "Failed to load group"
     private const val ERROR_UPDATE_FAILED = "Failed to update group"
     private const val ERROR_UNKNOWN = "Unknown error"
+    private const val ERROR_PHOTO_UPLOAD_FAILED = "Group updated but photo upload failed: %s"
+    private const val ERROR_PHOTO_DELETE_FAILED = "Group updated but photo deletion failed: %s"
   }
 
   override val _uiState = MutableStateFlow(EditGroupUIState())
@@ -191,7 +193,7 @@ class EditGroupViewModel(
               repository.uploadGroupPhoto(context, groupId, currentState.pendingPhotoUri)
               _uiState.value = _uiState.value.copy(isUploadingPhoto = false)
             } catch (e: Exception) {
-              photoError = "Group updated but photo upload failed: ${e.message ?: ERROR_UNKNOWN}"
+              photoError = ERROR_PHOTO_UPLOAD_FAILED.format(e.message ?: ERROR_UNKNOWN)
               Log.e(TAG, "Error uploading photo", e)
               _uiState.value = _uiState.value.copy(isUploadingPhoto = false)
             }
@@ -203,7 +205,7 @@ class EditGroupViewModel(
               repository.deleteGroupPhoto(groupId)
               _uiState.value = _uiState.value.copy(isUploadingPhoto = false)
             } catch (e: Exception) {
-              photoError = "Group updated but photo deletion failed: ${e.message ?: ERROR_UNKNOWN}"
+              photoError = ERROR_PHOTO_DELETE_FAILED.format(e.message ?: ERROR_UNKNOWN)
               Log.e(TAG, "Error deleting photo", e)
               _uiState.value = _uiState.value.copy(isUploadingPhoto = false)
             }
