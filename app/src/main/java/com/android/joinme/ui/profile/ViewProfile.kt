@@ -44,7 +44,6 @@ object ViewProfileTestTags {
   const val FOLLOWERS_STAT = "viewProfileFollowersStat"
   const val FOLLOWING_STAT = "viewProfileFollowingStat"
   const val PROFILE_PICTURE = "viewProfilePicture"
-  const val EVENT_STREAKS_SECTION = "viewProfileEventStreaksSection"
   const val USERNAME_FIELD = "viewProfileUsernameField"
   const val EMAIL_FIELD = "viewProfileEmailField"
   const val DATE_OF_BIRTH_FIELD = "viewProfileDateOfBirthField"
@@ -185,15 +184,6 @@ private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
             followersTestTag = ViewProfileTestTags.FOLLOWERS_STAT,
             followingTestTag = ViewProfileTestTags.FOLLOWING_STAT,
             profilePhotoTestTag = ViewProfileTestTags.PROFILE_PICTURE)
-
-        // Event Streaks
-        Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(horizontal = Dimens.Padding.large)
-                    .padding(bottom = Dimens.Padding.extraLarge)) {
-              EventStreaksSection(testTag = ViewProfileTestTags.EVENT_STREAKS_SECTION)
-            }
 
         // Form Fields (Read-only)
         Column(
