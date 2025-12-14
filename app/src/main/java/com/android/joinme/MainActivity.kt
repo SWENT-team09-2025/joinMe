@@ -23,8 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.credentials.CredentialManager
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.NavHost
@@ -77,6 +75,7 @@ import com.android.joinme.ui.profile.ViewProfileScreen
 import com.android.joinme.ui.signIn.SignInScreen
 import com.android.joinme.ui.theme.JoinMeTheme
 import com.android.joinme.util.TestEnvironmentDetector
+import com.android.joinme.util.createViewModelFactory
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.CoroutineScope
@@ -927,14 +926,9 @@ private fun NavGraphBuilder.groupScreens(context: Context, navigationActions: Na
       val leaderboardViewModel: GroupLeaderboardViewModel =
           viewModel(
               factory =
-                  object : ViewModelProvider.Factory {
-                    // Cannot put hardcoded string in a const, else we have a cast warning
-                    @Suppress("UNCHECKED_CAST")
-                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                      return GroupLeaderboardViewModel(
-                          application = (context.applicationContext as Application))
-                          as T
-                    }
+                  createViewModelFactory {
+                    GroupLeaderboardViewModel(
+                        application = (context.applicationContext as Application))
                   })
       GroupLeaderboardScreen(
           groupId = groupId,
@@ -961,79 +955,69 @@ private fun NavGraphBuilder.chatScreen(
     val chatTitle = navBackStackEntry.arguments?.getString(KEY_CHAT_TITLE)
     val totalParticipants =
         navBackStackEntry.arguments?.getString(KEY_TOTAL_PARTICIPANTS)?.toIntOrNull()
-            ?: DEFAULT_PARTICIPANT_COUNT
-    if (chatId != null && chatTitle != null) {
-      // Determine chat type based on participant count
-      val chatType =
-          if (totalParticipants <= MAX_INDIVIDUAL_CHAT_PARTICIPANTS) ChatType.INDIVIDUAL
-          else ChatType.GROUP
+            ?: MAX_INDIVIDUAL_CHAT_PARTICIPANTS
 
-      val chatViewModel: ChatViewModel =
-          viewModel(
-              factory =
-                  object : ViewModelProvider.Factory {
-                    @Suppress("UNCHECKED_CAST")
-                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                      return ChatViewModel(
-                          ChatRepositoryProvider.repository, ProfileRepositoryProvider.repository)
-                          as T
-                    }
-                  })
-
-      val presenceViewModel: PresenceViewModel =
-          viewModel(
-              factory =
-                  object : ViewModelProvider.Factory {
-                    @Suppress("UNCHECKED_CAST")
-                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                      return PresenceViewModel(PresenceRepositoryProvider.repository) as T
-                    }
-                  })
-
-      // Only create PollViewModel for group chats
-      val pollViewModel: PollViewModel? =
-          if (chatType == ChatType.GROUP) {
-            viewModel(
-                factory =
-                    object : ViewModelProvider.Factory {
-                      @Suppress("UNCHECKED_CAST")
-                      override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                        return PollViewModel(
-                            PollRepositoryProvider.repository,
-                            ChatRepositoryProvider.repository,
-                            ProfileRepositoryProvider.repository)
-                            as T
-                      }
-                    })
-          } else null
-
-      val currentUserName = currentUser?.displayName ?: stringResource(R.string.unknown_user)
-      ChatScreen(
-          chatId = chatId,
-          chatTitle = chatTitle,
-          currentUserId = currentUserId,
-          currentUserName = currentUserName,
-          viewModel = chatViewModel,
-          presenceViewModel = presenceViewModel,
-          pollViewModel = pollViewModel,
-          chatType = chatType,
-          totalParticipants = totalParticipants,
-          onLeaveClick = { navigationActions.goBack() },
-          onNavigateToMap = { location, senderId ->
-            navigationActions.navigateTo(
-                Screen.Map(
-                    location.latitude, location.longitude, showMarker = true, userId = senderId))
-            Toast.makeText(
-                    context,
-                    context.getString(R.string.toast_viewing_location, location.name),
-                    Toast.LENGTH_SHORT)
-                .show()
-          })
-    } else {
+    if (chatId == null || chatTitle == null) {
       Toast.makeText(
               context, context.getString(R.string.error_chat_id_or_title_null), Toast.LENGTH_SHORT)
           .show()
+      return@composable
     }
+
+    val chatType =
+        if (totalParticipants <= MAX_INDIVIDUAL_CHAT_PARTICIPANTS) ChatType.INDIVIDUAL
+        else ChatType.GROUP
+
+    val chatViewModel: ChatViewModel =
+        viewModel(
+            factory =
+                createViewModelFactory {
+                  ChatViewModel(
+                      ChatRepositoryProvider.repository, ProfileRepositoryProvider.repository)
+                })
+
+    val presenceViewModel: PresenceViewModel =
+        viewModel(
+            factory =
+                createViewModelFactory { PresenceViewModel(PresenceRepositoryProvider.repository) })
+
+    val pollViewModel: PollViewModel? =
+        if (chatType == ChatType.GROUP) {
+          viewModel(
+              factory =
+                  createViewModelFactory {
+                    PollViewModel(
+                        PollRepositoryProvider.repository,
+                        ChatRepositoryProvider.repository,
+                        ProfileRepositoryProvider.repository)
+                  })
+        } else null
+
+    val currentUserName = currentUser?.displayName ?: stringResource(R.string.unknown_user)
+    ChatScreen(
+        chatId = chatId,
+        chatTitle = chatTitle,
+        currentUserId = currentUserId,
+        currentUserName = currentUserName,
+        viewModel = chatViewModel,
+        presenceViewModel = presenceViewModel,
+        pollViewModel = pollViewModel,
+        chatType = chatType,
+        totalParticipants = totalParticipants,
+        onLeaveClick = { navigationActions.goBack() },
+        onNavigateToMap = { location, senderId ->
+          navigationActions.navigateTo(
+              Screen.Map(
+                  latitude = location.latitude,
+                  longitude = location.longitude,
+                  showMarker = true,
+                  userId = senderId))
+          Toast.makeText(
+                  context,
+                  context.getString(R.string.toast_viewing_location, location.name),
+                  Toast.LENGTH_SHORT)
+              .show()
+        })
   }
 }
 
