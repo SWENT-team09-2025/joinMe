@@ -124,7 +124,7 @@ class ChatRepositoryCachedTest {
   }
 
   @Test
-  fun `observeMessagesForConversation emits cached messages first even when online`() = runTest {
+  fun `observeMessagesForConversation emits Firebase messages when online`() = runTest {
     // Given
     val cachedEntities = listOf(testMessage.toEntity())
     val networkStatusFlow = flowOf(true) // Online
@@ -140,10 +140,10 @@ class ChatRepositoryCachedTest {
     val result = cachedRepository.observeMessagesForConversation(testConversationId).first()
 
     // Then
-    // First emission should be cached messages
-    assertEquals(1, result.size)
+    // First emission should be from Firebase (both messages)
+    assertEquals(2, result.size)
     assertEquals(testMessage.id, result[0].id)
-    coVerify(atLeast = 1) { mockMessageDao.getMessagesForConversation(testConversationId) }
+    assertEquals(testMessage2.id, result[1].id)
   }
 
   @Test
@@ -418,9 +418,9 @@ class ChatRepositoryCachedTest {
     val result = cachedRepository.observeMessagesForConversation(testConversationId).first()
 
     // Then
-    // First emission is cached messages
-    assertEquals(1, result.size)
-    // Note: Background cache update is async and may not complete before test ends
-    // This is acceptable as the UI gets immediate data from cache
+    // First emission is from Firebase
+    assertEquals(2, result.size)
+    // Verify cache is updated in background
+    coVerify { mockMessageDao.insertMessages(any()) }
   }
 }

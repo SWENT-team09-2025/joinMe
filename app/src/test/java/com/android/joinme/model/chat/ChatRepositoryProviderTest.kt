@@ -104,17 +104,30 @@ class ChatRepositoryProviderTest {
   // ==================== Repository Injection Tests ====================
 
   @Test
-  fun `repository property setter allows custom repository injection`() {
+  fun `setRepositoryForTesting allows custom repository injection`() {
     // Given
     val customRepo = mockk<ChatRepository>()
 
     // When
-    ChatRepositoryProvider.repository = customRepo
+    ChatRepositoryProvider.setRepositoryForTesting(customRepo)
 
-    // Then - Getter still returns the local repo in test env (setter doesn't override)
-    // The setter is a no-op that allows tests to compile
+    // Then - Should return the injected repository
     val result = ChatRepositoryProvider.repository
-    assertNotNull(result)
+    assertSame(customRepo, result)
+  }
+
+  @Test
+  fun `setRepositoryForTesting with null resets to default behavior`() {
+    // Given
+    val customRepo = mockk<ChatRepository>()
+    ChatRepositoryProvider.setRepositoryForTesting(customRepo)
+
+    // When - Reset to default
+    ChatRepositoryProvider.setRepositoryForTesting(null)
+
+    // Then - Should return default local repository in test environment
+    val result = ChatRepositoryProvider.repository
+    assertTrue(result is ChatRepositoryLocal)
   }
 
   // ==================== Cached Repository Production Tests ====================
@@ -213,16 +226,16 @@ class ChatRepositoryProviderTest {
   // ==================== Edge Cases ====================
 
   @Test
-  fun `getRepository after setting custom repository still works`() {
+  fun `getRepository after injecting custom repository returns injected repo`() {
     // Given
     val customRepo = mockk<ChatRepository>()
-    ChatRepositoryProvider.repository = customRepo
+    ChatRepositoryProvider.setRepositoryForTesting(customRepo)
 
     // When
     val result = ChatRepositoryProvider.getRepository()
 
-    // Then - Should still return the appropriate repository for test environment
-    assertNotNull(result)
+    // Then - Should return the injected repository
+    assertSame(customRepo, result)
   }
 
   @Test

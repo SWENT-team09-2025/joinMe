@@ -36,6 +36,11 @@ object ChatRepositoryProvider {
    * @return ChatRepository implementation
    */
   fun getRepository(context: Context? = null): ChatRepository {
+    // If a repository is injected for testing, return it
+    injectedRepository?.let {
+      return it
+    }
+
     // Test environment: use local repository
     if (TestEnvironmentDetector.isTestEnvironment()) return localRepo
 
@@ -52,14 +57,25 @@ object ChatRepositoryProvider {
     return getCachedRepo(ctx)
   }
 
+  // Injected repository for testing (takes precedence over default behavior)
+  private var injectedRepository: ChatRepository? = null
+
   // For backward compatibility and explicit test injection
-  var repository: ChatRepository
+  val repository: ChatRepository
     get() {
-      return if (TestEnvironmentDetector.isTestEnvironment()) localRepo else getRepository()
+      return injectedRepository
+          ?: if (TestEnvironmentDetector.isTestEnvironment()) localRepo else getRepository()
     }
-    set(value) {
-      // Allows tests to inject custom repository
-    }
+
+  /**
+   * Injects a custom repository for testing purposes.
+   *
+   * @param repository The repository to use, or null to reset to default behavior
+   */
+  @androidx.annotation.VisibleForTesting
+  fun setRepositoryForTesting(repository: ChatRepository?) {
+    injectedRepository = repository
+  }
 
   private fun getRealtimeDbRepo(): ChatRepository {
     if (realtimeDbRepo == null) {
@@ -82,5 +98,6 @@ object ChatRepositoryProvider {
   fun resetForTesting() {
     realtimeDbRepo = null
     cachedRepo = null
+    injectedRepository = null
   }
 }

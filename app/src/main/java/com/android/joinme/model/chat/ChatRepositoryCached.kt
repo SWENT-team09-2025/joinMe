@@ -56,21 +56,17 @@ class ChatRepositoryCached(
    * Observes messages for a conversation with automatic cache/online switching.
    *
    * Flow behavior:
-   * 1. Immediately emits cached messages (instant UI)
-   * 2. When online: Subscribes to Firebase real-time updates and updates cache
-   * 3. When offline: Emits cached messages
-   * 4. On timeout: Falls back to cache
+   * 1. When online: Subscribes to Firebase real-time updates and updates cache
+   * 2. When offline: Emits cached messages
+   * 3. On timeout: Falls back to cache
+   * 4. On network transitions: Automatically switches between Firebase and cache
    *
    * @param conversationId The conversation ID to observe
    * @return Flow of message lists that updates based on network status
    */
   override fun observeMessagesForConversation(conversationId: String): Flow<List<Message>> =
       callbackFlow {
-        // 1. Emit cached messages immediately for instant UI
-        val cachedMessages = messageDao.getMessagesForConversation(conversationId)
-        send(cachedMessages.map { it.toMessage() })
-
-        // 2. Observe network status and switch between Firebase and cache
+        // Observe network status and switch between Firebase and cache
         networkMonitor.observeNetworkStatus().collectLatest { isOnline ->
           if (isOnline) {
             // Online: Subscribe to real-time Firebase updates
