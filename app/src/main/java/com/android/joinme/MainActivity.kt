@@ -1,5 +1,6 @@
-// Implemented with help of Claude AI
 package com.android.joinme
+
+// Implemented with help of Claude AI
 
 import android.app.Application
 import android.app.NotificationChannel

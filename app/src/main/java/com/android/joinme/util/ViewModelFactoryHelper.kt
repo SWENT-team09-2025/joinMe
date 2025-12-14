@@ -1,5 +1,7 @@
 package com.android.joinme.util
 
+// Implemented with help of Claude AI
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 

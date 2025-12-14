@@ -15,6 +15,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
 
+// Implemented with help of Claude AI
+
 /** Android instrumentation tests for ChatScreen that require real Android environment (Coil). */
 class ChatScreenAndroidTest {
 

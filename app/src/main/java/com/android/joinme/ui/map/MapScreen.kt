@@ -1,5 +1,7 @@
 package com.android.joinme.ui.map
 
+// Implemented with help of Claude AI
+
 import android.Manifest
 import android.content.Context
 import android.util.Log
