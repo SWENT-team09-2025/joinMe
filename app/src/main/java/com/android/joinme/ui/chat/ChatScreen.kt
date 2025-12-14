@@ -32,7 +32,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
@@ -88,7 +87,6 @@ import com.android.joinme.R
 import com.android.joinme.model.chat.ChatListItem
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
-import com.android.joinme.model.chat.Poll
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.map.UserLocation
 import com.android.joinme.model.profile.Profile
@@ -113,7 +111,6 @@ import kotlinx.coroutines.launch
 
 /**
  * Type of chat determining UI behavior.
- *
  * - INDIVIDUAL: For one-on-one chats, shows "online"/"offline" status
  * - GROUP: For group/event chats, shows "X users online" count
  */
@@ -396,7 +393,8 @@ private fun ChatTopBar(
                                 when (onlineUsersCount) {
                                   0 -> stringResource(R.string.online_users_zero)
                                   1 -> stringResource(R.string.online_users_one)
-                                  else -> stringResource(R.string.online_users_many, onlineUsersCount)
+                                  else ->
+                                      stringResource(R.string.online_users_many, onlineUsersCount)
                                 }
                           }
                       Text(
