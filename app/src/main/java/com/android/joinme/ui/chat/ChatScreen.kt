@@ -88,6 +88,7 @@ import com.android.joinme.R
 import com.android.joinme.model.chat.ChatListItem
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
+import com.android.joinme.model.chat.Poll
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.map.UserLocation
 import com.android.joinme.model.profile.Profile
@@ -125,6 +126,15 @@ enum class ChatType {
 /** Shared constants for chat screens. */
 private object ChatConstants {
   const val TIMESTAMP_FORMAT = "HH:mm"
+  const val SECONDARY_ALPHA = 0.8f
+  const val SYSTEM_MESSAGE_ALPHA = 0.9f
+  const val DIVIDER_ALPHA = 0.5f
+  const val USERS_OFFLINE = 0
+  const val ONE_USER_ONLINE = 1
+  const val IMAGE_ASPECT_RATIO = 0.75f
+  const val MAX_INPUT_LINES = 4
+  const val BLUR_MULTIPLIER = 2
+  const val IMAGE_MIME_TYPE = "image/*"
 }
 
 /**
@@ -206,6 +216,9 @@ object ChatScreenTestTags {
   const val LOCATION_PREVIEW_SEND_BUTTON = "locationPreviewSendButton"
   const val LOCATION_PREVIEW_CANCEL_BUTTON = "locationPreviewCancelButton"
   const val LOCATION_MESSAGE_PREVIEW = "locationMessagePreview"
+  const val ONLINE_USERS_ROW = "onlineUsersRow"
+  const val ONLINE_INDICATOR_DOT = "onlineIndicatorDot"
+  const val ONLINE_USERS_COUNT = "onlineUsersCount"
 }
 
 /**
@@ -369,14 +382,15 @@ private fun ChatTopBar(
                 OnlineStatusIndicator(
                     onlineUsersCount = onlineUsersCount,
                     chatType = chatType,
-                    textColor = onTopBarColor.copy(alpha = 0.8f))
+                    textColor = onTopBarColor.copy(alpha = ChatConstants.SECONDARY_ALPHA))
               }
               // Leave button
               IconButton(
                   onClick = onLeaveClick,
                   modifier =
                       Modifier.size(Dimens.IconSize.medium)
-                          .background(topBarColor.copy(alpha = 0.8f), CircleShape)
+                          .background(
+                              topBarColor.copy(alpha = ChatConstants.SECONDARY_ALPHA), CircleShape)
                           .testTag(ChatScreenTestTags.LEAVE_BUTTON)) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,
@@ -404,18 +418,18 @@ private fun OnlineStatusIndicator(onlineUsersCount: Int, chatType: ChatType, tex
   Row(
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.extraSmall),
-      modifier = Modifier.testTag("onlineUsersRow")) {
+      modifier = Modifier.testTag(ChatScreenTestTags.ONLINE_USERS_ROW)) {
         Box(
             modifier =
                 Modifier.size(Dimens.Spacing.small)
                     .background(color = indicatorColor, shape = CircleShape)
-                    .testTag("onlineIndicatorDot"))
+                    .testTag(ChatScreenTestTags.ONLINE_INDICATOR_DOT))
 
         Text(
             text = statusText,
             style = MaterialTheme.typography.bodySmall,
             color = textColor,
-            modifier = Modifier.testTag("onlineUsersCount"))
+            modifier = Modifier.testTag(ChatScreenTestTags.ONLINE_USERS_COUNT))
       }
 }
 
@@ -437,8 +451,8 @@ private fun getIndividualStatusText(isOnline: Boolean): String {
 @Composable
 private fun getGroupStatusText(count: Int): String {
   return when (count) {
-    0 -> stringResource(R.string.online_users_zero)
-    1 -> stringResource(R.string.online_users_one)
+    ChatConstants.USERS_OFFLINE -> stringResource(R.string.online_users_zero)
+    ChatConstants.ONE_USER_ONLINE -> stringResource(R.string.online_users_one)
     else -> stringResource(R.string.online_users_many, count)
   }
 }
@@ -488,7 +502,12 @@ private fun ChatContent(
   ChatContentEffects(messages, listState, viewModel)
 
   val blurModifier =
-      if (selectedMessage != null) Modifier.blur(Dimens.Profile.photoBlurRadius * 2) else Modifier
+      if (selectedMessage != null)
+          Modifier.blur(Dimens.Profile.photoBlurRadius * ChatConstants.BLUR_MULTIPLIER)
+      else Modifier
+
+  // Collect poll state if available
+  val pollsState = pollViewModel?.pollsState?.collectAsState()
 
   Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
     Column(modifier = Modifier.fillMaxSize().then(blurModifier)) {
@@ -506,6 +525,12 @@ private fun ChatContent(
           onImageClick = { imageUrl -> fullScreenImageUrl = imageUrl },
           onLocationClick = { location, senderId -> onNavigateToMap(location, senderId) },
           chatColor = chatColor,
+          polls = pollsState?.value?.polls ?: emptyList(),
+          voterProfiles = pollsState?.value?.voterProfiles ?: emptyMap(),
+          onVote = { pollId, optionId -> pollViewModel?.vote(pollId, optionId) },
+          onClosePoll = { pollId -> pollViewModel?.closePoll(pollId) },
+          onReopenPoll = { pollId -> pollViewModel?.reopenPoll(pollId) },
+          onDeletePoll = { pollId -> pollViewModel?.deletePoll(pollId) },
           modifier = Modifier.weight(1f))
 
       MessageInput(
@@ -642,6 +667,12 @@ private fun createDialogCallbacks(stateSetters: DialogStateSetters): DialogCallb
  * @param onImageClick Callback when an image message is clicked
  * @param onLocationClick Callback when a location message is clicked
  * @param chatColor The chat color for the date headers (matches topbar)
+ * @param polls List of polls for this conversation
+ * @param voterProfiles Map of voter IDs to their profiles
+ * @param onVote Callback when a user votes on a poll option
+ * @param onClosePoll Callback when a poll is closed
+ * @param onReopenPoll Callback when a poll is reopened
+ * @param onDeletePoll Callback when a poll is deleted
  * @param modifier Modifier for the LazyColumn
  */
 @Composable
@@ -655,6 +686,12 @@ private fun MessageList(
     onImageClick: (String) -> Unit,
     onLocationClick: (Location, String) -> Unit,
     chatColor: Color,
+    polls: List<Poll> = emptyList(),
+    voterProfiles: Map<String, Profile> = emptyMap(),
+    onVote: (pollId: String, optionId: Int) -> Unit = { _, _ -> },
+    onClosePoll: (pollId: String) -> Unit = {},
+    onReopenPoll: (pollId: String) -> Unit = {},
+    onDeletePoll: (pollId: String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
   // Group messages by date and insert date headers
@@ -693,9 +730,15 @@ private fun MessageList(
                     val message = item.message
                     // Get user-specific color for this message sender
                     val userColors = getUserColor(message.senderId)
+                    // For poll messages, look up the poll by ID stored in message.content
+                    val poll =
+                        if (message.type == MessageType.POLL) {
+                          polls.find { it.id == message.content }
+                        } else null
                     MessageItem(
                         message = message,
                         isCurrentUser = message.senderId == currentUserId,
+                        currentUserId = currentUserId,
                         senderPhotoUrl = senderProfiles[message.senderId]?.photoUrl,
                         currentUserPhotoUrl = senderProfiles[currentUserId]?.photoUrl,
                         bubbleColor = userColors.first,
@@ -703,7 +746,13 @@ private fun MessageList(
                         totalUsersInChat = totalParticipants,
                         onLongPress = { onMessageLongPress(message) },
                         onImageClick = onImageClick,
-                        onLocationClick = onLocationClick)
+                        onLocationClick = onLocationClick,
+                        poll = poll,
+                        voterProfiles = voterProfiles,
+                        onVote = { optionId -> poll?.id?.let { onVote(it, optionId) } },
+                        onClosePoll = { poll?.id?.let { onClosePoll(it) } },
+                        onReopenPoll = { poll?.id?.let { onReopenPoll(it) } },
+                        onDeletePoll = { poll?.id?.let { onDeletePoll(it) } })
                   }
                 }
               }
@@ -765,7 +814,8 @@ private fun DateHeader(timestamp: Long, chatColor: Color) {
         // Horizontal divider line
         androidx.compose.material3.HorizontalDivider(
             modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.Padding.large),
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+            color =
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = ChatConstants.DIVIDER_ALPHA),
             thickness = Dimens.BorderWidth.thin)
 
         // Date text centered on white background
@@ -892,7 +942,7 @@ private fun MessageContent(
     Text(
         text = message.content,
         style = MaterialTheme.typography.bodySmall,
-        color = onBubbleColor.copy(alpha = 0.9f),
+        color = onBubbleColor.copy(alpha = ChatConstants.SYSTEM_MESSAGE_ALPHA),
         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
   } else {
     if (!isCurrentUser) {
@@ -900,7 +950,7 @@ private fun MessageContent(
           text = message.senderName,
           style = MaterialTheme.typography.labelSmall,
           fontWeight = FontWeight.Bold,
-          color = onBubbleColor.copy(alpha = 0.8f))
+          color = onBubbleColor.copy(alpha = ChatConstants.SECONDARY_ALPHA))
       Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
     }
 
@@ -1004,12 +1054,19 @@ private fun ReadReceiptIcon(message: Message, onBubbleColor: Color, totalUsersIn
  * @param onLongPress Callback invoked when the message is long-pressed
  * @param onImageClick Callback invoked when an image message is clicked for full-screen view
  * @param onLocationClick Callback invoked when a location message is clicked
+ * @param poll The poll object if this is a poll message
+ * @param voterProfiles Map of voter IDs to their profiles for displaying voter info
+ * @param onVote Callback when user votes on a poll option
+ * @param onClosePoll Callback when poll is closed
+ * @param onReopenPoll Callback when poll is reopened
+ * @param onDeletePoll Callback when poll is deleted
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MessageItem(
     message: Message,
     isCurrentUser: Boolean,
+    currentUserId: String,
     senderPhotoUrl: String? = null,
     currentUserPhotoUrl: String? = null,
     bubbleColor: Color,
@@ -1017,8 +1074,33 @@ private fun MessageItem(
     totalUsersInChat: Int = 0,
     onLongPress: () -> Unit = {},
     onImageClick: (String) -> Unit = {},
-    onLocationClick: (Location, String) -> Unit = { _, _ -> }
+    onLocationClick: (Location, String) -> Unit = { _, _ -> },
+    poll: Poll? = null,
+    voterProfiles: Map<String, Profile> = emptyMap(),
+    onVote: (optionId: Int) -> Unit = {},
+    onClosePoll: () -> Unit = {},
+    onReopenPoll: () -> Unit = {},
+    onDeletePoll: () -> Unit = {}
 ) {
+  // For poll messages, render PollCard instead of regular message bubble
+  if (message.type == MessageType.POLL && poll != null) {
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(horizontal = Dimens.Padding.small)
+                .testTag(ChatScreenTestTags.getTestTagForMessage(message.id))) {
+          PollCard(
+              poll = poll,
+              currentUserId = currentUserId,
+              voterProfiles = voterProfiles,
+              onVote = onVote,
+              onClosePoll = onClosePoll,
+              onReopenPoll = onReopenPoll,
+              onDeletePoll = onDeletePoll)
+        }
+    return
+  }
+
   val horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
 
   Row(
@@ -1194,7 +1276,8 @@ private fun ChatImageMessage(imageUrl: String, bubbleColor: Color, onClick: () -
               Box(
                   modifier =
                       Modifier.widthIn(max = Dimens.Chat.messageBubbleMaxWidth)
-                          .height(Dimens.Chat.messageBubbleMaxWidth * 0.75f)
+                          .height(
+                              Dimens.Chat.messageBubbleMaxWidth * ChatConstants.IMAGE_ASPECT_RATIO)
                           .testTag(ChatScreenTestTags.CHAT_IMAGE_LOADING), // 4:3 aspect ratio
                   contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = bubbleColor)
@@ -1205,7 +1288,8 @@ private fun ChatImageMessage(imageUrl: String, bubbleColor: Color, onClick: () -
               Box(
                   modifier =
                       Modifier.widthIn(max = Dimens.Chat.messageBubbleMaxWidth)
-                          .height(Dimens.Chat.messageBubbleMaxWidth * 0.75f)
+                          .height(
+                              Dimens.Chat.messageBubbleMaxWidth * ChatConstants.IMAGE_ASPECT_RATIO)
                           .clip(RoundedCornerShape(Dimens.CornerRadius.medium))
                           .background(MaterialTheme.colorScheme.errorContainer)
                           .testTag(ChatScreenTestTags.CHAT_IMAGE_ERROR),
@@ -1292,7 +1376,7 @@ private fun MessageInput(
                 },
                 shape = RoundedCornerShape(Dimens.CornerRadius.pill),
                 colors = MaterialTheme.customColors.outlinedTextField(),
-                maxLines = 4)
+                maxLines = ChatConstants.MAX_INPUT_LINES)
 
             // Dynamic send button (right) - disabled appearance when no text
             if (text.isEmpty()) {
@@ -1455,7 +1539,7 @@ private fun AttachmentMenu(
         onDismiss = { showPhotoSourceDialog = false },
         onGalleryClick = {
           showPhotoSourceDialog = false
-          imagePickerLauncher.launch("image/*")
+          imagePickerLauncher.launch(ChatConstants.IMAGE_MIME_TYPE)
         },
         onCameraClick = {
           showPhotoSourceDialog = false
@@ -1588,7 +1672,7 @@ private fun EditMessageDialog(
             modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.EDIT_MESSAGE_INPUT),
             placeholder = { Text(stringResource(R.string.edit_message_placeholder)) },
             colors = MaterialTheme.customColors.outlinedTextField(),
-            maxLines = 4)
+            maxLines = ChatConstants.MAX_INPUT_LINES)
       },
       confirmButton = {
         Button(

@@ -72,6 +72,7 @@
     <string name="location_permission_required">Location permission required to share location</string>
     <string name="sign_in_to_send_message">Please sign in to send messages</string>
     <string name="cannot_message_yourself">Cannot send messages to yourself</string>
+    <string name="chat_id_or_title_null">Chat ID or title is null</string>
 
     <!-- Map Screen -->
     <string name="shared_location_marker_title">Location</string>
@@ -231,6 +232,8 @@
     <string name="other_events">Other Events</string>
     <string name="clear_filters">Clear Filters</string>
     <string name="snippet_message">Tap to see more and join me</string>
+    <string name="filter_button_description">Filter</string>
+    <string name="my_location_button_description">My Location</string>
 
     <!-- Group button -->
     <string name="delete_group_button">DELETE GROUP</string>
