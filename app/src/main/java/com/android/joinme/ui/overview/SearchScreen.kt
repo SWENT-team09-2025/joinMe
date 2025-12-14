@@ -65,7 +65,6 @@ private fun SearchTextField(query: String, onQueryChange: (String) -> Unit) {
         IconButton(
             onClick = {
               if (query.isNotEmpty()) {
-                // Perform search action here
                 focusManager.clearFocus()
               }
             }) {
