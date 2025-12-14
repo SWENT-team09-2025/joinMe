@@ -50,7 +50,7 @@ class ChatRepositoryCached(
   private val database = AppDatabase.getDatabase(context)
   private val messageDao = database.messageDao()
 
-  override fun getNewMessageId(): String = realtimeDbRepo.getNewMessageId()
+  override fun getNewMessageId(): String = realtimeDbRepo.getNewMessageId() // NOSONAR
 
   /**
    * Observes messages for a conversation with automatic cache/online switching.
