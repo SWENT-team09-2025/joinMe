@@ -199,8 +199,8 @@ class CreateSerieViewModel(
       return stopLoadingAndReturn()
     }
 
-    // 8. Update Streaks
-    if (group != null && !updateStreaks(group, parsedDate)) {
+    // 8. Update Streak for creator
+    if (group != null && !updateCreatorStreak(group.id, userId, parsedDate)) {
       // Rollback serie and group association
       tryRollbackSerie(serie.serieId, group)
       return stopLoadingAndReturn()
@@ -365,19 +365,27 @@ class CreateSerieViewModel(
   }
 
   /**
-   * Updates streaks for all group members.
+   * Updates the streak for the serie creator.
    *
-   * @return `true` if all streak updates succeeded; `false` if any failed.
+   * Only the creator's streak is updated at creation time since group series are opt-in: other
+   * members join later and their streaks are updated in SerieDetailsViewModel.
+   *
+   * @param groupId The group ID for the streak.
+   * @param creatorId The user ID of the serie creator.
+   * @param date The serie date.
+   * @return `true` if the streak update succeeded; `false` if it failed.
    */
-  private suspend fun updateStreaks(group: Group, date: Timestamp): Boolean {
+  private suspend fun updateCreatorStreak(
+      groupId: String,
+      creatorId: String,
+      date: Timestamp
+  ): Boolean {
     return try {
-      for (memberId in group.memberIds) {
-        StreakService.onActivityJoined(group.id, memberId, date)
-      }
+      StreakService.onActivityJoined(groupId, creatorId, date)
       true
     } catch (e: Exception) {
-      Log.e("CreateSerieViewModel", "Error updating streaks", e)
-      setErrorMsg("Failed to update streaks. Cannot create serie: ${e.message}")
+      Log.e("CreateSerieViewModel", "Error updating streak for creator $creatorId", e)
+      setErrorMsg("Failed to update streak. Cannot create serie: ${e.message}")
       false
     }
   }
