@@ -8,11 +8,16 @@ import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.groups.streaks.StreakService
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import com.google.firebase.FirebaseApp
 import com.google.firebase.Timestamp
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -928,5 +933,93 @@ class CreateEventViewModelTest {
     Assert.assertTrue(vm.uiState.value.errorMsg!!.contains("Failed to update your profile"))
     // Event was added but rollback failed, so it's still in the list
     Assert.assertEquals(1, repo.added.size)
+  }
+
+  /** --- STREAK UPDATE TESTS --- */
+  @Test
+  fun createEvent_withGroup_updatesOnlyCreatorStreak() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityJoined(any(), any(), any()) } returns Unit
+
+    // Setup group with multiple members
+    val testGroup =
+        Group(
+            id = "group-1",
+            name = "Test Group",
+            memberIds = listOf("owner-123", "member-2", "member-3"),
+            eventIds = emptyList())
+    groupRepo.addTestGroup(testGroup)
+
+    val ownerProfile =
+        Profile(
+            uid = "owner-123", username = "Owner", email = "owner@test.com", eventsJoinedCount = 5)
+    whenever(profileRepository.getProfile("owner-123")).thenReturn(ownerProfile)
+
+    val newVm = CreateEventViewModel(repo, profileRepository, groupRepo)
+    advanceUntilIdle()
+
+    newVm.setSelectedGroup("group-1")
+    newVm.setTitle("Football")
+    newVm.setDescription("Friendly 5v5")
+    newVm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
+    newVm.setDate("25/12/2025")
+    newVm.setTime("10:00")
+    newVm.setMaxParticipants("10")
+    newVm.setDuration("90")
+
+    val ok = newVm.createEvent(userId = "owner-123")
+    advanceUntilIdle()
+
+    Assert.assertTrue(ok)
+
+    // Verify streak was updated ONLY for the creator, not for other group members
+    coVerify(exactly = 1) { StreakService.onActivityJoined("group-1", "owner-123", any()) }
+    coVerify(exactly = 0) { StreakService.onActivityJoined(any(), "member-2", any()) }
+    coVerify(exactly = 0) { StreakService.onActivityJoined(any(), "member-3", any()) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun createEvent_streakUpdateFails_rollsBackEvent() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityJoined(any(), any(), any()) } throws
+        RuntimeException("Streak error")
+
+    val testGroup =
+        Group(
+            id = "group-1",
+            name = "Test Group",
+            memberIds = listOf("owner-456"),
+            eventIds = emptyList())
+    groupRepo.addTestGroup(testGroup)
+
+    val ownerProfile =
+        Profile(
+            uid = "owner-456", username = "Owner", email = "owner@test.com", eventsJoinedCount = 5)
+    whenever(profileRepository.getProfile("owner-456")).thenReturn(ownerProfile)
+
+    val newVm = CreateEventViewModel(repo, profileRepository, groupRepo)
+    advanceUntilIdle()
+
+    newVm.setSelectedGroup("group-1")
+    newVm.setTitle("Football")
+    newVm.setDescription("Friendly 5v5")
+    newVm.selectLocation(Location(46.52, 6.63, "EPFL Field"))
+    newVm.setDate("25/12/2025")
+    newVm.setTime("10:00")
+    newVm.setMaxParticipants("10")
+    newVm.setDuration("90")
+
+    val ok = newVm.createEvent(userId = "owner-456")
+    advanceUntilIdle()
+
+    // Event creation should fail and event should be rolled back
+    Assert.assertFalse(ok)
+    Assert.assertTrue(repo.added.isEmpty())
+    Assert.assertEquals(1, repo.deleted.size)
+    Assert.assertNotNull(newVm.uiState.value.errorMsg)
+
+    unmockkObject(StreakService)
   }
 }
