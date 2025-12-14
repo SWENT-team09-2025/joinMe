@@ -21,6 +21,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -110,9 +111,6 @@ private const val NOTIFICATION_TYPE_NEW_FOLLOWER = "new_follower"
 /** Navigation argument keys. */
 const val SERIES_ID = "serieId"
 const val EVENT_ID = "eventId"
-
-/** Suppress annotation constant. */
-private const val SUPPRESS_UNCHECKED_CAST = "UNCHECKED_CAST"
 
 /**
  * Handles the logic for joining a group from an invitation link.
@@ -396,6 +394,40 @@ private fun FollowerNavigationEffect(
   }
 }
 
+/** Handles the invitation token when user is not logged in. */
+private fun handleUnauthenticatedInvitation(
+    tokenToProcess: String,
+    invitationToken: String?,
+    onPendingTokenChange: (String?) -> Unit,
+    onInitialTokenProcessed: () -> Unit
+) {
+  onPendingTokenChange(tokenToProcess)
+  if (tokenToProcess == invitationToken) {
+    onInitialTokenProcessed()
+  }
+}
+
+/** Handles the invitation token when user is logged in. */
+private suspend fun handleAuthenticatedInvitation(
+    tokenToProcess: String,
+    invitationToken: String?,
+    newInvitationToken: String?,
+    currentUserId: String,
+    context: Context,
+    navigationActions: NavigationActions,
+    onInitialTokenProcessed: () -> Unit,
+    onInvitationProcessed: () -> Unit
+) {
+  processInvitation(tokenToProcess, currentUserId, context, navigationActions)
+
+  if (tokenToProcess == invitationToken) {
+    onInitialTokenProcessed()
+  }
+  if (newInvitationToken != null) {
+    onInvitationProcessed()
+  }
+}
+
 /** Handles invitation token processing and authentication state. */
 @Composable
 private fun InvitationHandlingEffect(
@@ -414,22 +446,21 @@ private fun InvitationHandlingEffect(
     val tokenToProcess =
         newInvitationToken ?: (if (!initialTokenProcessed) invitationToken else null)
 
-    if (tokenToProcess != null) {
+    tokenToProcess?.let { token ->
       if (currentUserId.isEmpty()) {
-        onPendingTokenChange(tokenToProcess)
-        if (tokenToProcess == invitationToken) {
-          onInitialTokenProcessed()
-        }
+        handleUnauthenticatedInvitation(
+            token, invitationToken, onPendingTokenChange, onInitialTokenProcessed)
       } else {
         coroutineScope.launch {
-          processInvitation(tokenToProcess, currentUserId, context, navigationActions)
-
-          if (tokenToProcess == invitationToken) {
-            onInitialTokenProcessed()
-          }
-          if (newInvitationToken != null) {
-            onInvitationProcessed()
-          }
+          handleAuthenticatedInvitation(
+              token,
+              invitationToken,
+              newInvitationToken,
+              currentUserId,
+              context,
+              navigationActions,
+              onInitialTokenProcessed,
+              onInvitationProcessed)
         }
       }
     }
@@ -885,8 +916,9 @@ private fun NavGraphBuilder.groupScreens(context: Context, navigationActions: Na
           viewModel(
               factory =
                   object : ViewModelProvider.Factory {
+                    // Cannot put hardcoded string in a const, else we have a cast warning
+                    @Suppress("UNCHECKED_CAST")
                     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                      @Suppress(SUPPRESS_UNCHECKED_CAST)
                       return GroupLeaderboardViewModel(
                           application = (context.applicationContext as Application))
                           as T
@@ -922,14 +954,15 @@ private fun NavGraphBuilder.chatScreen(
           viewModel(
               factory =
                   object : ViewModelProvider.Factory {
+                    // Cannot put hardcoded string in a const, else we have a cast warning
+                    @Suppress("UNCHECKED_CAST")
                     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                      @Suppress(SUPPRESS_UNCHECKED_CAST)
                       return ChatViewModel(
                           ChatRepositoryProvider.repository, ProfileRepositoryProvider.repository)
                           as T
                     }
                   })
-      val currentUserName = currentUser?.displayName ?: "Unknown User"
+      val currentUserName = currentUser?.displayName ?: stringResource(R.string.unknown_user)
       ChatScreen(
           chatId = chatId,
           chatTitle = chatTitle,
