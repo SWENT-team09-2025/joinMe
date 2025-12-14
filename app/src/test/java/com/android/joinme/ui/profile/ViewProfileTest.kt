@@ -570,6 +570,85 @@ class ViewProfileScreenTest {
     composeTestRule.onNodeWithText("28.8m").assertIsDisplayed()
   }
 
+  @Test
+  fun viewProfileScreen_followersStat_isClickable() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
+    val viewModel = ProfileViewModel(repo)
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.FOLLOWERS_STAT).assertHasClickAction()
+  }
+
+  @Test
+  fun viewProfileScreen_followingStat_isClickable() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
+    val viewModel = ProfileViewModel(repo)
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.FOLLOWING_STAT).assertHasClickAction()
+  }
+
+  @Test
+  fun viewProfileScreen_followersStat_click_triggersCallback() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
+    val viewModel = ProfileViewModel(repo)
+    var clickedUserId: String? = null
+
+    composeTestRule.setContent {
+      ViewProfileScreen(
+          uid = testUid,
+          profileViewModel = viewModel,
+          onFollowersClick = { userId -> clickedUserId = userId })
+    }
+
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.FOLLOWERS_STAT).performClick()
+    assert(clickedUserId == testUid) { "Expected uid $testUid but got $clickedUserId" }
+  }
+
+  @Test
+  fun viewProfileScreen_followingStat_click_triggersCallback() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
+    val viewModel = ProfileViewModel(repo)
+    var clickedUserId: String? = null
+
+    composeTestRule.setContent {
+      ViewProfileScreen(
+          uid = testUid,
+          profileViewModel = viewModel,
+          onFollowingClick = { userId -> clickedUserId = userId })
+    }
+
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.FOLLOWING_STAT).performClick()
+    assert(clickedUserId == testUid) { "Expected uid $testUid but got $clickedUserId" }
+  }
+
+  @Test
+  fun viewProfileScreen_followerAndFollowingStats_independentCallbacks() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
+    val viewModel = ProfileViewModel(repo)
+    var followersClickedUserId: String? = null
+    var followingClickedUserId: String? = null
+
+    composeTestRule.setContent {
+      ViewProfileScreen(
+          uid = testUid,
+          profileViewModel = viewModel,
+          onFollowersClick = { userId -> followersClickedUserId = userId },
+          onFollowingClick = { userId -> followingClickedUserId = userId })
+    }
+
+    // Click followers stat
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.FOLLOWERS_STAT).performClick()
+    assert(followersClickedUserId == testUid) { "Followers callback not triggered" }
+    assert(followingClickedUserId == null) { "Following callback should not be triggered" }
+
+    // Click following stat
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.FOLLOWING_STAT).performClick()
+    assert(followingClickedUserId == testUid) { "Following callback not triggered" }
+  }
+
   // ==================== LAUNCHED EFFECT OPTIMIZATION TESTS ====================
 
   @Test

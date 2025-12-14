@@ -63,6 +63,8 @@ fun ViewProfileScreen(
     onGroupClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
     onSignOutComplete: () -> Unit = {},
+    onFollowersClick: (String) -> Unit = {},
+    onFollowingClick: (String) -> Unit = {},
 ) {
   val profile by profileViewModel.profile.collectAsState()
   val isLoading by profileViewModel.isLoading.collectAsState()
@@ -125,7 +127,9 @@ fun ViewProfileScreen(
                     profileViewModel.signOut(
                         onSignOutComplete,
                         onError = { profileViewModel.setError("Error while logging out") })
-                  })
+                  },
+                  onFollowersClick = { onFollowersClick(uid) },
+                  onFollowingClick = { onFollowingClick(uid) })
             }
             else -> {
               Text(text = "No profile data available", modifier = Modifier.align(Alignment.Center))
@@ -137,7 +141,12 @@ fun ViewProfileScreen(
 
 /** The main content of the profile screen, displaying profile details in read-only mode. */
 @Composable
-private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
+private fun ProfileContent(
+    profile: Profile,
+    onLogoutClick: () -> Unit,
+    onFollowersClick: () -> Unit,
+    onFollowingClick: () -> Unit
+) {
   var showLogoutDialog by remember { mutableStateOf(false) }
 
   Column(
@@ -184,7 +193,9 @@ private fun ProfileContent(profile: Profile, onLogoutClick: () -> Unit) {
             eventsJoinedTestTag = ViewProfileTestTags.EVENTS_JOINED_STAT,
             followersTestTag = ViewProfileTestTags.FOLLOWERS_STAT,
             followingTestTag = ViewProfileTestTags.FOLLOWING_STAT,
-            profilePhotoTestTag = ViewProfileTestTags.PROFILE_PICTURE)
+            profilePhotoTestTag = ViewProfileTestTags.PROFILE_PICTURE,
+            onFollowersClick = onFollowersClick,
+            onFollowingClick = onFollowingClick)
 
         // Event Streaks
         Box(

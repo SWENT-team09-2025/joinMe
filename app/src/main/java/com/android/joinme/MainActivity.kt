@@ -757,6 +757,16 @@ private fun NavGraphBuilder.profileScreens(
         onSignOutComplete = {
           FCMTokenManager.clearFCMToken()
           navigationActions.navigateTo(Screen.Auth)
+        },
+        onFollowersClick = { profileUserId ->
+          navigationActions.navigateTo(
+              Screen.FollowList(
+                  profileUserId, com.android.joinme.ui.profile.FollowTab.FOLLOWERS.name))
+        },
+        onFollowingClick = { profileUserId ->
+          navigationActions.navigateTo(
+              Screen.FollowList(
+                  profileUserId, com.android.joinme.ui.profile.FollowTab.FOLLOWING.name))
         })
   }
   composable(Screen.PublicProfile.route) { navBackStackEntry ->
