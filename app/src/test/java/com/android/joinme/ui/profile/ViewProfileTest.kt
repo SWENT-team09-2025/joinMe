@@ -533,7 +533,6 @@ class ViewProfileScreenTest {
     composeTestRule.onNodeWithText("89").assertIsDisplayed()
   }
 
-
   @Test
   fun viewProfileScreen_displaysCorrectStatsValues() = runTest {
     val profile =
