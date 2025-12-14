@@ -32,7 +32,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.BrokenImage
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
@@ -73,6 +75,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -85,6 +88,7 @@ import com.android.joinme.R
 import com.android.joinme.model.chat.ChatListItem
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
+import com.android.joinme.model.chat.Poll
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.map.UserLocation
 import com.android.joinme.model.profile.Profile
@@ -102,7 +106,40 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.launch
+
+/**
+ * Type of chat determining UI behavior.
+ *
+ * - INDIVIDUAL: For one-on-one chats, shows "online"/"offline" status
+ * - GROUP: For group/event chats, shows "X users online" count
+ */
+enum class ChatType {
+  INDIVIDUAL,
+  GROUP
+}
+
+/** Shared constants for chat screens. */
+private object ChatConstants {
+  const val SENDER_NAME_ALPHA = 0.8f
+  const val TIMESTAMP_ALPHA = 0.7f
+  const val MESSAGE_INPUT_MAX_LINES = 4
+  const val TIMESTAMP_FORMAT = "HH:mm"
+}
+
+/**
+ * Formats a Unix timestamp into a readable time string.
+ *
+ * @param timestamp Unix timestamp in milliseconds
+ * @return Formatted time string (e.g., "14:32")
+ */
+private fun formatTimestamp(timestamp: Long): String {
+  val dateFormat = SimpleDateFormat(ChatConstants.TIMESTAMP_FORMAT, Locale.getDefault())
+  return dateFormat.format(Date(timestamp))
+}
 
 /**
  * Disabled MapUiSettings for location previews.
@@ -198,6 +235,9 @@ object ChatScreenTestTags {
  * @param totalParticipants Total number of participants in the event/group
  * @param presenceViewModel Optional presence view model for online tracking
  * @param onNavigateToMap Callback invoked when user clicks on a location message to view on map
+ * @param chatType Type of chat (INDIVIDUAL or GROUP), determines UI behavior like online status
+ *   display. Defaults to INDIVIDUAL.
+ * @param pollViewModel Optional poll view model for group/event chats with poll support
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -213,8 +253,9 @@ fun ChatScreen(
     totalParticipants: Int = 1, // Total number of participants in the event/group
     presenceViewModel: PresenceViewModel? =
         null, // Optional presence view model for online tracking
-    onNavigateToMap: (Location, String) -> Unit = { _, _ ->
-    } // Callback when user clicks on location message (location, senderId)
+    onNavigateToMap: (Location, String) -> Unit = { _, _ -> },
+    chatType: ChatType = ChatType.INDIVIDUAL,
+    pollViewModel: PollViewModel? = null
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val snackbarHostState = remember { SnackbarHostState() }
@@ -253,7 +294,8 @@ fun ChatScreen(
             onLeaveClick = onLeaveClick, // Leave chat navigates back
             topBarColor = effectiveChatColor,
             onTopBarColor = effectiveOnChatColor,
-            onlineUsersCount = presenceState?.value?.onlineUsersCount ?: 0)
+            onlineUsersCount = presenceState?.value?.onlineUsersCount ?: 0,
+            chatType = chatType)
       },
       snackbarHost = { SnackbarHost(snackbarHostState) },
       contentWindowInsets = WindowInsets.systemBars, // Only consume system bars, not IME
@@ -278,7 +320,8 @@ fun ChatScreen(
               onChatColor = effectiveOnChatColor,
               viewModel = viewModel,
               totalParticipants = totalParticipants,
-              onNavigateToMap = onNavigateToMap)
+              onNavigateToMap = onNavigateToMap,
+              pollViewModel = pollViewModel)
         }
       }
 }
@@ -292,6 +335,7 @@ fun ChatScreen(
  * @param onTopBarColor Color for text/icons on the top bar (must provide proper contrast with
  *   topBarColor)
  * @param onlineUsersCount Number of users currently online in the chat
+ * @param chatType Type of chat (INDIVIDUAL or GROUP), determines online status display format
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -300,7 +344,8 @@ private fun ChatTopBar(
     onLeaveClick: () -> Unit,
     topBarColor: Color,
     onTopBarColor: Color,
-    onlineUsersCount: Int = 0
+    onlineUsersCount: Int = 0,
+    chatType: ChatType = ChatType.INDIVIDUAL
 ) {
   // Define colors for the online indicator dot
   val onlineIndicatorColor = Color(0xFF4CAF50) // Green
@@ -341,11 +386,21 @@ private fun ChatTopBar(
                                       shape = CircleShape)
                                   .testTag("onlineIndicatorDot"))
 
-                      // For individual chats, show simple "online" / "offline"
+                      // Display text based on chat type
+                      val statusText =
+                          when (chatType) {
+                            ChatType.INDIVIDUAL ->
+                                if (onlineUsersCount > 0) stringResource(R.string.status_online)
+                                else stringResource(R.string.status_offline)
+                            ChatType.GROUP ->
+                                when (onlineUsersCount) {
+                                  0 -> stringResource(R.string.online_users_zero)
+                                  1 -> stringResource(R.string.online_users_one)
+                                  else -> stringResource(R.string.online_users_many, onlineUsersCount)
+                                }
+                          }
                       Text(
-                          text =
-                              if (onlineUsersCount > 0) stringResource(R.string.status_online)
-                              else stringResource(R.string.status_offline),
+                          text = statusText,
                           style = MaterialTheme.typography.bodySmall,
                           color = onTopBarColor.copy(alpha = 0.8f),
                           modifier = Modifier.testTag("onlineUsersCount"))
@@ -382,6 +437,7 @@ private fun ChatTopBar(
  * @param viewModel ChatViewModel for managing chat state
  * @param totalParticipants Total number of participants in the chat
  * @param onNavigateToMap Callback to navigate to map screen with a location
+ * @param pollViewModel Optional poll view model for group/event chats with poll support
  */
 @Composable
 private fun ChatContent(
@@ -395,7 +451,8 @@ private fun ChatContent(
     onChatColor: Color,
     viewModel: ChatViewModel,
     totalParticipants: Int,
-    onNavigateToMap: (Location, String) -> Unit
+    onNavigateToMap: (Location, String) -> Unit,
+    pollViewModel: PollViewModel? = null
 ) {
   val uiState by viewModel.uiState.collectAsState()
   var messageText by remember { mutableStateOf("") }
@@ -1676,4 +1733,93 @@ private fun MessageContextMenu(
               }
             }
       }
+}
+
+/**
+ * Individual attachment option with icon and label.
+ *
+ * @param icon The icon to display
+ * @param label The text label below the icon
+ * @param onClick Callback when the option is clicked
+ * @param modifier Modifier for the component
+ */
+@Composable
+private fun AttachmentOption(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Column(
+      modifier = modifier.clickable(onClick = onClick).padding(Dimens.Padding.medium),
+      horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(Dimens.IconSize.large))
+
+        Spacer(modifier = Modifier.height(Dimens.Spacing.small))
+
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface)
+      }
+}
+
+/**
+ * Dialog for choosing photo source (Gallery or Camera).
+ *
+ * @param onDismiss Callback when dialog is dismissed
+ * @param onGalleryClick Callback when gallery option is selected
+ * @param onCameraClick Callback when camera option is selected
+ */
+@Composable
+private fun PhotoSourceDialog(
+    onDismiss: () -> Unit,
+    onGalleryClick: () -> Unit,
+    onCameraClick: () -> Unit
+) {
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      modifier = Modifier.testTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG),
+      title = { Text(text = stringResource(R.string.choose_photo_source)) },
+      text = {
+        Column(modifier = Modifier.fillMaxWidth()) {
+          // Gallery option
+          TextButton(
+              onClick = onGalleryClick,
+              modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_GALLERY)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
+                      Icon(
+                          imageVector = Icons.Default.Image,
+                          contentDescription = stringResource(R.string.gallery))
+                      Text(text = stringResource(R.string.gallery))
+                    }
+              }
+
+          // Camera option
+          TextButton(
+              onClick = onCameraClick,
+              modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_CAMERA)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
+                      Icon(
+                          imageVector = Icons.Default.CameraAlt,
+                          contentDescription = stringResource(R.string.camera))
+                      Text(text = stringResource(R.string.camera))
+                    }
+              }
+        }
+      },
+      confirmButton = {},
+      dismissButton = {
+        TextButton(onClick = onDismiss) { Text(text = stringResource(R.string.cancel)) }
+      })
 }

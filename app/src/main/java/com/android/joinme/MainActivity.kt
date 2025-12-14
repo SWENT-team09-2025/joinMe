@@ -41,8 +41,7 @@ import com.android.joinme.model.presence.PresenceRepositoryProvider
 import com.android.joinme.model.profile.ProfileRepositoryProvider
 import com.android.joinme.ui.calendar.CalendarScreen
 import com.android.joinme.ui.chat.ChatScreen
-import com.android.joinme.ui.chat.ChatScreenConfig
-import com.android.joinme.ui.chat.ChatScreenWithPolls
+import com.android.joinme.ui.chat.ChatType
 import com.android.joinme.ui.chat.ChatViewModel
 import com.android.joinme.ui.chat.PollViewModel
 import com.android.joinme.ui.chat.PresenceViewModel
@@ -860,8 +859,8 @@ fun JoinMe(
           val currentUserName = currentUser?.displayName ?: "Unknown User"
 
           // Route based on chat type:
-          // - Individual chats (2 participants): Use ChatScreen (no polls)
-          // - Group/event chats (>2 participants): Use ChatScreenWithPolls (with polls)
+          // - Individual chats (2 participants): ChatType.INDIVIDUAL (no polls)
+          // - Group/event chats (>2 participants): ChatType.GROUP (with polls)
           if (totalParticipants <= 2) {
             // Individual/private chat - use ChatScreen without polls
             val presenceViewModel: PresenceViewModel =
@@ -892,7 +891,7 @@ fun JoinMe(
                           userId = senderId))
                 })
           } else {
-            // Group/event chat - use ChatScreenWithPolls
+            // Group/event chat - use ChatScreen with ChatType.GROUP
             val pollViewModel: PollViewModel =
                 viewModel(
                     factory =
@@ -917,17 +916,25 @@ fun JoinMe(
                           }
                         })
 
-            ChatScreenWithPolls(
-                config =
-                    ChatScreenConfig(
-                        chatId = chatId,
-                        chatTitle = chatTitle,
-                        currentUserId = currentUserId,
-                        currentUserName = currentUserName),
-                chatViewModel = chatViewModel,
-                pollViewModel = pollViewModel,
+            ChatScreen(
+                chatId = chatId,
+                chatTitle = chatTitle,
+                currentUserId = currentUserId,
+                currentUserName = currentUserName,
+                viewModel = chatViewModel,
+                onLeaveClick = { navigationActions.goBack() },
+                totalParticipants = totalParticipants,
                 presenceViewModel = presenceViewModelForPolls,
-                onLeaveClick = { navigationActions.goBack() })
+                onNavigateToMap = { location, senderId ->
+                  navigationActions.navigateTo(
+                      Screen.Map(
+                          latitude = location.latitude,
+                          longitude = location.longitude,
+                          showMarker = true,
+                          userId = senderId))
+                },
+                chatType = ChatType.GROUP,
+                pollViewModel = pollViewModel)
           }
         } else {
           Toast.makeText(context, "Chat ID or title is null", Toast.LENGTH_SHORT).show()

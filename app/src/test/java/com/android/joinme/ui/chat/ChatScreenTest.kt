@@ -322,7 +322,7 @@ class ChatScreenTest {
     composeTestRule.waitForIdle()
 
     // Verify Photo and Location options are displayed with their labels
-    // Note: Poll option is only available in ChatScreenWithPolls (for groups/events)
+    // Note: Poll option is only available in group/event chats (ChatType.GROUP)
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_PHOTO).assertIsDisplayed()
     composeTestRule.onNodeWithText("Photo").assertIsDisplayed()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_LOCATION).assertIsDisplayed()
