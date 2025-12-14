@@ -675,6 +675,17 @@ private fun createDialogCallbacks(stateSetters: DialogStateSetters): DialogCallb
  * @param onDeletePoll Callback when a poll is deleted
  * @param modifier Modifier for the LazyColumn
  */
+/** Finds the poll associated with a message if it's a poll message. */
+private fun findPollForMessage(message: Message, polls: List<Poll>): Poll? =
+    if (message.type == MessageType.POLL) polls.find { it.id == message.content } else null
+
+/** Gets the item key for a ChatListItem. */
+private fun getItemKey(item: ChatListItem): String =
+    when (item) {
+      is ChatListItem.MessageItem -> item.message.id
+      is ChatListItem.DateHeader -> "date_${item.timestamp}"
+    }
+
 @Composable
 private fun MessageList(
     messages: List<Message>,
@@ -686,15 +697,14 @@ private fun MessageList(
     onImageClick: (String) -> Unit,
     onLocationClick: (Location, String) -> Unit,
     chatColor: Color,
+    modifier: Modifier = Modifier,
     polls: List<Poll> = emptyList(),
     voterProfiles: Map<String, Profile> = emptyMap(),
     onVote: (pollId: String, optionId: Int) -> Unit = { _, _ -> },
     onClosePoll: (pollId: String) -> Unit = {},
     onReopenPoll: (pollId: String) -> Unit = {},
-    onDeletePoll: (pollId: String) -> Unit = {},
-    modifier: Modifier = Modifier
+    onDeletePoll: (pollId: String) -> Unit = {}
 ) {
-  // Group messages by date and insert date headers
   val listItems = remember(messages) { groupMessagesByDate(messages) }
 
   LazyColumn(
@@ -703,61 +713,114 @@ private fun MessageList(
       contentPadding = PaddingValues(Dimens.Padding.medium),
       verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
         if (messages.isEmpty()) {
-          item {
-            Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-              Text(
-                  text = stringResource(R.string.empty_chat_message),
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  textAlign = TextAlign.Center,
-                  modifier = Modifier.testTag(ChatScreenTestTags.EMPTY_MESSAGE))
-            }
-          }
+          item { EmptyMessagePlaceholder() }
         } else {
-          items(
-              listItems,
-              key = { item ->
-                when (item) {
-                  is ChatListItem.MessageItem -> item.message.id
-                  is ChatListItem.DateHeader -> "date_${item.timestamp}"
-                }
-              }) { item ->
-                when (item) {
-                  is ChatListItem.DateHeader -> {
-                    DateHeader(timestamp = item.timestamp, chatColor = chatColor)
-                  }
-                  is ChatListItem.MessageItem -> {
-                    val message = item.message
-                    // Get user-specific color for this message sender
-                    val userColors = getUserColor(message.senderId)
-                    // For poll messages, look up the poll by ID stored in message.content
-                    val poll =
-                        if (message.type == MessageType.POLL) {
-                          polls.find { it.id == message.content }
-                        } else null
-                    MessageItem(
-                        message = message,
-                        isCurrentUser = message.senderId == currentUserId,
-                        currentUserId = currentUserId,
-                        senderPhotoUrl = senderProfiles[message.senderId]?.photoUrl,
-                        currentUserPhotoUrl = senderProfiles[currentUserId]?.photoUrl,
-                        bubbleColor = userColors.first,
-                        onBubbleColor = userColors.second,
-                        totalUsersInChat = totalParticipants,
-                        onLongPress = { onMessageLongPress(message) },
-                        onImageClick = onImageClick,
-                        onLocationClick = onLocationClick,
-                        poll = poll,
-                        voterProfiles = voterProfiles,
-                        onVote = { optionId -> poll?.id?.let { onVote(it, optionId) } },
-                        onClosePoll = { poll?.id?.let { onClosePoll(it) } },
-                        onReopenPoll = { poll?.id?.let { onReopenPoll(it) } },
-                        onDeletePoll = { poll?.id?.let { onDeletePoll(it) } })
-                  }
-                }
-              }
+          items(listItems, key = ::getItemKey) { item ->
+            RenderChatListItem(
+                item = item,
+                chatColor = chatColor,
+                currentUserId = currentUserId,
+                senderProfiles = senderProfiles,
+                totalParticipants = totalParticipants,
+                polls = polls,
+                voterProfiles = voterProfiles,
+                onMessageLongPress = onMessageLongPress,
+                onImageClick = onImageClick,
+                onLocationClick = onLocationClick,
+                onVote = onVote,
+                onClosePoll = onClosePoll,
+                onReopenPoll = onReopenPoll,
+                onDeletePoll = onDeletePoll)
+          }
         }
       }
+}
+
+@Composable
+private fun EmptyMessagePlaceholder() {
+  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Text(
+        text = stringResource(R.string.empty_chat_message),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.testTag(ChatScreenTestTags.EMPTY_MESSAGE))
+  }
+}
+
+@Composable
+private fun RenderChatListItem(
+    item: ChatListItem,
+    chatColor: Color,
+    currentUserId: String,
+    senderProfiles: Map<String, Profile>,
+    totalParticipants: Int,
+    polls: List<Poll>,
+    voterProfiles: Map<String, Profile>,
+    onMessageLongPress: (Message) -> Unit,
+    onImageClick: (String) -> Unit,
+    onLocationClick: (Location, String) -> Unit,
+    onVote: (pollId: String, optionId: Int) -> Unit,
+    onClosePoll: (pollId: String) -> Unit,
+    onReopenPoll: (pollId: String) -> Unit,
+    onDeletePoll: (pollId: String) -> Unit
+) {
+  when (item) {
+    is ChatListItem.DateHeader -> DateHeader(timestamp = item.timestamp, chatColor = chatColor)
+    is ChatListItem.MessageItem ->
+        RenderMessageItem(
+            message = item.message,
+            currentUserId = currentUserId,
+            senderProfiles = senderProfiles,
+            totalParticipants = totalParticipants,
+            polls = polls,
+            voterProfiles = voterProfiles,
+            onMessageLongPress = onMessageLongPress,
+            onImageClick = onImageClick,
+            onLocationClick = onLocationClick,
+            onVote = onVote,
+            onClosePoll = onClosePoll,
+            onReopenPoll = onReopenPoll,
+            onDeletePoll = onDeletePoll)
+  }
+}
+
+@Composable
+private fun RenderMessageItem(
+    message: Message,
+    currentUserId: String,
+    senderProfiles: Map<String, Profile>,
+    totalParticipants: Int,
+    polls: List<Poll>,
+    voterProfiles: Map<String, Profile>,
+    onMessageLongPress: (Message) -> Unit,
+    onImageClick: (String) -> Unit,
+    onLocationClick: (Location, String) -> Unit,
+    onVote: (pollId: String, optionId: Int) -> Unit,
+    onClosePoll: (pollId: String) -> Unit,
+    onReopenPoll: (pollId: String) -> Unit,
+    onDeletePoll: (pollId: String) -> Unit
+) {
+  val userColors = getUserColor(message.senderId)
+  val poll = findPollForMessage(message, polls)
+  MessageItem(
+      message = message,
+      isCurrentUser = message.senderId == currentUserId,
+      currentUserId = currentUserId,
+      senderPhotoUrl = senderProfiles[message.senderId]?.photoUrl,
+      currentUserPhotoUrl = senderProfiles[currentUserId]?.photoUrl,
+      bubbleColor = userColors.first,
+      onBubbleColor = userColors.second,
+      totalUsersInChat = totalParticipants,
+      onLongPress = { onMessageLongPress(message) },
+      onImageClick = onImageClick,
+      onLocationClick = onLocationClick,
+      poll = poll,
+      voterProfiles = voterProfiles,
+      onVote = { optionId -> poll?.id?.let { onVote(it, optionId) } },
+      onClosePoll = { poll?.id?.let { onClosePoll(it) } },
+      onReopenPoll = { poll?.id?.let { onReopenPoll(it) } },
+      onDeletePoll = { poll?.id?.let { onDeletePoll(it) } })
 }
 
 /**
