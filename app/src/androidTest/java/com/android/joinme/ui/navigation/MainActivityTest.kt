@@ -1415,8 +1415,56 @@ class MainActivityTest {
     scenario.close()
   }
 
-  // ========== Chat Location Navigation Tests ==========
-  // These tests cover the onNavigateToMap callback in MainActivity (lines 729-734)
+  // ========== Location Navigation Tests ==========
+  // These tests cover the onNavigateToMap callbacks in MainActivity
+
+  @Test
+  fun mainActivity_showEventScreen_onNavigateToMap_navigatesToMapWithLocation() = runBlocking {
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    if (currentUser == null) return@runBlocking
+
+    val eventRepository =
+        com.android.joinme.model.event.EventsRepositoryProvider.getRepository(
+            isOnline = true, ApplicationProvider.getApplicationContext())
+    val testEventId = eventRepository.getNewEventId()
+    val testEvent =
+        com.android.joinme.model.event.Event(
+            eventId = testEventId,
+            type = com.android.joinme.model.event.EventType.SPORTS,
+            title = "Location Test Event",
+            description = "Test",
+            location = com.android.joinme.model.map.Location(46.5196, 6.5680, "EPFL"),
+            date = com.google.firebase.Timestamp.now(),
+            duration = 60,
+            participants = listOf(currentUser.uid),
+            maxParticipants = 10,
+            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
+            ownerId = currentUser.uid)
+    eventRepository.addEvent(testEvent)
+
+    try {
+      val context = ApplicationProvider.getApplicationContext<Context>()
+      val intent =
+          Intent(context, MainActivity::class.java).apply {
+            putExtra("eventId", testEventId)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+          }
+
+      val scenario = ActivityScenario.launch<MainActivity>(intent)
+      composeTestRule.waitForIdle()
+      Thread.sleep(2000)
+
+      composeTestRule.onNodeWithText("EPFL", useUnmergedTree = true).performClick()
+      composeTestRule.waitForIdle()
+
+      scenario.use { it.onActivity { activity -> assert(!activity.isFinishing) } }
+      scenario.close()
+    } finally {
+      try {
+        eventRepository.deleteEvent(testEventId)
+      } catch (_: Exception) {}
+    }
+  }
 
   @Test
   fun mainActivity_chatScreen_onNavigateToMap_navigatesToMapWithLocation() = runBlocking {

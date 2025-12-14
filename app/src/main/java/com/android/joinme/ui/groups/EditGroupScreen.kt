@@ -6,7 +6,6 @@ import android.widget.Toast
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.android.joinme.R
 import com.android.joinme.ui.profile.rememberPhotoPickerLauncher
 
 object EditGroupScreenTags {
@@ -57,14 +56,8 @@ fun EditGroupScreen(
   val photoPicker =
       rememberPhotoPickerLauncher(
           onPhotoPicked = { uri ->
-            viewModel.uploadGroupPhoto(
-                context = context,
-                groupId = groupId,
-                imageUri = uri,
-                onSuccess = {
-                  Toast.makeText(context, R.string.group_photo_uploaded, Toast.LENGTH_SHORT).show()
-                },
-                onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
+            // Store pending photo - don't upload yet
+            viewModel.setPendingPhoto(uri)
           },
           onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
 
@@ -131,18 +124,22 @@ fun EditGroupScreen(
       onNameChange = { viewModel.setName(it) },
       onCategoryChange = { viewModel.setCategory(it) },
       onDescriptionChange = { viewModel.setDescription(it) },
-      onSave = { viewModel.updateGroup(groupId) },
-      onGoBack = onBackClick,
+      onSave = { viewModel.updateGroup(groupId, context) },
+      onGoBack = {
+        viewModel.clearPendingPhotoChanges()
+        onBackClick()
+      },
       saveButtonText = "Save Changes",
       onPictureEditClick = { photoPicker.launch() },
       onPictureDeleteClick = {
-        viewModel.deleteGroupPhoto(
-            groupId = groupId,
-            onSuccess = {
-              Toast.makeText(context, R.string.group_photo_deleted, Toast.LENGTH_SHORT).show()
-            },
-            onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
+        // Mark for deletion - don't delete yet
+        viewModel.markPhotoForDeletion()
       },
-      groupPictureUrl = uiState.photoUrl,
+      groupPictureUrl =
+          when {
+            uiState.pendingPhotoDelete -> null
+            uiState.pendingPhotoUri != null -> uiState.pendingPhotoUri.toString()
+            else -> uiState.photoUrl
+          },
       isUploadingPicture = uiState.isUploadingPhoto)
 }

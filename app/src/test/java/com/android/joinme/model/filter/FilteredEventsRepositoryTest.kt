@@ -251,23 +251,6 @@ class FilteredEventsRepositoryTest {
   }
 
   @Test
-  fun `filter repository properly filters events by sports`() = runTest {
-    fakeEventRepository.eventsToReturn = listOf(sampleSportsEvent)
-    repository.refresh()
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    // Initially all events visible
-    assertEquals(1, repository.filteredEvents.value.size)
-
-    // Select a specific sport
-    FilterRepository.toggleSport("basket")
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    // Sports events should be visible when any sport is selected
-    assertEquals(1, repository.filteredEvents.value.size)
-  }
-
-  @Test
   fun `empty events list after filtering`() = runTest {
     fakeEventRepository.eventsToReturn = listOf(sampleSocialEvent)
     repository.refresh()

@@ -3,6 +3,7 @@ package com.android.joinme.model.profile
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.android.joinme.model.chat.ConversationCleanupService
 import com.android.joinme.model.utils.ImageProcessor
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentSnapshot
@@ -37,7 +38,7 @@ private const val F_FOLLOWED_ID = "followedId"
 
 /**
  * Firestore implementation of [ProfileRepository] that manages user profile data in Firebase
- * Firestore and profile photos in Firebase Storage.
+ * Firestore and profile photo in Firebase Storage.
  *
  * This repository provides CRUD operations for user profiles, storing them in a Firestore
  * collection. Each profile document is keyed by the user's UID. All operations are asynchronous and
@@ -127,6 +128,9 @@ class ProfileRepositoryFirestore(
 
   override suspend fun deleteProfile(uid: String) {
     profilesCollection.document(uid).delete().await()
+
+    // Delete all direct message conversations involving this user
+    ConversationCleanupService.cleanupUserConversations(userId = uid)
   }
 
   /**

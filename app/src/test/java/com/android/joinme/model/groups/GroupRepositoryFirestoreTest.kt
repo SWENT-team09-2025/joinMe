@@ -8,6 +8,9 @@ import com.android.joinme.model.utils.ImageProcessor
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
@@ -18,13 +21,17 @@ import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 import com.google.firebase.storage.UploadTask
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.unmockkAll
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertThrows
@@ -42,6 +49,8 @@ class GroupRepositoryFirestoreTest {
   private lateinit var mockUser: FirebaseUser
   private lateinit var mockStorage: FirebaseStorage
   private lateinit var mockStorageRef: StorageReference
+  private lateinit var mockEventsRepository: com.android.joinme.model.event.EventsRepository
+  private lateinit var mockSeriesRepository: com.android.joinme.model.serie.SeriesRepository
   private lateinit var repository: GroupRepositoryFirestore
 
   private val testGroupId = "testGroup123"
@@ -75,12 +84,47 @@ class GroupRepositoryFirestoreTest {
     mockStorage = mockk(relaxed = true)
     mockStorageRef = mockk(relaxed = true)
 
+    // Mock Repositories
+    mockEventsRepository = mockk(relaxed = true)
+    mockSeriesRepository = mockk(relaxed = true)
+
+    // Mock Firebase Realtime Database and Storage for ConversationCleanupService
+    mockkStatic(FirebaseDatabase::class)
+    mockkStatic(FirebaseStorage::class)
+    val mockDatabase = mockk<FirebaseDatabase>(relaxed = true)
+    val mockConversationsRef = mockk<DatabaseReference>(relaxed = true)
+    val mockConversationRef = mockk<DatabaseReference>(relaxed = true)
+    val mockMessagesRef = mockk<DatabaseReference>(relaxed = true)
+    val mockMessagesSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockCleanupStorageRef = mockk<StorageReference>(relaxed = true)
+
+    every { FirebaseDatabase.getInstance() } returns mockDatabase
+    every { FirebaseStorage.getInstance() } returns mockStorage
+    every { mockDatabase.getReference("conversations") } returns mockConversationsRef
+    every { mockConversationsRef.child(any()) } returns mockConversationRef
+    every { mockConversationRef.child("messages") } returns mockMessagesRef
+    every { mockMessagesRef.get() } returns Tasks.forResult(mockMessagesSnapshot)
+    every { mockMessagesSnapshot.children } returns emptyList()
+    every { mockStorage.reference } returns mockCleanupStorageRef
+    every { mockConversationRef.removeValue() } returns Tasks.forResult(null)
+
     every { mockDb.collection(GROUPS_COLLECTION_PATH) } returns mockCollection
     every { mockCollection.document(any()) } returns mockDocument
     every { mockCollection.document() } returns mockDocument
     every { mockDocument.id } returns testGroupId
 
     repository = GroupRepositoryFirestore(mockDb, mockStorage)
+    repository =
+        GroupRepositoryFirestore(
+            mockDb,
+            mockStorage,
+            eventsRepository = mockEventsRepository,
+            seriesRepository = mockSeriesRepository)
+  }
+
+  @After
+  fun teardown() {
+    unmockkAll()
   }
 
   @Test
@@ -175,7 +219,11 @@ class GroupRepositoryFirestoreTest {
     every { mockSnapshot.getString("ownerId") } returns testUserId // User is owner
     every { mockSnapshot.get("memberIds") } returns testGroup.memberIds
     every { mockSnapshot.get("eventIds") } returns testGroup.eventIds
+    every { mockSnapshot.get("serieIds") } returns emptyList<String>()
     every { mockSnapshot.get("category") } returns null
+
+    // Mock repository deletions
+    coEvery { mockEventsRepository.deleteEvent(any()) } returns Unit
 
     // Mock delete operation
     every { mockDocument.delete() } returns Tasks.forResult(null)
@@ -310,7 +358,12 @@ class GroupRepositoryFirestoreTest {
     every { mockSnapshot.getString("ownerId") } returns testUserId
     every { mockSnapshot.get("memberIds") } returns group.memberIds
     every { mockSnapshot.get("eventIds") } returns group.eventIds
+    every { mockSnapshot.get("serieIds") } returns emptyList<String>()
     every { mockSnapshot.getString("photoUrl") } returns null
+
+    // Mock repository deletions
+    coEvery { mockEventsRepository.deleteEvent(any()) } returns Unit
+
     every { mockDocument.delete() } returns Tasks.forResult(null)
 
     // When
@@ -961,7 +1014,13 @@ class GroupRepositoryFirestoreTest {
 
     // Mock Image Processor
     every { mockImageProcessor.processImage(mockUri) } returns processedBytes
-    repository = GroupRepositoryFirestore(mockDb, mockStorage) { mockImageProcessor }
+    repository =
+        GroupRepositoryFirestore(
+            mockDb,
+            mockStorage,
+            imageProcessorFactory = { mockImageProcessor },
+            eventsRepository = mockEventsRepository,
+            seriesRepository = mockSeriesRepository)
 
     // Mock Storage (using the fix for ClassCastException)
     val photoRef = setupStorageMocksForPhoto()
@@ -1002,7 +1061,13 @@ class GroupRepositoryFirestoreTest {
     val mockDownloadUri = mockk<Uri>()
 
     every { mockImageProcessor.processImage(mockUri) } returns processedBytes
-    repository = GroupRepositoryFirestore(mockDb, mockStorage) { mockImageProcessor }
+    repository =
+        GroupRepositoryFirestore(
+            mockDb,
+            mockStorage,
+            imageProcessorFactory = { mockImageProcessor },
+            eventsRepository = mockEventsRepository,
+            seriesRepository = mockSeriesRepository)
 
     // Mock Storage Success
     val photoRef = setupStorageMocksForPhoto()
@@ -1055,7 +1120,13 @@ class GroupRepositoryFirestoreTest {
     every { mockImageProcessor.processImage(mockUri) } throws Exception("Corrupt image")
 
     // Re-initialize repository
-    repository = GroupRepositoryFirestore(mockDb, mockStorage) { mockImageProcessor }
+    repository =
+        GroupRepositoryFirestore(
+            mockDb,
+            mockStorage,
+            imageProcessorFactory = { mockImageProcessor },
+            eventsRepository = mockEventsRepository,
+            seriesRepository = mockSeriesRepository)
 
     // When/Then
     val exception =
@@ -1110,5 +1181,93 @@ class GroupRepositoryFirestoreTest {
 
     // Then
     verify { mockDocument.update("photoUrl", null) }
+  }
+
+  // =======================================
+  // Cascade Deletion Tests
+  // =======================================
+
+  /** Helper to setup group with events and series for cascade deletion tests. */
+  private fun setupGroupDeletionMocks(
+      eventIds: List<String> = listOf("event1", "event2"),
+      serieIds: List<String> = listOf("serie1")
+  ) {
+    val group = createTestGroup().copy(eventIds = eventIds, serieIds = serieIds)
+
+    // Mock getGroup
+    every { mockSnapshot.id } returns testGroupId
+    every { mockSnapshot.getString("name") } returns group.name
+    every { mockSnapshot.getString("category") } returns "SPORTS"
+    every { mockSnapshot.getString("description") } returns group.description
+    every { mockSnapshot.getString("ownerId") } returns testUserId
+    every { mockSnapshot.get("memberIds") } returns group.memberIds
+    every { mockSnapshot.get("eventIds") } returns eventIds
+    every { mockSnapshot.get("serieIds") } returns serieIds
+    every { mockSnapshot.getString("photoUrl") } returns null
+    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+
+    // Mock repository deletions
+    coEvery { mockEventsRepository.deleteEvent(any()) } returns Unit
+    coEvery { mockSeriesRepository.deleteSerie(any()) } returns Unit
+
+    every { mockDocument.delete() } returns Tasks.forResult(null)
+  }
+
+  @Test
+  fun deleteGroup_cascadesEventsAndSeriesDeletion() = runTest {
+    // Given
+    setupGroupDeletionMocks()
+
+    // When
+    repository.deleteGroup(testGroupId, testUserId)
+
+    // Then
+    coVerify { mockEventsRepository.deleteEvent("event1") }
+    coVerify { mockEventsRepository.deleteEvent("event2") }
+    coVerify { mockSeriesRepository.deleteSerie("serie1") }
+    verify { mockDocument.delete() }
+  }
+
+  @Test
+  fun deleteGroup_withNoEventsOrSeries_deletesGroupOnly() = runTest {
+    // Given
+    setupGroupDeletionMocks(eventIds = emptyList(), serieIds = emptyList())
+
+    // When
+    repository.deleteGroup(testGroupId, testUserId)
+
+    // Then
+    verify { mockDocument.delete() }
+    coVerify(exactly = 0) { mockEventsRepository.deleteEvent(any()) }
+    coVerify(exactly = 0) { mockSeriesRepository.deleteSerie(any()) }
+  }
+
+  @Test
+  fun deleteGroup_eventDeletionFails_logsWarningAndContinues() = runTest {
+    // Covers lines 61-62: catch block when event deletion fails
+    setupGroupDeletionMocks()
+    coEvery { mockEventsRepository.deleteEvent("event1") } throws Exception("Event delete failed")
+
+    // When
+    repository.deleteGroup(testGroupId, testUserId)
+
+    // Then - group is still deleted despite event deletion failure
+    verify { mockDocument.delete() }
+    coVerify { mockEventsRepository.deleteEvent("event1") }
+    coVerify { mockEventsRepository.deleteEvent("event2") }
+  }
+
+  @Test
+  fun deleteGroup_serieDeletionFails_logsWarningAndContinues() = runTest {
+    // Covers lines 70-71: catch block when serie deletion fails
+    setupGroupDeletionMocks()
+    coEvery { mockSeriesRepository.deleteSerie("serie1") } throws Exception("Serie delete failed")
+
+    // When
+    repository.deleteGroup(testGroupId, testUserId)
+
+    // Then - group is still deleted despite serie deletion failure
+    verify { mockDocument.delete() }
+    coVerify { mockSeriesRepository.deleteSerie("serie1") }
   }
 }

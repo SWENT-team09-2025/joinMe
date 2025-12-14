@@ -17,6 +17,7 @@ import com.android.joinme.model.map.Location
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.utils.Visibility
 import com.google.android.gms.maps.MapsInitializer
+import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertNotNull
@@ -224,6 +225,60 @@ class MapScreenTest {
     assertNotNull(darkGrayMarker)
     assertNotNull(redMarker)
     assertNotNull(blackMarker)
+  }
+
+  @Test
+  fun createBadgeMarker_returns_non_null_BitmapDescriptor_for_count_1() {
+    val result: BitmapDescriptor = createBadgeMarker(1)
+    assertNotNull(result)
+
+    val result1: BitmapDescriptor = createBadgeMarker(2)
+    assertNotNull(result1)
+
+    val result2: BitmapDescriptor = createBadgeMarker(10)
+    assertNotNull(result2)
+
+    val result3: BitmapDescriptor = createBadgeMarker(50)
+    assertNotNull(result3)
+
+    val result4: BitmapDescriptor = createBadgeMarker(99)
+    assertNotNull(result4)
+
+    val result5: BitmapDescriptor = createBadgeMarker(100)
+    assertNotNull(result5)
+
+    val result6: BitmapDescriptor = createBadgeMarker(150)
+    assertNotNull(result6)
+
+    val result7: BitmapDescriptor = createBadgeMarker(999)
+    assertNotNull(result7)
+
+    val result8: BitmapDescriptor = createBadgeMarker(0)
+    assertNotNull(result8)
+
+    val result9: BitmapDescriptor = createBadgeMarker(10000)
+    assertNotNull(result9)
+  }
+
+  @Test
+  fun createCircleMarker_returns_non_null_BitmapDescriptor_for_red_color() {
+    val result: BitmapDescriptor = createCircleMarker(Color.Red)
+    assertNotNull(result)
+
+    val result1: BitmapDescriptor = createCircleMarker(Color.Blue)
+    assertNotNull(result1)
+
+    val result2: BitmapDescriptor = createCircleMarker(Color.Green)
+    assertNotNull(result2)
+
+    val result3: BitmapDescriptor = createCircleMarker(Color.Black)
+    assertNotNull(result3)
+
+    val result4: BitmapDescriptor = createCircleMarker(Color.White)
+    assertNotNull(result4)
+
+    val result5: BitmapDescriptor = createCircleMarker(Color.Transparent)
+    assertNotNull(result5)
   }
 
   @Test
@@ -464,5 +519,279 @@ class MapScreenTest {
         .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
         .assertExists()
         .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_displaysGroupedMarkersWhenMultipleEventsAtSameLocation() {
+    // Create test events with the same location
+    val sameLocation = Location(latitude = 46.5187, longitude = 6.5629, name = "EPFL")
+    val testEvents =
+        listOf(
+            Event(
+                eventId = "event1",
+                type = EventType.SPORTS,
+                title = "Football Match",
+                description = "Test event 1",
+                location = sameLocation,
+                date = Timestamp.now(),
+                duration = 60,
+                participants = emptyList(),
+                maxParticipants = 10,
+                visibility = EventVisibility.PUBLIC,
+                ownerId = "owner1"),
+            Event(
+                eventId = "event2",
+                type = EventType.ACTIVITY,
+                title = "Hiking",
+                description = "Test event 2",
+                location = sameLocation,
+                date = Timestamp.now(),
+                duration = 120,
+                participants = emptyList(),
+                maxParticipants = 5,
+                visibility = EventVisibility.PUBLIC,
+                ownerId = "owner2"),
+            Event(
+                eventId = "event3",
+                type = EventType.SOCIAL,
+                title = "Party",
+                description = "Test event 3",
+                location = sameLocation,
+                date = Timestamp.now(),
+                duration = 180,
+                participants = emptyList(),
+                maxParticipants = 20,
+                visibility = EventVisibility.PUBLIC,
+                ownerId = "owner3"))
+
+    // Inject events into the ViewModel state
+    mutableState.value = MapUIState(events = testEvents)
+
+    composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
+    composeTestRule.waitForIdle()
+
+    // Verify the map screen is displayed
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_displaysSingleMarkersWhenEventsAtDifferentLocations() {
+    // Create test events with different locations
+    val testEvents =
+        listOf(
+            Event(
+                eventId = "event1",
+                type = EventType.SPORTS,
+                title = "Football Match",
+                description = "Test event 1",
+                location = Location(latitude = 46.5187, longitude = 6.5629, name = "EPFL"),
+                date = Timestamp.now(),
+                duration = 60,
+                participants = emptyList(),
+                maxParticipants = 10,
+                visibility = EventVisibility.PUBLIC,
+                ownerId = "owner1"),
+            Event(
+                eventId = "event2",
+                type = EventType.ACTIVITY,
+                title = "Hiking",
+                description = "Test event 2",
+                location = Location(latitude = 46.52, longitude = 6.57, name = "Lausanne"),
+                date = Timestamp.now(),
+                duration = 120,
+                participants = emptyList(),
+                maxParticipants = 5,
+                visibility = EventVisibility.PUBLIC,
+                ownerId = "owner2"))
+
+    // Inject events into the ViewModel state
+    mutableState.value = MapUIState(events = testEvents)
+
+    composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
+    composeTestRule.waitForIdle()
+
+    // Verify the map screen is displayed with individual markers
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_displaysMixedEventAndSerieMarkers() {
+    // Create test event
+    val testEvent =
+        Event(
+            eventId = "event1",
+            type = EventType.SPORTS,
+            title = "Football Match",
+            description = "Test event",
+            location = Location(latitude = 46.5187, longitude = 6.5629, name = "EPFL"),
+            date = Timestamp.now(),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    // Create test serie with different location
+    val serieLocation = Location(latitude = 46.52, longitude = 6.57, name = "Lausanne")
+    val testSerie =
+        Serie(
+            serieId = "serie1",
+            title = "Weekly Football",
+            description = "Test serie",
+            date = Timestamp.now(),
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event2", "event3"),
+            ownerId = "owner1")
+
+    // Inject both event and serie into the ViewModel state
+    mutableState.value =
+        MapUIState(events = listOf(testEvent), series = mapOf(serieLocation to testSerie))
+
+    composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
+    composeTestRule.waitForIdle()
+
+    // Verify the map screen is displayed with both event and serie markers
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_displaysGroupedMarkerWithEventAndSerieAtSameLocation() {
+    // Create test event and serie with the same location
+    val sameLocation = Location(latitude = 46.5187, longitude = 6.5629, name = "EPFL")
+    val testEvent =
+        Event(
+            eventId = "event1",
+            type = EventType.SPORTS,
+            title = "Football Match",
+            description = "Test event",
+            location = sameLocation,
+            date = Timestamp.now(),
+            duration = 60,
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = EventVisibility.PUBLIC,
+            ownerId = "owner1")
+
+    val testSerie =
+        Serie(
+            serieId = "serie1",
+            title = "Weekly Football",
+            description = "Test serie",
+            date = Timestamp.now(),
+            participants = emptyList(),
+            maxParticipants = 10,
+            visibility = Visibility.PUBLIC,
+            eventIds = listOf("event2", "event3"),
+            ownerId = "owner1")
+
+    // Inject both event and serie at same location into the ViewModel state
+    mutableState.value =
+        MapUIState(events = listOf(testEvent), series = mapOf(sameLocation to testSerie))
+
+    composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
+    composeTestRule.waitForIdle()
+
+    // Verify the map screen is displayed with grouped marker
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_handlesEmptyEventsAndSeriesLists() {
+    // Set empty state
+    mutableState.value = MapUIState(events = emptyList(), series = emptyMap())
+
+    composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
+    composeTestRule.waitForIdle()
+
+    // Verify the map screen is displayed without markers
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_handlesEventsWithNullLocation() {
+    // Create test events where one has null location
+    val testEvents =
+        listOf(
+            Event(
+                eventId = "event1",
+                type = EventType.SPORTS,
+                title = "Football Match",
+                description = "Test event with location",
+                location = Location(latitude = 46.5187, longitude = 6.5629, name = "EPFL"),
+                date = Timestamp.now(),
+                duration = 60,
+                participants = emptyList(),
+                maxParticipants = 10,
+                visibility = EventVisibility.PUBLIC,
+                ownerId = "owner1"),
+            Event(
+                eventId = "event2",
+                type = EventType.ACTIVITY,
+                title = "Online Event",
+                description = "Test event without location",
+                location = null, // No location
+                date = Timestamp.now(),
+                duration = 120,
+                participants = emptyList(),
+                maxParticipants = 5,
+                visibility = EventVisibility.PUBLIC,
+                ownerId = "owner2"))
+
+    // Inject events into the ViewModel state
+    mutableState.value = MapUIState(events = testEvents)
+
+    composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
+    composeTestRule.waitForIdle()
+
+    // Verify the map screen is displayed and only shows marker for event with location
+    composeTestRule
+        .onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN)
+        .assertExists()
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_userLocationFollowing_preservesStateWhenReturningFromMarkerClick() {
+    // Set initial state to returning from marker click with following enabled
+    mutableState.value = MapUIState(isFollowingUser = true, isReturningFromMarkerClick = true)
+
+    composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
+
+    composeTestRule.waitForIdle()
+
+    // Verify that marker click flag is cleared
+    assert(!testViewModel.uiState.value.isReturningFromMarkerClick)
+    // Verify that following user state is preserved (not modified)
+    assert(testViewModel.uiState.value.isFollowingUser)
+  }
+
+  @Test
+  fun mapScreen_userLocationFollowing_enabledOnFirstLaunch() {
+    // Set initial state to not returning from marker click
+    mutableState.value = MapUIState(isFollowingUser = false, isReturningFromMarkerClick = false)
+
+    composeTestRule.setContent { MapScreen(viewModel = testViewModel, navigationActions = null) }
+
+    composeTestRule.waitForIdle()
+
+    // Verify that following user is enabled on first launch
+    assert(testViewModel.uiState.value.isFollowingUser)
   }
 }

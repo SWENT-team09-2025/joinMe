@@ -1,6 +1,7 @@
 package com.android.joinme.ui.overview
 
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
@@ -242,7 +244,8 @@ fun ShowEventScreen(
     onGoBack: () -> Unit = {},
     onEditEvent: (String) -> Unit = {},
     onEditEventForSerie: (String, String) -> Unit = { _, _ -> },
-    onNavigateToChat: (String, String, Int) -> Unit = { _, _, _ -> }
+    onNavigateToChat: (String, String, Int) -> Unit = { _, _, _ -> },
+    onNavigateToMap: (com.android.joinme.model.map.Location) -> Unit = {}
 ) {
   LaunchedEffect(eventId, serieId) { showEventViewModel.loadEvent(eventId, serieId) }
 
@@ -383,12 +386,26 @@ fun ShowEventScreen(
                   thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
 
               // Location
-              Text(
-                  text = eventUIState.location,
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+              Row(
                   modifier =
-                      Modifier.fillMaxWidth().testTag(ShowEventScreenTestTags.EVENT_LOCATION))
+                      Modifier.fillMaxWidth()
+                          .clickable {
+                            eventUIState.locationObject?.let { location ->
+                              onNavigateToMap(location)
+                            }
+                          }
+                          .testTag(ShowEventScreenTestTags.EVENT_LOCATION),
+                  horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small),
+                  verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = stringResource(R.string.view_on_map),
+                        tint = MaterialTheme.colorScheme.primary)
+                    Text(
+                        text = eventUIState.location,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary)
+                  }
 
               HorizontalDivider(
                   thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)

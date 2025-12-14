@@ -130,3 +130,8 @@ val silverDark = Color(0xFFD4D4D4)
 
 val bronzeLight = Color(0xFFCD7F32)
 val bronzeDark = Color(0xFFE8A854)
+
+val badgeMarkerColor = Color(0xFF2196F3)
+val white = Color(0xFFFFFFFF)
+val black = Color(0xFF000000)
+val gray = Color(0xFF888888)

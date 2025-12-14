@@ -27,18 +27,6 @@ class FilterRepositoryTest {
   }
 
   @Test
-  fun `initial state has no filters selected`() = runTest {
-    val state = FilterRepository.filterState.first()
-
-    assertFalse(state.isSocialSelected)
-    assertFalse(state.isActivitySelected)
-    assertFalse(state.isSportSelected)
-    assertFalse(state.isSelectAllChecked)
-    assertEquals(0, state.selectedSportsCount)
-    assertTrue(state.sportCategories.none { it.isChecked })
-  }
-
-  @Test
   fun `reset restores default state`() = runTest {
     // Modify state by selecting some filters
     FilterRepository.toggleSocial()
@@ -50,7 +38,7 @@ class FilterRepositoryTest {
     val state = FilterRepository.filterState.first()
     assertFalse(state.isSocialSelected)
     assertFalse(state.isActivitySelected)
-    assertFalse(state.isSelectAllChecked)
+    assertFalse(state.isSportSelected)
   }
 
   @Test
@@ -86,78 +74,6 @@ class FilterRepositoryTest {
     FilterRepository.toggleSport()
     val secondToggle = FilterRepository.filterState.first()
     assertFalse(secondToggle.isSportSelected)
-  }
-
-  @Test
-  fun `toggleSelectAll selects all sports`() = runTest {
-    FilterRepository.toggleSelectAll()
-
-    val state = FilterRepository.filterState.first()
-    assertTrue(state.isSelectAllChecked)
-    assertEquals(4, state.selectedSportsCount)
-    assertTrue(state.sportCategories.all { it.isChecked })
-  }
-
-  @Test
-  fun `toggleSelectAll twice returns sports to initial state`() = runTest {
-    FilterRepository.toggleSelectAll()
-    FilterRepository.toggleSelectAll()
-
-    val state = FilterRepository.filterState.first()
-    assertFalse(state.isSelectAllChecked)
-    assertEquals(0, state.selectedSportsCount)
-    assertTrue(state.sportCategories.none { it.isChecked })
-  }
-
-  @Test
-  fun `toggleSport selects specific sport`() = runTest {
-    FilterRepository.toggleSport("basket")
-
-    val state = FilterRepository.filterState.first()
-    val basketSport = state.sportCategories.find { it.id == "basket" }
-    assertNotNull(basketSport)
-    assertTrue(basketSport!!.isChecked)
-    assertEquals(1, state.selectedSportsCount)
-    assertFalse(state.isSelectAllChecked)
-  }
-
-  @Test
-  fun `toggleSport twice returns sport to initial state`() = runTest {
-    FilterRepository.toggleSport("football")
-    FilterRepository.toggleSport("football")
-
-    val state = FilterRepository.filterState.first()
-    val footballSport = state.sportCategories.find { it.id == "football" }
-    assertFalse(footballSport!!.isChecked)
-    assertEquals(0, state.selectedSportsCount)
-  }
-
-  @Test
-  fun `toggleSport with invalid id does nothing`() = runTest {
-    FilterRepository.toggleSport("invalid_sport")
-
-    val state = FilterRepository.filterState.first()
-    assertEquals(0, state.selectedSportsCount)
-  }
-
-  @Test
-  fun `sportCategories contains correct sports`() = runTest {
-    val state = FilterRepository.filterState.first()
-    val sportIds = state.sportCategories.map { it.id }
-
-    assertTrue(sportIds.contains("basket"))
-    assertTrue(sportIds.contains("football"))
-    assertTrue(sportIds.contains("tennis"))
-    assertTrue(sportIds.contains("running"))
-  }
-
-  @Test
-  fun `selectedSportsCount is computed correctly`() = runTest {
-    FilterRepository.toggleSport("basket")
-    FilterRepository.toggleSport("tennis")
-
-    val state = FilterRepository.filterState.first()
-    assertEquals(2, state.selectedSportsCount)
   }
 
   @Test

@@ -157,16 +157,6 @@ class SearchScreenTest {
   }
 
   @Test
-  fun searchScreen_allFiltersDisplayedSimultaneously() {
-    setupScreen()
-
-    // All filter chips should be visible at the same time
-    composeTestRule.onNodeWithText("Social").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Activity").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Sport").assertIsDisplayed()
-  }
-
-  @Test
   fun searchScreen_viewModelIntegration_queryUpdates() {
     val viewModel = SearchViewModel(filteredEventsRepository)
     setupScreen(viewModel)
@@ -303,16 +293,6 @@ class SearchScreenTest {
   }
 
   @Test
-  fun searchScreen_filterChips_displayedInRow() {
-    setupScreen()
-
-    // All filter chips in same row
-    composeTestRule.onNodeWithText("Social").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Activity").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Sport").assertIsDisplayed()
-  }
-
-  @Test
   fun searchScreen_complexFilterScenario() {
     setupScreen()
 
@@ -375,9 +355,17 @@ class SearchScreenTest {
 
     composeTestRule.waitForIdle()
 
-    // Event card should be displayed
+    // Event card should be displayed with correct content
     composeTestRule.onNodeWithText("Basketball Game").assertIsDisplayed()
     composeTestRule.onNodeWithText("Place : EPFL").assertIsDisplayed()
+
+    // Event list should have proper test tag
+    composeTestRule.onNodeWithTag(SearchScreenTestTags.EVENT_LIST).assertIsDisplayed()
+
+    // Event card should have correct test tag
+    composeTestRule
+        .onNodeWithTag(SearchScreenTestTags.getTestTagForEventItem(sampleEvent))
+        .assertIsDisplayed()
   }
 
   @Test
@@ -414,66 +402,6 @@ class SearchScreenTest {
     composeTestRule.onNodeWithText("Basketball Game").performClick()
 
     assert(eventClicked)
-  }
-
-  @Test
-  fun searchScreen_eventList_displaysWithTestTag() {
-    val viewModel = SearchViewModel(filteredEventsRepository)
-    setupScreen(viewModel)
-
-    val sampleEvent =
-        com.android.joinme.model.event.Event(
-            eventId = "1",
-            type = com.android.joinme.model.event.EventType.SPORTS,
-            title = "Basketball Game",
-            description = "Fun basketball game",
-            location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = futureTimestamp,
-            duration = 60,
-            participants = listOf("user1"),
-            maxParticipants = 10,
-            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
-            ownerId = "owner1")
-
-    // Set events
-    fakeEventRepository.eventsToReturn = listOf(sampleEvent)
-    filteredEventsRepository.refresh()
-
-    composeTestRule.waitForIdle()
-
-    // Event list should have proper test tag
-    composeTestRule.onNodeWithTag(SearchScreenTestTags.EVENT_LIST).assertIsDisplayed()
-  }
-
-  @Test
-  fun searchScreen_eventCard_hasCorrectTestTag() {
-    val viewModel = SearchViewModel(filteredEventsRepository)
-    setupScreen(viewModel)
-
-    val sampleEvent =
-        com.android.joinme.model.event.Event(
-            eventId = "123",
-            type = com.android.joinme.model.event.EventType.SPORTS,
-            title = "Test Event",
-            description = "Test description",
-            location = com.android.joinme.model.map.Location(46.5191, 6.5668, "EPFL"),
-            date = futureTimestamp,
-            duration = 60,
-            participants = listOf("user1"),
-            maxParticipants = 10,
-            visibility = com.android.joinme.model.event.EventVisibility.PUBLIC,
-            ownerId = "owner1")
-
-    // Set events
-    fakeEventRepository.eventsToReturn = listOf(sampleEvent)
-    filteredEventsRepository.refresh()
-
-    composeTestRule.waitForIdle()
-
-    // Event card should have correct test tag based on eventId
-    composeTestRule
-        .onNodeWithTag(SearchScreenTestTags.getTestTagForEventItem(sampleEvent))
-        .assertIsDisplayed()
   }
 
   @Test

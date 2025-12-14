@@ -2,33 +2,19 @@ package com.android.joinme.ui.map
 
 import android.Manifest
 import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Path
+import android.util.Log
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,15 +27,14 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.core.graphics.createBitmap
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
 import com.android.joinme.model.event.getColor
 import com.android.joinme.model.filter.FilterState
+import com.android.joinme.ui.map.MapScreenTestTags.getTestTagForGroupMarker
 import com.android.joinme.ui.map.MapScreenTestTags.getTestTagForMarker
 import com.android.joinme.ui.map.userLocation.LocationServiceImpl
 import com.android.joinme.ui.navigation.BottomNavigationMenu
@@ -62,8 +47,6 @@ import com.android.joinme.ui.theme.getUserColor
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.BitmapDescriptor
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.CameraPositionState
@@ -88,155 +71,104 @@ object MapScreenTestTags {
   const val FILTER_PARTICIPATION_OTHER_EVENTS = "filterParticipationOtherEvents"
   const val FILTER_CLOSE_BUTTON = "filterCloseButton"
   const val LOCATION_MARKER_TAG = "locationMarker"
+  const val GROUPED_INFO_WINDOW = "groupedInfoWindow"
 
   fun getTestTagForMarker(id: String): String = "marker$id"
+
+  fun getTestTagForGroupedItem(index: Int): String = "groupedItem$index"
+
+  fun getTestTagForGroupMarker(group: MapMarkerGroup): String =
+      "grouped_${group.position.latitude}_${group.position.longitude}"
 }
 
-/** Diameter of the circle marker for shared locations */
-const val CIRCLE_MARKER_SIZE = 48
-
-const val LOW_SATURATION_THRESHOLD = 0.1f
-const val LOW_VALUE_THRESHOLD = 0.1f
 const val ONE_S_IN_MS = 1000
 const val ZOOM_PROPORTION = 15f
 const val CONTAINER_COLOR = true
 const val NOT_CONTAINER_COLOR = false
-const val BORDER_WIDTH_DP = 4
 
 /**
- * Creates a circular marker icon for shared locations based on user color.
+ * Renders all markers on the map including event/serie markers and location marker.
  *
- * Creates a filled circle with a white border to represent a user's shared location on the map,
- * similar to the current location indicator but with the user's unique color.
- *
- * @param color The user's color for the circle
- * @return A BitmapDescriptor for the circle marker
- */
-internal fun createCircleMarker(color: Color): BitmapDescriptor {
-  val bitmap = createBitmap(CIRCLE_MARKER_SIZE, CIRCLE_MARKER_SIZE)
-  val canvas = Canvas(bitmap)
-
-  // Draw outer white circle (border)
-  val borderPaint =
-      Paint().apply {
-        this.color = android.graphics.Color.WHITE
-        isAntiAlias = true
-        style = Paint.Style.FILL
-      }
-  canvas.drawCircle(
-      CIRCLE_MARKER_SIZE / 2f, CIRCLE_MARKER_SIZE / 2f, CIRCLE_MARKER_SIZE / 2f, borderPaint)
-
-  // Draw inner colored circle
-  val circlePaint =
-      Paint().apply {
-        this.color = color.toArgb()
-        isAntiAlias = true
-        style = Paint.Style.FILL
-      }
-  canvas.drawCircle(
-      CIRCLE_MARKER_SIZE / 2f,
-      CIRCLE_MARKER_SIZE / 2f,
-      (CIRCLE_MARKER_SIZE / 2f) - BORDER_WIDTH_DP,
-      circlePaint)
-
-  return BitmapDescriptorFactory.fromBitmap(bitmap)
-}
-
-/**
- * Creates a marker icon for Google Maps based on the given color.
- *
- * For black or very dark colors (where HSV saturation and value are very low), creates a custom
- * black bitmap marker. For other colors, uses the default marker with the color's hue.
- *
- * @param color The Compose Color to convert to a marker
- * @return A BitmapDescriptor for the marker
- */
-internal fun createMarkerForColor(color: Color): BitmapDescriptor {
-  val hsv = FloatArray(3)
-  android.graphics.Color.colorToHSV(color.toArgb(), hsv)
-
-  // Check if color is black or very dark (low saturation and low value)
-  val isBlackish = hsv[1] < LOW_SATURATION_THRESHOLD && hsv[2] < LOW_VALUE_THRESHOLD
-
-  return if (isBlackish) {
-    // Create custom black marker (3x size to match default markers)
-    val width = Dimens.PinMark.PIN_MARK_WIDTH
-    val height = Dimens.PinMark.PIN_MARK_HEIGHT
-    val bitmap = createBitmap(width, height)
-    val canvas = Canvas(bitmap)
-
-    // Create the pin shape with black paint
-    val blackPaint = Paint()
-    blackPaint.isAntiAlias = true
-    blackPaint.color = android.graphics.Color.BLACK
-    blackPaint.style = Paint.Style.FILL
-
-    // Draw the pin circle (top part)
-    val circleRadius = width / 2f - 4f
-    canvas.drawCircle(width / 2f, circleRadius + 4f, circleRadius, blackPaint)
-
-    // Draw the pin pointer (bottom part)
-    val path =
-        Path().apply {
-          moveTo(width / 2f, height.toFloat())
-          lineTo(width / 2f - circleRadius / 2f, circleRadius * 2f)
-          lineTo(width / 2f + circleRadius / 2f, circleRadius * 2f)
-          close()
-        }
-    canvas.drawPath(path, blackPaint)
-
-    // Draw white circle in the middle
-    val whitePaint = Paint()
-    whitePaint.isAntiAlias = true
-    whitePaint.color = android.graphics.Color.GRAY
-    whitePaint.style = Paint.Style.FILL
-    canvas.drawCircle(width / 2f, circleRadius + 4f, circleRadius / 2.5f, whitePaint)
-
-    BitmapDescriptorFactory.fromBitmap(bitmap)
-  } else {
-    // Use default marker with hue
-    BitmapDescriptorFactory.defaultMarker(hsv[0])
-  }
-}
-
-/**
- * Handles camera positioning when centering on a specific location.
- *
- * This is used when navigating to a specific location (e.g., from a chat location message). It
- * centers the map on the provided coordinates and disables user following.
- *
- * @param initialLatitude Optional latitude to center on
- * @param initialLongitude Optional longitude to center on
- * @param cameraPositionState Camera position state to animate
- * @param onProgrammaticMoveStart Callback when programmatic move starts
- * @param onProgrammaticMoveEnd Callback when programmatic move ends
- * @param onDisableFollowing Callback to disable user following
+ * @param uiState The current UI state containing events and series
+ * @param viewModel The MapViewModel for marker click handling
+ * @param navigationActions Navigation actions for navigating to event/serie details
+ * @param onGroupClick Callback when a grouped marker is clicked
+ * @param showLocationMarker Whether to show the location marker
+ * @param initialLatitude Latitude for location marker
+ * @param initialLongitude Longitude for location marker
+ * @param sharedLocationUserId User ID for shared location
+ * @param currentUserId Current user's ID
  */
 @Composable
-private fun MapInitialLocationEffect(
+private fun MapMarkersContent(
+    uiState: MapUIState,
+    viewModel: MapViewModel,
+    navigationActions: NavigationActions?,
+    onGroupClick: (MapMarkerGroup) -> Unit,
+    showLocationMarker: Boolean,
     initialLatitude: Double?,
     initialLongitude: Double?,
-    cameraPositionState: com.google.maps.android.compose.CameraPositionState,
-    onProgrammaticMoveStart: () -> Unit,
-    onProgrammaticMoveEnd: () -> Unit,
-    onDisableFollowing: () -> Unit
+    sharedLocationUserId: String?,
+    currentUserId: String?
 ) {
-  LaunchedEffect(initialLatitude, initialLongitude) {
-    if (initialLatitude != null && initialLongitude != null) {
-      try {
-        onProgrammaticMoveStart()
-        onDisableFollowing() // Don't follow user when viewing specific location
-        cameraPositionState.animate(
-            update =
-                CameraUpdateFactory.newLatLngZoom(LatLng(initialLatitude, initialLongitude), 16f),
-            durationMs = 1000)
-      } catch (e: Exception) {
-        // Animation was interrupted or failed
-      } finally {
-        onProgrammaticMoveEnd()
+  val serieColor = MaterialTheme.customColors.seriePinMark
+  val allMapItems = buildList {
+    uiState.events.forEach { event ->
+      if (event.location != null) {
+        add(MapItem.EventItem(event, event.type.getColor()))
       }
     }
+    uiState.series.forEach { (location, serie) ->
+      add(MapItem.SerieItem(serie, location, serieColor))
+    }
   }
+
+  val markerGroups =
+      allMapItems
+          .groupBy { item -> item.position.latitude to item.position.longitude }
+          .map { (_, items) -> MapMarkerGroup(position = items.first().position, items = items) }
+
+  // Display markers
+  markerGroups.forEach { group ->
+    if (group.isSingle) {
+      val item = group.items.first()
+      val markerIcon = createMarkerForColor(item.color)
+
+      Marker(
+          state = MarkerState(position = group.position),
+          icon = markerIcon,
+          tag = getTestTagForMarker(item.id),
+          title = item.title,
+          snippet = stringResource(R.string.snippet_message),
+          onInfoWindowClick = {
+            viewModel.onMarkerClick()
+            when (item) {
+              is MapItem.EventItem ->
+                  navigationActions?.navigateTo(Screen.ShowEventScreen(item.event.eventId))
+              is MapItem.SerieItem ->
+                  navigationActions?.navigateTo(Screen.SerieDetails(item.serie.serieId))
+            }
+          })
+    } else {
+      val badgeIcon = createBadgeMarker(group.count)
+
+      Marker(
+          state = MarkerState(position = group.position),
+          icon = badgeIcon,
+          tag = getTestTagForGroupMarker(group),
+          onClick = {
+            onGroupClick(group)
+            false
+          })
+    }
+  }
+
+  ShowLocationMarker(
+      showLocationMarker = showLocationMarker,
+      initialLatitude = initialLatitude,
+      initialLongitude = initialLongitude,
+      userId = sharedLocationUserId,
+      currentUserId = currentUserId)
 }
 
 /** Checks if the camera should follow the user location. */
@@ -268,7 +200,7 @@ private suspend fun animateCameraToLocation(
         update = CameraUpdateFactory.newLatLngZoom(LatLng(latitude, longitude), ZOOM_PROPORTION),
         durationMs = ONE_S_IN_MS)
   } catch (e: Exception) {
-    // Animation was interrupted or failed
+    Log.e("animateCameraToLocation", e.message ?: "Unknown error")
   } finally {
     onMoveEnd()
   }
@@ -291,8 +223,7 @@ private fun hasActiveFilters(filterState: FilterState): Boolean {
       filterState.isSportSelected ||
       filterState.showMyEvents ||
       filterState.showJoinedEvents ||
-      filterState.showOtherEvents ||
-      filterState.sportCategories.any { it.isChecked }
+      filterState.showOtherEvents
 }
 
 /** Requests location permissions if not already granted. */
@@ -313,6 +244,7 @@ private fun initLocationServiceIfGranted(
   }
 }
 
+/** Returns the button color based on the provided condition. (filter and centralization) */
 @Composable
 private fun buttonColor(condition: Boolean, containerColor: Boolean): Color {
   return if (condition) {
@@ -320,129 +252,6 @@ private fun buttonColor(condition: Boolean, containerColor: Boolean): Color {
   } else {
     if (containerColor) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface
   }
-}
-
-@Composable
-private fun FilterChipConstructor(
-    name: String,
-    filterState: Boolean,
-    onToggleAction: () -> Unit,
-    testTag: String
-) {
-  FilterChip(
-      selected = filterState,
-      onClick = onToggleAction,
-      label = { Text(name) },
-      colors = MaterialTheme.customColors.filterChip,
-      modifier = Modifier.testTag(testTag))
-}
-
-/**
- * Filter bottom sheet for the map screen.
- *
- * Displays event type filters (Social, Activity, Sport) and participation filters (My Events,
- * Joined Events, Other Events).
- *
- * @param filterState The current filter state
- * @param onToggleSocial Callback for toggling Social filter
- * @param onToggleActivity Callback for toggling Activity filter
- * @param onToggleSport Callback for toggling Sport filter
- * @param onToggleMyEvents Callback for toggling My Events filter
- * @param onToggleJoinedEvents Callback for toggling Joined Events filter
- * @param onToggleOtherEvents Callback for toggling Other Events filter
- * @param onClearFilters Callback for clearing all filters
- * @param onDismiss Callback when the bottom sheet is dismissed
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FilterBottomSheet(
-    filterState: FilterState,
-    onToggleSocial: () -> Unit,
-    onToggleActivity: () -> Unit,
-    onToggleSport: () -> Unit,
-    onToggleMyEvents: () -> Unit,
-    onToggleJoinedEvents: () -> Unit,
-    onToggleOtherEvents: () -> Unit,
-    onClearFilters: () -> Unit,
-    onDismiss: () -> Unit
-) {
-  val sheetState = rememberModalBottomSheetState()
-
-  ModalBottomSheet(
-      onDismissRequest = onDismiss,
-      sheetState = sheetState,
-      modifier = Modifier.testTag(MapScreenTestTags.FILTER_BOTTOM_SHEET)) {
-        Column(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(horizontal = Dimens.Padding.medium)
-                    .padding(bottom = Dimens.Padding.large)) {
-              Text(
-                  text = stringResource(R.string.type_object),
-                  style = MaterialTheme.typography.titleMedium,
-                  modifier = Modifier.padding(bottom = Dimens.Padding.small))
-
-              Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
-                    FilterChipConstructor(
-                        name = stringResource(R.string.social_type),
-                        filterState = filterState.isSocialSelected,
-                        onToggleAction = onToggleSocial,
-                        testTag = MapScreenTestTags.FILTER_TYPE_SOCIAL)
-                    FilterChipConstructor(
-                        name = stringResource(R.string.activity_type),
-                        filterState = filterState.isActivitySelected,
-                        onToggleAction = onToggleActivity,
-                        testTag = MapScreenTestTags.FILTER_TYPE_ACTIVITY)
-                    FilterChipConstructor(
-                        name = stringResource(R.string.sport_type),
-                        filterState = filterState.isSportSelected,
-                        onToggleAction = onToggleSport,
-                        testTag = MapScreenTestTags.FILTER_TYPE_SPORT)
-                  }
-
-              Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
-              HorizontalDivider()
-              Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
-
-              Text(
-                  text = stringResource(R.string.participation),
-                  style = MaterialTheme.typography.titleMedium,
-                  modifier = Modifier.padding(bottom = Dimens.Padding.small))
-
-              Column(
-                  modifier = Modifier.fillMaxWidth(),
-                  verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small),
-                  horizontalAlignment = Alignment.CenterHorizontally) {
-                    FilterChipConstructor(
-                        name = stringResource(R.string.my_events),
-                        filterState = filterState.showMyEvents,
-                        onToggleAction = onToggleMyEvents,
-                        testTag = MapScreenTestTags.FILTER_PARTICIPATION_MY_EVENTS)
-
-                    FilterChipConstructor(
-                        name = stringResource(R.string.joined_events),
-                        filterState = filterState.showJoinedEvents,
-                        onToggleAction = onToggleJoinedEvents,
-                        testTag = MapScreenTestTags.FILTER_PARTICIPATION_JOINED_EVENTS)
-                    FilterChipConstructor(
-                        name = stringResource(R.string.other_events),
-                        filterState = filterState.showOtherEvents,
-                        onToggleAction = onToggleOtherEvents,
-                        testTag = MapScreenTestTags.FILTER_PARTICIPATION_OTHER_EVENTS)
-                  }
-
-              Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
-
-              Button(
-                  onClick = onClearFilters,
-                  modifier =
-                      Modifier.fillMaxWidth().testTag(MapScreenTestTags.FILTER_CLOSE_BUTTON)) {
-                    Text(stringResource(R.string.clear_filters))
-                  }
-            }
-      }
 }
 
 /**
@@ -491,6 +300,46 @@ private fun ShowLocationMarker(
 }
 
 /**
+ * Handles camera positioning when centering on a specific location.
+ *
+ * This is used when navigating to a specific location (e.g., from a chat location message). It
+ * centers the map on the provided coordinates and disables user following.
+ *
+ * @param initialLatitude Optional latitude to center on
+ * @param initialLongitude Optional longitude to center on
+ * @param cameraPositionState Camera position state to animate
+ * @param onProgrammaticMoveStart Callback when programmatic move starts
+ * @param onProgrammaticMoveEnd Callback when programmatic move ends
+ * @param onDisableFollowing Callback to disable user following
+ */
+@Composable
+private fun MapInitialLocationEffect(
+    initialLatitude: Double?,
+    initialLongitude: Double?,
+    cameraPositionState: CameraPositionState,
+    onProgrammaticMoveStart: () -> Unit,
+    onProgrammaticMoveEnd: () -> Unit,
+    onDisableFollowing: () -> Unit
+) {
+  LaunchedEffect(initialLatitude, initialLongitude) {
+    if (initialLatitude != null && initialLongitude != null) {
+      try {
+        onProgrammaticMoveStart()
+        onDisableFollowing() // Don't follow user when viewing specific location
+        cameraPositionState.animate(
+            update =
+                CameraUpdateFactory.newLatLngZoom(LatLng(initialLatitude, initialLongitude), 16f),
+            durationMs = 1000)
+      } catch (e: Exception) {
+        Log.e("MapInitialLocationEffect", e.message ?: "Unknown error")
+      } finally {
+        onProgrammaticMoveEnd()
+      }
+    }
+  }
+}
+
+/**
  * Displays the main map screen of the application.
  *
  * This composable handles:
@@ -534,6 +383,10 @@ fun MapScreen(
 
   // --- State for showing/hiding the filter bottom sheet ---
   var showFilterSheet by remember { mutableStateOf(false) }
+
+  // --- State for showing grouped items bottom sheet ---
+  var showGroupedItemsSheet by remember { mutableStateOf(false) }
+  var selectedGroup by remember { mutableStateOf<MapMarkerGroup?>(null) }
 
   // --- Enable following user on screen entry (unless returning from marker double click) ---
   LaunchedEffect(Unit) { handleInitialFollowing(viewModel, uiState.isReturningFromMarkerClick) }
@@ -638,44 +491,18 @@ fun MapScreen(
                   properties = mapProperties,
                   uiSettings =
                       MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = false)) {
-                    uiState.events.forEach { event ->
-                      event.location?.let { location ->
-                        val position = LatLng(location.latitude, location.longitude)
-                        val markerIcon = createMarkerForColor(event.type.getColor())
-
-                        Marker(
-                            state = MarkerState(position = position),
-                            icon = markerIcon,
-                            tag = getTestTagForMarker(event.eventId),
-                            title = event.title,
-                            snippet = stringResource(R.string.snippet_message),
-                            onInfoWindowClick = {
-                              viewModel.onMarkerClick()
-                              navigationActions?.navigateTo(Screen.ShowEventScreen(event.eventId))
-                            })
-                      }
-                    }
-                    uiState.series.forEach { (location, serie) ->
-                      val position = LatLng(location.latitude, location.longitude)
-                      val markerIcon = createMarkerForColor(MaterialTheme.customColors.seriePinMark)
-                      Marker(
-                          state = MarkerState(position = position),
-                          icon = markerIcon,
-                          tag = getTestTagForMarker(serie.serieId),
-                          title = serie.title,
-                          snippet = stringResource(R.string.snippet_message),
-                          onInfoWindowClick = {
-                            viewModel.onMarkerClick()
-                            navigationActions?.navigateTo(Screen.SerieDetails(serie.serieId))
-                          })
-                    }
-
-                    // Show marker for initial location (e.g., from chat location messages)
-                    ShowLocationMarker(
+                    MapMarkersContent(
+                        uiState = uiState,
+                        viewModel = viewModel,
+                        navigationActions = navigationActions,
+                        onGroupClick = { group ->
+                          selectedGroup = group
+                          showGroupedItemsSheet = true
+                        },
                         showLocationMarker = showLocationMarker,
                         initialLatitude = initialLatitude,
                         initialLongitude = initialLongitude,
-                        userId = sharedLocationUserId,
+                        sharedLocationUserId = sharedLocationUserId,
                         currentUserId = currentUserId)
                   }
 
@@ -722,5 +549,22 @@ fun MapScreen(
         onToggleOtherEvents = { viewModel.toggleOtherEvents() },
         onClearFilters = { viewModel.clearFilters() },
         onDismiss = { showFilterSheet = false })
+  }
+
+  // --- Group of events/series display ---
+  if (showGroupedItemsSheet && selectedGroup != null) {
+    GroupedItemsBottomSheet(
+        group = selectedGroup!!,
+        onItemClick = { item ->
+          viewModel.onMarkerClick()
+          showGroupedItemsSheet = false
+          when (item) {
+            is MapItem.EventItem ->
+                navigationActions?.navigateTo(Screen.ShowEventScreen(item.event.eventId))
+            is MapItem.SerieItem ->
+                navigationActions?.navigateTo(Screen.SerieDetails(item.serie.serieId))
+          }
+        },
+        onDismiss = { showGroupedItemsSheet = false })
   }
 }
