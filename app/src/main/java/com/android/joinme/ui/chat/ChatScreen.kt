@@ -655,6 +655,30 @@ private fun createDialogCallbacks(stateSetters: DialogStateSetters): DialogCallb
       })
 }
 
+/** Callbacks for message interactions in the message list. */
+private data class MessageCallbacks(
+    val onLongPress: (Message) -> Unit,
+    val onImageClick: (String) -> Unit,
+    val onLocationClick: (Location, String) -> Unit
+)
+
+/** Callbacks for poll interactions in the message list. */
+private data class PollCallbacks(
+    val onVote: (pollId: String, optionId: Int) -> Unit,
+    val onClosePoll: (pollId: String) -> Unit,
+    val onReopenPoll: (pollId: String) -> Unit,
+    val onDeletePoll: (pollId: String) -> Unit
+)
+
+/** Context data for rendering messages in the list. */
+private data class MessageRenderContext(
+    val currentUserId: String,
+    val senderProfiles: Map<String, Profile>,
+    val totalParticipants: Int,
+    val polls: List<Poll>,
+    val voterProfiles: Map<String, Profile>
+)
+
 /**
  * Displays the list of messages in a LazyColumn.
  *
@@ -719,18 +743,24 @@ private fun MessageList(
             RenderChatListItem(
                 item = item,
                 chatColor = chatColor,
-                currentUserId = currentUserId,
-                senderProfiles = senderProfiles,
-                totalParticipants = totalParticipants,
-                polls = polls,
-                voterProfiles = voterProfiles,
-                onMessageLongPress = onMessageLongPress,
-                onImageClick = onImageClick,
-                onLocationClick = onLocationClick,
-                onVote = onVote,
-                onClosePoll = onClosePoll,
-                onReopenPoll = onReopenPoll,
-                onDeletePoll = onDeletePoll)
+                context =
+                    MessageRenderContext(
+                        currentUserId = currentUserId,
+                        senderProfiles = senderProfiles,
+                        totalParticipants = totalParticipants,
+                        polls = polls,
+                        voterProfiles = voterProfiles),
+                messageCallbacks =
+                    MessageCallbacks(
+                        onLongPress = onMessageLongPress,
+                        onImageClick = onImageClick,
+                        onLocationClick = onLocationClick),
+                pollCallbacks =
+                    PollCallbacks(
+                        onVote = onVote,
+                        onClosePoll = onClosePoll,
+                        onReopenPoll = onReopenPoll,
+                        onDeletePoll = onDeletePoll))
           }
         }
       }
@@ -752,75 +782,48 @@ private fun EmptyMessagePlaceholder() {
 private fun RenderChatListItem(
     item: ChatListItem,
     chatColor: Color,
-    currentUserId: String,
-    senderProfiles: Map<String, Profile>,
-    totalParticipants: Int,
-    polls: List<Poll>,
-    voterProfiles: Map<String, Profile>,
-    onMessageLongPress: (Message) -> Unit,
-    onImageClick: (String) -> Unit,
-    onLocationClick: (Location, String) -> Unit,
-    onVote: (pollId: String, optionId: Int) -> Unit,
-    onClosePoll: (pollId: String) -> Unit,
-    onReopenPoll: (pollId: String) -> Unit,
-    onDeletePoll: (pollId: String) -> Unit
+    context: MessageRenderContext,
+    messageCallbacks: MessageCallbacks,
+    pollCallbacks: PollCallbacks
 ) {
   when (item) {
     is ChatListItem.DateHeader -> DateHeader(timestamp = item.timestamp, chatColor = chatColor)
     is ChatListItem.MessageItem ->
         RenderMessageItem(
             message = item.message,
-            currentUserId = currentUserId,
-            senderProfiles = senderProfiles,
-            totalParticipants = totalParticipants,
-            polls = polls,
-            voterProfiles = voterProfiles,
-            onMessageLongPress = onMessageLongPress,
-            onImageClick = onImageClick,
-            onLocationClick = onLocationClick,
-            onVote = onVote,
-            onClosePoll = onClosePoll,
-            onReopenPoll = onReopenPoll,
-            onDeletePoll = onDeletePoll)
+            context = context,
+            messageCallbacks = messageCallbacks,
+            pollCallbacks = pollCallbacks)
   }
 }
 
 @Composable
 private fun RenderMessageItem(
     message: Message,
-    currentUserId: String,
-    senderProfiles: Map<String, Profile>,
-    totalParticipants: Int,
-    polls: List<Poll>,
-    voterProfiles: Map<String, Profile>,
-    onMessageLongPress: (Message) -> Unit,
-    onImageClick: (String) -> Unit,
-    onLocationClick: (Location, String) -> Unit,
-    onVote: (pollId: String, optionId: Int) -> Unit,
-    onClosePoll: (pollId: String) -> Unit,
-    onReopenPoll: (pollId: String) -> Unit,
-    onDeletePoll: (pollId: String) -> Unit
+    context: MessageRenderContext,
+    messageCallbacks: MessageCallbacks,
+    pollCallbacks: PollCallbacks
 ) {
   val userColors = getUserColor(message.senderId)
-  val poll = findPollForMessage(message, polls)
+  val poll = findPollForMessage(message, context.polls)
   MessageItem(
       message = message,
-      isCurrentUser = message.senderId == currentUserId,
-      currentUserId = currentUserId,
-      senderPhotoUrl = senderProfiles[message.senderId]?.photoUrl,
-      currentUserPhotoUrl = senderProfiles[currentUserId]?.photoUrl,
+      isCurrentUser = message.senderId == context.currentUserId,
+      currentUserId = context.currentUserId,
+      senderPhotoUrl = context.senderProfiles[message.senderId]?.photoUrl,
+      currentUserPhotoUrl = context.senderProfiles[context.currentUserId]?.photoUrl,
       bubbleColor = userColors.first,
       onBubbleColor = userColors.second,
-      totalUsersInChat = totalParticipants,
-      onLongPress = { onMessageLongPress(message) },
-      onImageClick = onImageClick,
-      onLocationClick = onLocationClick,
+      totalUsersInChat = context.totalParticipants,
+      onLongPress = { messageCallbacks.onLongPress(message) },
+      onImageClick = messageCallbacks.onImageClick,
+      onLocationClick = messageCallbacks.onLocationClick,
       poll = poll,
-      voterProfiles = voterProfiles,
-      onVote = { optionId -> poll?.id?.let { onVote(it, optionId) } },
-      onClosePoll = { poll?.id?.let { onClosePoll(it) } },
-      onReopenPoll = { poll?.id?.let { onReopenPoll(it) } },
-      onDeletePoll = { poll?.id?.let { onDeletePoll(it) } })
+      voterProfiles = context.voterProfiles,
+      onVote = { optionId -> poll?.id?.let { pollCallbacks.onVote(it, optionId) } },
+      onClosePoll = { poll?.id?.let { pollCallbacks.onClosePoll(it) } },
+      onReopenPoll = { poll?.id?.let { pollCallbacks.onReopenPoll(it) } },
+      onDeletePoll = { poll?.id?.let { pollCallbacks.onDeletePoll(it) } })
 }
 
 /**
