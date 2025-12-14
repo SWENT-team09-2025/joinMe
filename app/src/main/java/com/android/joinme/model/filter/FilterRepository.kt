@@ -92,7 +92,7 @@ object FilterRepository {
    * @return The filtered list of events based on the current filter state. If no filters are
    *   selected, returns all events (default behavior).
    */
-  fun applyFilters(events: List<Event>, currentUserId: String = ""): List<Event> {
+  fun applyFiltersToEvents(events: List<Event>, currentUserId: String = ""): List<Event> {
     val state = _filterState.value
 
     // STEP 1: Apply event type filters (Social, Activity, Sports)
@@ -100,7 +100,7 @@ object FilterRepository {
 
     // STEP 2: Apply participation filters (My Events, Joined Events, Other Events)
     val participationFilteredEvents =
-        applyParticipationFilters(typeFilteredEvents, currentUserId, state)
+        applyParticipationFiltersEvent(typeFilteredEvents, currentUserId, state)
 
     return participationFilteredEvents
   }
@@ -137,7 +137,7 @@ object FilterRepository {
    * @return Events filtered by participation status, or all events if no participation filters are
    *   selected
    */
-  private fun applyParticipationFilters(
+  private fun applyParticipationFiltersEvent(
       events: List<Event>,
       userId: String,
       state: FilterState
@@ -166,24 +166,56 @@ object FilterRepository {
   }
 
   /**
-   * Applies the current filters to a list of series.
+   * Applies participation filters (My Events, Joined Events, Other Events).
    *
-   * A series is included if at least one of its events matches the current filter criteria. This
-   * allows users to discover series that contain events of interest.
+   * @param series The list of series to filter
+   * @param userId The current user's ID
+   * @param state The current filter state
+   * @return Series filtered by participation status, or all series if no participation filters are
+   *   selected
+   */
+  private fun applyParticipationFiltersSeries(
+      series: List<Serie>,
+      userId: String,
+      state: FilterState
+  ): List<Serie> {
+    // If no participation filters are selected, return all series (default behavior)
+    if (!state.showMyEvents && !state.showJoinedEvents && !state.showOtherEvents) {
+      return series
+    }
+
+    // If userId is empty, cannot filter by participation - return all series
+    if (userId.isEmpty()) {
+      return series
+    }
+
+    // Filter based on selected participation types
+    return series.filter { serie ->
+      val isMyEvent = serie.ownerId == userId
+      val isJoinedEvent = serie.participants.contains(userId) && !isMyEvent
+      val isOtherEvent = !serie.participants.contains(userId)
+
+      // Include event if ANY of the selected filters match
+      (state.showMyEvents && isMyEvent) ||
+          (state.showJoinedEvents && isJoinedEvent) ||
+          (state.showOtherEvents && isOtherEvent)
+    }
+  }
+  /**
+   * Applies event type filters (Social, Activity, Sports) to series.
+   *
+   * A series is included if at least one of its events matches the allowed types.
    *
    * @param series The list of series to filter
    * @param allEvents The list of all events (needed to check event types for each serie)
-   * @param currentUserId The ID of the current user (required for participation filters)
-   * @return The filtered list of series based on the current filter state. If no filters are
-   *   selected, returns all series (default behavior).
+   * @param state The current filter state
+   * @return Series filtered by type, or all series if no type filters are selected
    */
-  fun applyFiltersToSeries(
+  private fun applyTypeFiltersToSeries(
       series: List<Serie>,
       allEvents: List<Event>,
-      currentUserId: String = ""
+      state: FilterState
   ): List<Serie> {
-    val state = _filterState.value
-
     // Build list of allowed event types based on selected filters
     val allowedTypes = mutableListOf<EventType>()
     if (state.isSocialSelected) allowedTypes.add(EventType.SOCIAL)
@@ -203,5 +235,32 @@ object FilterRepository {
         event != null && event.type in allowedTypes
       }
     }
+  }
+
+  /**
+   * Applies the current filters to a list of series.
+   *
+   * A series is included if at least one of its events matches the current filter criteria. This
+   * allows users to discover series that contain events of interest.
+   *
+   * @param series The list of series to filter
+   * @param allEvents The list of all events (needed to check event types for each serie)
+   * @param currentUserId The ID of the current user (required for participation filters)
+   * @return The filtered list of series based on the current filter state. If no filters are
+   *   selected, returns all series (default behavior).
+   */
+  fun applyFiltersToSeries(
+      series: List<Serie>,
+      allEvents: List<Event>,
+      currentUserId: String = ""
+  ): List<Serie> {
+    val state = _filterState.value
+
+    val typeFilteredSeries = applyTypeFiltersToSeries(series, allEvents, state)
+
+    val participationFilteredSeries =
+        applyParticipationFiltersSeries(typeFilteredSeries, currentUserId, state)
+
+    return participationFilteredSeries
   }
 }

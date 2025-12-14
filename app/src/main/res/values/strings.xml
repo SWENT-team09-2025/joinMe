@@ -225,9 +225,9 @@
     <string name="activity_type">Activity</string>
     <string name="sport_type">Sport</string>
     <string name="participation">Participation</string>
-    <string name="my_events">My Events</string>
-    <string name="joined_events">Joined Events</string>
-    <string name="other_events">Other Events</string>
+    <string name="my_events">My Activities</string>
+    <string name="joined_events">Joined Activities</string>
+    <string name="other_events">Other Activities</string>
     <string name="clear_filters">Clear Filters</string>
     <string name="snippet_message">Tap to see more and join me</string>
     <string name="number_of_activities_with_same_location">%1$s activities in this place</string>
