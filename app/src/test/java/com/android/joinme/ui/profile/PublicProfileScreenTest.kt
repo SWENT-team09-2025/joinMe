@@ -417,27 +417,6 @@ class PublicProfileScreenTest {
     composeTestRule.onNodeWithText("No interests available").assertIsDisplayed()
   }
 
-  @Test
-  fun publicProfileScreen_displaysEventStreaks() {
-    val profile = createTestProfile()
-    val viewModel =
-        PublicProfileViewModel(
-            FakeProfileRepository(profile), FakeEventsRepository(), FakeGroupRepository())
-
-    composeTestRule.setContent {
-      PublicProfileScreen(userId = otherUserId, viewModel = viewModel, onBackClick = {})
-    }
-
-    viewModel.loadPublicProfile(otherUserId, currentUserId)
-    composeTestRule.waitForIdle()
-
-    composeTestRule
-        .onNodeWithTag(PublicProfileScreenTestTags.EVENT_STREAKS_SECTION)
-        .assertIsDisplayed()
-    composeTestRule.onNodeWithText("Event Streaks").assertIsDisplayed()
-    composeTestRule.onNodeWithText("0 days").assertIsDisplayed()
-  }
-
   // ==================== BUTTONS TESTS ====================
 
   @Test

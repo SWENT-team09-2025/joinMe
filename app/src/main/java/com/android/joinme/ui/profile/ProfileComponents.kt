@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
@@ -110,30 +109,6 @@ fun StatItem(value: String, label: String, testTag: String = "", onClick: (() ->
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
       }
-}
-
-/**
- * Displays the event streaks section with a fire emoji and streak count.
- *
- * Currently displays a hardcoded "0 days" streak. This is intended to be replaced with actual
- * streak tracking in the future.
- *
- * @param testTag Optional test tag for UI testing
- */
-@Composable
-fun EventStreaksSection(testTag: String = "") {
-  Column(modifier = Modifier.fillMaxWidth().testTag(testTag)) {
-    Text(
-        text = stringResource(R.string.event_streaks),
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
-    Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
-    Row(verticalAlignment = Alignment.CenterVertically) {
-      Text(text = "🔥", style = MaterialTheme.typography.titleMedium)
-      Spacer(modifier = Modifier.width(Dimens.Spacing.small))
-      Text(text = stringResource(R.string.zero_days), style = MaterialTheme.typography.bodyMedium)
-    }
-  }
 }
 
 /**
