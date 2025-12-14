@@ -1,5 +1,7 @@
 package com.android.joinme.ui.map
 
+// Implemented with help of Claude AI
+
 import android.Manifest
 import android.content.Context
 import android.util.Log
@@ -70,6 +72,7 @@ object MapScreenTestTags {
   const val FILTER_PARTICIPATION_JOINED_EVENTS = "filterParticipationJoinedEvents"
   const val FILTER_PARTICIPATION_OTHER_EVENTS = "filterParticipationOtherEvents"
   const val FILTER_CLOSE_BUTTON = "filterCloseButton"
+  const val LOCATION_MARKER_TAG = "locationMarker"
   const val GROUPED_INFO_WINDOW = "groupedInfoWindow"
 
   fun getTestTagForMarker(id: String): String = "marker$id"
@@ -292,7 +295,7 @@ private fun ShowLocationMarker(
     Marker(
         state = MarkerState(position = locationPosition),
         icon = circleMarkerIcon,
-        tag = "locationMarker",
+        tag = MapScreenTestTags.LOCATION_MARKER_TAG,
         title = context.getString(R.string.shared_location_marker_title),
         snippet = context.getString(R.string.shared_location_marker_snippet))
   }
@@ -516,7 +519,7 @@ fun MapScreen(
                   containerColor = buttonColor(hasFilters, CONTAINER_COLOR)) {
                     Icon(
                         imageVector = Icons.Filled.Tune,
-                        contentDescription = "Filter",
+                        contentDescription = stringResource(R.string.filter_button_description),
                         tint = buttonColor(hasFilters, NOT_CONTAINER_COLOR))
                   }
 
@@ -529,7 +532,8 @@ fun MapScreen(
                   containerColor = buttonColor(isFollowingUser, CONTAINER_COLOR)) {
                     Icon(
                         imageVector = Icons.Filled.MyLocation,
-                        contentDescription = "My Location",
+                        contentDescription =
+                            stringResource(R.string.my_location_button_description),
                         tint = buttonColor(isFollowingUser, NOT_CONTAINER_COLOR))
                   }
             }

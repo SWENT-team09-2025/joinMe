@@ -1,5 +1,6 @@
-// Implemented with help of Claude AI
 package com.android.joinme
+
+// Implemented with help of Claude AI
 
 import android.app.Application
 import android.app.NotificationChannel
@@ -23,8 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.credentials.CredentialManager
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.NavHost
@@ -32,16 +31,21 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
 import com.android.joinme.model.chat.ChatRepositoryProvider
+import com.android.joinme.model.chat.PollRepositoryProvider
 import com.android.joinme.model.event.EventsRepositoryProvider
 import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.invitation.InvitationRepositoryProvider
 import com.android.joinme.model.invitation.InvitationType
 import com.android.joinme.model.invitation.deepLink.DeepLinkService
 import com.android.joinme.model.notification.FCMTokenManager
+import com.android.joinme.model.presence.PresenceRepositoryProvider
 import com.android.joinme.model.profile.ProfileRepositoryProvider
 import com.android.joinme.ui.calendar.CalendarScreen
 import com.android.joinme.ui.chat.ChatScreen
+import com.android.joinme.ui.chat.ChatType
 import com.android.joinme.ui.chat.ChatViewModel
+import com.android.joinme.ui.chat.PollViewModel
+import com.android.joinme.ui.chat.PresenceViewModel
 import com.android.joinme.ui.groups.ActivityGroupScreen
 import com.android.joinme.ui.groups.CreateGroupScreen
 import com.android.joinme.ui.groups.EditGroupScreen
@@ -72,6 +76,7 @@ import com.android.joinme.ui.profile.ViewProfileScreen
 import com.android.joinme.ui.signIn.SignInScreen
 import com.android.joinme.ui.theme.JoinMeTheme
 import com.android.joinme.util.TestEnvironmentDetector
+import com.android.joinme.util.createViewModelFactory
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.CoroutineScope
@@ -107,6 +112,10 @@ private const val HOST_GROUP = "group"
 
 /** Notification type values. */
 private const val NOTIFICATION_TYPE_NEW_FOLLOWER = "new_follower"
+
+/** Chat constants. */
+private const val DEFAULT_PARTICIPANT_COUNT = 1
+private const val MAX_INDIVIDUAL_CHAT_PARTICIPANTS = 2
 
 /** Navigation argument keys. */
 const val SERIES_ID = "serieId"
@@ -328,7 +337,10 @@ private fun EventChatNavigationEffect(
                   totalParticipants = event.participants.size))
         } catch (_: Exception) {
           navigationActions.navigateTo(
-              Screen.Chat(chatId = conversationId, chatTitle = chatName, totalParticipants = 1))
+              Screen.Chat(
+                  chatId = conversationId,
+                  chatTitle = chatName,
+                  totalParticipants = DEFAULT_PARTICIPANT_COUNT))
         }
       }
     }
@@ -915,14 +927,9 @@ private fun NavGraphBuilder.groupScreens(context: Context, navigationActions: Na
       val leaderboardViewModel: GroupLeaderboardViewModel =
           viewModel(
               factory =
-                  object : ViewModelProvider.Factory {
-                    // Cannot put hardcoded string in a const, else we have a cast warning
-                    @Suppress("UNCHECKED_CAST")
-                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                      return GroupLeaderboardViewModel(
-                          application = (context.applicationContext as Application))
-                          as T
-                    }
+                  createViewModelFactory {
+                    GroupLeaderboardViewModel(
+                        application = (context.applicationContext as Application))
                   })
       GroupLeaderboardScreen(
           groupId = groupId,
@@ -948,44 +955,70 @@ private fun NavGraphBuilder.chatScreen(
     val chatId = navBackStackEntry.arguments?.getString(KEY_CHAT_ID)
     val chatTitle = navBackStackEntry.arguments?.getString(KEY_CHAT_TITLE)
     val totalParticipants =
-        navBackStackEntry.arguments?.getString(KEY_TOTAL_PARTICIPANTS)?.toIntOrNull() ?: 1
-    if (chatId != null && chatTitle != null) {
-      val chatViewModel: ChatViewModel =
-          viewModel(
-              factory =
-                  object : ViewModelProvider.Factory {
-                    // Cannot put hardcoded string in a const, else we have a cast warning
-                    @Suppress("UNCHECKED_CAST")
-                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                      return ChatViewModel(
-                          ChatRepositoryProvider.repository, ProfileRepositoryProvider.repository)
-                          as T
-                    }
-                  })
-      val currentUserName = currentUser?.displayName ?: stringResource(R.string.unknown_user)
-      ChatScreen(
-          chatId = chatId,
-          chatTitle = chatTitle,
-          currentUserId = currentUserId,
-          currentUserName = currentUserName,
-          viewModel = chatViewModel,
-          totalParticipants = totalParticipants,
-          onLeaveClick = { navigationActions.goBack() },
-          onNavigateToMap = { location, senderId ->
-            navigationActions.navigateTo(
-                Screen.Map(
-                    location.latitude, location.longitude, showMarker = true, userId = senderId))
-            Toast.makeText(
-                    context,
-                    context.getString(R.string.toast_viewing_location, location.name),
-                    Toast.LENGTH_SHORT)
-                .show()
-          })
-    } else {
+        navBackStackEntry.arguments?.getString(KEY_TOTAL_PARTICIPANTS)?.toIntOrNull()
+            ?: MAX_INDIVIDUAL_CHAT_PARTICIPANTS
+
+    if (chatId == null || chatTitle == null) {
       Toast.makeText(
               context, context.getString(R.string.error_chat_id_or_title_null), Toast.LENGTH_SHORT)
           .show()
+      return@composable
     }
+
+    val chatType =
+        if (totalParticipants <= MAX_INDIVIDUAL_CHAT_PARTICIPANTS) ChatType.INDIVIDUAL
+        else ChatType.GROUP
+
+    val chatViewModel: ChatViewModel =
+        viewModel(
+            factory =
+                createViewModelFactory {
+                  ChatViewModel(
+                      ChatRepositoryProvider.repository, ProfileRepositoryProvider.repository)
+                })
+
+    val presenceViewModel: PresenceViewModel =
+        viewModel(
+            factory =
+                createViewModelFactory { PresenceViewModel(PresenceRepositoryProvider.repository) })
+
+    val pollViewModel: PollViewModel? =
+        if (chatType == ChatType.GROUP) {
+          viewModel(
+              factory =
+                  createViewModelFactory {
+                    PollViewModel(
+                        PollRepositoryProvider.repository,
+                        ChatRepositoryProvider.repository,
+                        ProfileRepositoryProvider.repository)
+                  })
+        } else null
+
+    val currentUserName = currentUser?.displayName ?: stringResource(R.string.unknown_user)
+    ChatScreen(
+        chatId = chatId,
+        chatTitle = chatTitle,
+        currentUserId = currentUserId,
+        currentUserName = currentUserName,
+        viewModel = chatViewModel,
+        presenceViewModel = presenceViewModel,
+        pollViewModel = pollViewModel,
+        chatType = chatType,
+        totalParticipants = totalParticipants,
+        onLeaveClick = { navigationActions.goBack() },
+        onNavigateToMap = { location, senderId ->
+          navigationActions.navigateTo(
+              Screen.Map(
+                  latitude = location.latitude,
+                  longitude = location.longitude,
+                  showMarker = true,
+                  userId = senderId))
+          Toast.makeText(
+                  context,
+                  context.getString(R.string.toast_viewing_location, location.name),
+                  Toast.LENGTH_SHORT)
+              .show()
+        })
   }
 }
 

@@ -72,6 +72,7 @@
     <string name="location_permission_required">Location permission required to share location</string>
     <string name="sign_in_to_send_message">Please sign in to send messages</string>
     <string name="cannot_message_yourself">Cannot send messages to yourself</string>
+    <string name="chat_id_or_title_null">Chat ID or title is null</string>
 
     <!-- Map Screen -->
     <string name="shared_location_marker_title">Location</string>
@@ -128,6 +129,8 @@
     <string name="online_users_zero">0 users online</string>
     <string name="online_users_one">1 user online</string>
     <string name="online_users_many">%d users online</string>
+    <string name="status_online">online</string>
+    <string name="status_offline">offline</string>
 
     <!-- Context Menu -->
     <string name="copy">Copy</string>
@@ -230,10 +233,11 @@
     <string name="other_events">Other Activities</string>
     <string name="clear_filters">Clear Filters</string>
     <string name="snippet_message">Tap to see more and join me</string>
+    <string name="filter_button_description">Filter</string>
+    <string name="my_location_button_description">My Location</string>
     <string name="number_of_activities_with_same_location">%1$s activities in this place</string>
     <string name="serie">Serie</string>
     <string name="geo_query">geo:%1$s,%2$s?q=%1$s,%2$s</string>
-
 
     <!-- Group button -->
     <string name="delete_group_button">DELETE GROUP</string>

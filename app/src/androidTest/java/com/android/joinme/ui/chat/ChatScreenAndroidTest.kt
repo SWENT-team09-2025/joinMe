@@ -15,6 +15,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
 
+// Implemented with help of Claude AI
+
 /** Android instrumentation tests for ChatScreen that require real Android environment (Coil). */
 class ChatScreenAndroidTest {
 
@@ -215,7 +217,7 @@ class ChatScreenAndroidTest {
    * conditional) and (FullScreenImageViewer composable).
    */
   @Test
-  fun chatScreen_imageMessage_opensFullScreenViewer() = runTest {
+  fun chatScreen_imageMessage_opensFullScreenViewer() {
     val messages =
         listOf(
             Message(
@@ -434,7 +436,7 @@ class ChatScreenAndroidTest {
    * full-screen image fails to load).
    */
   @Test
-  fun chatScreen_fullScreenImageViewer_displaysErrorState() = runTest {
+  fun chatScreen_fullScreenImageViewer_displaysErrorState() {
     // Use an invalid URL that will fail to load in Coil
     val messages =
         listOf(
@@ -490,7 +492,7 @@ class ChatScreenAndroidTest {
    * for images, Maps for locations) work together.
    */
   @Test
-  fun chatScreen_locationAndMixedMessages_renderCorrectlyWithMaps() = runTest {
+  fun chatScreen_locationAndMixedMessages_renderCorrectlyWithMaps() {
     val messages =
         listOf(
             // Image message
@@ -587,7 +589,7 @@ class ChatScreenAndroidTest {
    * chatScreen_locationAndMixedMessages_renderCorrectlyWithMaps.
    */
   @Test
-  fun chatScreen_locationMessage_clickTriggersNavigation() = runTest {
+  fun chatScreen_locationMessage_clickTriggersNavigation() {
     var navigationCallbackInvoked = false
     var navigatedLocation: com.android.joinme.model.map.Location? = null
 
@@ -663,11 +665,11 @@ class ChatScreenAndroidTest {
 
     composeTestRule.waitForIdle()
 
-    // Verify attachment menu is displayed with all options
+    // Verify attachment menu is displayed with Photo and Location options
+    // Note: Poll option is only available in group/event chats (ChatType.GROUP)
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_MENU).assertIsDisplayed()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_PHOTO).assertExists()
     composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_LOCATION).assertExists()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_POLL).assertExists()
 
     // Verify location option is displayed with proper icon and label, and is clickable
     composeTestRule

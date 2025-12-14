@@ -32,7 +32,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
@@ -42,6 +41,7 @@ import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Poll
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -75,6 +75,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -87,6 +88,7 @@ import com.android.joinme.R
 import com.android.joinme.model.chat.ChatListItem
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
+import com.android.joinme.model.chat.Poll
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.map.UserLocation
 import com.android.joinme.model.profile.Profile
@@ -95,6 +97,8 @@ import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
 import com.android.joinme.ui.theme.getUserColor
+import com.android.joinme.ui.theme.offlineIndicator
+import com.android.joinme.ui.theme.onlineIndicator
 import com.android.joinme.ui.theme.outlinedTextField
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -108,6 +112,41 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.launch
+
+/**
+ * Type of chat determining UI behavior.
+ * - INDIVIDUAL: For one-on-one chats, shows "online"/"offline" status
+ * - GROUP: For group/event chats, shows "X users online" count
+ */
+enum class ChatType {
+  INDIVIDUAL,
+  GROUP
+}
+
+/** Shared constants for chat screens. */
+private object ChatConstants {
+  const val TIMESTAMP_FORMAT = "HH:mm"
+  const val SECONDARY_ALPHA = 0.8f
+  const val SYSTEM_MESSAGE_ALPHA = 0.9f
+  const val DIVIDER_ALPHA = 0.5f
+  const val USERS_OFFLINE = 0
+  const val ONE_USER_ONLINE = 1
+  const val IMAGE_ASPECT_RATIO = 0.75f
+  const val MAX_INPUT_LINES = 4
+  const val BLUR_MULTIPLIER = 2
+  const val IMAGE_MIME_TYPE = "image/*"
+}
+
+/**
+ * Formats a Unix timestamp into a readable time string.
+ *
+ * @param timestamp Unix timestamp in milliseconds
+ * @return Formatted time string (e.g., "14:32")
+ */
+private fun formatTimestamp(timestamp: Long): String {
+  val dateFormat = SimpleDateFormat(ChatConstants.TIMESTAMP_FORMAT, Locale.getDefault())
+  return dateFormat.format(Date(timestamp))
+}
 
 /**
  * Disabled MapUiSettings for location previews.
@@ -138,7 +177,6 @@ object ChatScreenTestTags {
   const val MESSAGE_LIST = "messageList"
   const val MESSAGE_INPUT = "messageInput"
   const val SEND_BUTTON = "sendButton"
-  const val MIC_BUTTON = "micButton"
   const val ATTACHMENT_BUTTON = "attachmentButton"
   const val ATTACHMENT_MENU = "attachmentMenu"
   const val ATTACHMENT_PHOTO = "attachmentPhoto"
@@ -178,6 +216,9 @@ object ChatScreenTestTags {
   const val LOCATION_PREVIEW_SEND_BUTTON = "locationPreviewSendButton"
   const val LOCATION_PREVIEW_CANCEL_BUTTON = "locationPreviewCancelButton"
   const val LOCATION_MESSAGE_PREVIEW = "locationMessagePreview"
+  const val ONLINE_USERS_ROW = "onlineUsersRow"
+  const val ONLINE_INDICATOR_DOT = "onlineIndicatorDot"
+  const val ONLINE_USERS_COUNT = "onlineUsersCount"
 }
 
 /**
@@ -203,6 +244,9 @@ object ChatScreenTestTags {
  * @param totalParticipants Total number of participants in the event/group
  * @param presenceViewModel Optional presence view model for online tracking
  * @param onNavigateToMap Callback invoked when user clicks on a location message to view on map
+ * @param chatType Type of chat (INDIVIDUAL or GROUP), determines UI behavior like online status
+ *   display. Defaults to INDIVIDUAL.
+ * @param pollViewModel Optional poll view model for group/event chats with poll support
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -218,8 +262,9 @@ fun ChatScreen(
     totalParticipants: Int = 1, // Total number of participants in the event/group
     presenceViewModel: PresenceViewModel? =
         null, // Optional presence view model for online tracking
-    onNavigateToMap: (Location, String) -> Unit = { _, _ ->
-    } // Callback when user clicks on location message (location, senderId)
+    onNavigateToMap: (Location, String) -> Unit = { _, _ -> },
+    chatType: ChatType = ChatType.INDIVIDUAL,
+    pollViewModel: PollViewModel? = null
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val snackbarHostState = remember { SnackbarHostState() }
@@ -240,6 +285,11 @@ fun ChatScreen(
     presenceViewModel?.initialize(chatId, currentUserId)
   }
 
+  // Initialize poll tracking when screen loads (for group/event chats)
+  LaunchedEffect(chatId, currentUserId, pollViewModel) {
+    pollViewModel?.initialize(chatId, currentUserId)
+  }
+
   // Show error messages in snackbar
   LaunchedEffect(uiState.errorMsg) {
     uiState.errorMsg?.let { errorMsg ->
@@ -258,7 +308,8 @@ fun ChatScreen(
             onLeaveClick = onLeaveClick, // Leave chat navigates back
             topBarColor = effectiveChatColor,
             onTopBarColor = effectiveOnChatColor,
-            onlineUsersCount = presenceState?.value?.onlineUsersCount ?: 0)
+            onlineUsersCount = presenceState?.value?.onlineUsersCount ?: 0,
+            chatType = chatType)
       },
       snackbarHost = { SnackbarHost(snackbarHostState) },
       contentWindowInsets = WindowInsets.systemBars, // Only consume system bars, not IME
@@ -283,7 +334,8 @@ fun ChatScreen(
               onChatColor = effectiveOnChatColor,
               viewModel = viewModel,
               totalParticipants = totalParticipants,
-              onNavigateToMap = onNavigateToMap)
+              onNavigateToMap = onNavigateToMap,
+              pollViewModel = pollViewModel)
         }
       }
 }
@@ -297,6 +349,7 @@ fun ChatScreen(
  * @param onTopBarColor Color for text/icons on the top bar (must provide proper contrast with
  *   topBarColor)
  * @param onlineUsersCount Number of users currently online in the chat
+ * @param chatType Type of chat (INDIVIDUAL or GROUP), determines online status display format
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -305,12 +358,9 @@ private fun ChatTopBar(
     onLeaveClick: () -> Unit,
     topBarColor: Color,
     onTopBarColor: Color,
-    onlineUsersCount: Int = 0
+    onlineUsersCount: Int = 0,
+    chatType: ChatType = ChatType.INDIVIDUAL
 ) {
-  // Define colors for the online indicator dot
-  val onlineIndicatorColor = Color(0xFF4CAF50) // Green
-  val offlineIndicatorColor = Color(0xFFF44336) // Red
-
   Surface(
       modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.TOP_BAR),
       color = topBarColor,
@@ -322,7 +372,6 @@ private fun ChatTopBar(
             verticalAlignment = Alignment.CenterVertically) {
               // Title and online status column
               Column(modifier = Modifier.weight(1f)) {
-                // Title
                 Text(
                     text = chatTitle,
                     style = MaterialTheme.typography.titleMedium,
@@ -330,41 +379,18 @@ private fun ChatTopBar(
                     color = onTopBarColor,
                     modifier = Modifier.testTag(ChatScreenTestTags.TITLE))
 
-                // Online users count with indicator dot (always displayed)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.extraSmall),
-                    modifier = Modifier.testTag("onlineUsersRow")) {
-                      // Colored indicator dot
-                      Box(
-                          modifier =
-                              Modifier.size(Dimens.Spacing.small)
-                                  .background(
-                                      color =
-                                          if (onlineUsersCount > 0) onlineIndicatorColor
-                                          else offlineIndicatorColor,
-                                      shape = CircleShape)
-                                  .testTag("onlineIndicatorDot"))
-
-                      // Online users count text
-                      Text(
-                          text =
-                              when (onlineUsersCount) {
-                                0 -> stringResource(R.string.online_users_zero)
-                                1 -> stringResource(R.string.online_users_one)
-                                else -> stringResource(R.string.online_users_many, onlineUsersCount)
-                              },
-                          style = MaterialTheme.typography.bodySmall,
-                          color = onTopBarColor.copy(alpha = 0.8f),
-                          modifier = Modifier.testTag("onlineUsersCount"))
-                    }
+                OnlineStatusIndicator(
+                    onlineUsersCount = onlineUsersCount,
+                    chatType = chatType,
+                    textColor = onTopBarColor.copy(alpha = ChatConstants.SECONDARY_ALPHA))
               }
-              // Leave button - background color matches top bar
+              // Leave button
               IconButton(
                   onClick = onLeaveClick,
                   modifier =
                       Modifier.size(Dimens.IconSize.medium)
-                          .background(topBarColor.copy(alpha = 0.8f), CircleShape)
+                          .background(
+                              topBarColor.copy(alpha = ChatConstants.SECONDARY_ALPHA), CircleShape)
                           .testTag(ChatScreenTestTags.LEAVE_BUTTON)) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,
@@ -374,6 +400,61 @@ private fun ChatTopBar(
                   }
             }
       }
+}
+
+/**
+ * Online status indicator with colored dot and status text.
+ *
+ * @param onlineUsersCount Number of users currently online
+ * @param chatType Type of chat determining status text format
+ * @param textColor Color for the status text
+ */
+@Composable
+private fun OnlineStatusIndicator(onlineUsersCount: Int, chatType: ChatType, textColor: Color) {
+  val isOnline = onlineUsersCount > 0
+  val indicatorColor = if (isOnline) onlineIndicator else offlineIndicator
+  val statusText = getStatusText(chatType, onlineUsersCount)
+
+  Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.extraSmall),
+      modifier = Modifier.testTag(ChatScreenTestTags.ONLINE_USERS_ROW)) {
+        Box(
+            modifier =
+                Modifier.size(Dimens.Spacing.small)
+                    .background(color = indicatorColor, shape = CircleShape)
+                    .testTag(ChatScreenTestTags.ONLINE_INDICATOR_DOT))
+
+        Text(
+            text = statusText,
+            style = MaterialTheme.typography.bodySmall,
+            color = textColor,
+            modifier = Modifier.testTag(ChatScreenTestTags.ONLINE_USERS_COUNT))
+      }
+}
+
+/** Returns the appropriate status text based on chat type and online user count. */
+@Composable
+private fun getStatusText(chatType: ChatType, onlineUsersCount: Int): String {
+  return when (chatType) {
+    ChatType.INDIVIDUAL -> getIndividualStatusText(onlineUsersCount > 0)
+    ChatType.GROUP -> getGroupStatusText(onlineUsersCount)
+  }
+}
+
+@Composable
+private fun getIndividualStatusText(isOnline: Boolean): String {
+  return if (isOnline) stringResource(R.string.status_online)
+  else stringResource(R.string.status_offline)
+}
+
+@Composable
+private fun getGroupStatusText(count: Int): String {
+  return when (count) {
+    ChatConstants.USERS_OFFLINE -> stringResource(R.string.online_users_zero)
+    ChatConstants.ONE_USER_ONLINE -> stringResource(R.string.online_users_one)
+    else -> stringResource(R.string.online_users_many, count)
+  }
 }
 
 /**
@@ -390,6 +471,7 @@ private fun ChatTopBar(
  * @param viewModel ChatViewModel for managing chat state
  * @param totalParticipants Total number of participants in the chat
  * @param onNavigateToMap Callback to navigate to map screen with a location
+ * @param pollViewModel Optional poll view model for group/event chats with poll support
  */
 @Composable
 private fun ChatContent(
@@ -403,7 +485,8 @@ private fun ChatContent(
     onChatColor: Color,
     viewModel: ChatViewModel,
     totalParticipants: Int,
-    onNavigateToMap: (Location, String) -> Unit
+    onNavigateToMap: (Location, String) -> Unit,
+    pollViewModel: PollViewModel? = null
 ) {
   val uiState by viewModel.uiState.collectAsState()
   var messageText by remember { mutableStateOf("") }
@@ -413,67 +496,67 @@ private fun ChatContent(
   var showDeleteDialog by remember { mutableStateOf(false) }
   var showWhoReadDialog by remember { mutableStateOf(false) }
   var fullScreenImageUrl by remember { mutableStateOf<String?>(null) }
+  var showPollCreation by remember { mutableStateOf(false) }
 
-  // Auto-scroll to bottom when new messages arrive
-  LaunchedEffect(messages.size) {
-    if (messages.isNotEmpty()) {
-      listState.animateScrollToItem(messages.size - 1)
-    }
-  }
+  // Auto-scroll and mark messages as read
+  ChatContentEffects(messages, listState, viewModel)
 
-  // Mark all messages as read when chat is opened or new messages arrive
-  LaunchedEffect(messages.size) {
-    if (messages.isNotEmpty()) {
-      viewModel.markAllMessagesAsRead()
-    }
-  }
+  val blurModifier =
+      if (selectedMessage != null)
+          Modifier.blur(Dimens.Profile.photoBlurRadius * ChatConstants.BLUR_MULTIPLIER)
+      else Modifier
+
+  // Collect poll state if available
+  val pollsState = pollViewModel?.pollsState?.collectAsState()
 
   Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-    Column(
-        modifier =
-            Modifier.fillMaxSize()
-                .then(
-                    if (selectedMessage != null) Modifier.blur(Dimens.Profile.photoBlurRadius * 2)
-                    else Modifier)) {
-          // Messages list
-          MessageList(
-              messages = messages,
-              currentUserId = currentUserId,
-              senderProfiles = senderProfiles,
-              totalParticipants = totalParticipants,
-              listState = listState,
-              onMessageLongPress = { message ->
-                // Only show context menu if there are items to display
-                val isCurrentUser = message.senderId == currentUserId
-                // Location and Image messages: only delete and see who read
-                val hasMenuItems = message.type == MessageType.TEXT || isCurrentUser
-                if (hasMenuItems) {
-                  selectedMessage = message
-                }
-              },
-              onImageClick = { imageUrl -> fullScreenImageUrl = imageUrl },
-              onLocationClick = { location, senderId -> onNavigateToMap(location, senderId) },
-              chatColor = chatColor,
-              modifier = Modifier.weight(1f))
+    Column(modifier = Modifier.fillMaxSize().then(blurModifier)) {
+      MessageList(
+          messages = messages,
+          currentUserId = currentUserId,
+          senderProfiles = senderProfiles,
+          totalParticipants = totalParticipants,
+          listState = listState,
+          onMessageLongPress = { message ->
+            if (shouldShowContextMenu(message, currentUserId)) {
+              selectedMessage = message
+            }
+          },
+          onImageClick = { imageUrl -> fullScreenImageUrl = imageUrl },
+          onLocationClick = { location, senderId -> onNavigateToMap(location, senderId) },
+          chatColor = chatColor,
+          polls = pollsState?.value?.polls ?: emptyList(),
+          voterProfiles = pollsState?.value?.voterProfiles ?: emptyMap(),
+          onVote = { pollId, optionId -> pollViewModel?.vote(pollId, optionId) },
+          onClosePoll = { pollId -> pollViewModel?.closePoll(pollId) },
+          onReopenPoll = { pollId -> pollViewModel?.reopenPoll(pollId) },
+          onDeletePoll = { pollId -> pollViewModel?.deletePoll(pollId) },
+          modifier = Modifier.weight(1f))
 
-          // Message input
-          MessageInput(
-              text = messageText,
-              onTextChange = { messageText = it },
-              onSendClick = {
-                if (messageText.isNotBlank()) {
-                  onSendMessage(messageText)
-                  messageText = ""
-                }
-              },
-              sendButtonColor = chatColor,
-              onSendButtonColor = onChatColor,
-              viewModel = viewModel,
-              currentUserName = currentUserName,
-              isUploadingImage = uiState.isUploadingImage)
-        }
+      MessageInput(
+          text = messageText,
+          onTextChange = { messageText = it },
+          onSendClick = {
+            if (messageText.isNotBlank()) {
+              onSendMessage(messageText)
+              messageText = ""
+            }
+          },
+          sendButtonColor = chatColor,
+          onSendButtonColor = onChatColor,
+          viewModel = viewModel,
+          currentUserName = currentUserName,
+          isUploadingImage = uiState.isUploadingImage,
+          pollViewModel = pollViewModel,
+          onPollClick = { showPollCreation = true })
+    }
 
-    // Message interaction overlays
+    PollCreationOverlay(
+        showPollCreation = showPollCreation,
+        pollViewModel = pollViewModel,
+        creatorName = currentUserName,
+        onDismiss = { showPollCreation = false })
+
     MessageInteractionOverlays(
         selectedMessage = selectedMessage,
         currentUserId = currentUserId,
@@ -484,31 +567,117 @@ private fun ChatContent(
                 showDeleteDialog = showDeleteDialog,
                 showWhoReadDialog = showWhoReadDialog),
         callbacks =
-            DialogCallbacks(
-                onDismissContextMenu = { selectedMessage = null },
-                onShowEditDialog = { showEditDialog = true },
-                onShowDeleteDialog = { showDeleteDialog = true },
-                onShowWhoReadDialog = { showWhoReadDialog = true },
-                onDismissEditDialog = {
-                  showEditDialog = false
-                  selectedMessage = null
-                },
-                onDismissDeleteDialog = {
-                  showDeleteDialog = false
-                  selectedMessage = null
-                },
-                onDismissWhoReadDialog = {
-                  showWhoReadDialog = false
-                  selectedMessage = null
-                }),
+            createDialogCallbacks(
+                DialogStateSetters(
+                    setShowEditDialog = { showEditDialog = it },
+                    setShowDeleteDialog = { showDeleteDialog = it },
+                    setShowWhoReadDialog = { showWhoReadDialog = it },
+                    setSelectedMessage = { selectedMessage = it })),
         viewModel = viewModel)
 
-    // Full-screen image viewer
     fullScreenImageUrl?.let { imageUrl ->
       FullScreenImageViewer(imageUrl = imageUrl, onDismiss = { fullScreenImageUrl = null })
     }
   }
 }
+
+/** Handles auto-scroll and message read marking side effects. */
+@Composable
+private fun ChatContentEffects(
+    messages: List<Message>,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    viewModel: ChatViewModel
+) {
+  LaunchedEffect(messages.size) {
+    if (messages.isNotEmpty()) {
+      listState.animateScrollToItem(messages.size - 1)
+      viewModel.markAllMessagesAsRead()
+    }
+  }
+}
+
+/** Determines if context menu should be shown for a message. */
+private fun shouldShowContextMenu(message: Message, currentUserId: String): Boolean {
+  val isCurrentUser = message.senderId == currentUserId
+  return message.type == MessageType.TEXT || isCurrentUser
+}
+
+/** Displays poll creation sheet if conditions are met. */
+@Composable
+private fun PollCreationOverlay(
+    showPollCreation: Boolean,
+    pollViewModel: PollViewModel?,
+    creatorName: String,
+    onDismiss: () -> Unit
+) {
+  if (showPollCreation && pollViewModel != null) {
+    PollCreationSheet(
+        viewModel = pollViewModel,
+        creatorName = creatorName,
+        onDismiss = onDismiss,
+        onPollCreated = onDismiss)
+  }
+}
+
+/**
+ * State setters for dialog visibility.
+ *
+ * @property setShowEditDialog Setter for edit dialog visibility
+ * @property setShowDeleteDialog Setter for delete dialog visibility
+ * @property setShowWhoReadDialog Setter for "who read" dialog visibility
+ * @property setSelectedMessage Setter for selected message (null to clear)
+ */
+private data class DialogStateSetters(
+    val setShowEditDialog: (Boolean) -> Unit,
+    val setShowDeleteDialog: (Boolean) -> Unit,
+    val setShowWhoReadDialog: (Boolean) -> Unit,
+    val setSelectedMessage: (Message?) -> Unit
+)
+
+/** Creates dialog callbacks with consistent dismiss behavior. */
+private fun createDialogCallbacks(stateSetters: DialogStateSetters): DialogCallbacks {
+  return DialogCallbacks(
+      onDismissContextMenu = { stateSetters.setSelectedMessage(null) },
+      onShowEditDialog = { stateSetters.setShowEditDialog(true) },
+      onShowDeleteDialog = { stateSetters.setShowDeleteDialog(true) },
+      onShowWhoReadDialog = { stateSetters.setShowWhoReadDialog(true) },
+      onDismissEditDialog = {
+        stateSetters.setShowEditDialog(false)
+        stateSetters.setSelectedMessage(null)
+      },
+      onDismissDeleteDialog = {
+        stateSetters.setShowDeleteDialog(false)
+        stateSetters.setSelectedMessage(null)
+      },
+      onDismissWhoReadDialog = {
+        stateSetters.setShowWhoReadDialog(false)
+        stateSetters.setSelectedMessage(null)
+      })
+}
+
+/** Callbacks for message interactions in the message list. */
+private data class MessageCallbacks(
+    val onLongPress: (Message) -> Unit,
+    val onImageClick: (String) -> Unit,
+    val onLocationClick: (Location, String) -> Unit
+)
+
+/** Callbacks for poll interactions in the message list. */
+private data class PollCallbacks(
+    val onVote: (pollId: String, optionId: Int) -> Unit,
+    val onClosePoll: (pollId: String) -> Unit,
+    val onReopenPoll: (pollId: String) -> Unit,
+    val onDeletePoll: (pollId: String) -> Unit
+)
+
+/** Context data for rendering messages in the list. */
+private data class MessageRenderContext(
+    val currentUserId: String,
+    val senderProfiles: Map<String, Profile>,
+    val totalParticipants: Int,
+    val polls: List<Poll>,
+    val voterProfiles: Map<String, Profile>
+)
 
 /**
  * Displays the list of messages in a LazyColumn.
@@ -522,8 +691,25 @@ private fun ChatContent(
  * @param onImageClick Callback when an image message is clicked
  * @param onLocationClick Callback when a location message is clicked
  * @param chatColor The chat color for the date headers (matches topbar)
+ * @param polls List of polls for this conversation
+ * @param voterProfiles Map of voter IDs to their profiles
+ * @param onVote Callback when a user votes on a poll option
+ * @param onClosePoll Callback when a poll is closed
+ * @param onReopenPoll Callback when a poll is reopened
+ * @param onDeletePoll Callback when a poll is deleted
  * @param modifier Modifier for the LazyColumn
  */
+/** Finds the poll associated with a message if it's a poll message. */
+private fun findPollForMessage(message: Message, polls: List<Poll>): Poll? =
+    if (message.type == MessageType.POLL) polls.find { it.id == message.content } else null
+
+/** Gets the item key for a ChatListItem. */
+private fun getItemKey(item: ChatListItem): String =
+    when (item) {
+      is ChatListItem.MessageItem -> item.message.id
+      is ChatListItem.DateHeader -> "date_${item.timestamp}"
+    }
+
 @Composable
 private fun MessageList(
     messages: List<Message>,
@@ -535,9 +721,14 @@ private fun MessageList(
     onImageClick: (String) -> Unit,
     onLocationClick: (Location, String) -> Unit,
     chatColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    polls: List<Poll> = emptyList(),
+    voterProfiles: Map<String, Profile> = emptyMap(),
+    onVote: (pollId: String, optionId: Int) -> Unit = { _, _ -> },
+    onClosePoll: (pollId: String) -> Unit = {},
+    onReopenPoll: (pollId: String) -> Unit = {},
+    onDeletePoll: (pollId: String) -> Unit = {}
 ) {
-  // Group messages by date and insert date headers
   val listItems = remember(messages) { groupMessagesByDate(messages) }
 
   LazyColumn(
@@ -546,49 +737,93 @@ private fun MessageList(
       contentPadding = PaddingValues(Dimens.Padding.medium),
       verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
         if (messages.isEmpty()) {
-          item {
-            Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-              Text(
-                  text = stringResource(R.string.empty_chat_message),
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  textAlign = TextAlign.Center,
-                  modifier = Modifier.testTag(ChatScreenTestTags.EMPTY_MESSAGE))
-            }
-          }
+          item { EmptyMessagePlaceholder() }
         } else {
-          items(
-              listItems,
-              key = { item ->
-                when (item) {
-                  is ChatListItem.MessageItem -> item.message.id
-                  is ChatListItem.DateHeader -> "date_${item.timestamp}"
-                }
-              }) { item ->
-                when (item) {
-                  is ChatListItem.DateHeader -> {
-                    DateHeader(timestamp = item.timestamp, chatColor = chatColor)
-                  }
-                  is ChatListItem.MessageItem -> {
-                    val message = item.message
-                    // Get user-specific color for this message sender
-                    val userColors = getUserColor(message.senderId)
-                    MessageItem(
-                        message = message,
-                        isCurrentUser = message.senderId == currentUserId,
-                        senderPhotoUrl = senderProfiles[message.senderId]?.photoUrl,
-                        currentUserPhotoUrl = senderProfiles[currentUserId]?.photoUrl,
-                        bubbleColor = userColors.first,
-                        onBubbleColor = userColors.second,
-                        totalUsersInChat = totalParticipants,
-                        onLongPress = { onMessageLongPress(message) },
+          items(listItems, key = ::getItemKey) { item ->
+            RenderChatListItem(
+                item = item,
+                chatColor = chatColor,
+                context =
+                    MessageRenderContext(
+                        currentUserId = currentUserId,
+                        senderProfiles = senderProfiles,
+                        totalParticipants = totalParticipants,
+                        polls = polls,
+                        voterProfiles = voterProfiles),
+                messageCallbacks =
+                    MessageCallbacks(
+                        onLongPress = onMessageLongPress,
                         onImageClick = onImageClick,
-                        onLocationClick = onLocationClick)
-                  }
-                }
-              }
+                        onLocationClick = onLocationClick),
+                pollCallbacks =
+                    PollCallbacks(
+                        onVote = onVote,
+                        onClosePoll = onClosePoll,
+                        onReopenPoll = onReopenPoll,
+                        onDeletePoll = onDeletePoll))
+          }
         }
       }
+}
+
+@Composable
+private fun EmptyMessagePlaceholder() {
+  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Text(
+        text = stringResource(R.string.empty_chat_message),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.testTag(ChatScreenTestTags.EMPTY_MESSAGE))
+  }
+}
+
+@Composable
+private fun RenderChatListItem(
+    item: ChatListItem,
+    chatColor: Color,
+    context: MessageRenderContext,
+    messageCallbacks: MessageCallbacks,
+    pollCallbacks: PollCallbacks
+) {
+  when (item) {
+    is ChatListItem.DateHeader -> DateHeader(timestamp = item.timestamp, chatColor = chatColor)
+    is ChatListItem.MessageItem ->
+        RenderMessageItem(
+            message = item.message,
+            context = context,
+            messageCallbacks = messageCallbacks,
+            pollCallbacks = pollCallbacks)
+  }
+}
+
+@Composable
+private fun RenderMessageItem(
+    message: Message,
+    context: MessageRenderContext,
+    messageCallbacks: MessageCallbacks,
+    pollCallbacks: PollCallbacks
+) {
+  val userColors = getUserColor(message.senderId)
+  val poll = findPollForMessage(message, context.polls)
+  MessageItem(
+      message = message,
+      isCurrentUser = message.senderId == context.currentUserId,
+      currentUserId = context.currentUserId,
+      senderPhotoUrl = context.senderProfiles[message.senderId]?.photoUrl,
+      currentUserPhotoUrl = context.senderProfiles[context.currentUserId]?.photoUrl,
+      bubbleColor = userColors.first,
+      onBubbleColor = userColors.second,
+      totalUsersInChat = context.totalParticipants,
+      onLongPress = { messageCallbacks.onLongPress(message) },
+      onImageClick = messageCallbacks.onImageClick,
+      onLocationClick = messageCallbacks.onLocationClick,
+      poll = poll,
+      voterProfiles = context.voterProfiles,
+      onVote = { optionId -> poll?.id?.let { pollCallbacks.onVote(it, optionId) } },
+      onClosePoll = { poll?.id?.let { pollCallbacks.onClosePoll(it) } },
+      onReopenPoll = { poll?.id?.let { pollCallbacks.onReopenPoll(it) } },
+      onDeletePoll = { poll?.id?.let { pollCallbacks.onDeletePoll(it) } })
 }
 
 /**
@@ -643,9 +878,10 @@ private fun DateHeader(timestamp: Long, chatColor: Color) {
       modifier = Modifier.fillMaxWidth().padding(vertical = Dimens.Spacing.medium),
       contentAlignment = Alignment.Center) {
         // Horizontal divider line
-        androidx.compose.material3.Divider(
+        androidx.compose.material3.HorizontalDivider(
             modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.Padding.large),
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+            color =
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = ChatConstants.DIVIDER_ALPHA),
             thickness = Dimens.BorderWidth.thin)
 
         // Date text centered on white background
@@ -772,7 +1008,7 @@ private fun MessageContent(
     Text(
         text = message.content,
         style = MaterialTheme.typography.bodySmall,
-        color = onBubbleColor.copy(alpha = 0.9f),
+        color = onBubbleColor.copy(alpha = ChatConstants.SYSTEM_MESSAGE_ALPHA),
         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
   } else {
     if (!isCurrentUser) {
@@ -780,7 +1016,7 @@ private fun MessageContent(
           text = message.senderName,
           style = MaterialTheme.typography.labelSmall,
           fontWeight = FontWeight.Bold,
-          color = onBubbleColor.copy(alpha = 0.8f))
+          color = onBubbleColor.copy(alpha = ChatConstants.SECONDARY_ALPHA))
       Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
     }
 
@@ -884,12 +1120,19 @@ private fun ReadReceiptIcon(message: Message, onBubbleColor: Color, totalUsersIn
  * @param onLongPress Callback invoked when the message is long-pressed
  * @param onImageClick Callback invoked when an image message is clicked for full-screen view
  * @param onLocationClick Callback invoked when a location message is clicked
+ * @param poll The poll object if this is a poll message
+ * @param voterProfiles Map of voter IDs to their profiles for displaying voter info
+ * @param onVote Callback when user votes on a poll option
+ * @param onClosePoll Callback when poll is closed
+ * @param onReopenPoll Callback when poll is reopened
+ * @param onDeletePoll Callback when poll is deleted
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MessageItem(
     message: Message,
     isCurrentUser: Boolean,
+    currentUserId: String,
     senderPhotoUrl: String? = null,
     currentUserPhotoUrl: String? = null,
     bubbleColor: Color,
@@ -897,8 +1140,33 @@ private fun MessageItem(
     totalUsersInChat: Int = 0,
     onLongPress: () -> Unit = {},
     onImageClick: (String) -> Unit = {},
-    onLocationClick: (Location, String) -> Unit = { _, _ -> }
+    onLocationClick: (Location, String) -> Unit = { _, _ -> },
+    poll: Poll? = null,
+    voterProfiles: Map<String, Profile> = emptyMap(),
+    onVote: (optionId: Int) -> Unit = {},
+    onClosePoll: () -> Unit = {},
+    onReopenPoll: () -> Unit = {},
+    onDeletePoll: () -> Unit = {}
 ) {
+  // For poll messages, render PollCard instead of regular message bubble
+  if (message.type == MessageType.POLL && poll != null) {
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(horizontal = Dimens.Padding.small)
+                .testTag(ChatScreenTestTags.getTestTagForMessage(message.id))) {
+          PollCard(
+              poll = poll,
+              currentUserId = currentUserId,
+              voterProfiles = voterProfiles,
+              onVote = onVote,
+              onClosePoll = onClosePoll,
+              onReopenPoll = onReopenPoll,
+              onDeletePoll = onDeletePoll)
+        }
+    return
+  }
+
   val horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
 
   Row(
@@ -1074,7 +1342,8 @@ private fun ChatImageMessage(imageUrl: String, bubbleColor: Color, onClick: () -
               Box(
                   modifier =
                       Modifier.widthIn(max = Dimens.Chat.messageBubbleMaxWidth)
-                          .height(Dimens.Chat.messageBubbleMaxWidth * 0.75f)
+                          .height(
+                              Dimens.Chat.messageBubbleMaxWidth * ChatConstants.IMAGE_ASPECT_RATIO)
                           .testTag(ChatScreenTestTags.CHAT_IMAGE_LOADING), // 4:3 aspect ratio
                   contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = bubbleColor)
@@ -1085,7 +1354,8 @@ private fun ChatImageMessage(imageUrl: String, bubbleColor: Color, onClick: () -
               Box(
                   modifier =
                       Modifier.widthIn(max = Dimens.Chat.messageBubbleMaxWidth)
-                          .height(Dimens.Chat.messageBubbleMaxWidth * 0.75f)
+                          .height(
+                              Dimens.Chat.messageBubbleMaxWidth * ChatConstants.IMAGE_ASPECT_RATIO)
                           .clip(RoundedCornerShape(Dimens.CornerRadius.medium))
                           .background(MaterialTheme.colorScheme.errorContainer)
                           .testTag(ChatScreenTestTags.CHAT_IMAGE_ERROR),
@@ -1127,7 +1397,9 @@ private fun MessageInput(
     onSendButtonColor: Color,
     viewModel: ChatViewModel,
     currentUserName: String,
-    isUploadingImage: Boolean
+    isUploadingImage: Boolean,
+    pollViewModel: PollViewModel? = null,
+    onPollClick: () -> Unit = {}
 ) {
   var showAttachmentMenu by remember { mutableStateOf(false) }
 
@@ -1170,7 +1442,7 @@ private fun MessageInput(
                 },
                 shape = RoundedCornerShape(Dimens.CornerRadius.pill),
                 colors = MaterialTheme.customColors.outlinedTextField(),
-                maxLines = 4)
+                maxLines = ChatConstants.MAX_INPUT_LINES)
 
             // Dynamic send button (right) - disabled appearance when no text
             if (text.isEmpty()) {
@@ -1212,32 +1484,34 @@ private fun MessageInput(
     AttachmentMenu(
         onDismiss = { showAttachmentMenu = false },
         viewModel = viewModel,
-        currentUserName = currentUserName)
+        currentUserName = currentUserName,
+        onPollClick = if (pollViewModel != null) onPollClick else null)
   }
 }
 
 /**
  * Bottom sheet menu for attachment options.
  *
- * Displays three options in a horizontal row:
+ * Displays attachment options in a horizontal row:
  * - Photo: For taking photos or selecting from gallery (opens dialog to choose)
  * - Location: For sharing current location (shows preview before sending)
- * - Poll: For creating polls (not yet implemented)
+ * - Poll: For creating polls (only shown in group/event chats when onPollClick is provided)
  *
  * @param onDismiss Callback when the menu should be dismissed
  * @param viewModel ChatViewModel for handling image uploads and location messages
  * @param currentUserName The display name of the current user for image messages
+ * @param onPollClick Optional callback for creating polls (only available in group/event chats)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AttachmentMenu(
     onDismiss: () -> Unit,
     viewModel: ChatViewModel,
-    currentUserName: String
+    currentUserName: String,
+    onPollClick: (() -> Unit)? = null
 ) {
   val sheetState = rememberModalBottomSheetState()
   val context = LocalContext.current
-  val notImplementedMsg = stringResource(R.string.not_yet_implemented)
 
   // State to hold the camera image URI
   var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -1308,16 +1582,17 @@ private fun AttachmentMenu(
                 },
                 modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_LOCATION))
 
-            // Poll option
-            // TODO (#363): Implement poll creation
-            AttachmentOption(
-                icon = Icons.Default.BarChart,
-                label = stringResource(R.string.poll),
-                onClick = {
-                  Toast.makeText(context, notImplementedMsg, Toast.LENGTH_SHORT).show()
-                  onDismiss()
-                },
-                modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_POLL))
+            // Poll option (only shown in group/event chats)
+            onPollClick?.let { pollClick ->
+              AttachmentOption(
+                  icon = Icons.Default.Poll,
+                  label = stringResource(R.string.poll),
+                  onClick = {
+                    pollClick()
+                    onDismiss()
+                  },
+                  modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_POLL))
+            }
           }
 
           Spacer(modifier = Modifier.height(Dimens.Padding.large))
@@ -1330,7 +1605,7 @@ private fun AttachmentMenu(
         onDismiss = { showPhotoSourceDialog = false },
         onGalleryClick = {
           showPhotoSourceDialog = false
-          imagePickerLauncher.launch("image/*")
+          imagePickerLauncher.launch(ChatConstants.IMAGE_MIME_TYPE)
         },
         onCameraClick = {
           showPhotoSourceDialog = false
@@ -1438,99 +1713,6 @@ internal fun LocationPreviewDialog(
 }
 
 /**
- * Dialog for choosing photo source (Gallery or Camera).
- *
- * @param onDismiss Callback when dialog is dismissed
- * @param onGalleryClick Callback when gallery option is selected
- * @param onCameraClick Callback when camera option is selected
- */
-@Composable
-private fun PhotoSourceDialog(
-    onDismiss: () -> Unit,
-    onGalleryClick: () -> Unit,
-    onCameraClick: () -> Unit
-) {
-  AlertDialog(
-      onDismissRequest = onDismiss,
-      title = { Text(text = stringResource(R.string.choose_photo_source)) },
-      text = {
-        Column(modifier = Modifier.fillMaxWidth()) {
-          // Gallery option
-          TextButton(
-              onClick = onGalleryClick,
-              modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_GALLERY)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start) {
-                      Icon(
-                          imageVector = Icons.Default.Image,
-                          contentDescription = stringResource(R.string.gallery),
-                          modifier = Modifier.padding(end = Dimens.Padding.medium))
-                      Text(text = stringResource(R.string.gallery))
-                    }
-              }
-
-          // Camera option
-          TextButton(
-              onClick = onCameraClick,
-              modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_CAMERA)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start) {
-                      Icon(
-                          imageVector = Icons.Default.CameraAlt,
-                          contentDescription = stringResource(R.string.camera),
-                          modifier = Modifier.padding(end = Dimens.Padding.medium))
-                      Text(text = stringResource(R.string.camera))
-                    }
-              }
-        }
-      },
-      confirmButton = {},
-      dismissButton = {
-        TextButton(onClick = onDismiss) { Text(text = stringResource(R.string.cancel)) }
-      },
-      modifier = Modifier.testTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG))
-}
-
-/**
- * Individual attachment option with icon and label.
- *
- * @param icon The icon to display
- * @param label The text label below the icon
- * @param onClick Callback when the option is clicked
- * @param modifier Modifier for the component
- */
-@Composable
-private fun AttachmentOption(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-  Column(
-      modifier = modifier.clickable(onClick = onClick).padding(Dimens.Padding.medium),
-      horizontalAlignment = Alignment.CenterHorizontally) {
-        // Icon
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(Dimens.IconSize.large))
-
-        Spacer(modifier = Modifier.height(Dimens.Spacing.small))
-
-        // Label
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface)
-      }
-}
-
-/**
  * Dialog for editing a message.
  *
  * @param message The message to edit
@@ -1556,7 +1738,7 @@ private fun EditMessageDialog(
             modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.EDIT_MESSAGE_INPUT),
             placeholder = { Text(stringResource(R.string.edit_message_placeholder)) },
             colors = MaterialTheme.customColors.outlinedTextField(),
-            maxLines = 4)
+            maxLines = ChatConstants.MAX_INPUT_LINES)
       },
       confirmButton = {
         Button(
@@ -1791,12 +1973,90 @@ private fun MessageContextMenu(
 }
 
 /**
- * Formats a Unix timestamp into a readable time string.
+ * Individual attachment option with icon and label.
  *
- * @param timestamp Unix timestamp in milliseconds
- * @return Formatted time string (e.g., "14:32")
+ * @param icon The icon to display
+ * @param label The text label below the icon
+ * @param onClick Callback when the option is clicked
+ * @param modifier Modifier for the component
  */
-private fun formatTimestamp(timestamp: Long): String {
-  val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-  return dateFormat.format(Date(timestamp))
+@Composable
+private fun AttachmentOption(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Column(
+      modifier = modifier.clickable(onClick = onClick).padding(Dimens.Padding.medium),
+      horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(Dimens.IconSize.large))
+
+        Spacer(modifier = Modifier.height(Dimens.Spacing.small))
+
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface)
+      }
+}
+
+/**
+ * Dialog for choosing photo source (Gallery or Camera).
+ *
+ * @param onDismiss Callback when dialog is dismissed
+ * @param onGalleryClick Callback when gallery option is selected
+ * @param onCameraClick Callback when camera option is selected
+ */
+@Composable
+private fun PhotoSourceDialog(
+    onDismiss: () -> Unit,
+    onGalleryClick: () -> Unit,
+    onCameraClick: () -> Unit
+) {
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      modifier = Modifier.testTag(ChatScreenTestTags.PHOTO_SOURCE_DIALOG),
+      title = { Text(text = stringResource(R.string.choose_photo_source)) },
+      text = {
+        Column(modifier = Modifier.fillMaxWidth()) {
+          // Gallery option
+          TextButton(
+              onClick = onGalleryClick,
+              modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_GALLERY)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
+                      Icon(
+                          imageVector = Icons.Default.Image,
+                          contentDescription = stringResource(R.string.gallery))
+                      Text(text = stringResource(R.string.gallery))
+                    }
+              }
+
+          // Camera option
+          TextButton(
+              onClick = onCameraClick,
+              modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.PHOTO_SOURCE_CAMERA)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
+                      Icon(
+                          imageVector = Icons.Default.CameraAlt,
+                          contentDescription = stringResource(R.string.camera))
+                      Text(text = stringResource(R.string.camera))
+                    }
+              }
+        }
+      },
+      confirmButton = {},
+      dismissButton = {
+        TextButton(onClick = onDismiss) { Text(text = stringResource(R.string.cancel)) }
+      })
 }

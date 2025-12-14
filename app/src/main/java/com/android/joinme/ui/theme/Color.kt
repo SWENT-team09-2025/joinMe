@@ -117,6 +117,10 @@ val onChatDefaultDark = onPrimaryContainerDark
 
 val TransparentColor = Color.Transparent
 
+// Online/Offline status indicator colors
+val onlineIndicator = Color(0xFF4CAF50) // Green
+val offlineIndicator = Color(0xFFF44336) // Red
+
 // Leaderboard badge colors
 val goldLight = Color(0xFFFFD700)
 val goldDark = Color(0xFFFFD700)
