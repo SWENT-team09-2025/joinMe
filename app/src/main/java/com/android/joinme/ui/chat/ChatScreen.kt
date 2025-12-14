@@ -543,14 +543,11 @@ private fun ChatContent(
                 showWhoReadDialog = showWhoReadDialog),
         callbacks =
             createDialogCallbacks(
-                onDismissContextMenu = { selectedMessage = null },
-                onShowEditDialog = { showEditDialog = true },
-                onShowDeleteDialog = { showDeleteDialog = true },
-                onShowWhoReadDialog = { showWhoReadDialog = true },
-                onClearSelectedMessage = { selectedMessage = null },
-                onEditDialogDismiss = { showEditDialog = false },
-                onDeleteDialogDismiss = { showDeleteDialog = false },
-                onWhoReadDialogDismiss = { showWhoReadDialog = false }),
+                DialogStateSetters(
+                    setShowEditDialog = { showEditDialog = it },
+                    setShowDeleteDialog = { showDeleteDialog = it },
+                    setShowWhoReadDialog = { showWhoReadDialog = it },
+                    setSelectedMessage = { selectedMessage = it })),
         viewModel = viewModel)
 
     fullScreenImageUrl?.let { imageUrl ->
@@ -597,33 +594,39 @@ private fun PollCreationOverlay(
   }
 }
 
+/**
+ * State setters for dialog visibility.
+ *
+ * @property setShowEditDialog Setter for edit dialog visibility
+ * @property setShowDeleteDialog Setter for delete dialog visibility
+ * @property setShowWhoReadDialog Setter for "who read" dialog visibility
+ * @property setSelectedMessage Setter for selected message (null to clear)
+ */
+private data class DialogStateSetters(
+    val setShowEditDialog: (Boolean) -> Unit,
+    val setShowDeleteDialog: (Boolean) -> Unit,
+    val setShowWhoReadDialog: (Boolean) -> Unit,
+    val setSelectedMessage: (Message?) -> Unit
+)
+
 /** Creates dialog callbacks with consistent dismiss behavior. */
-private fun createDialogCallbacks(
-    onDismissContextMenu: () -> Unit,
-    onShowEditDialog: () -> Unit,
-    onShowDeleteDialog: () -> Unit,
-    onShowWhoReadDialog: () -> Unit,
-    onClearSelectedMessage: () -> Unit,
-    onEditDialogDismiss: () -> Unit,
-    onDeleteDialogDismiss: () -> Unit,
-    onWhoReadDialogDismiss: () -> Unit
-): DialogCallbacks {
+private fun createDialogCallbacks(stateSetters: DialogStateSetters): DialogCallbacks {
   return DialogCallbacks(
-      onDismissContextMenu = onDismissContextMenu,
-      onShowEditDialog = onShowEditDialog,
-      onShowDeleteDialog = onShowDeleteDialog,
-      onShowWhoReadDialog = onShowWhoReadDialog,
+      onDismissContextMenu = { stateSetters.setSelectedMessage(null) },
+      onShowEditDialog = { stateSetters.setShowEditDialog(true) },
+      onShowDeleteDialog = { stateSetters.setShowDeleteDialog(true) },
+      onShowWhoReadDialog = { stateSetters.setShowWhoReadDialog(true) },
       onDismissEditDialog = {
-        onEditDialogDismiss()
-        onClearSelectedMessage()
+        stateSetters.setShowEditDialog(false)
+        stateSetters.setSelectedMessage(null)
       },
       onDismissDeleteDialog = {
-        onDeleteDialogDismiss()
-        onClearSelectedMessage()
+        stateSetters.setShowDeleteDialog(false)
+        stateSetters.setSelectedMessage(null)
       },
       onDismissWhoReadDialog = {
-        onWhoReadDialogDismiss()
-        onClearSelectedMessage()
+        stateSetters.setShowWhoReadDialog(false)
+        stateSetters.setSelectedMessage(null)
       })
 }
 

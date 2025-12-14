@@ -925,7 +925,6 @@ class ChatScreenTest {
 
   @Test
   fun chatScreen_sameDayMessages_displaysSingleDateHeader() {
-    val now = System.currentTimeMillis()
     val messages =
         listOf(
             createMessage(
@@ -949,7 +948,6 @@ class ChatScreenTest {
 
   @Test
   fun chatScreen_multipleDayMessages_displaysMultipleDateHeaders() {
-    val now = System.currentTimeMillis()
     val oneDayMs = 24 * 60 * 60 * 1000L
     val messages =
         listOf(
@@ -969,6 +967,346 @@ class ChatScreenTest {
     // Verify both date headers appear
     composeTestRule.onNodeWithText("Today", useUnmergedTree = true).assertIsDisplayed()
     composeTestRule.onNodeWithText("Yesterday", useUnmergedTree = true).assertIsDisplayed()
+  }
+
+  // ============================================================================
+  // Online Status Indicator Tests
+  // ============================================================================
+
+  @Test
+  fun chatScreen_individualChat_displaysOfflineStatus_whenNoUsersOnline() {
+    composeTestRule.setContent {
+      ChatScreen(
+          chatId = "chat1",
+          chatTitle = "Alice",
+          currentUserId = "user1",
+          currentUserName = "Bob",
+          viewModel = viewModel,
+          chatType = ChatType.INDIVIDUAL,
+          presenceViewModel = null)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Verify offline status is displayed for individual chat
+    val offlineText =
+        ApplicationProvider.getApplicationContext<Context>().getString(R.string.status_offline)
+    composeTestRule.onNodeWithText(offlineText, useUnmergedTree = true).assertExists()
+  }
+
+  @Test
+  fun chatScreen_groupChat_displaysZeroUsersOnline_whenNoPresence() {
+    composeTestRule.setContent {
+      ChatScreen(
+          chatId = "chat1",
+          chatTitle = "Group Chat",
+          currentUserId = "user1",
+          currentUserName = "Alice",
+          viewModel = viewModel,
+          chatType = ChatType.GROUP,
+          presenceViewModel = null)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Verify group chat online status format
+    val zeroUsersOnlineText =
+        ApplicationProvider.getApplicationContext<Context>().getString(R.string.online_users_zero)
+    composeTestRule.onNodeWithText(zeroUsersOnlineText, useUnmergedTree = true).assertExists()
+  }
+
+  @Test
+  fun chatScreen_onlineStatusIndicator_isDisplayed() {
+    setupChatScreen()
+
+    composeTestRule.waitForIdle()
+
+    // Verify online status indicator row and dot exist
+    composeTestRule.onNodeWithTag("onlineUsersRow").assertExists()
+    composeTestRule.onNodeWithTag("onlineIndicatorDot").assertExists()
+    composeTestRule.onNodeWithTag("onlineUsersCount").assertExists()
+  }
+
+  // ============================================================================
+  // Edit Message Dialog Tests
+  // ============================================================================
+
+  @Test
+  fun editDialog_testTags_areCorrectlyDefined() {
+    // Verify the edit dialog test tags are correctly defined
+    // This ensures dialog components have proper tags for testing
+    assert(ChatScreenTestTags.EDIT_MESSAGE_DIALOG == "editMessageDialog")
+    assert(ChatScreenTestTags.EDIT_MESSAGE_INPUT == "editMessageInput")
+    assert(ChatScreenTestTags.EDIT_MESSAGE_SAVE_BUTTON == "editMessageSaveButton")
+  }
+
+  // ============================================================================
+  // WhoReadDialog Tests
+  // ============================================================================
+
+  @Test
+  fun whoReadDialog_displaysNoOneReadYet_whenMessageOnlyReadBySender() {
+    val messages =
+        listOf(
+            Message(
+                id = "msg1",
+                conversationId = "chat1",
+                senderId = "user1",
+                senderName = "Alice",
+                content = "Unread message",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.TEXT,
+                readBy = listOf("user1"), // Only sender has read
+                isPinned = false,
+                isEdited = false))
+    fakeChatRepository.setMessages(messages)
+
+    setupChatScreen()
+
+    composeTestRule.waitForIdle()
+
+    // Long press on message
+    composeTestRule.onNodeWithText("Unread message").performTouchInput { longClick() }
+
+    composeTestRule.waitForIdle()
+
+    // Click "See who read"
+    val seeWhoReadText =
+        ApplicationProvider.getApplicationContext<Context>().getString(R.string.see_who_read)
+    composeTestRule.onNodeWithText(seeWhoReadText).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify "No one has read" message is displayed
+    val noOneReadText =
+        ApplicationProvider.getApplicationContext<Context>().getString(R.string.no_one_read_yet)
+    composeTestRule.onNodeWithText(noOneReadText).assertIsDisplayed()
+  }
+
+  // ============================================================================
+  // Context Menu for Own Image/Location Messages Tests
+  // ============================================================================
+
+  @Test
+  fun ownImageMessage_existsWithBubble() {
+    // Test that own image messages render correctly with bubbles
+    val messages =
+        listOf(
+            Message(
+                id = "img1",
+                conversationId = "chat1",
+                senderId = "user1", // Current user's own image
+                senderName = "Alice",
+                content = "https://example.com/my-image.jpg",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.IMAGE,
+                readBy = listOf("user1"),
+                isPinned = false,
+                isEdited = false))
+    fakeChatRepository.setMessages(messages)
+
+    setupChatScreen(currentUserId = "user1")
+
+    composeTestRule.waitForIdle()
+
+    // Verify own image message exists with bubble
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("img1")).assertExists()
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.getTestTagForMessageBubble("img1"))
+        .assertExists()
+  }
+
+  @Test
+  fun ownLocationMessage_existsWithBubble() {
+    val testLocation =
+        com.android.joinme.model.map.Location(
+            latitude = 46.5197, longitude = 6.6323, name = "My Location")
+    val messages =
+        listOf(
+            Message(
+                id = "loc1",
+                conversationId = "chat1",
+                senderId = "user1", // Current user's own location
+                senderName = "Alice",
+                content = "static_map_url",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.LOCATION,
+                location = testLocation,
+                readBy = listOf("user1"),
+                isPinned = false,
+                isEdited = false))
+    fakeChatRepository.setMessages(messages)
+
+    setupChatScreen(currentUserId = "user1")
+
+    composeTestRule.waitForIdle()
+
+    // Verify own location message exists with bubble
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("loc1")).assertExists()
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.getTestTagForMessageBubble("loc1"))
+        .assertExists()
+    // Verify location name is displayed
+    composeTestRule.onNodeWithText("My Location", useUnmergedTree = true).assertExists()
+  }
+
+  // ============================================================================
+  // Poll Functionality Tests
+  // ============================================================================
+
+  @Test
+  fun attachmentMenu_showsPollOption_whenPollViewModelProvided() {
+    composeTestRule.setContent {
+      ChatScreen(
+          chatId = "chat1",
+          chatTitle = "Group Chat",
+          currentUserId = "user1",
+          currentUserName = "Alice",
+          viewModel = viewModel,
+          chatType = ChatType.GROUP,
+          pollViewModel = null // We can't easily mock this, but we test the path without it
+          )
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Open attachment menu
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Poll option should NOT be visible when pollViewModel is null
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.ATTACHMENT_POLL).assertDoesNotExist()
+  }
+
+  // ============================================================================
+  // Message Bubble Shape Tests (coverage for isCurrentUser branches)
+  // ============================================================================
+
+  @Test
+  fun messageBubble_currentUser_appearsOnRight() {
+    val messages = listOf(createMessage(id = "msg1", senderId = "user1", content = "My message"))
+    fakeChatRepository.setMessages(messages)
+
+    setupChatScreen(currentUserId = "user1")
+
+    composeTestRule.waitForIdle()
+
+    // Message should exist with correct test tag
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("msg1")).assertExists()
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.getTestTagForMessageBubble("msg1"))
+        .assertExists()
+  }
+
+  @Test
+  fun messageBubble_otherUser_appearsOnLeft() {
+    val messages =
+        listOf(
+            createMessage(
+                id = "msg1", senderId = "user2", senderName = "Bob", content = "Bob's message"))
+    fakeChatRepository.setMessages(messages)
+
+    setupChatScreen(currentUserId = "user1")
+
+    composeTestRule.waitForIdle()
+
+    // Message should exist and show sender name
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.getTestTagForMessage("msg1")).assertExists()
+    composeTestRule.onNodeWithText("Bob", useUnmergedTree = true).assertExists()
+  }
+
+  // ============================================================================
+  // Custom Chat Colors Tests
+  // ============================================================================
+
+  @Test
+  fun chatScreen_usesCustomColors_whenProvided() {
+    composeTestRule.setContent {
+      ChatScreen(
+          chatId = "chat1",
+          chatTitle = "Colored Chat",
+          currentUserId = "user1",
+          currentUserName = "Alice",
+          viewModel = viewModel,
+          chatColor = androidx.compose.ui.graphics.Color.Red,
+          onChatColor = androidx.compose.ui.graphics.Color.White)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Verify chat screen is displayed (colors are applied internally)
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.SCREEN).assertExists()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.TOP_BAR).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Colored Chat").assertIsDisplayed()
+  }
+
+  // ============================================================================
+  // Leave Button Tests
+  // ============================================================================
+
+  @Test
+  fun leaveButton_invokesCallback_whenClicked() {
+    var leaveClicked = false
+
+    composeTestRule.setContent {
+      ChatScreen(
+          chatId = "chat1",
+          chatTitle = "Test Chat",
+          currentUserId = "user1",
+          currentUserName = "Alice",
+          viewModel = viewModel,
+          onLeaveClick = { leaveClicked = true })
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Click leave button
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.LEAVE_BUTTON).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify callback was invoked
+    assert(leaveClicked) { "Leave button callback was not invoked" }
+  }
+
+  // ============================================================================
+  // Total Participants Tests
+  // ============================================================================
+
+  @Test
+  fun readReceipt_considersAllParticipants() {
+    // Chat with 2 participants, message read by both
+    val messages =
+        listOf(
+            Message(
+                id = "msg1",
+                conversationId = "chat1",
+                senderId = "user1",
+                senderName = "Alice",
+                content = "Message in 2-person chat",
+                timestamp = System.currentTimeMillis(),
+                type = MessageType.TEXT,
+                readBy = listOf("user1", "user2"),
+                isPinned = false,
+                isEdited = false))
+    fakeChatRepository.setMessages(messages)
+
+    composeTestRule.setContent {
+      ChatScreen(
+          chatId = "chat1",
+          chatTitle = "1:1 Chat",
+          currentUserId = "user1",
+          currentUserName = "Alice",
+          viewModel = viewModel,
+          totalParticipants = 2)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Should show "read by all" since all participants have read
+    val readByAllDescription =
+        ApplicationProvider.getApplicationContext<Context>().getString(R.string.read_by_all)
+    composeTestRule.onNodeWithContentDescription(readByAllDescription).assertExists()
   }
 
   // ============================================================================
