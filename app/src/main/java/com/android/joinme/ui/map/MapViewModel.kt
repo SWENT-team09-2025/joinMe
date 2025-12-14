@@ -131,7 +131,7 @@ class MapViewModel(
         }
 
     // Apply filters from FilterRepository
-    val filteredEvents = filterRepository.applyFilters(allEvents, currentUserId)
+    val filteredEvents = filterRepository.applyFiltersToEvents(allEvents, currentUserId)
     val filteredSeries = filterRepository.applyFiltersToSeries(allSeries, allEvents, currentUserId)
 
     // Remove events that are part of a series

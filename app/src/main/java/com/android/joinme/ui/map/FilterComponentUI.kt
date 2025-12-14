@@ -95,7 +95,8 @@ fun FilterBottomSheet(
 
               Row(
                   modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small)) {
+                  horizontalArrangement =
+                      Arrangement.spacedBy(Dimens.Spacing.small, Alignment.CenterHorizontally)) {
                     FilterChipConstructor(
                         name = stringResource(R.string.social_type),
                         filterState = filterState.isSocialSelected,

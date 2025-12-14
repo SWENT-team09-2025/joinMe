@@ -125,7 +125,7 @@ class FilteredEventsRepository(
           ""
         }
 
-    val filteredEvents = filterRepository.applyFilters(allEvents, currentUserId)
+    val filteredEvents = filterRepository.applyFiltersToEvents(allEvents, currentUserId)
     val filteredSeries = filterRepository.applyFiltersToSeries(allSeries, allEvents, currentUserId)
 
     _filteredEvents.value = filteredEvents
