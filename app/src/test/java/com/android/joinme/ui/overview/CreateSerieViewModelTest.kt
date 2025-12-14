@@ -5,6 +5,7 @@ import android.net.Uri
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.groups.streaks.StreakService
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SerieFilter
 import com.android.joinme.model.serie.SeriesRepository
@@ -12,10 +13,14 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.auth
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import io.mockk.unmockkObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -1235,5 +1240,88 @@ class CreateSerieViewModelTest {
     assertNotEquals(serieId1, serieId2)
     assertEquals(1, repo.added.size) // Only the new serie
     assertEquals("group-1", repo.added.first().groupId)
+  }
+
+  /** --- STREAK UPDATE TESTS --- */
+  @Test
+  fun createSerie_withGroup_updatesOnlyCreatorStreak() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityJoined(any(), any(), any()) } returns Unit
+
+    // Setup group with multiple members
+    val group =
+        Group(
+            id = "group-1",
+            name = "Test Group",
+            category = EventType.SPORTS,
+            ownerId = "test-user-id",
+            memberIds = listOf("test-user-id", "member-2", "member-3"),
+            serieIds = emptyList())
+    groupRepo.groups.add(group)
+
+    vm.loadUserGroups()
+    advanceUntilIdle()
+
+    vm.setSelectedGroup("group-1")
+    advanceUntilIdle()
+    vm.setTitle("Weekly Soccer")
+    vm.setDescription("Weekly games")
+    vm.setDate("25/12/2025")
+    vm.setTime("18:00")
+    vm.setMaxParticipants("20")
+
+    val serieId = vm.createSerie()
+    advanceUntilIdle()
+
+    assertNotNull(serieId)
+
+    // Verify streak was updated ONLY for the creator, not for other group members
+    coVerify(exactly = 1) { StreakService.onActivityJoined("group-1", "test-user-id", any()) }
+    coVerify(exactly = 0) { StreakService.onActivityJoined(any(), "member-2", any()) }
+    coVerify(exactly = 0) { StreakService.onActivityJoined(any(), "member-3", any()) }
+
+    unmockkObject(StreakService)
+  }
+
+  @Test
+  fun createSerie_streakUpdateFails_rollsBackSerieAndGroup() = runTest {
+    mockkObject(StreakService)
+    coEvery { StreakService.onActivityJoined(any(), any(), any()) } throws
+        RuntimeException("Streak error")
+
+    val group =
+        Group(
+            id = "group-1",
+            name = "Test Group",
+            category = EventType.SPORTS,
+            ownerId = "test-user-id",
+            memberIds = listOf("test-user-id"),
+            serieIds = emptyList())
+    groupRepo.groups.add(group)
+
+    vm.loadUserGroups()
+    advanceUntilIdle()
+
+    vm.setSelectedGroup("group-1")
+    advanceUntilIdle()
+    vm.setTitle("Weekly Soccer")
+    vm.setDescription("Weekly games")
+    vm.setDate("25/12/2025")
+    vm.setTime("18:00")
+    vm.setMaxParticipants("20")
+
+    val serieId = vm.createSerie()
+    advanceUntilIdle()
+
+    // Serie creation should fail
+    assertNull(serieId)
+    assertTrue(repo.added.isEmpty())
+    assertNotNull(vm.uiState.value.errorMsg)
+
+    // Group should be rolled back (serie removed from serieIds)
+    val groupAfter = groupRepo.groups.first()
+    assertTrue(groupAfter.serieIds.isEmpty())
+
+    unmockkObject(StreakService)
   }
 }
