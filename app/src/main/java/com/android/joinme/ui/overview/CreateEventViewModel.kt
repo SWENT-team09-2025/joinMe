@@ -289,8 +289,8 @@ class CreateEventViewModel(
       return false
     }
 
-    // C. Update Streaks (for group events)
-    if (group != null && !updateStreaks(group, date)) {
+    // C. Update Streak for creator (for group events)
+    if (group != null && !updateCreatorStreak(group.id, event.ownerId, date)) {
       // Return false to trigger rollback in the orchestrator
       return false
     }
@@ -329,19 +329,27 @@ class CreateEventViewModel(
   }
 
   /**
-   * Updates streaks for all group members.
+   * Updates the streak for the event creator.
    *
-   * @return `true` if all streak updates succeeded; `false` if any failed.
+   * Only the creator's streak is updated at creation time since group events are opt-in: other
+   * members join later and their streaks are updated in ShowEventViewModel.
+   *
+   * @param groupId The group ID for the streak.
+   * @param creatorId The user ID of the event creator.
+   * @param date The event date.
+   * @return `true` if the streak update succeeded; `false` if it failed.
    */
-  private suspend fun updateStreaks(group: Group, date: Timestamp): Boolean {
+  private suspend fun updateCreatorStreak(
+      groupId: String,
+      creatorId: String,
+      date: Timestamp
+  ): Boolean {
     return try {
-      for (memberId in group.memberIds) {
-        StreakService.onActivityJoined(group.id, memberId, date)
-      }
+      StreakService.onActivityJoined(groupId, creatorId, date)
       true
     } catch (e: Exception) {
-      Log.e("CreateEventViewModel", "Error updating streaks", e)
-      setErrorMsg("Failed to update streaks. Cannot create event: ${e.message}")
+      Log.e("CreateEventViewModel", "Error updating streak for creator $creatorId", e)
+      setErrorMsg("Failed to update streak. Cannot create event: ${e.message}")
       false
     }
   }
