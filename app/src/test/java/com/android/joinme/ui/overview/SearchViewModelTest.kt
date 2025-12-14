@@ -63,7 +63,6 @@ class SearchViewModelTest {
     assertFalse(filterState.isSocialSelected)
     assertFalse(filterState.isActivitySelected)
     assertFalse(filterState.isSportSelected)
-    assertEquals(4, filterState.sportCategories.size)
     assertTrue(uiState.eventItems.isEmpty())
   }
 

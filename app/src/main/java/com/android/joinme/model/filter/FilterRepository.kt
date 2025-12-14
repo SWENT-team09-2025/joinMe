@@ -3,19 +3,9 @@ package com.android.joinme.model.filter
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.serie.Serie
-import com.android.joinme.model.sport.Sports
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-
-/**
- * Represents a sport category that can be filtered.
- *
- * @property id Unique identifier for the sport
- * @property name Display name of the sport
- * @property isChecked Whether the sport category is currently selected
- */
-data class SportCategory(val id: String, val name: String, val isChecked: Boolean = false)
 
 /**
  * Represents the current state of event filters.
@@ -23,30 +13,19 @@ data class SportCategory(val id: String, val name: String, val isChecked: Boolea
  * @property isSocialSelected Whether the Social event type filter is selected
  * @property isActivitySelected Whether the Activity event type filter is selected
  * @property isSportSelected Whether the Sport event type filter is selected
- * @property sportCategories List of sport categories with their selection states
  * @property showMyEvents Whether to show events owned by the current user (Map only)
  * @property showJoinedEvents Whether to show events the user participates in but doesn't own (Map
  *   only)
  * @property showOtherEvents Whether to show public events the user hasn't joined (Map only)
- * @property selectedSportsCount Computed property returning the count of selected sports
- * @property isSelectAllChecked Computed property indicating if all sports are selected
  */
 data class FilterState(
     val isSocialSelected: Boolean = false,
     val isActivitySelected: Boolean = false,
     val isSportSelected: Boolean = false,
-    val sportCategories: List<SportCategory> =
-        Sports.ALL.map { SportCategory(it.id, it.name, isChecked = false) },
     val showMyEvents: Boolean = false,
     val showJoinedEvents: Boolean = false,
     val showOtherEvents: Boolean = false
-) {
-  val selectedSportsCount: Int
-    get() = sportCategories.count { it.isChecked }
-
-  val isSelectAllChecked: Boolean
-    get() = sportCategories.all { it.isChecked }
-}
+)
 
 /**
  * Repository for managing event filter state across the application.
@@ -85,31 +64,6 @@ object FilterRepository {
     val state = _filterState.value
     val newSportSelected = !state.isSportSelected
     _filterState.value = state.copy(isSportSelected = newSportSelected)
-  }
-
-  /** Toggles the "Select All" sports filter. */
-  fun toggleSelectAll() {
-    val state = _filterState.value
-    val newSelectAllChecked = !state.isSelectAllChecked
-    _filterState.value =
-        state.copy(
-            sportCategories =
-                state.sportCategories.map { it.copy(isChecked = newSelectAllChecked) })
-  }
-
-  /**
-   * Toggles a specific sport filter by ID.
-   *
-   * @param sportId The unique identifier of the sport to toggle
-   */
-  fun toggleSport(sportId: String) {
-    val state = _filterState.value
-    val updatedSports =
-        state.sportCategories.map { sport ->
-          if (sport.id == sportId) sport.copy(isChecked = !sport.isChecked) else sport
-        }
-
-    _filterState.value = state.copy(sportCategories = updatedSports)
   }
 
   /** Toggles the "My Events" participation filter (Map only). */
@@ -163,20 +117,13 @@ object FilterRepository {
     val allowedTypes = mutableListOf<EventType>()
     if (state.isSocialSelected) allowedTypes.add(EventType.SOCIAL)
     if (state.isActivitySelected) allowedTypes.add(EventType.ACTIVITY)
-
-    // Add SPORTS if sport filter is selected
-    if (state.isSportSelected) {
-      allowedTypes.add(EventType.SPORTS)
-    }
+    if (state.isSportSelected) allowedTypes.add(EventType.SPORTS)
 
     // If no type filters are selected, return all events (default behavior)
     if (allowedTypes.isEmpty()) return events
 
     // Filter by event type
     val filteredEvents = events.filter { it.type in allowedTypes }
-
-    // TODO: Add sport-specific filtering when sport metadata is added to Event model
-    // For now, all SPORTS events pass through if sport is selected
 
     return filteredEvents
   }
@@ -241,9 +188,7 @@ object FilterRepository {
     val allowedTypes = mutableListOf<EventType>()
     if (state.isSocialSelected) allowedTypes.add(EventType.SOCIAL)
     if (state.isActivitySelected) allowedTypes.add(EventType.ACTIVITY)
-    if (state.isSportSelected) {
-      allowedTypes.add(EventType.SPORTS)
-    }
+    if (state.isSportSelected) allowedTypes.add(EventType.SPORTS)
 
     // If no type filters are selected, return all series (default behavior)
     if (allowedTypes.isEmpty()) return series

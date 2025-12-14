@@ -222,8 +222,7 @@ private fun hasActiveFilters(filterState: FilterState): Boolean {
       filterState.isSportSelected ||
       filterState.showMyEvents ||
       filterState.showJoinedEvents ||
-      filterState.showOtherEvents ||
-      filterState.sportCategories.any { it.isChecked }
+      filterState.showOtherEvents
 }
 
 /** Requests location permissions if not already granted. */
