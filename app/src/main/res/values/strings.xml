@@ -257,4 +257,24 @@
     <!-- Activity Group Screen -->
     <string name="group_activities_title">%1$s Activities</string>
     <string name="group_activities_default">Group Activities</string>
+
+    <!-- MainActivity Errors -->
+    <string name="error_series_id_null">Serie ID is null</string>
+    <string name="error_event_id_null">Event UID is null</string>
+    <string name="error_user_id_null">UserId is null</string>
+    <string name="error_group_id_null">Group ID is null</string>
+    <string name="error_chat_id_or_title_null">Chat ID or title is null</string>
+    <string name="error_series_or_event_id_null">Serie ID or Event ID is null</string>
+    <string name="error_failed_access_group">Failed to access group: %1$s</string>
+    <string name="success_left_group">Left group successfully</string>
+    <string name="success_deleted_group">Group deleted successfully</string>
+    <string name="toast_viewing_location">Viewing location: %1$s</string>
+
+    <!-- Notification Channel -->
+    <string name="notification_channel_id">event_notifications</string>
+    <string name="notification_channel_name">Event Notifications</string>
+    <string name="notification_channel_description">Notifications for upcoming events</string>
+
+    <!-- Notification Types -->
+    <string name="notification_type_new_follower">new_follower</string>
 </resources>
