@@ -359,7 +359,6 @@ private fun ChatTopBar(
             verticalAlignment = Alignment.CenterVertically) {
               // Title and online status column
               Column(modifier = Modifier.weight(1f)) {
-                // Title
                 Text(
                     text = chatTitle,
                     style = MaterialTheme.typography.titleMedium,
@@ -367,44 +366,12 @@ private fun ChatTopBar(
                     color = onTopBarColor,
                     modifier = Modifier.testTag(ChatScreenTestTags.TITLE))
 
-                // Online users count with indicator dot (always displayed)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.extraSmall),
-                    modifier = Modifier.testTag("onlineUsersRow")) {
-                      // Colored indicator dot
-                      Box(
-                          modifier =
-                              Modifier.size(Dimens.Spacing.small)
-                                  .background(
-                                      color =
-                                          if (onlineUsersCount > 0) onlineIndicator
-                                          else offlineIndicator,
-                                      shape = CircleShape)
-                                  .testTag("onlineIndicatorDot"))
-
-                      // Display text based on chat type
-                      val statusText =
-                          when (chatType) {
-                            ChatType.INDIVIDUAL ->
-                                if (onlineUsersCount > 0) stringResource(R.string.status_online)
-                                else stringResource(R.string.status_offline)
-                            ChatType.GROUP ->
-                                when (onlineUsersCount) {
-                                  0 -> stringResource(R.string.online_users_zero)
-                                  1 -> stringResource(R.string.online_users_one)
-                                  else ->
-                                      stringResource(R.string.online_users_many, onlineUsersCount)
-                                }
-                          }
-                      Text(
-                          text = statusText,
-                          style = MaterialTheme.typography.bodySmall,
-                          color = onTopBarColor.copy(alpha = 0.8f),
-                          modifier = Modifier.testTag("onlineUsersCount"))
-                    }
+                OnlineStatusIndicator(
+                    onlineUsersCount = onlineUsersCount,
+                    chatType = chatType,
+                    textColor = onTopBarColor.copy(alpha = 0.8f))
               }
-              // Leave button - background color matches top bar
+              // Leave button
               IconButton(
                   onClick = onLeaveClick,
                   modifier =
@@ -419,6 +386,61 @@ private fun ChatTopBar(
                   }
             }
       }
+}
+
+/**
+ * Online status indicator with colored dot and status text.
+ *
+ * @param onlineUsersCount Number of users currently online
+ * @param chatType Type of chat determining status text format
+ * @param textColor Color for the status text
+ */
+@Composable
+private fun OnlineStatusIndicator(onlineUsersCount: Int, chatType: ChatType, textColor: Color) {
+  val isOnline = onlineUsersCount > 0
+  val indicatorColor = if (isOnline) onlineIndicator else offlineIndicator
+  val statusText = getStatusText(chatType, onlineUsersCount)
+
+  Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.extraSmall),
+      modifier = Modifier.testTag("onlineUsersRow")) {
+        Box(
+            modifier =
+                Modifier.size(Dimens.Spacing.small)
+                    .background(color = indicatorColor, shape = CircleShape)
+                    .testTag("onlineIndicatorDot"))
+
+        Text(
+            text = statusText,
+            style = MaterialTheme.typography.bodySmall,
+            color = textColor,
+            modifier = Modifier.testTag("onlineUsersCount"))
+      }
+}
+
+/** Returns the appropriate status text based on chat type and online user count. */
+@Composable
+private fun getStatusText(chatType: ChatType, onlineUsersCount: Int): String {
+  return when (chatType) {
+    ChatType.INDIVIDUAL -> getIndividualStatusText(onlineUsersCount > 0)
+    ChatType.GROUP -> getGroupStatusText(onlineUsersCount)
+  }
+}
+
+@Composable
+private fun getIndividualStatusText(isOnline: Boolean): String {
+  return if (isOnline) stringResource(R.string.status_online)
+  else stringResource(R.string.status_offline)
+}
+
+@Composable
+private fun getGroupStatusText(count: Int): String {
+  return when (count) {
+    0 -> stringResource(R.string.online_users_zero)
+    1 -> stringResource(R.string.online_users_one)
+    else -> stringResource(R.string.online_users_many, count)
+  }
 }
 
 /**
@@ -460,81 +482,56 @@ private fun ChatContent(
   var showDeleteDialog by remember { mutableStateOf(false) }
   var showWhoReadDialog by remember { mutableStateOf(false) }
   var fullScreenImageUrl by remember { mutableStateOf<String?>(null) }
-
-  // Poll state
   var showPollCreation by remember { mutableStateOf(false) }
 
-  // Auto-scroll to bottom when new messages arrive
-  LaunchedEffect(messages.size) {
-    if (messages.isNotEmpty()) {
-      listState.animateScrollToItem(messages.size - 1)
-    }
-  }
+  // Auto-scroll and mark messages as read
+  ChatContentEffects(messages, listState, viewModel)
 
-  // Mark all messages as read when chat is opened or new messages arrive
-  LaunchedEffect(messages.size) {
-    if (messages.isNotEmpty()) {
-      viewModel.markAllMessagesAsRead()
-    }
-  }
+  val blurModifier =
+      if (selectedMessage != null) Modifier.blur(Dimens.Profile.photoBlurRadius * 2) else Modifier
 
   Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-    Column(
-        modifier =
-            Modifier.fillMaxSize()
-                .then(
-                    if (selectedMessage != null) Modifier.blur(Dimens.Profile.photoBlurRadius * 2)
-                    else Modifier)) {
-          // Messages list
-          MessageList(
-              messages = messages,
-              currentUserId = currentUserId,
-              senderProfiles = senderProfiles,
-              totalParticipants = totalParticipants,
-              listState = listState,
-              onMessageLongPress = { message ->
-                // Only show context menu if there are items to display
-                val isCurrentUser = message.senderId == currentUserId
-                // Location and Image messages: only delete and see who read
-                val hasMenuItems = message.type == MessageType.TEXT || isCurrentUser
-                if (hasMenuItems) {
-                  selectedMessage = message
-                }
-              },
-              onImageClick = { imageUrl -> fullScreenImageUrl = imageUrl },
-              onLocationClick = { location, senderId -> onNavigateToMap(location, senderId) },
-              chatColor = chatColor,
-              modifier = Modifier.weight(1f))
+    Column(modifier = Modifier.fillMaxSize().then(blurModifier)) {
+      MessageList(
+          messages = messages,
+          currentUserId = currentUserId,
+          senderProfiles = senderProfiles,
+          totalParticipants = totalParticipants,
+          listState = listState,
+          onMessageLongPress = { message ->
+            if (shouldShowContextMenu(message, currentUserId)) {
+              selectedMessage = message
+            }
+          },
+          onImageClick = { imageUrl -> fullScreenImageUrl = imageUrl },
+          onLocationClick = { location, senderId -> onNavigateToMap(location, senderId) },
+          chatColor = chatColor,
+          modifier = Modifier.weight(1f))
 
-          // Message input
-          MessageInput(
-              text = messageText,
-              onTextChange = { messageText = it },
-              onSendClick = {
-                if (messageText.isNotBlank()) {
-                  onSendMessage(messageText)
-                  messageText = ""
-                }
-              },
-              sendButtonColor = chatColor,
-              onSendButtonColor = onChatColor,
-              viewModel = viewModel,
-              currentUserName = currentUserName,
-              isUploadingImage = uiState.isUploadingImage,
-              pollViewModel = pollViewModel,
-              onPollClick = { showPollCreation = true })
-        }
-
-    // Poll creation sheet
-    if (showPollCreation && pollViewModel != null) {
-      PollCreationSheet(
-          viewModel = pollViewModel,
-          creatorName = currentUserName,
-          onDismiss = { showPollCreation = false },
-          onPollCreated = { showPollCreation = false })
+      MessageInput(
+          text = messageText,
+          onTextChange = { messageText = it },
+          onSendClick = {
+            if (messageText.isNotBlank()) {
+              onSendMessage(messageText)
+              messageText = ""
+            }
+          },
+          sendButtonColor = chatColor,
+          onSendButtonColor = onChatColor,
+          viewModel = viewModel,
+          currentUserName = currentUserName,
+          isUploadingImage = uiState.isUploadingImage,
+          pollViewModel = pollViewModel,
+          onPollClick = { showPollCreation = true })
     }
 
-    // Message interaction overlays
+    PollCreationOverlay(
+        showPollCreation = showPollCreation,
+        pollViewModel = pollViewModel,
+        creatorName = currentUserName,
+        onDismiss = { showPollCreation = false })
+
     MessageInteractionOverlays(
         selectedMessage = selectedMessage,
         currentUserId = currentUserId,
@@ -545,30 +542,89 @@ private fun ChatContent(
                 showDeleteDialog = showDeleteDialog,
                 showWhoReadDialog = showWhoReadDialog),
         callbacks =
-            DialogCallbacks(
+            createDialogCallbacks(
                 onDismissContextMenu = { selectedMessage = null },
                 onShowEditDialog = { showEditDialog = true },
                 onShowDeleteDialog = { showDeleteDialog = true },
                 onShowWhoReadDialog = { showWhoReadDialog = true },
-                onDismissEditDialog = {
-                  showEditDialog = false
-                  selectedMessage = null
-                },
-                onDismissDeleteDialog = {
-                  showDeleteDialog = false
-                  selectedMessage = null
-                },
-                onDismissWhoReadDialog = {
-                  showWhoReadDialog = false
-                  selectedMessage = null
-                }),
+                onClearSelectedMessage = { selectedMessage = null },
+                onEditDialogDismiss = { showEditDialog = false },
+                onDeleteDialogDismiss = { showDeleteDialog = false },
+                onWhoReadDialogDismiss = { showWhoReadDialog = false }),
         viewModel = viewModel)
 
-    // Full-screen image viewer
     fullScreenImageUrl?.let { imageUrl ->
       FullScreenImageViewer(imageUrl = imageUrl, onDismiss = { fullScreenImageUrl = null })
     }
   }
+}
+
+/** Handles auto-scroll and message read marking side effects. */
+@Composable
+private fun ChatContentEffects(
+    messages: List<Message>,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    viewModel: ChatViewModel
+) {
+  LaunchedEffect(messages.size) {
+    if (messages.isNotEmpty()) {
+      listState.animateScrollToItem(messages.size - 1)
+      viewModel.markAllMessagesAsRead()
+    }
+  }
+}
+
+/** Determines if context menu should be shown for a message. */
+private fun shouldShowContextMenu(message: Message, currentUserId: String): Boolean {
+  val isCurrentUser = message.senderId == currentUserId
+  return message.type == MessageType.TEXT || isCurrentUser
+}
+
+/** Displays poll creation sheet if conditions are met. */
+@Composable
+private fun PollCreationOverlay(
+    showPollCreation: Boolean,
+    pollViewModel: PollViewModel?,
+    creatorName: String,
+    onDismiss: () -> Unit
+) {
+  if (showPollCreation && pollViewModel != null) {
+    PollCreationSheet(
+        viewModel = pollViewModel,
+        creatorName = creatorName,
+        onDismiss = onDismiss,
+        onPollCreated = onDismiss)
+  }
+}
+
+/** Creates dialog callbacks with consistent dismiss behavior. */
+private fun createDialogCallbacks(
+    onDismissContextMenu: () -> Unit,
+    onShowEditDialog: () -> Unit,
+    onShowDeleteDialog: () -> Unit,
+    onShowWhoReadDialog: () -> Unit,
+    onClearSelectedMessage: () -> Unit,
+    onEditDialogDismiss: () -> Unit,
+    onDeleteDialogDismiss: () -> Unit,
+    onWhoReadDialogDismiss: () -> Unit
+): DialogCallbacks {
+  return DialogCallbacks(
+      onDismissContextMenu = onDismissContextMenu,
+      onShowEditDialog = onShowEditDialog,
+      onShowDeleteDialog = onShowDeleteDialog,
+      onShowWhoReadDialog = onShowWhoReadDialog,
+      onDismissEditDialog = {
+        onEditDialogDismiss()
+        onClearSelectedMessage()
+      },
+      onDismissDeleteDialog = {
+        onDeleteDialogDismiss()
+        onClearSelectedMessage()
+      },
+      onDismissWhoReadDialog = {
+        onWhoReadDialogDismiss()
+        onClearSelectedMessage()
+      })
 }
 
 /**
