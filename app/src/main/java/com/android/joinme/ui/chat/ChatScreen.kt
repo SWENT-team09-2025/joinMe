@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Poll
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -95,6 +96,8 @@ import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
 import com.android.joinme.ui.theme.getUserColor
+import com.android.joinme.ui.theme.offlineIndicator
+import com.android.joinme.ui.theme.onlineIndicator
 import com.android.joinme.ui.theme.outlinedTextField
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -121,9 +124,6 @@ enum class ChatType {
 
 /** Shared constants for chat screens. */
 private object ChatConstants {
-  const val SENDER_NAME_ALPHA = 0.8f
-  const val TIMESTAMP_ALPHA = 0.7f
-  const val MESSAGE_INPUT_MAX_LINES = 4
   const val TIMESTAMP_FORMAT = "HH:mm"
 }
 
@@ -167,7 +167,6 @@ object ChatScreenTestTags {
   const val MESSAGE_LIST = "messageList"
   const val MESSAGE_INPUT = "messageInput"
   const val SEND_BUTTON = "sendButton"
-  const val MIC_BUTTON = "micButton"
   const val ATTACHMENT_BUTTON = "attachmentButton"
   const val ATTACHMENT_MENU = "attachmentMenu"
   const val ATTACHMENT_PHOTO = "attachmentPhoto"
@@ -273,6 +272,11 @@ fun ChatScreen(
     presenceViewModel?.initialize(chatId, currentUserId)
   }
 
+  // Initialize poll tracking when screen loads (for group/event chats)
+  LaunchedEffect(chatId, currentUserId, pollViewModel) {
+    pollViewModel?.initialize(chatId, currentUserId)
+  }
+
   // Show error messages in snackbar
   LaunchedEffect(uiState.errorMsg) {
     uiState.errorMsg?.let { errorMsg ->
@@ -344,10 +348,6 @@ private fun ChatTopBar(
     onlineUsersCount: Int = 0,
     chatType: ChatType = ChatType.INDIVIDUAL
 ) {
-  // Define colors for the online indicator dot
-  val onlineIndicatorColor = Color(0xFF4CAF50) // Green
-  val offlineIndicatorColor = Color(0xFFF44336) // Red
-
   Surface(
       modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.TOP_BAR),
       color = topBarColor,
@@ -378,8 +378,8 @@ private fun ChatTopBar(
                               Modifier.size(Dimens.Spacing.small)
                                   .background(
                                       color =
-                                          if (onlineUsersCount > 0) onlineIndicatorColor
-                                          else offlineIndicatorColor,
+                                          if (onlineUsersCount > 0) onlineIndicator
+                                          else offlineIndicator,
                                       shape = CircleShape)
                                   .testTag("onlineIndicatorDot"))
 
@@ -461,6 +461,9 @@ private fun ChatContent(
   var showWhoReadDialog by remember { mutableStateOf(false) }
   var fullScreenImageUrl by remember { mutableStateOf<String?>(null) }
 
+  // Poll state
+  var showPollCreation by remember { mutableStateOf(false) }
+
   // Auto-scroll to bottom when new messages arrive
   LaunchedEffect(messages.size) {
     if (messages.isNotEmpty()) {
@@ -517,8 +520,19 @@ private fun ChatContent(
               onSendButtonColor = onChatColor,
               viewModel = viewModel,
               currentUserName = currentUserName,
-              isUploadingImage = uiState.isUploadingImage)
+              isUploadingImage = uiState.isUploadingImage,
+              pollViewModel = pollViewModel,
+              onPollClick = { showPollCreation = true })
         }
+
+    // Poll creation sheet
+    if (showPollCreation && pollViewModel != null) {
+      PollCreationSheet(
+          viewModel = pollViewModel,
+          creatorName = currentUserName,
+          onDismiss = { showPollCreation = false },
+          onPollCreated = { showPollCreation = false })
+    }
 
     // Message interaction overlays
     MessageInteractionOverlays(
@@ -1174,7 +1188,9 @@ private fun MessageInput(
     onSendButtonColor: Color,
     viewModel: ChatViewModel,
     currentUserName: String,
-    isUploadingImage: Boolean
+    isUploadingImage: Boolean,
+    pollViewModel: PollViewModel? = null,
+    onPollClick: () -> Unit = {}
 ) {
   var showAttachmentMenu by remember { mutableStateOf(false) }
 
@@ -1259,29 +1275,31 @@ private fun MessageInput(
     AttachmentMenu(
         onDismiss = { showAttachmentMenu = false },
         viewModel = viewModel,
-        currentUserName = currentUserName)
+        currentUserName = currentUserName,
+        onPollClick = if (pollViewModel != null) onPollClick else null)
   }
 }
 
 /**
  * Bottom sheet menu for attachment options.
  *
- * Displays two options in a horizontal row:
+ * Displays attachment options in a horizontal row:
  * - Photo: For taking photos or selecting from gallery (opens dialog to choose)
  * - Location: For sharing current location (shows preview before sending)
- *
- * Note: Polls are only available in group/event chats via ChatScreenWithPolls.
+ * - Poll: For creating polls (only shown in group/event chats when onPollClick is provided)
  *
  * @param onDismiss Callback when the menu should be dismissed
  * @param viewModel ChatViewModel for handling image uploads and location messages
  * @param currentUserName The display name of the current user for image messages
+ * @param onPollClick Optional callback for creating polls (only available in group/event chats)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AttachmentMenu(
     onDismiss: () -> Unit,
     viewModel: ChatViewModel,
-    currentUserName: String
+    currentUserName: String,
+    onPollClick: (() -> Unit)? = null
 ) {
   val sheetState = rememberModalBottomSheetState()
   val context = LocalContext.current
@@ -1354,6 +1372,18 @@ private fun AttachmentMenu(
                           android.Manifest.permission.ACCESS_COARSE_LOCATION))
                 },
                 modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_LOCATION))
+
+            // Poll option (only shown in group/event chats)
+            onPollClick?.let { pollClick ->
+              AttachmentOption(
+                  icon = Icons.Default.Poll,
+                  label = stringResource(R.string.poll),
+                  onClick = {
+                    pollClick()
+                    onDismiss()
+                  },
+                  modifier = Modifier.testTag(ChatScreenTestTags.ATTACHMENT_POLL))
+            }
           }
 
           Spacer(modifier = Modifier.height(Dimens.Padding.large))
