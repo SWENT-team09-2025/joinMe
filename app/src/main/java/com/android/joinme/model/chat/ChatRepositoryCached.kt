@@ -8,13 +8,11 @@ import com.android.joinme.model.database.toEntity
 import com.android.joinme.model.database.toMessage
 import com.android.joinme.model.event.OfflineException
 import com.android.joinme.network.NetworkMonitor
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
 
 /**
  * Cached implementation of ChatRepository. Implements online-first read strategy with offline
@@ -23,7 +21,8 @@ import kotlinx.coroutines.withTimeout
  * **Read Strategy:**
  * 1. Emit cached messages immediately for instant UI
  * 2. Switch between Firebase real-time updates and cache based on network connectivity
- * 3. Fall back to cache on timeout or network errors
+ * 3. Fall back to cache on network errors
+ * 4. Firebase listeners remain active indefinitely for real-time updates
  *
  * **Write Strategy:**
  * 1. Require network connectivity (throw OfflineException if offline)
@@ -42,8 +41,6 @@ class ChatRepositoryCached(
 
   companion object {
     private const val TAG = "ChatRepositoryCached"
-    /** Timeout for Firebase operations in milliseconds (3 seconds) */
-    private const val TIMEOUT_MS = 3000L
     private const val FIREBASE_ERROR_MSG = "Firebase operation failed, falling back to cache"
   }
 
@@ -58,8 +55,10 @@ class ChatRepositoryCached(
    * Flow behavior:
    * 1. When online: Subscribes to Firebase real-time updates and updates cache
    * 2. When offline: Emits cached messages
-   * 3. On timeout: Falls back to cache
+   * 3. On Firebase error: Falls back to cache
    * 4. On network transitions: Automatically switches between Firebase and cache
+   *
+   * Note: Firebase listeners are long-lived and remain active to receive real-time updates.
    *
    * @param conversationId The conversation ID to observe
    * @return Flow of message lists that updates based on network status
@@ -70,23 +69,19 @@ class ChatRepositoryCached(
         networkMonitor.observeNetworkStatus().collectLatest { isOnline ->
           if (isOnline) {
             // Online: Subscribe to real-time Firebase updates
+            // No timeout - Firebase listeners should remain active indefinitely
             try {
-              withTimeout(TIMEOUT_MS) {
-                realtimeDbRepo.observeMessagesForConversation(conversationId).collect { messages ->
-                  // Update cache in background
-                  launch { messageDao.insertMessages(messages.map { it.toEntity() }) }
-                  // Emit to UI
-                  send(messages)
-                }
+              realtimeDbRepo.observeMessagesForConversation(conversationId).collect { messages ->
+                // Update cache in background
+                launch { messageDao.insertMessages(messages.map { it.toEntity() }) }
+                // Emit to UI
+                send(messages)
               }
-            } catch (e: TimeoutCancellationException) {
-              Log.w(TAG, "Firebase timeout, falling back to cache", e)
-              // Timeout - fall back to cache
-              val fallbackMessages = messageDao.getMessagesForConversation(conversationId)
-              send(fallbackMessages.map { it.toMessage() })
             } catch (e: Exception) {
               Log.w(TAG, FIREBASE_ERROR_MSG, e)
-              // On error, continue showing cache (don't re-emit to avoid duplicates)
+              // On error, fall back to cache
+              val fallbackMessages = messageDao.getMessagesForConversation(conversationId)
+              send(fallbackMessages.map { it.toMessage() })
             }
           } else {
             // Offline - emit cached messages
