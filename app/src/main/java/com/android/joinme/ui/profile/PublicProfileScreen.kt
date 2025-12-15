@@ -77,7 +77,6 @@ object PublicProfileScreenTestTags {
   const val USERNAME = "publicProfileUsername"
   const val BIO = "publicProfileBio"
   const val INTERESTS_SECTION = "publicProfileInterestsSection"
-  const val EVENT_STREAKS_SECTION = "publicProfileEventStreaksSection"
   const val FOLLOW_BUTTON = "publicProfileFollowButton"
   const val MESSAGE_BUTTON = "publicProfileMessageButton"
   const val COMMON_EVENTS_TITLE = "publicProfileCommonEventsTitle"
@@ -100,7 +99,6 @@ object PublicProfileScreenTestTags {
  * This screen shows:
  * - User's profile information (photo, username, bio, interests)
  * - Stats (events joined, followers, following)
- * - Event streak (currently set to 0)
  * - Common events shared with the current user
  * - Common groups shared with the current user
  * - Follow and Message buttons (UI only, not yet functional)
@@ -253,7 +251,6 @@ private fun ProfileContent(
             onFollowClick = onFollowClick)
         InterestsSection(
             profile = profile, onMessageClick = onMessageClick, currentUserId = currentUserId)
-        EventStreaksSection(testTag = PublicProfileScreenTestTags.EVENT_STREAKS_SECTION)
         CommonEventsAndGroupsSection(
             commonEvents = commonEvents,
             commonGroups = commonGroups,

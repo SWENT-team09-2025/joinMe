@@ -534,16 +534,6 @@ class ViewProfileScreenTest {
   }
 
   @Test
-  fun viewProfileScreen_displaysEventStreaksSection() = runTest {
-    val repo = FakeProfileRepository(createTestProfile())
-    val viewModel = ProfileViewModel(repo)
-
-    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
-
-    composeTestRule.onNodeWithTag(ViewProfileTestTags.EVENT_STREAKS_SECTION).assertIsDisplayed()
-  }
-
-  @Test
   fun viewProfileScreen_displaysCorrectStatsValues() = runTest {
     val profile =
         createTestProfile()
