@@ -93,7 +93,7 @@ internal fun GroupedItemRow(item: MapItem, onItemClick: (MapItem) -> Unit, conte
             containerColor = MaterialTheme.colorScheme.secondaryContainer) {
               Icon(
                   imageVector = Icons.Filled.Directions,
-                  contentDescription = "Directions",
+                  contentDescription = stringResource(R.string.directions),
                   modifier = Modifier.size(Dimens.Button.googleMapButtonIcon),
                   tint = MaterialTheme.colorScheme.onSecondaryContainer)
             }
@@ -118,7 +118,7 @@ internal fun GroupedItemRow(item: MapItem, onItemClick: (MapItem) -> Unit, conte
             containerColor = MaterialTheme.colorScheme.primaryContainer) {
               Icon(
                   imageVector = Icons.Filled.Map,
-                  contentDescription = "View in Maps",
+                  contentDescription = stringResource(R.string.view_on_map),
                   modifier = Modifier.size(Dimens.Button.googleMapButtonIcon),
                   tint = MaterialTheme.colorScheme.onPrimaryContainer)
             }

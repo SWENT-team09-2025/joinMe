@@ -25,7 +25,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.android.joinme.R
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.customColors
@@ -99,7 +101,7 @@ fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, 
                       color = MaterialTheme.customColors.onSerieContainer)
 
                   Text(
-                      text = "Serie 🔥",
+                      text = stringResource(R.string.serie_badge),
                       style = MaterialTheme.typography.bodySmall,
                       fontWeight = FontWeight.Medium,
                       color = MaterialTheme.customColors.onSerieContainer)
@@ -130,7 +132,7 @@ fun SerieCard(modifier: Modifier = Modifier, serie: Serie, onClick: () -> Unit, 
                 verticalAlignment = Alignment.CenterVertically) {
                   Icon(
                       imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                      contentDescription = "View serie details",
+                      contentDescription = stringResource(R.string.view_serie_details),
                       tint = MaterialTheme.colorScheme.onSurface)
                 }
           }

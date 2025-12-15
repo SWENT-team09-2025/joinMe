@@ -22,7 +22,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.android.joinme.R
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.event.getColor
 import com.android.joinme.model.event.getOnContainerColor
@@ -85,7 +87,10 @@ fun EventCard(modifier: Modifier = Modifier, event: Event, onClick: () -> Unit, 
               horizontalArrangement = Arrangement.SpaceBetween,
               verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Place : ${event.location?.name ?: "Unknown"}",
+                    text =
+                        stringResource(
+                            R.string.place_label,
+                            event.location?.name ?: stringResource(R.string.unknown)),
                     style = MaterialTheme.typography.bodySmall,
                     color = event.type.getOnContainerColor().copy(alpha = 0.9f),
                     maxLines = 3,
@@ -93,7 +98,7 @@ fun EventCard(modifier: Modifier = Modifier, event: Event, onClick: () -> Unit, 
                 Icon(
                     modifier = Modifier.size(Dimens.IconSize.medium),
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = "View event details",
+                    contentDescription = stringResource(R.string.view_event_details),
                     tint = MaterialTheme.colorScheme.onSurface)
               }
         }

@@ -8,7 +8,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.R
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.customColors
 import kotlinx.coroutines.launch
@@ -54,8 +56,8 @@ private fun GroupSelectionDropdown(
                 },
             onValueChange = {},
             readOnly = true,
-            label = { Text("Group") },
-            placeholder = { Text("Select group or standalone") },
+            label = { Text(stringResource(R.string.group_label)) },
+            placeholder = { Text(stringResource(R.string.select_group_or_standalone)) },
             trailingIcon = {
               ExposedDropdownMenuDefaults.TrailingIcon(expanded = showGroupDropdown)
             },
