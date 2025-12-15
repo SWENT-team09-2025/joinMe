@@ -161,6 +161,30 @@ class ChatRepositoryCachedTest {
     coVerify { mockMessageDao.getMessagesForConversation(testConversationId) }
   }
 
+  @Test
+  fun `observeMessagesForConversation falls back to cache when Firebase throws exception`() =
+      runTest {
+        // Given - online but Firebase will fail
+        val networkStatusFlow = flowOf(true) // Online
+        val cachedEntities = listOf(testMessage.toEntity(), testMessage2.toEntity())
+
+        every { mockNetworkMonitor.observeNetworkStatus() } returns networkStatusFlow
+        every { mockRealtimeDbRepo.observeMessagesForConversation(testConversationId) } returns
+            flow { throw RuntimeException("Firebase connection failed") }
+        coEvery { mockMessageDao.getMessagesForConversation(testConversationId) } returns
+            cachedEntities
+
+        // When
+        val result = cachedRepository.observeMessagesForConversation(testConversationId).first()
+
+        // Then - should fall back to cached messages
+        assertEquals(2, result.size)
+        assertEquals(testMessage.id, result[0].id)
+        assertEquals(testMessage2.id, result[1].id)
+        coVerify { mockMessageDao.getMessagesForConversation(testConversationId) }
+        coVerify(exactly = 0) { mockMessageDao.insertMessages(any()) }
+      }
+
   // ==================== addMessage Tests ====================
 
   @Test
