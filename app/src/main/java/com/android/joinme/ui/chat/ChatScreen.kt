@@ -498,8 +498,11 @@ private fun ChatContent(
   var fullScreenImageUrl by remember { mutableStateOf<String?>(null) }
   var showPollCreation by remember { mutableStateOf(false) }
 
+  // Group messages by date (includes date headers in the list)
+  val listItems = remember(messages) { groupMessagesByDate(messages) }
+
   // Auto-scroll and mark messages as read
-  ChatContentEffects(messages, listState, viewModel)
+  ChatContentEffects(listItems, listState, viewModel)
 
   val blurModifier =
       if (selectedMessage != null)
@@ -512,7 +515,7 @@ private fun ChatContent(
   Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
     Column(modifier = Modifier.fillMaxSize().then(blurModifier)) {
       MessageList(
-          messages = messages,
+          listItems = listItems,
           currentUserId = currentUserId,
           senderProfiles = senderProfiles,
           totalParticipants = totalParticipants,
@@ -584,13 +587,14 @@ private fun ChatContent(
 /** Handles auto-scroll and message read marking side effects. */
 @Composable
 private fun ChatContentEffects(
-    messages: List<Message>,
+    listItems: List<ChatListItem>,
     listState: androidx.compose.foundation.lazy.LazyListState,
     viewModel: ChatViewModel
 ) {
-  LaunchedEffect(messages.size) {
-    if (messages.isNotEmpty()) {
-      listState.animateScrollToItem(messages.size - 1)
+  LaunchedEffect(listItems.size) {
+    if (listItems.isNotEmpty()) {
+      // Scroll to the last item (which is the last message, after all date headers)
+      listState.animateScrollToItem(listItems.size - 1)
       viewModel.markAllMessagesAsRead()
     }
   }
@@ -682,7 +686,7 @@ private data class MessageRenderContext(
 /**
  * Displays the list of messages in a LazyColumn.
  *
- * @param messages The list of messages to display
+ * @param listItems The list of chat list items (messages + date headers) to display
  * @param currentUserId The ID of the current user
  * @param senderProfiles A map of sender IDs to their Profile objects
  * @param totalParticipants Total number of participants in the chat
@@ -712,7 +716,7 @@ private fun getItemKey(item: ChatListItem): String =
 
 @Composable
 private fun MessageList(
-    messages: List<Message>,
+    listItems: List<ChatListItem>,
     currentUserId: String,
     senderProfiles: Map<String, Profile>,
     totalParticipants: Int,
@@ -729,14 +733,13 @@ private fun MessageList(
     onReopenPoll: (pollId: String) -> Unit = {},
     onDeletePoll: (pollId: String) -> Unit = {}
 ) {
-  val listItems = remember(messages) { groupMessagesByDate(messages) }
 
   LazyColumn(
       modifier = modifier.fillMaxWidth().testTag(ChatScreenTestTags.MESSAGE_LIST),
       state = listState,
       contentPadding = PaddingValues(Dimens.Padding.medium),
       verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
-        if (messages.isEmpty()) {
+        if (listItems.isEmpty()) {
           item { EmptyMessagePlaceholder() }
         } else {
           items(listItems, key = ::getItemKey) { item ->
