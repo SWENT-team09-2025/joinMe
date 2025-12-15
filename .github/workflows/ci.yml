@@ -66,6 +66,20 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
+      # Get SHA-256 fingerprint of the release keystore
+      - name: Display SHA-256 fingerprint
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          echo "=========================================="
+          echo "SHA-256 Fingerprint of Release Keystore:"
+          echo "=========================================="
+          keytool -list -v -keystore ./release.keystore -alias $KEY_ALIAS -storepass $KEYSTORE_PASSWORD | grep "SHA256:" || true
+          echo "=========================================="
+          echo "Copy this SHA-256 and add it to your assetlinks.json file"
+          echo "=========================================="
+
       # Build the release APK
       - name: Build Release APK
         env:
