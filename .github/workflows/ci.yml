@@ -1,10 +1,10 @@
-name: M2 - Build Release APK
+name: M3 - Build Release APK
 
-# Run the workflow when commits are pushed to M2 branch
+# Run the workflow when commits are pushed to M3 branch
 on:
   push:
     branches:
-      - M2
+      - M3
 
 jobs:
   build-release-apk:
@@ -75,9 +75,9 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew assembleRelease --parallel --build-cache
 
-      # Upload the release APK as an artifact for M2 submission
-      - name: Upload M2 Release APK
+      # Upload the release APK as an artifact for M3 submission
+      - name: Upload M3 Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: joinMe-M2-release
+          name: joinMe-M3-release
           path: app/build/outputs/apk/release/app-release.apk
