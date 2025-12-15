@@ -1,6 +1,8 @@
 // Implemented with help of Claude AI
 package com.android.joinme.ui.groups
 
+import android.content.Context
+import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.core.app.ApplicationProvider
@@ -88,6 +90,24 @@ class CreateGroupScreenTest {
       val updatedMemberIds = group.memberIds + userId
       val updatedGroup = group.copy(memberIds = updatedMemberIds)
       editGroup(groupId, updatedGroup)
+    }
+
+    override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
+      if (userIds.isEmpty()) return emptyList()
+      return groups.filter { group -> userIds.all { userId -> group.memberIds.contains(userId) } }
+    }
+
+    override suspend fun uploadGroupPhoto(
+        context: Context,
+        groupId: String,
+        imageUri: Uri
+    ): String {
+      // Not needed for these tests
+      return "http://fakeurl.com/photo.jpg"
+    }
+
+    override suspend fun deleteGroupPhoto(groupId: String) {
+      // Not needed for these tests
     }
   }
 
@@ -377,5 +397,86 @@ class CreateGroupScreenTest {
     composeTestRule
         .onNodeWithTag(CreateGroupScreenTestTags.NAME_SUPPORTING_TEXT)
         .assertTextEquals("3-30 characters. Letters, numbers, spaces, or underscores only")
+  }
+
+  // ==========================================
+  // Group Photo Tests
+  // ==========================================
+
+  private fun setScreenContent() {
+    composeTestRule.setContent { CreateGroupScreen(viewModel = viewModel) }
+  }
+
+  private fun selectTestPhoto() {
+    viewModel.setPendingPhoto(Uri.parse("content://test/photo.jpg"))
+  }
+
+  private fun assertPlaceholderDisplayed() {
+    composeTestRule
+        .onNodeWithTag(GroupPhotoImageTestTags.GROUP_PHOTO_PLACEHOLDER)
+        .assertIsDisplayed()
+  }
+
+  private fun assertDeleteButtonExists(exists: Boolean) {
+    if (exists) {
+      composeTestRule
+          .onNodeWithTag(CreateGroupScreenTestTags.DELETE_PHOTO_BUTTON)
+          .assertIsDisplayed()
+          .assertHasClickAction()
+    } else {
+      composeTestRule
+          .onNodeWithTag(CreateGroupScreenTestTags.DELETE_PHOTO_BUTTON)
+          .assertDoesNotExist()
+    }
+  }
+
+  @Test
+  fun photoSection_initialState_showsPlaceholderAndEditButton_noDeleteButton() {
+    setScreenContent()
+
+    assertPlaceholderDisplayed()
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.EDIT_PHOTO_BUTTON)
+        .assertIsDisplayed()
+        .assertHasClickAction()
+    assertDeleteButtonExists(false)
+  }
+
+  @Test
+  fun photoSection_withSelectedPhoto_showsDeleteButton() {
+    selectTestPhoto()
+    setScreenContent()
+
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.GROUP_PICTURE).assertIsDisplayed()
+    assertDeleteButtonExists(true)
+  }
+
+  @Test
+  fun deletePhotoButton_click_clearsSelectionAndShowsPlaceholder() {
+    selectTestPhoto()
+    setScreenContent()
+
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.DELETE_PHOTO_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    assertDeleteButtonExists(false)
+    assertPlaceholderDisplayed()
+  }
+
+  @Test
+  fun formValidity_notAffectedByPhotoSelection() {
+    setScreenContent()
+
+    // Without photo, valid name enables save
+    composeTestRule
+        .onNodeWithTag(CreateGroupScreenTestTags.GROUP_NAME_TEXT_FIELD)
+        .performTextInput("Test Group")
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.SAVE_BUTTON).assertIsEnabled()
+
+    // Adding photo doesn't change validity
+    selectTestPhoto()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(CreateGroupScreenTestTags.SAVE_BUTTON).assertIsEnabled()
   }
 }

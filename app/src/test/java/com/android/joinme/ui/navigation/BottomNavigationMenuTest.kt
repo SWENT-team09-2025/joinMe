@@ -173,7 +173,7 @@ class BottomNavigationMenuTest {
     assert(Tab.Search.name == "Search")
     assert(Tab.Search.destination == Screen.Search)
     assert(Tab.Map.name == "Map")
-    assert(Tab.Map.destination == Screen.Map)
+    assert(Tab.Map.destination == Screen.Map())
     assert(Tab.Profile.name == "Profile")
     assert(Tab.Profile.destination == Screen.Profile)
   }

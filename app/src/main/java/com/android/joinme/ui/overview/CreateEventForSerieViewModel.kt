@@ -6,17 +6,20 @@ import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
 import com.android.joinme.model.event.EventsRepositoryProvider
+import com.android.joinme.model.groups.GroupRepository
+import com.android.joinme.model.groups.GroupRepositoryProvider
 import com.android.joinme.model.map.LocationRepository
 import com.android.joinme.model.map.NominatimLocationRepository
 import com.android.joinme.model.serie.Serie
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.google.firebase.Timestamp
+import java.time.Instant
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** Note: This file was refactored using IA (Claude) */
+/** Note: This file was co-written with AI (Claude) */
 
 /** Milliseconds per second conversion factor */
 private const val MILLIS_PER_SECOND = 1000L
@@ -45,9 +48,10 @@ private const val MILLIS_PER_MINUTE = SECONDS_PER_MINUTE * MILLIS_PER_SECOND
 class CreateEventForSerieViewModel(
     private val eventRepository: EventsRepository =
         EventsRepositoryProvider.getRepository(isOnline = true),
-    private val serieRepository: SeriesRepository = SeriesRepositoryProvider.repository,
+    serieRepository: SeriesRepository = SeriesRepositoryProvider.repository,
+    groupRepository: GroupRepository = GroupRepositoryProvider.repository,
     locationRepository: LocationRepository = NominatimLocationRepository(HttpClientProvider.client)
-) : BaseEventForSerieViewModel(locationRepository) {
+) : BaseEventForSerieViewModel(locationRepository, serieRepository, groupRepository) {
 
   override val _uiState = MutableStateFlow(EventForSerieFormState())
   val uiState: StateFlow<EventForSerieFormState> = _uiState.asStateFlow()
@@ -56,6 +60,17 @@ class CreateEventForSerieViewModel(
 
   override fun updateState(transform: (EventForSerieFormUIState) -> EventForSerieFormUIState) {
     _uiState.value = transform(_uiState.value) as EventForSerieFormState
+  }
+
+  /**
+   * Loads the serie information and updates the UI state.
+   *
+   * If the serie has a group, sets serieHasGroup to true and loads the group's event type.
+   *
+   * @param serieId The ID of the serie to load
+   */
+  suspend fun loadSerie(serieId: String) {
+    loadSerieAndCheckGroup(serieId)
   }
 
   /**
@@ -88,6 +103,21 @@ class CreateEventForSerieViewModel(
       // Load the serie
       val serie = serieRepository.getSerie(serieId)
 
+      // Determine the event type
+      // If serie has a group, use the group's category; otherwise use the user's selection
+      val eventType =
+          try {
+            if (serie.groupId != null) {
+              determineEventTypeFromGroup(serie)
+            } else {
+              EventType.valueOf(state.type.uppercase())
+            }
+          } catch (e: Exception) {
+            setErrorMsg("Failed to determine event type: ${e.message}")
+            _uiState.value = _uiState.value.copy(isLoading = false)
+            return false
+          }
+
       // Calculate the event date based on the serie's existing events
       val eventDate = calculateEventDate(serie)
 
@@ -96,7 +126,7 @@ class CreateEventForSerieViewModel(
       val event =
           Event(
               eventId = newEventId,
-              type = EventType.valueOf(state.type.uppercase()),
+              type = eventType,
               title = state.title,
               description = state.description,
               location = state.selectedLocation!!,
@@ -110,7 +140,8 @@ class CreateEventForSerieViewModel(
                     com.android.joinme.model.utils.Visibility.PRIVATE -> EventVisibility.PRIVATE
                   },
               ownerId = serie.ownerId, // Inherit from serie
-              isPartOfASerie = true // Mark as part of a serie
+              partOfASerie = true, // Mark as part of a serie
+              groupId = serie.groupId // Inherit groupId from serie
               )
 
       // Add the event to the repository
@@ -118,7 +149,8 @@ class CreateEventForSerieViewModel(
 
       // Calculate the end time of the new event
       val newEventEndTime = event.date.toDate().time + (event.duration * MILLIS_PER_MINUTE)
-      val newEventEndTimestamp = Timestamp(java.util.Date(newEventEndTime))
+      val instant = Instant.ofEpochMilli(newEventEndTime)
+      val newEventEndTimestamp = Timestamp(instant.epochSecond, instant.nano)
 
       // Update the serie to include the new event ID and update lastEventEndTime
       val updatedSerie =
@@ -153,11 +185,7 @@ class CreateEventForSerieViewModel(
     }
 
     // Get all events in the serie and find the last one
-    val allEvents =
-        eventRepository.getAllEvents(
-            com.android.joinme.model.event.EventFilter.EVENTS_FOR_OVERVIEW_SCREEN)
-    val serieEvents =
-        allEvents.filter { it.eventId in serie.eventIds }.sortedBy { it.date.toDate().time }
+    val serieEvents = eventRepository.getEventsByIds(serie.eventIds)
 
     if (serieEvents.isEmpty()) {
       // No events found, use the serie's date
@@ -167,7 +195,8 @@ class CreateEventForSerieViewModel(
     // Calculate when the last event ends
     val lastEvent = serieEvents.last()
     val lastEventEndTime = lastEvent.date.toDate().time + (lastEvent.duration * MILLIS_PER_MINUTE)
+    val instant = Instant.ofEpochMilli(lastEventEndTime)
 
-    return Timestamp(java.util.Date(lastEventEndTime))
+    return Timestamp(instant.epochSecond, instant.nano)
   }
 }

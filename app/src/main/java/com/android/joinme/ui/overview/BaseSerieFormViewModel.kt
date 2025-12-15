@@ -1,6 +1,7 @@
 package com.android.joinme.ui.overview
 
 import androidx.lifecycle.ViewModel
+import com.android.joinme.util.TestEnvironmentDetector
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
@@ -160,10 +161,10 @@ abstract class BaseSerieFormViewModel : ViewModel() {
             // Compare dates at day level (start of day) instead of exact timestamp
             val calendar = java.util.Calendar.getInstance()
             calendar.timeInMillis = System.currentTimeMillis()
-            calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
-            calendar.set(java.util.Calendar.MINUTE, 0)
-            calendar.set(java.util.Calendar.SECOND, 0)
-            calendar.set(java.util.Calendar.MILLISECOND, 0)
+            calendar[java.util.Calendar.HOUR_OF_DAY] = 0
+            calendar[java.util.Calendar.MINUTE] = 0
+            calendar[java.util.Calendar.SECOND] = 0
+            calendar[java.util.Calendar.MILLISECOND] = 0
             val todayStart = calendar.timeInMillis
 
             if (parsedDate.time < todayStart) "Date cannot be in the past" else null
@@ -188,6 +189,45 @@ abstract class BaseSerieFormViewModel : ViewModel() {
   }
 
   /**
+   * Validates if the time string has a valid HH:mm format.
+   *
+   * @param time The time string to validate
+   * @return true if valid, false otherwise
+   */
+  private fun isValidTimeFormat(time: String): Boolean {
+    val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+    return try {
+      sdf.parse(time) != null
+    } catch (_: Exception) {
+      false
+    }
+  }
+
+  /**
+   * Validates if the combined date-time is in the past.
+   *
+   * @param date The date string in dd/MM/yyyy format
+   * @param time The time string in HH:mm format
+   * @return Error message if in the past, null otherwise
+   */
+  private fun validateCombinedDateTime(date: String, time: String): String? {
+    if (date.isBlank()) return null
+
+    val combinedSdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+    val combinedDateTime = "$date $time"
+    return try {
+      val parsedDateTime = combinedSdf.parse(combinedDateTime)
+      if (parsedDateTime != null && parsedDateTime.time < System.currentTimeMillis()) {
+        "Time cannot be in the past"
+      } else {
+        null
+      }
+    } catch (_: Exception) {
+      null
+    }
+  }
+
+  /**
    * Updates the serie time and validates the format.
    *
    * Uses SimpleDateFormat to parse the time. Note that SimpleDateFormat is lenient by default, so
@@ -196,37 +236,11 @@ abstract class BaseSerieFormViewModel : ViewModel() {
    * @param time The new time value in HH:mm format
    */
   fun setTime(time: String) {
-    val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-    val valid =
-        try {
-          sdf.parse(time) != null
-        } catch (_: Exception) {
-          false
-        }
-
-    val currentState = getState()
     val errorMsg =
-        if (!valid) {
+        if (!isValidTimeFormat(time)) {
           "Invalid format (must be HH:mm)"
         } else {
-          // Check if combined date-time is in the past
-          val currentDate = currentState.date
-          if (currentDate.isNotBlank()) {
-            val combinedSdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-            val combinedDateTime = "$currentDate $time"
-            try {
-              val parsedDateTime = combinedSdf.parse(combinedDateTime)
-              if (parsedDateTime != null && parsedDateTime.time < System.currentTimeMillis()) {
-                "Time cannot be in the past"
-              } else {
-                null
-              }
-            } catch (_: Exception) {
-              null
-            }
-          } else {
-            null
-          }
+          validateCombinedDateTime(getState().date, time)
         }
 
     updateState { state ->
@@ -329,18 +343,10 @@ abstract class BaseSerieFormViewModel : ViewModel() {
    * @return The user ID if authenticated, null otherwise
    */
   protected fun getCurrentUserId(): String? {
-    // Detect test environment
-    val isTestEnv =
-        android.os.Build.FINGERPRINT == "robolectric" ||
-            android.os.Debug.isDebuggerConnected() ||
-            System.getProperty("IS_TEST_ENV") == "true"
-
-    // Return test user ID in test environments
-    if (isTestEnv) {
-      return "test-user-id"
-    }
-
     return Firebase.auth.currentUser?.uid
+        ?: if (TestEnvironmentDetector.shouldUseTestUserId()) {
+          TestEnvironmentDetector.getTestUserId()
+        } else null
   }
 
   /**

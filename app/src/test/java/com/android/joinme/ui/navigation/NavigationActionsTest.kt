@@ -25,9 +25,9 @@ class NavigationActionsTest {
 
   @Test
   fun `navigateTo should NOT navigate again if already on same top-level`() {
-    every { navController.currentDestination?.route } returns Screen.Map.route
+    every { navController.currentDestination?.route } returns Screen.Map().route
 
-    actions.navigateTo(Screen.Map)
+    actions.navigateTo(Screen.Map())
 
     verify(exactly = 0) {
       navController.navigate(any<String>(), any<NavOptionsBuilder.() -> Unit>())
@@ -38,11 +38,11 @@ class NavigationActionsTest {
   fun `navigateTo configures popUpTo, launchSingleTop, restoreState for top-level`() {
     every { navController.currentDestination?.route } returns "auth" // ensure we navigate
 
-    actions.navigateTo(Screen.Map)
+    actions.navigateTo(Screen.Map())
 
     verify {
       navController.navigate(
-          eq(Screen.Map.route),
+          eq(Screen.Map().route),
           withArg<NavOptionsBuilder.() -> Unit> { block ->
             val options: NavOptions = navOptions(block)
 
@@ -466,6 +466,30 @@ class NavigationActionsTest {
   }
 
   @Test
+  fun `Calendar screen has correct properties`() {
+    assertEquals("calendar", Screen.Calendar.route)
+    assertEquals("Calendar", Screen.Calendar.name)
+    assertFalse(Screen.Calendar.isTopLevelDestination)
+  }
+
+  @Test
+  fun `navigateTo Calendar from Overview navigates correctly`() {
+    every { navController.currentDestination?.route } returns Screen.Overview.route
+
+    actions.navigateTo(Screen.Calendar)
+
+    verify {
+      navController.navigate(
+          eq(Screen.Calendar.route),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
   fun `Auth screen has correct properties`() {
     assertEquals("auth", Screen.Auth.route)
     assertEquals("Authentication", Screen.Auth.name)
@@ -488,9 +512,48 @@ class NavigationActionsTest {
 
   @Test
   fun `Map screen is top-level destination`() {
-    assertEquals("map", Screen.Map.route)
-    assertEquals("Map", Screen.Map.name)
-    assertTrue(Screen.Map.isTopLevelDestination)
+    val map = Screen.Map()
+    assertEquals("map", map.route)
+    assertEquals("Map", map.name)
+    assertTrue(map.isTopLevelDestination)
+    // Also verify the companion route pattern
+    assertEquals("map?lat={lat}&lon={lon}&marker={marker}&userId={userId}", Screen.Map.route)
+  }
+
+  @Test
+  fun `navigateTo Map with location parameters navigates to correct route`() {
+    val latitude = 46.5197
+    val longitude = 6.6323
+    every { navController.currentDestination?.route } returns Screen.Overview.route
+
+    actions.navigateTo(Screen.Map(latitude, longitude))
+
+    verify {
+      navController.navigate(
+          eq("map?lat=$latitude&lon=$longitude&marker=false"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldLaunchSingleTop())
+            assertTrue(options.shouldRestoreState())
+          })
+    }
+  }
+
+  @Test
+  fun `navigateTo Map without parameters uses default route`() {
+    every { navController.currentDestination?.route } returns Screen.Overview.route
+
+    actions.navigateTo(Screen.Map())
+
+    verify {
+      navController.navigate(
+          eq("map"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldLaunchSingleTop())
+            assertTrue(options.shouldRestoreState())
+          })
+    }
   }
 
   @Test
@@ -681,6 +744,285 @@ class NavigationActionsTest {
             assertTrue(options.shouldRestoreState())
             assertFalse(options.shouldLaunchSingleTop())
           })
+    }
+  }
+
+  // ========== Chat Navigation Tests ==========
+
+  @Test
+  fun `navigateTo Chat with chatId and chatTitle navigates to correct route`() {
+    val chatId = "test-chat-123"
+    val chatTitle = "Test Chat"
+    val totalParticipants = 1
+    every { navController.currentDestination?.route } returns Screen.Groups.route
+
+    actions.navigateTo(Screen.Chat(chatId, chatTitle, totalParticipants))
+
+    verify {
+      navController.navigate(
+          eq("chat/$chatId/$chatTitle/$totalParticipants"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            // Chat is not a top-level destination, so shouldn't have launchSingleTop
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `Chat route companion object matches pattern`() {
+    assertEquals("chat/{chatId}/{chatTitle}/{totalParticipants}", Screen.Chat.Companion.route)
+  }
+
+  @Test
+  fun chatScreen_hasCorrectRouteAndName() {
+    val chatId = "test-chat-789"
+    val chatTitle = "My Group Chat"
+    val totalParticipants = 1
+    val screen = Screen.Chat(chatId, chatTitle, totalParticipants)
+
+    assertEquals("chat/$chatId/$chatTitle/$totalParticipants", screen.route)
+    assertEquals("Chat", screen.name)
+  }
+
+  @Test
+  fun `navigateTo Chat from GroupListScreen works correctly`() {
+    val chatId = "group-chat-456"
+    val chatTitle = "Team Discussion"
+    val totalParticipants = 1
+    every { navController.currentDestination?.route } returns Screen.Groups.route
+
+    actions.navigateTo(Screen.Chat(chatId, chatTitle, totalParticipants))
+
+    verify {
+      navController.navigate(
+          eq("chat/$chatId/$chatTitle/$totalParticipants"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `navigateTo Chat with special characters in chatTitle`() {
+    val chatId = "chat-123"
+    val chatTitle = "Group Name with Spaces & Symbols!"
+    val totalParticipants = 1
+    every { navController.currentDestination?.route } returns Screen.GroupDetail(chatId).route
+
+    actions.navigateTo(Screen.Chat(chatId, chatTitle, totalParticipants))
+
+    verify {
+      navController.navigate(
+          eq("chat/$chatId/$chatTitle/$totalParticipants"), any<NavOptionsBuilder.() -> Unit>())
+    }
+  }
+
+  @Test
+  fun `navigateTo Chat multiple times with different chatIds`() {
+    every { navController.currentDestination?.route } returns Screen.Groups.route
+
+    val chatId1 = "chat-1"
+    val chatTitle1 = "Chat One"
+    val totalParticipants1 = 1
+    val chatId2 = "chat-2"
+    val chatTitle2 = "Chat Two"
+    val totalParticipants2 = 1
+
+    actions.navigateTo(Screen.Chat(chatId1, chatTitle1, totalParticipants1))
+    actions.navigateTo(Screen.Chat(chatId2, chatTitle2, totalParticipants2))
+
+    verify {
+      navController.navigate(
+          eq("chat/$chatId1/$chatTitle1/$totalParticipants1"), any<NavOptionsBuilder.() -> Unit>())
+    }
+    verify {
+      navController.navigate(
+          eq("chat/$chatId2/$chatTitle2/$totalParticipants2"), any<NavOptionsBuilder.() -> Unit>())
+    }
+  }
+
+  @Test
+  fun `navigateTo Chat from ShowEventScreen with eventId as chatId works correctly`() {
+    val eventId = "event-789"
+    val eventTitle = "Basketball Game"
+    val totalParticipants = 1
+    every { navController.currentDestination?.route } returns Screen.ShowEventScreen(eventId).route
+
+    // When navigating from ShowEvent to Chat, eventId is used as chatId
+    actions.navigateTo(
+        Screen.Chat(
+            chatId = eventId, chatTitle = eventTitle, totalParticipants = totalParticipants))
+
+    verify {
+      navController.navigate(
+          eq("chat/$eventId/$eventTitle/$totalParticipants"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `Chat navigation from event uses eventId correctly`() {
+    // Verify that event chat uses eventId as chatId
+    val eventId = "event-456"
+    val chatTitle = "Event Chat"
+    val totalParticipants = 1
+    val screen =
+        Screen.Chat(chatId = eventId, chatTitle = chatTitle, totalParticipants = totalParticipants)
+
+    assertEquals("chat/$eventId/$chatTitle/$totalParticipants", screen.route)
+  }
+
+  // ========== ActivityGroup Screen Tests ==========
+
+  @Test
+  fun activityGroup_screen_routeIsProperlyFormatted() {
+    val groupId = "test-group-123"
+    val activityGroupScreen = Screen.ActivityGroup(groupId)
+
+    assert(activityGroupScreen.route == "activity_group/$groupId")
+    assert(activityGroupScreen.name == "Activity Group")
+    assert(!activityGroupScreen.isTopLevelDestination)
+  }
+
+  // ========== FollowList Navigation Tests ==========
+
+  @Test
+  fun `navigateTo FollowList with userId navigates to correct route with default tab`() {
+    val userId = "test-user-123"
+    every { navController.currentDestination?.route } returns Screen.Profile.route
+
+    actions.navigateTo(Screen.FollowList(userId))
+
+    verify {
+      navController.navigate(
+          eq("follow_list/$userId?initialTab=FOLLOWERS"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            // FollowList is not a top-level destination
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `navigateTo FollowList with userId and FOLLOWING tab navigates to correct route`() {
+    val userId = "test-user-456"
+    every { navController.currentDestination?.route } returns Screen.Profile.route
+
+    actions.navigateTo(Screen.FollowList(userId, "FOLLOWING"))
+
+    verify {
+      navController.navigate(
+          eq("follow_list/$userId?initialTab=FOLLOWING"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `FollowList route companion object matches pattern`() {
+    assertEquals("follow_list/{userId}?initialTab={initialTab}", Screen.FollowList.Companion.route)
+  }
+
+  @Test
+  fun `FollowList screen has correct name`() {
+    val screen = Screen.FollowList("test-id")
+    assertEquals("Follow List", screen.name)
+    assertFalse(screen.isTopLevelDestination)
+  }
+
+  @Test
+  fun `FollowList screen with special characters in userId`() {
+    val userId = "user-123-abc-xyz"
+    every { navController.currentDestination?.route } returns Screen.Profile.route
+
+    actions.navigateTo(Screen.FollowList(userId))
+
+    verify {
+      navController.navigate(
+          eq("follow_list/$userId?initialTab=FOLLOWERS"), any<NavOptionsBuilder.() -> Unit>())
+    }
+  }
+
+  // ========== GroupLeaderboard Navigation Tests ==========
+
+  @Test
+  fun `navigateTo GroupLeaderboard with groupId navigates to correct route`() {
+    val groupId = "test-group-123"
+    every { navController.currentDestination?.route } returns Screen.GroupDetail(groupId).route
+
+    actions.navigateTo(Screen.GroupLeaderboard(groupId))
+
+    verify {
+      navController.navigate(
+          eq("group/$groupId/leaderboard"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            // GroupLeaderboard is not a top-level destination
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `GroupLeaderboard route companion object matches pattern`() {
+    assertEquals("group/{groupId}/leaderboard", Screen.GroupLeaderboard.Companion.route)
+  }
+
+  @Test
+  fun `GroupLeaderboard instance route contains groupId`() {
+    val groupId = "leaderboard-group-456"
+    val screen = Screen.GroupLeaderboard(groupId)
+    assertEquals("group/$groupId/leaderboard", screen.route)
+  }
+
+  @Test
+  fun `GroupLeaderboard screen has correct name`() {
+    val screen = Screen.GroupLeaderboard("test-id")
+    assertEquals("Group Leaderboard", screen.name)
+    assertFalse(screen.isTopLevelDestination)
+  }
+
+  @Test
+  fun `navigateTo GroupLeaderboard from GroupDetail works correctly`() {
+    val groupId = "group-789"
+    every { navController.currentDestination?.route } returns Screen.GroupDetail(groupId).route
+
+    actions.navigateTo(Screen.GroupLeaderboard(groupId))
+
+    verify {
+      navController.navigate(
+          eq("group/$groupId/leaderboard"),
+          withArg<NavOptionsBuilder.() -> Unit> { block ->
+            val options = navOptions(block)
+            assertTrue(options.shouldRestoreState())
+            assertFalse(options.shouldLaunchSingleTop())
+          })
+    }
+  }
+
+  @Test
+  fun `navigateTo GroupLeaderboard with special characters in groupId`() {
+    val groupId = "group-123-abc-xyz"
+    every { navController.currentDestination?.route } returns Screen.GroupDetail(groupId).route
+
+    actions.navigateTo(Screen.GroupLeaderboard(groupId))
+
+    verify {
+      navController.navigate(eq("group/$groupId/leaderboard"), any<NavOptionsBuilder.() -> Unit>())
     }
   }
 }

@@ -4,10 +4,19 @@ import android.content.Context
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.notification.NotificationScheduler
 import com.google.android.gms.tasks.Tasks
+import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.auth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageReference
 import io.mockk.*
 import java.util.Date
 import java.util.concurrent.TimeUnit
@@ -22,6 +31,8 @@ class EventsRepositoryFirestoreNotificationTest {
   private lateinit var mockCollection: CollectionReference
   private lateinit var mockDocument: DocumentReference
   private lateinit var mockContext: Context
+  private lateinit var mockAuth: FirebaseAuth
+  private lateinit var mockUser: FirebaseUser
   private lateinit var repository: EventsRepositoryFirestore
 
   private val testEventId = "testEvent123"
@@ -42,10 +53,40 @@ class EventsRepositoryFirestoreNotificationTest {
     every { mockDocument.set(any()) } returns Tasks.forResult(null)
     every { mockDocument.delete() } returns Tasks.forResult(null)
 
+    // Mock Firebase Auth
+    mockAuth = mockk(relaxed = true)
+    mockUser = mockk(relaxed = true)
+    mockkStatic(FirebaseAuth::class)
+    mockkStatic("com.google.firebase.auth.AuthKt")
+    every { Firebase.auth } returns mockAuth
+    every { mockAuth.currentUser } returns mockUser
+    every { mockUser.uid } returns testUserId
+
     // Mock NotificationScheduler
     mockkObject(NotificationScheduler)
     every { NotificationScheduler.scheduleEventNotification(any(), any()) } just Runs
     every { NotificationScheduler.cancelEventNotification(any(), any()) } just Runs
+
+    // Mock Firebase Realtime Database and Storage for ConversationCleanupService
+    mockkStatic(FirebaseDatabase::class)
+    mockkStatic(FirebaseStorage::class)
+    val mockDatabase = mockk<FirebaseDatabase>(relaxed = true)
+    val mockStorage = mockk<FirebaseStorage>(relaxed = true)
+    val mockConversationsRef = mockk<DatabaseReference>(relaxed = true)
+    val mockConversationRef = mockk<DatabaseReference>(relaxed = true)
+    val mockMessagesRef = mockk<DatabaseReference>(relaxed = true)
+    val mockMessagesSnapshot = mockk<DataSnapshot>(relaxed = true)
+    val mockStorageRef = mockk<StorageReference>(relaxed = true)
+
+    every { FirebaseDatabase.getInstance() } returns mockDatabase
+    every { FirebaseStorage.getInstance() } returns mockStorage
+    every { mockDatabase.getReference("conversations") } returns mockConversationsRef
+    every { mockConversationsRef.child(any()) } returns mockConversationRef
+    every { mockConversationRef.child("messages") } returns mockMessagesRef
+    every { mockMessagesRef.get() } returns Tasks.forResult(mockMessagesSnapshot)
+    every { mockMessagesSnapshot.children } returns emptyList()
+    every { mockStorage.reference } returns mockStorageRef
+    every { mockConversationRef.removeValue() } returns Tasks.forResult(null)
 
     repository = EventsRepositoryFirestore(mockDb, mockContext)
   }
@@ -173,31 +214,60 @@ class EventsRepositoryFirestoreNotificationTest {
   }
 
   @Test
-  fun `editEvent cancels old notification and schedules new one for upcoming event`() = runTest {
-    // Given
-    val futureTime = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(2)
-    val updatedEvent =
-        Event(
-            eventId = testEventId,
-            type = EventType.SOCIAL,
-            title = "Updated Event",
-            description = "Updated Description",
-            location = Location(46.52, 6.63, "Location"),
-            date = Timestamp(Date(futureTime)),
-            duration = 90,
-            participants = emptyList(),
-            maxParticipants = 15,
-            visibility = EventVisibility.PUBLIC,
-            ownerId = testUserId)
+  fun `editEvent cancels old notification and schedules new one for upcoming event when user is participant`() =
+      runTest {
+        // Given - current user is in participants list
+        val futureTime = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(2)
+        val updatedEvent =
+            Event(
+                eventId = testEventId,
+                type = EventType.SOCIAL,
+                title = "Updated Event",
+                description = "Updated Description",
+                location = Location(46.52, 6.63, "Location"),
+                date = Timestamp(Date(futureTime)),
+                duration = 90,
+                participants = listOf(testUserId),
+                maxParticipants = 15,
+                visibility = EventVisibility.PUBLIC,
+                ownerId = testUserId)
 
-    // When
-    repository.editEvent(testEventId, updatedEvent)
+        // When
+        repository.editEvent(testEventId, updatedEvent)
 
-    // Then
-    verify { mockDocument.set(updatedEvent) }
-    verify { NotificationScheduler.cancelEventNotification(mockContext, testEventId) }
-    verify { NotificationScheduler.scheduleEventNotification(mockContext, updatedEvent) }
-  }
+        // Then
+        verify { mockDocument.set(updatedEvent) }
+        verify { NotificationScheduler.cancelEventNotification(mockContext, testEventId) }
+        verify { NotificationScheduler.scheduleEventNotification(mockContext, updatedEvent) }
+      }
+
+  @Test
+  fun `editEvent cancels notification but does not reschedule when user is not participant`() =
+      runTest {
+        // Given - current user is NOT in participants list
+        val futureTime = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(2)
+        val updatedEvent =
+            Event(
+                eventId = testEventId,
+                type = EventType.SOCIAL,
+                title = "Updated Event",
+                description = "Updated Description",
+                location = Location(46.52, 6.63, "Location"),
+                date = Timestamp(Date(futureTime)),
+                duration = 90,
+                participants = listOf("otherUser123"),
+                maxParticipants = 15,
+                visibility = EventVisibility.PUBLIC,
+                ownerId = "otherUser123")
+
+        // When
+        repository.editEvent(testEventId, updatedEvent)
+
+        // Then
+        verify { mockDocument.set(updatedEvent) }
+        verify { NotificationScheduler.cancelEventNotification(mockContext, testEventId) }
+        verify(exactly = 0) { NotificationScheduler.scheduleEventNotification(any(), any()) }
+      }
 
   @Test
   fun `editEvent cancels notification but does not reschedule for past event`() = runTest {
@@ -279,7 +349,7 @@ class EventsRepositoryFirestoreNotificationTest {
 
   @Test
   fun `editEvent handles event date change correctly`() = runTest {
-    // Given - change event from 1 hour in future to 3 hours in future
+    // Given - change event from 1 hour in future to 3 hours in future, current user is participant
     val newTime = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(3)
     val rescheduledEvent =
         Event(
@@ -290,7 +360,7 @@ class EventsRepositoryFirestoreNotificationTest {
             location = Location(46.52, 6.63, "Location"),
             date = Timestamp(Date(newTime)),
             duration = 60,
-            participants = emptyList(),
+            participants = listOf(testUserId),
             maxParticipants = 10,
             visibility = EventVisibility.PUBLIC,
             ownerId = testUserId)

@@ -1,6 +1,8 @@
 // Implemented with help of Claude AI
 package com.android.joinme.viewmodel
 
+import android.content.Context
+import android.net.Uri
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
 import com.android.joinme.ui.groups.GroupListViewModel
@@ -98,6 +100,25 @@ class GroupListViewModelTest {
       val updatedMemberIds = group.memberIds + userId
       val updatedGroup = group.copy(memberIds = updatedMemberIds)
       editGroup(groupId, updatedGroup)
+    }
+
+    override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
+      if (shouldThrowError) throw Exception(errorMessage)
+      if (userIds.isEmpty()) return emptyList()
+      return groups.filter { group -> userIds.all { userId -> group.memberIds.contains(userId) } }
+    }
+
+    override suspend fun uploadGroupPhoto(
+        context: Context,
+        groupId: String,
+        imageUri: Uri
+    ): String {
+      // Not needed for these tests
+      return "http://fakeurl.com/photo.jpg"
+    }
+
+    override suspend fun deleteGroupPhoto(groupId: String) {
+      // Not needed for these tests
     }
   }
 

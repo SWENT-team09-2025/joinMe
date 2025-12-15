@@ -89,6 +89,8 @@ class EditEventViewModelTest {
     assertEquals("PUBLIC", state.visibility)
     assertEquals("owner123", state.ownerId)
     assertEquals(listOf("user1", "owner123"), state.participants)
+    assertNull(state.groupId)
+    assertFalse(state.isGroupEvent)
     assertNull(state.errorMsg)
   }
 
@@ -431,6 +433,48 @@ class EditEventViewModelTest {
   }
 
   @Test
+  fun isValid_groupEvent_validWithoutTypeMaxParticipantsVisibility() = runTest {
+    // Create a group event
+    val groupEvent = createTestEvent().copy(groupId = "group123")
+    repository.addEvent(groupEvent)
+
+    viewModel.loadEvent(groupEvent.eventId)
+    advanceUntilIdle()
+
+    // Modify only allowed fields for group events
+    viewModel.setTitle("Updated Title")
+    viewModel.setDescription("Updated Description")
+    viewModel.selectLocation(Location(46.52, 6.63, "New Location"))
+    viewModel.setDuration("120")
+    viewModel.setDate("26/12/2024")
+    viewModel.setTime("15:00")
+
+    val state = viewModel.uiState.first()
+    assertTrue(state.isGroupEvent)
+    assertEquals("group123", state.groupId)
+    // For group events, type/maxParticipants/visibility are not required for validation
+    assertTrue(state.isValid)
+  }
+
+  @Test
+  fun isValid_standaloneEvent_requiresAllFields() = runTest {
+    val standaloneEvent = createTestEvent().copy(groupId = null)
+    repository.addEvent(standaloneEvent)
+
+    viewModel.loadEvent(standaloneEvent.eventId)
+    advanceUntilIdle()
+
+    // Clear type to make it invalid
+    viewModel.setType("")
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.isGroupEvent)
+    assertNull(state.groupId)
+    // For standalone events, all fields are required
+    assertFalse(state.isValid)
+  }
+
+  @Test
   fun isValid_emptyTitle_returnsFalse() = runBlocking {
     viewModel.setType("SPORTS")
     viewModel.setTitle("")
@@ -484,6 +528,33 @@ class EditEventViewModelTest {
     // Verify the event was updated in the repository
     val updatedEvent = repository.getEvent(event.eventId)
     assertEquals("Updated Title", updatedEvent.title)
+    assertNull(updatedEvent.groupId) // Standalone event
+  }
+
+  @Test
+  fun editEvent_groupEvent_preservesGroupId() = runTest {
+    val groupEvent = createTestEvent().copy(groupId = "group123")
+    repository.addEvent(groupEvent)
+
+    // Load the group event
+    viewModel.loadEvent(groupEvent.eventId)
+    advanceUntilIdle()
+
+    // Modify allowed fields
+    viewModel.setTitle("Updated Group Event")
+    viewModel.setDescription("Updated Description")
+    viewModel.setDuration("120")
+
+    // Edit the event
+    val result = viewModel.editEvent(groupEvent.eventId)
+    advanceUntilIdle()
+
+    assertTrue(result)
+
+    // Verify groupId is preserved
+    val updatedEvent = repository.getEvent(groupEvent.eventId)
+    assertEquals("Updated Group Event", updatedEvent.title)
+    assertEquals("group123", updatedEvent.groupId)
   }
 
   @Test

@@ -46,6 +46,9 @@ class ViewProfileScreenTest {
           country = "Netherlands",
           interests = listOf("Racing", "Cars", "Technology"),
           bio = "F1 driver with a need for speed",
+          eventsJoinedCount = 42,
+          followersCount = 1250,
+          followingCount = 89,
           createdAt = Timestamp.now(),
           updatedAt = Timestamp.now())
 
@@ -61,6 +64,12 @@ class ViewProfileScreenTest {
         throw RuntimeException("Network error")
       }
       return stored?.takeIf { it.uid == uid }
+    }
+
+    override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? {
+      if (uids.isEmpty()) return emptyList()
+      val result = uids.mapNotNull { stored?.takeIf { p -> p.uid == it } }
+      return if (result.size == uids.size) result else null
     }
 
     override suspend fun createOrUpdateProfile(profile: Profile) {
@@ -83,6 +92,20 @@ class ViewProfileScreenTest {
     override suspend fun deleteProfilePhoto(uid: String) {
       stored = stored?.copy(photoUrl = null)
     }
+
+    // Stub implementations for follow methods - not used in ViewProfile tests
+    override suspend fun followUser(followerId: String, followedId: String) {}
+
+    override suspend fun unfollowUser(followerId: String, followedId: String) {}
+
+    override suspend fun isFollowing(followerId: String, followedId: String): Boolean = false
+
+    override suspend fun getFollowing(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getFollowers(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getMutualFollowing(userId1: String, userId2: String): List<Profile> =
+        emptyList()
   }
 
   // Helper function to scroll and assert
@@ -112,9 +135,8 @@ class ViewProfileScreenTest {
     composeTestRule.onNodeWithTag(ViewProfileTestTags.SCREEN).assertIsDisplayed()
     composeTestRule.onNodeWithTag(ViewProfileTestTags.PROFILE_TITLE).assertIsDisplayed()
     composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.STATS_ROW).assertIsDisplayed()
     composeTestRule.onNodeWithTag(ViewProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(ViewProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
-    composeTestRule.onNodeWithContentDescription("Profile Picture").assertIsDisplayed()
   }
 
   @Test
@@ -151,14 +173,6 @@ class ViewProfileScreenTest {
     scrollAndAssertText("Netherlands")
     scrollAndAssertText("Racing, Cars, Technology")
     scrollAndAssertText("F1 driver with a need for speed")
-  }
-
-  @Test
-  fun viewProfileScreen_displaysCorrectBio() = runTest {
-    val repo = FakeProfileRepository(createTestProfile())
-    val viewModel = ProfileViewModel(repo)
-
-    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
   }
 
   // ==================== NULL/EMPTY VALUES TESTS ====================
@@ -203,7 +217,6 @@ class ViewProfileScreenTest {
   fun viewProfileScreen_topBar_allNavigationButtonsWork() = runTest {
     val repo = FakeProfileRepository(createTestProfile())
     val viewModel = ProfileViewModel(repo)
-    var back = false
     var group = false
     var edit = false
     var logoutClicked = false
@@ -212,20 +225,52 @@ class ViewProfileScreenTest {
       ViewProfileScreen(
           uid = testUid,
           profileViewModel = viewModel,
-          onBackClick = { back = true },
           onGroupClick = { group = true },
           onEditClick = { edit = true },
           onSignOutComplete = { logoutClicked = true })
     }
 
-    composeTestRule.onNodeWithContentDescription("Back").performClick()
-    assert(back)
     composeTestRule.onNodeWithContentDescription("Group").performClick()
     assert(group)
     composeTestRule.onNodeWithContentDescription("Edit").performClick()
     assert(edit)
+
+    // Click logout button - this should show the confirmation dialog
     composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_BUTTON).performClick()
+
+    // Verify dialog is shown
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_CONFIRM_DIALOG).assertIsDisplayed()
+
+    // Click confirm button in dialog
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_CONFIRM_BUTTON).performClick()
+
+    // Now logout should be triggered
     assert(logoutClicked)
+  }
+
+  @Test
+  fun viewProfileScreen_logoutDialog_cancelButton_dismissesDialog() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
+    val viewModel = ProfileViewModel(repo)
+    var logoutClicked = false
+
+    composeTestRule.setContent {
+      ViewProfileScreen(
+          uid = testUid, profileViewModel = viewModel, onSignOutComplete = { logoutClicked = true })
+    }
+
+    // Click logout button to show dialog
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_BUTTON).performClick()
+
+    // Verify dialog is shown
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_CONFIRM_DIALOG).assertIsDisplayed()
+
+    // Click cancel button
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_CANCEL_BUTTON).performClick()
+
+    // Dialog should be dismissed and logout should NOT be triggered
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.LOGOUT_CONFIRM_DIALOG).assertDoesNotExist()
+    assert(!logoutClicked)
   }
 
   @Test
@@ -439,5 +484,224 @@ class ViewProfileScreenTest {
     // Should handle long URLs without crashing - remote image should be attempted
     composeTestRule.onNodeWithTag(ViewProfileTestTags.PROFILE_PICTURE).assertIsDisplayed()
     composeTestRule.onNodeWithTag(ProfilePhotoImageTestTags.REMOTE_IMAGE).assertExists()
+  }
+
+  // ==================== STATS AND STREAKS TESTS ====================
+
+  @Test
+  fun viewProfileScreen_displaysStatsRow() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
+    val viewModel = ProfileViewModel(repo)
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.STATS_ROW).assertIsDisplayed()
+  }
+
+  @Test
+  fun viewProfileScreen_displaysEventsJoinedStat() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
+    val viewModel = ProfileViewModel(repo)
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.EVENTS_JOINED_STAT).assertIsDisplayed()
+    composeTestRule.onNodeWithText("42").assertIsDisplayed()
+  }
+
+  @Test
+  fun viewProfileScreen_displaysFollowersStat_withFormattedCount() = runTest {
+    val profile = createTestProfile().copy(followersCount = 1200)
+    val repo = FakeProfileRepository(profile)
+    val viewModel = ProfileViewModel(repo)
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.FOLLOWERS_STAT).assertIsDisplayed()
+    // 1200 should be formatted as "1.2k"
+    composeTestRule.onNodeWithText("1.2k").assertIsDisplayed()
+  }
+
+  @Test
+  fun viewProfileScreen_displaysFollowingStat() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
+    val viewModel = ProfileViewModel(repo)
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.FOLLOWING_STAT).assertIsDisplayed()
+    composeTestRule.onNodeWithText("89").assertIsDisplayed()
+  }
+
+  @Test
+  fun viewProfileScreen_displaysCorrectStatsValues() = runTest {
+    val profile =
+        createTestProfile()
+            .copy(eventsJoinedCount = 100, followersCount = 5000, followingCount = 250)
+    val repo = FakeProfileRepository(profile)
+    val viewModel = ProfileViewModel(repo)
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+
+    composeTestRule.onNodeWithText("100").assertIsDisplayed() // events joined
+    composeTestRule.onNodeWithText("5.0k").assertIsDisplayed() // followers formatted
+    composeTestRule.onNodeWithText("250").assertIsDisplayed() // following
+  }
+
+  @Test
+  fun viewProfileScreen_handlesLargeFollowerCount() = runTest {
+    val profile = createTestProfile().copy(followersCount = 28_800_000)
+    val repo = FakeProfileRepository(profile)
+    val viewModel = ProfileViewModel(repo)
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+
+    // 28,800,000 should be formatted as "28.8m"
+    composeTestRule.onNodeWithText("28.8m").assertIsDisplayed()
+  }
+
+  @Test
+  fun viewProfileScreen_followersStat_isClickable() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
+    val viewModel = ProfileViewModel(repo)
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.FOLLOWERS_STAT).assertHasClickAction()
+  }
+
+  @Test
+  fun viewProfileScreen_followingStat_isClickable() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
+    val viewModel = ProfileViewModel(repo)
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.FOLLOWING_STAT).assertHasClickAction()
+  }
+
+  @Test
+  fun viewProfileScreen_followersStat_click_triggersCallback() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
+    val viewModel = ProfileViewModel(repo)
+    var clickedUserId: String? = null
+
+    composeTestRule.setContent {
+      ViewProfileScreen(
+          uid = testUid,
+          profileViewModel = viewModel,
+          onFollowersClick = { userId -> clickedUserId = userId })
+    }
+
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.FOLLOWERS_STAT).performClick()
+    assert(clickedUserId == testUid) { "Expected uid $testUid but got $clickedUserId" }
+  }
+
+  @Test
+  fun viewProfileScreen_followingStat_click_triggersCallback() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
+    val viewModel = ProfileViewModel(repo)
+    var clickedUserId: String? = null
+
+    composeTestRule.setContent {
+      ViewProfileScreen(
+          uid = testUid,
+          profileViewModel = viewModel,
+          onFollowingClick = { userId -> clickedUserId = userId })
+    }
+
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.FOLLOWING_STAT).performClick()
+    assert(clickedUserId == testUid) { "Expected uid $testUid but got $clickedUserId" }
+  }
+
+  @Test
+  fun viewProfileScreen_followerAndFollowingStats_independentCallbacks() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
+    val viewModel = ProfileViewModel(repo)
+    var followersClickedUserId: String? = null
+    var followingClickedUserId: String? = null
+
+    composeTestRule.setContent {
+      ViewProfileScreen(
+          uid = testUid,
+          profileViewModel = viewModel,
+          onFollowersClick = { userId -> followersClickedUserId = userId },
+          onFollowingClick = { userId -> followingClickedUserId = userId })
+    }
+
+    // Click followers stat
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.FOLLOWERS_STAT).performClick()
+    assert(followersClickedUserId == testUid) { "Followers callback not triggered" }
+    assert(followingClickedUserId == null) { "Following callback should not be triggered" }
+
+    // Click following stat
+    composeTestRule.onNodeWithTag(ViewProfileTestTags.FOLLOWING_STAT).performClick()
+    assert(followingClickedUserId == testUid) { "Following callback not triggered" }
+  }
+
+  // ==================== LAUNCHED EFFECT OPTIMIZATION TESTS ====================
+
+  @Test
+  fun viewProfileScreen_skipsReload_whenProfileAlreadyLoadedForSameUid() = runTest {
+    var loadCount = 0
+    val countingRepo =
+        object : ProfileRepository by FakeProfileRepository(createTestProfile()) {
+          override suspend fun getProfile(uid: String): Profile? {
+            loadCount++
+            return createTestProfile()
+          }
+        }
+
+    val viewModel = ProfileViewModel(countingRepo)
+    viewModel.loadProfile(testUid) // Pre-load profile
+    composeTestRule.waitForIdle()
+    loadCount = 0 // Reset after initial load
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+    composeTestRule.waitForIdle()
+
+    assert(loadCount == 0) { "Profile should not reload when already loaded for same UID" }
+  }
+
+  @Test
+  fun viewProfileScreen_reloadsProfile_whenUidIsDifferent() = runTest {
+    // Create a mutable repository that can handle multiple profiles
+    val profiles =
+        mutableMapOf<String, Profile>(
+            "user1" to createTestProfile().copy(uid = "user1", username = "User One"),
+            "user2" to createTestProfile().copy(uid = "user2", username = "User Two"))
+
+    val repo =
+        object : ProfileRepository by FakeProfileRepository() {
+          override suspend fun getProfile(uid: String): Profile? = profiles[uid]
+
+          override suspend fun createOrUpdateProfile(profile: Profile) {
+            profiles[profile.uid] = profile
+          }
+        }
+
+    val viewModel = ProfileViewModel(repo)
+    viewModel.loadProfile("user1")
+    composeTestRule.waitForIdle()
+
+    // Change to different user
+    composeTestRule.setContent { ViewProfileScreen(uid = "user2", profileViewModel = viewModel) }
+    composeTestRule.waitForIdle()
+
+    // Verify new profile loaded
+    composeTestRule.onNodeWithText("User Two").assertExists()
+  }
+
+  @Test
+  fun viewProfileScreen_loadsProfile_whenViewModelStateIsNull() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
+    val viewModel = ProfileViewModel(repo)
+    // Don't pre-load - profile state is null
+
+    composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
+    composeTestRule.waitForIdle()
+
+    // Verify profile loaded and displayed
+    composeTestRule.onNodeWithText("Max Verstappen").assertExists()
   }
 }

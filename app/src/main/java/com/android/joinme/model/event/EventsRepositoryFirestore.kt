@@ -1,6 +1,7 @@
 package com.android.joinme.model.event
 
 import android.content.Context
+import com.android.joinme.model.chat.ConversationCleanupService
 import com.android.joinme.model.map.Location
 import com.android.joinme.model.notification.NotificationScheduler
 import com.google.firebase.Firebase
@@ -82,7 +83,7 @@ class EventsRepositoryFirestore(
 
     val snapshot = db.collection(EVENTS_COLLECTION_PATH).whereIn("eventId", eventIds).get().await()
 
-    return snapshot.mapNotNull { documentToEvent(it) }
+    return snapshot.mapNotNull { documentToEvent(it) }.sortedBy { it.date.toDate().time }
   }
 
   override suspend fun getEvent(eventId: String): Event {
@@ -109,10 +110,15 @@ class EventsRepositoryFirestore(
   override suspend fun editEvent(eventId: String, newValue: Event) {
     db.collection(EVENTS_COLLECTION_PATH).document(eventId).set(newValue).await()
 
-    // Cancel old notification and reschedule if event is upcoming
+    // Cancel old notification and reschedule only if current user is a participant
     context?.let {
       NotificationScheduler.cancelEventNotification(it, eventId)
-      if (newValue.isUpcoming()) {
+
+      // Only schedule notification if the current user is a participant of the event
+      val currentUserId = Firebase.auth.currentUser?.uid
+      if (newValue.isUpcoming() &&
+          currentUserId != null &&
+          newValue.participants.contains(currentUserId)) {
         NotificationScheduler.scheduleEventNotification(it, newValue)
       }
     }
@@ -121,8 +127,40 @@ class EventsRepositoryFirestore(
   override suspend fun deleteEvent(eventId: String) {
     db.collection(EVENTS_COLLECTION_PATH).document(eventId).delete().await()
 
-    // Cancel notification when event is deleted
+    // Cancel notifications when event is deleted
     context?.let { NotificationScheduler.cancelEventNotification(it, eventId) }
+
+    // Delete the associated conversation (messages, polls, images)
+    ConversationCleanupService.cleanupConversation(conversationId = eventId)
+  }
+
+  override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+    if (userIds.isEmpty()) return emptyList()
+    if (userIds.size == 1) {
+      // For a single user, just get all events they're a participant in
+      val snapshot =
+          db.collection(EVENTS_COLLECTION_PATH)
+              .whereArrayContains("participants", userIds[0])
+              .get()
+              .await()
+      return snapshot.mapNotNull { documentToEvent(it) }.sortedBy { it.date.toDate().time }
+    }
+
+    // For multiple users, get events for the first user and filter for others
+    // (Firestore doesn't support multiple arrayContains queries)
+    val snapshot =
+        db.collection(EVENTS_COLLECTION_PATH)
+            .whereArrayContains("participants", userIds[0])
+            .get()
+            .await()
+
+    return snapshot
+        .mapNotNull { documentToEvent(it) }
+        .filter { event ->
+          // Check if all specified users are participants
+          userIds.all { userId -> event.participants.contains(userId) }
+        }
+        .sortedBy { it.date.toDate().time }
   }
 
   /**
@@ -153,6 +191,9 @@ class EventsRepositoryFirestore(
                 name = it["name"] as? String ?: "")
           }
 
+      val partOfASerie = document.getBoolean("partOfASerie") ?: false
+      val groupId = document.getString("groupId")
+
       Event(
           eventId = eventId,
           type = EventType.valueOf(typeString),
@@ -164,7 +205,9 @@ class EventsRepositoryFirestore(
           participants = participants,
           maxParticipants = maxParticipants,
           visibility = EventVisibility.valueOf(visibilityString),
-          ownerId = ownerId)
+          ownerId = ownerId,
+          partOfASerie = partOfASerie,
+          groupId = groupId)
     } catch (e: Exception) {
       null
     }

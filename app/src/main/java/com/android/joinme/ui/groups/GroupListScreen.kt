@@ -1,7 +1,5 @@
-// Implemented with help of Claude AI
 package com.android.joinme.ui.groups
 
-import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -19,21 +17,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -48,37 +41,41 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.*
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.R
 import com.android.joinme.model.event.getColor
 import com.android.joinme.model.event.getOnContainerColor
 import com.android.joinme.model.groups.Group
-import com.android.joinme.ui.components.BubbleAction
-import com.android.joinme.ui.components.BubbleAlignment
-import com.android.joinme.ui.components.FloatingActionBubbles
+import com.android.joinme.model.invitation.InvitationType
+import com.android.joinme.ui.components.shareInvitation
 import com.android.joinme.ui.profile.ProfileScreen
 import com.android.joinme.ui.profile.ProfileTopBar
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.customColors
+import com.android.joinme.util.TestEnvironmentDetector
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+import kotlinx.coroutines.launch
 
 /** Dimensions and styling constants for GroupListScreen and its components */
 // Constants for GroupListScreen
@@ -86,6 +83,17 @@ private const val SCRIM_ANIMATION_DURATION = 300 // milliseconds
 private const val SCRIM_Z_INDEX = 1000f
 private const val DESCRIPTION_ALPHA = 0.8f
 private const val MEMBERS_ALPHA = 0.7f
+
+/**
+ * Gets the current user ID, with special handling for test environments.
+ *
+ * @return The current user's UID, or "test-user-id" in test environments
+ */
+private fun getCurrentUserId(): String? {
+  return Firebase.auth.currentUser?.uid
+      ?: if (TestEnvironmentDetector.shouldUseTestUserId()) TestEnvironmentDetector.getTestUserId()
+      else null
+}
 
 /**
  * Contains test tags for UI elements in the GroupListScreen.
@@ -106,14 +114,8 @@ object GroupListScreenTestTags {
   /** Test tag for the empty state view when no groups are present. */
   const val EMPTY = "groups:empty"
 
-  /** Test tag for the "Join with link" bubble action. */
-  const val JOIN_WITH_LINK_BUBBLE = "groupJoinWithLinkBubble"
-
   /** Test tag for the "Create a group" bubble action. */
   const val CREATE_GROUP_BUBBLE = "groupCreateBubble"
-
-  // Group card menu bubbles
-  const val VIEW_GROUP_DETAILS_BUBBLE = "viewGroupDetailsBubble"
   const val LEAVE_GROUP_BUBBLE = "leaveGroupBubble"
   const val SHARE_GROUP_BUBBLE = "shareGroupBubble"
   const val EDIT_GROUP_BUBBLE = "editGroupBubble"
@@ -126,18 +128,6 @@ object GroupListScreenTestTags {
   const val DELETE_GROUP_DIALOG = "deleteGroupDialog"
   const val DELETE_GROUP_CONFIRM_BUTTON = "deleteGroupConfirmButton"
   const val DELETE_GROUP_CANCEL_BUTTON = "deleteGroupCancelButton"
-
-  // Share dialog
-  const val SHARE_GROUP_DIALOG = "shareGroupDialog"
-  const val SHARE_GROUP_COPY_LINK_BUTTON = "shareGroupCopyLinkButton"
-  const val SHARE_GROUP_CLOSE_BUTTON = "shareGroupCloseButton"
-
-  // Join with link dialog
-  const val JOIN_WITH_LINK_DIALOG = "joinWithLinkDialog"
-  const val JOIN_WITH_LINK_INPUT = "joinWithLinkInput"
-  const val JOIN_WITH_LINK_PASTE_BUTTON = "joinWithLinkPasteButton"
-  const val JOIN_WITH_LINK_JOIN_BUTTON = "joinWithLinkJoinButton"
-  const val JOIN_WITH_LINK_CLOSE_BUTTON = "joinWithLinkCloseButton"
 
   /**
    * Generates a test tag for a specific group card.
@@ -156,6 +146,20 @@ object GroupListScreenTestTags {
   fun moreTag(id: String) = "group:more:$id"
 }
 
+/** State holder for GroupListScreen to manage UI state and reduce complexity. */
+@Stable
+private class GroupListScreenState {
+  var openMenuGroupId by mutableStateOf<String?>(null)
+  var menuButtonYPosition by mutableFloatStateOf(0f)
+  var groupToLeave by mutableStateOf<Group?>(null)
+  var groupToDelete by mutableStateOf<Group?>(null)
+
+  fun toggleGroupMenu(groupId: String, yPosition: Float) {
+    openMenuGroupId = if (openMenuGroupId == groupId) null else groupId
+    menuButtonYPosition = yPosition
+  }
+}
+
 /**
  * Displays a list of groups that the user belongs to.
  *
@@ -167,13 +171,10 @@ object GroupListScreenTestTags {
  *
  * @param viewModel The ViewModel managing the group list state and business logic. Defaults to a
  *   new instance provided by viewModel().
- * @param onJoinWithLink Callback invoked when user taps "Join with link" option
  * @param onCreateGroup Callback invoked when user taps "Create a group" option
  * @param onGroup Callback invoked when the user taps on a group card, receiving the selected
  *   [Group].
- * @param onViewGroupDetails Callback invoked when the user taps "View Group Details" for a group.
  * @param onLeaveGroup Callback invoked when the user taps "Leave Group" for a group.
- * @param onShareGroup Callback invoked when the user taps "Share Group" for a group.
  * @param onEditGroup Callback invoked when the user taps "Edit Group" for a group.
  * @param onDeleteGroup Callback invoked when the user taps "Delete Group" for a group.
  * @param onBackClick Callback invoked when the user taps the back button in the top bar.
@@ -184,12 +185,9 @@ object GroupListScreenTestTags {
 @Composable
 fun GroupListScreen(
     viewModel: GroupListViewModel = viewModel(),
-    onJoinWithLink: (String) -> Unit = {},
     onCreateGroup: () -> Unit = {},
     onGroup: (Group) -> Unit = {},
-    onViewGroupDetails: (Group) -> Unit = {},
     onLeaveGroup: (Group) -> Unit = {},
-    onShareGroup: (Group) -> Unit = {},
     onEditGroup: (Group) -> Unit = {},
     onDeleteGroup: (Group) -> Unit = {},
     onBackClick: () -> Unit = {},
@@ -198,58 +196,19 @@ fun GroupListScreen(
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val groups = uiState.groups
-  // Current user ID with test environment detection
-  val currentUserId = run {
-    // Detect test environment first (same as CreateGroupViewModel)
-    val isTestEnv =
-        android.os.Build.FINGERPRINT == "robolectric" ||
-            android.os.Debug.isDebuggerConnected() ||
-            System.getProperty("IS_TEST_ENV") == "true"
-    if (isTestEnv) {
-      "test-user-id"
-    } else {
-      Firebase.auth.currentUser?.uid
+  val currentUserId = getCurrentUserId()
+  val screenState = remember { GroupListScreenState() }
+
+  // Refresh groups when screen becomes visible (e.g., after joining via deep link)
+  val lifecycleOwner = LocalLifecycleOwner.current
+  DisposableEffect(lifecycleOwner) {
+    val observer = LifecycleEventObserver { _, event ->
+      if (event == Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshUIState()
+      }
     }
-  }
-  val context = LocalContext.current
-
-  // State for showing/hiding floating bubbles in the join/create group FAB
-  var showJoinBubbles by remember { mutableStateOf(false) }
-
-  // State for tracking which group's menu is currently open (null = none open)
-  var openMenuGroupId by remember { mutableStateOf<String?>(null) }
-
-  // State for tracking the position of the clicked three-dot button
-  var menuButtonYPosition by remember { mutableFloatStateOf(0f) }
-
-  // State for leave group confirmation dialog
-  var groupToLeave by remember { mutableStateOf<Group?>(null) }
-
-  // State for delete group confirmation dialog
-  var groupToDelete by remember { mutableStateOf<Group?>(null) }
-
-  // State for share group dialog
-  var groupToShare by remember { mutableStateOf<Group?>(null) }
-
-  // State for join with link dialog
-  var showJoinWithLinkDialog by remember { mutableStateOf(false) }
-
-  // Define bubble actions for join/create group FAB
-  val groupJoinBubbleActions = remember {
-    listOf(
-        BubbleAction(
-            text = "JOIN WITH LINK",
-            icon = Icons.Default.Link,
-            onClick = {
-              showJoinWithLinkDialog = true
-              showJoinBubbles = false
-            },
-            testTag = GroupListScreenTestTags.JOIN_WITH_LINK_BUBBLE),
-        BubbleAction(
-            text = "CREATE A GROUP",
-            icon = Icons.Default.Add,
-            onClick = onCreateGroup,
-            testTag = GroupListScreenTestTags.CREATE_GROUP_BUBBLE))
+    lifecycleOwner.lifecycle.addObserver(observer)
+    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
   }
 
   Box(modifier = Modifier.fillMaxSize()) {
@@ -262,266 +221,148 @@ fun GroupListScreen(
               onGroupClick = {},
               onEditClick = onEditClick)
         },
-        floatingActionButton = {
-          ExtendedFloatingActionButton(
-              modifier = Modifier.testTag(GroupListScreenTestTags.ADD_NEW_GROUP),
-              onClick = {
-                // Close any open card menu
-                openMenuGroupId = null
-                // Toggle the join/create menu
-                showJoinBubbles = !showJoinBubbles
-              },
-              icon = {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "JOIN A NEW GROUP",
-                    tint =
-                        if (showJoinBubbles) MaterialTheme.colorScheme.onSurfaceVariant
-                        else MaterialTheme.colorScheme.onPrimary)
-              },
-              shape = RoundedCornerShape(Dimens.CornerRadius.pill),
-              text = {
-                Text(
-                    "JOIN A NEW GROUP",
-                    color =
-                        if (showJoinBubbles) MaterialTheme.colorScheme.onSurfaceVariant
-                        else MaterialTheme.colorScheme.onPrimary)
-              },
-              containerColor =
-                  if (showJoinBubbles) MaterialTheme.colorScheme.surfaceVariant
-                  else MaterialTheme.colorScheme.primary)
-        },
+        floatingActionButton = { GroupListFab(onClick = onCreateGroup) },
         floatingActionButtonPosition = FabPosition.Center,
     ) { pd ->
-      Box(modifier = Modifier.fillMaxSize()) {
-        // Main content
-        if (groups.isNotEmpty()) {
-          LazyColumn(
-              modifier =
-                  Modifier.fillMaxSize()
-                      .padding(horizontal = Dimens.Spacing.medium)
-                      .padding(
-                          bottom = pd.calculateBottomPadding() + Dimens.GroupList.fabReservedSpace)
-                      .padding(top = pd.calculateTopPadding())
-                      .testTag(GroupListScreenTestTags.LIST),
-              contentPadding = PaddingValues(vertical = Dimens.Spacing.itemSpacing)) {
-                items(groups) { group ->
-                  GroupCard(
-                      group = group,
-                      onClick = { onGroup(group) },
-                      onMoreOptions = { yPosition ->
-                        // Close the join/create group menu if it's open
-                        showJoinBubbles = false
-                        // Toggle the card menu
-                        openMenuGroupId = if (openMenuGroupId == group.id) null else group.id
-                        menuButtonYPosition = yPosition
-                      })
-                  HorizontalDivider(
-                      modifier = Modifier.padding(vertical = Dimens.Spacing.medium),
-                      thickness = Dimens.BorderWidth.thin,
-                      color = MaterialTheme.colorScheme.primary)
-                }
-              }
-        } else {
-          Box(
-              modifier = Modifier.fillMaxSize().padding(pd).testTag(GroupListScreenTestTags.EMPTY),
-              contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                  Text(
-                      text = "You are currently not",
-                      style = MaterialTheme.typography.bodyMedium,
-                      color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
-                  Text(
-                      text = "assigned to a group…",
-                      style = MaterialTheme.typography.bodyMedium,
-                      color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
-                }
-              }
-        }
-      }
+      GroupListContent(
+          groups = groups,
+          paddingValues = pd,
+          onGroup = onGroup,
+          onMoreOptions = { group, yPosition -> screenState.toggleGroupMenu(group.id, yPosition) })
     }
 
     // Card menu overlay - OUTSIDE Scaffold, covers everything including FAB
-    openMenuGroupId?.let { groupId ->
-      val selectedGroup = groups.find { it.id == groupId }
-      selectedGroup?.let { group ->
-        val density = LocalDensity.current
-        val configuration = LocalConfiguration.current
-        val screenHeightDp = configuration.screenHeightDp.dp
+    screenState.openMenuGroupId?.let { groupId ->
+      groups
+          .find { it.id == groupId }
+          ?.let { group ->
+            GroupCardMenuOverlay(
+                group = group,
+                currentUserId = currentUserId,
+                menuButtonYPosition = screenState.menuButtonYPosition,
+                onDismiss = { screenState.openMenuGroupId = null },
+                onLeaveGroup = { screenState.groupToLeave = it },
+                onEditGroup = onEditGroup,
+                onDeleteGroup = { screenState.groupToDelete = it })
+          }
+    }
 
-        // Convert pixel position to dp
-        val buttonTopPaddingDp = with(density) { menuButtonYPosition.toDp() }
+    // Dialogs
+    GroupListDialogs(
+        screenState = screenState, onLeaveGroup = onLeaveGroup, onDeleteGroup = onDeleteGroup)
+  }
+}
 
-        // Calculate dynamic menu height based on ownership
-        val isOwner = group.ownerId == currentUserId
-        val numberOfButtons = if (isOwner) 5 else 3 // 5 if owner, 3 if not
-        val dynamicMenuHeight =
-            Dimens.TouchTarget.minimum.times(numberOfButtons) +
-                Dimens.Spacing.small.times(numberOfButtons - 1)
+/** Floating Action Button for creating a new group. */
+@Composable
+private fun GroupListFab(onClick: () -> Unit) {
+  ExtendedFloatingActionButton(
+      modifier = Modifier.testTag(GroupListScreenTestTags.ADD_NEW_GROUP),
+      onClick = onClick,
+      icon = {
+        Icon(
+            Icons.Default.Add,
+            contentDescription = stringResource(R.string.create_group_button),
+            tint = MaterialTheme.colorScheme.onPrimary)
+      },
+      shape = RoundedCornerShape(Dimens.CornerRadius.pill),
+      text = {
+        Text(
+            stringResource(R.string.create_group_button),
+            color = MaterialTheme.colorScheme.onPrimary)
+      },
+      containerColor = MaterialTheme.colorScheme.primary)
+}
 
-        // Check if menu would go off-screen (reserve space for FAB at bottom)
-        val spaceBelow =
-            (screenHeightDp.value -
-                    buttonTopPaddingDp.value -
-                    Dimens.GroupList.fabReservedSpace.value)
-                .dp
-        val shouldPositionAbove = spaceBelow < dynamicMenuHeight
-
-        // Calculate final top position
-        val topPaddingDp =
-            if (shouldPositionAbove) {
-              // Position menu so bottom aligns with button (menu above button)
-              (buttonTopPaddingDp - dynamicMenuHeight).coerceAtLeast(
-                  Dimens.GroupList.fabReservedSpace)
-            } else {
-              // Normal position (menu below button)
-              buttonTopPaddingDp
+/** Main content area showing groups list or empty state. */
+@Composable
+private fun GroupListContent(
+    groups: List<Group>,
+    paddingValues: PaddingValues,
+    onGroup: (Group) -> Unit,
+    onMoreOptions: (Group, Float) -> Unit
+) {
+  Box(modifier = Modifier.fillMaxSize()) {
+    if (groups.isNotEmpty()) {
+      LazyColumn(
+          modifier =
+              Modifier.fillMaxSize()
+                  .padding(horizontal = Dimens.Spacing.medium)
+                  .padding(
+                      bottom =
+                          paddingValues.calculateBottomPadding() +
+                              Dimens.GroupList.fabReservedSpace)
+                  .padding(top = paddingValues.calculateTopPadding())
+                  .testTag(GroupListScreenTestTags.LIST),
+          contentPadding = PaddingValues(vertical = Dimens.Spacing.itemSpacing)) {
+            items(groups) { group ->
+              GroupCard(
+                  group = group,
+                  onClick = { onGroup(group) },
+                  onMoreOptions = { yPosition -> onMoreOptions(group, yPosition) })
+              HorizontalDivider(
+                  modifier = Modifier.padding(vertical = Dimens.Spacing.medium),
+                  thickness = Dimens.BorderWidth.thin,
+                  color = MaterialTheme.colorScheme.primary)
             }
-
-        // Animate scrim opacity for smooth fade-in/fade-out (same as join menu)
-        val scrimAlpha by
-            animateFloatAsState(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = SCRIM_ANIMATION_DURATION),
-                label = "cardMenuScrimAlpha")
-        val scrimBaseColor = MaterialTheme.customColors.scrimOverlay
-        val scrimColor = scrimBaseColor.copy(alpha = scrimBaseColor.alpha * scrimAlpha)
-
-        // Full-screen scrim overlay with menu bubbles
-        Box(
-            modifier =
-                Modifier.fillMaxSize()
-                    .zIndex(SCRIM_Z_INDEX)
-                    .background(scrimColor)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = { openMenuGroupId = null })) {
-              // Menu bubbles positioned dynamically based on clicked card
-              Column(
-                  modifier =
-                      Modifier.align(Alignment.TopEnd)
-                          .padding(top = topPaddingDp, end = Dimens.Spacing.huge),
-                  verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small),
-                  horizontalAlignment = Alignment.End) {
-                    // View Group Details
-                    MenuBubble(
-                        text = "VIEW GROUP DETAILS",
-                        icon = Icons.Default.Visibility,
-                        onClick = {
-                          onViewGroupDetails(group)
-                          openMenuGroupId = null
-                        },
-                        testTag = GroupListScreenTestTags.VIEW_GROUP_DETAILS_BUBBLE)
-
-                    // Leave Group - Only shown for non-owners
-                    if (group.ownerId != currentUserId) {
-                      MenuBubble(
-                          text = "LEAVE GROUP",
-                          icon = Icons.AutoMirrored.Filled.ExitToApp,
-                          onClick = {
-                            openMenuGroupId = null
-                            groupToLeave = group
-                          },
-                          testTag = GroupListScreenTestTags.LEAVE_GROUP_BUBBLE)
-                    }
-
-                    // Share Group
-                    MenuBubble(
-                        text = "SHARE GROUP",
-                        icon = Icons.Default.Share,
-                        onClick = {
-                          openMenuGroupId = null
-                          groupToShare = group
-                        },
-                        testTag = GroupListScreenTestTags.SHARE_GROUP_BUBBLE)
-
-                    // Edit Group - Only shown for owners
-                    if (group.ownerId == currentUserId) {
-                      MenuBubble(
-                          text = "EDIT GROUP",
-                          icon = Icons.Default.Edit,
-                          onClick = {
-                            onEditGroup(group)
-                            openMenuGroupId = null
-                          },
-                          testTag = GroupListScreenTestTags.EDIT_GROUP_BUBBLE)
-                    }
-
-                    // Delete Group - Only shown for owners
-                    if (group.ownerId == currentUserId) {
-                      MenuBubble(
-                          text = "DELETE GROUP",
-                          icon = Icons.Default.Delete,
-                          onClick = {
-                            openMenuGroupId = null
-                            groupToDelete = group
-                          },
-                          testTag = GroupListScreenTestTags.DELETE_GROUP_BUBBLE)
-                    }
-                  }
+          }
+    } else {
+      Box(
+          modifier =
+              Modifier.fillMaxSize().padding(paddingValues).testTag(GroupListScreenTestTags.EMPTY),
+          contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+              Text(
+                  text = stringResource(R.string.currently_not),
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+              Text(
+                  text = stringResource(R.string.assigned_to_group),
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
             }
-      }
+          }
     }
+  }
+}
 
-    // Floating action bubbles overlay for join/create group
-    // Positioned at bottom-right, using theme colors for dark mode support
-    FloatingActionBubbles(
-        visible = showJoinBubbles,
-        onDismiss = { showJoinBubbles = false },
-        actions = groupJoinBubbleActions,
-        bubbleAlignment = BubbleAlignment.BOTTOM_END,
-        containerColor = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
+/** All dialogs for the group list screen. */
+@Composable
+private fun GroupListDialogs(
+    screenState: GroupListScreenState,
+    onLeaveGroup: (Group) -> Unit,
+    onDeleteGroup: (Group) -> Unit
+) {
+  screenState.groupToLeave?.let { group ->
+    CustomConfirmationDialog(
+        modifier = Modifier.testTag(GroupListScreenTestTags.LEAVE_GROUP_DIALOG),
+        title = stringResource(R.string.message_group_leaving),
+        confirmText = stringResource(R.string.confirmation_group_button),
+        cancelText = stringResource(R.string.negation_group_button),
+        onConfirm = {
+          onLeaveGroup(group)
+          screenState.groupToLeave = null
+        },
+        onDismiss = { screenState.groupToLeave = null },
+        confirmButtonTestTag = GroupListScreenTestTags.LEAVE_GROUP_CONFIRM_BUTTON,
+        cancelButtonTestTag = GroupListScreenTestTags.LEAVE_GROUP_CANCEL_BUTTON)
+  }
 
-    // Leave Group Confirmation Dialog
-    groupToLeave?.let { group ->
-      CustomConfirmationDialog(
-          modifier = Modifier.testTag(GroupListScreenTestTags.LEAVE_GROUP_DIALOG),
-          title = "Are you sure you want to leave\nthis group?",
-          confirmText = "Yes",
-          cancelText = "No",
-          onConfirm = {
-            onLeaveGroup(group)
-            groupToLeave = null
-          },
-          onDismiss = { groupToLeave = null },
-          confirmButtonTestTag = GroupListScreenTestTags.LEAVE_GROUP_CONFIRM_BUTTON,
-          cancelButtonTestTag = GroupListScreenTestTags.LEAVE_GROUP_CANCEL_BUTTON)
-    }
-
-    // Delete Group Confirmation Dialog
-    groupToDelete?.let { group ->
-      CustomConfirmationDialog(
-          modifier = Modifier.testTag(GroupListScreenTestTags.DELETE_GROUP_DIALOG),
-          title = "Are you sure you want to delete\nthis group?",
-          message = "The group will be permanently deleted\nThis action is irreversible",
-          confirmText = "Yes",
-          cancelText = "No",
-          onConfirm = {
-            onDeleteGroup(group)
-            groupToDelete = null
-          },
-          onDismiss = { groupToDelete = null },
-          confirmButtonTestTag = GroupListScreenTestTags.DELETE_GROUP_CONFIRM_BUTTON,
-          cancelButtonTestTag = GroupListScreenTestTags.DELETE_GROUP_CANCEL_BUTTON)
-    }
-
-    // Share Group Dialog
-    groupToShare?.let { group ->
-      ShareGroupDialog(group = group, onDismiss = { groupToShare = null })
-    }
-
-    // Join with Link Dialog
-    if (showJoinWithLinkDialog) {
-      JoinWithLinkDialog(
-          onJoin = { groupId ->
-            onJoinWithLink(groupId)
-            showJoinWithLinkDialog = false
-          },
-          onDismiss = { showJoinWithLinkDialog = false })
-    }
-  } // Close outer Box
+  screenState.groupToDelete?.let { group ->
+    CustomConfirmationDialog(
+        modifier = Modifier.testTag(GroupListScreenTestTags.DELETE_GROUP_DIALOG),
+        title = stringResource(R.string.message_group_deletion),
+        message = stringResource(R.string.advertisment_group_deletion),
+        confirmText = stringResource(R.string.confirmation_group_button),
+        cancelText = stringResource(R.string.negation_group_button),
+        onConfirm = {
+          onDeleteGroup(group)
+          screenState.groupToDelete = null
+        },
+        onDismiss = { screenState.groupToDelete = null },
+        confirmButtonTestTag = GroupListScreenTestTags.DELETE_GROUP_CONFIRM_BUTTON,
+        cancelButtonTestTag = GroupListScreenTestTags.DELETE_GROUP_CANCEL_BUTTON)
+  }
 }
 
 /**
@@ -582,9 +423,129 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: (Float) 
                           }) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "More options",
+                        contentDescription = stringResource(R.string.more_options),
                         tint = groupOnColor)
                   }
+            }
+      }
+}
+
+/**
+ * Displays the contextual menu overlay for a group card.
+ *
+ * @param group The group to display menu for
+ * @param currentUserId The current user's ID
+ * @param menuButtonYPosition The Y position of the three-dot button
+ * @param onDismiss Callback to dismiss the menu
+ * @param onLeaveGroup Callback when leave group is selected
+ * @param onEditGroup Callback when edit group is selected
+ * @param onDeleteGroup Callback when delete group is selected
+ */
+@Composable
+private fun GroupCardMenuOverlay(
+    group: Group,
+    currentUserId: String?,
+    menuButtonYPosition: Float,
+    onDismiss: () -> Unit,
+    onLeaveGroup: (Group) -> Unit,
+    onEditGroup: (Group) -> Unit,
+    onDeleteGroup: (Group) -> Unit
+) {
+  val density = LocalDensity.current
+  val configuration = LocalConfiguration.current
+  val screenHeightDp = configuration.screenHeightDp.dp
+  val context = LocalContext.current
+  val scope = rememberCoroutineScope()
+
+  val buttonTopPaddingDp = with(density) { menuButtonYPosition.toDp() }
+
+  val isOwner = group.ownerId == currentUserId
+  val numberOfButtons = if (isOwner) 4 else 2
+  val dynamicMenuHeight =
+      Dimens.TouchTarget.minimum.times(numberOfButtons) +
+          Dimens.Spacing.small.times(numberOfButtons - 1)
+
+  val spaceBelow =
+      (screenHeightDp.value - buttonTopPaddingDp.value - Dimens.GroupList.fabReservedSpace.value).dp
+  val shouldPositionAbove = spaceBelow < dynamicMenuHeight
+
+  val topPaddingDp =
+      if (shouldPositionAbove) {
+        (buttonTopPaddingDp - dynamicMenuHeight).coerceAtLeast(Dimens.GroupList.fabReservedSpace)
+      } else {
+        buttonTopPaddingDp
+      }
+
+  val scrimAlpha by
+      animateFloatAsState(
+          targetValue = 1f,
+          animationSpec = tween(durationMillis = SCRIM_ANIMATION_DURATION),
+          label = "cardMenuScrimAlpha")
+  val scrimBaseColor = MaterialTheme.customColors.scrimOverlay
+  val scrimColor = scrimBaseColor.copy(alpha = scrimBaseColor.alpha * scrimAlpha)
+
+  Box(
+      modifier =
+          Modifier.fillMaxSize()
+              .zIndex(SCRIM_Z_INDEX)
+              .background(scrimColor)
+              .clickable(
+                  interactionSource = remember { MutableInteractionSource() },
+                  indication = null,
+                  onClick = onDismiss)) {
+        Column(
+            modifier =
+                Modifier.align(Alignment.TopEnd)
+                    .padding(top = topPaddingDp, end = Dimens.Spacing.huge),
+            verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.small),
+            horizontalAlignment = Alignment.End) {
+              if (!isOwner) {
+                MenuBubble(
+                    text = stringResource(R.string.leave_group_button),
+                    icon = Icons.AutoMirrored.Filled.ExitToApp,
+                    onClick = {
+                      onDismiss()
+                      onLeaveGroup(group)
+                    },
+                    testTag = GroupListScreenTestTags.LEAVE_GROUP_BUBBLE)
+              }
+
+              MenuBubble(
+                  text = stringResource(R.string.share_group_button),
+                  icon = Icons.Default.Share,
+                  onClick = {
+                    scope.launch {
+                      shareInvitation(
+                          invitationType = InvitationType.GROUP,
+                          targetId = group.id,
+                          createdBy = currentUserId ?: "",
+                          context = context)
+                      onDismiss()
+                    }
+                  },
+                  testTag = GroupListScreenTestTags.SHARE_GROUP_BUBBLE)
+
+              if (isOwner) {
+                MenuBubble(
+                    text = stringResource(R.string.edit_group_button),
+                    icon = Icons.Default.Edit,
+                    onClick = {
+                      onEditGroup(group)
+                      onDismiss()
+                    },
+                    testTag = GroupListScreenTestTags.EDIT_GROUP_BUBBLE)
+              }
+
+              if (isOwner) {
+                MenuBubble(
+                    text = stringResource(R.string.delete_group_button),
+                    icon = Icons.Default.Delete,
+                    onClick = {
+                      onDismiss()
+                      onDeleteGroup(group)
+                    },
+                    testTag = GroupListScreenTestTags.DELETE_GROUP_BUBBLE)
+              }
             }
       }
 }
@@ -720,249 +681,4 @@ private fun CustomConfirmationDialog(
               }
         }
   }
-}
-
-/**
- * Share Group Dialog matching the design in screenshots.
- *
- * @param group The group to share
- * @param onDismiss Callback when dialog is dismissed
- */
-@Composable
-private fun ShareGroupDialog(group: Group, onDismiss: () -> Unit) {
-  val context = LocalContext.current
-  val clipboardManager = LocalClipboardManager.current
-
-  Dialog(onDismissRequest = onDismiss) {
-    Card(
-        modifier = Modifier.fillMaxWidth().testTag(GroupListScreenTestTags.SHARE_GROUP_DIALOG),
-        shape = RoundedCornerShape(Dimens.CornerRadius.extraLarge),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-          Column(
-              modifier = Modifier.padding(Dimens.Padding.large),
-              horizontalAlignment = Alignment.CenterHorizontally) {
-                // Header with close button
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically) {
-                      Spacer(Modifier.width(24.dp)) // Balance the close button
-                      Text(
-                          text = "       Share this group",
-                          style = MaterialTheme.typography.titleMedium,
-                          color = MaterialTheme.colorScheme.onSurface)
-                      IconButton(
-                          onClick = onDismiss,
-                          modifier =
-                              Modifier.testTag(GroupListScreenTestTags.SHARE_GROUP_CLOSE_BUTTON)) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
-                                tint = MaterialTheme.colorScheme.onSurface)
-                          }
-                    }
-
-                Spacer(Modifier.height(16.dp))
-
-                // Group name
-                Text(
-                    text = group.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.fillMaxWidth())
-
-                Spacer(Modifier.height(24.dp))
-
-                // Copy Group ID button
-                Button(
-                    onClick = {
-                      // Copy group ID to clipboard so users can join with it
-                      clipboardManager.setText(AnnotatedString(group.id))
-                      Toast.makeText(context, "Group ID copied to clipboard!", Toast.LENGTH_SHORT)
-                          .show()
-                      onDismiss()
-                    },
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .height(Dimens.Button.minHeight)
-                            .testTag(GroupListScreenTestTags.SHARE_GROUP_COPY_LINK_BUTTON),
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary),
-                    shape = RoundedCornerShape(Dimens.CornerRadius.extraLarge)) {
-                      Row(
-                          horizontalArrangement = Arrangement.Center,
-                          verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.ContentCopy,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = "Copy Group ID", color = MaterialTheme.colorScheme.onPrimary)
-                          }
-                    }
-
-                Spacer(Modifier.height(12.dp))
-
-                // Helper text
-                Text(
-                    text = "Anyone with this ID can join the group",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    textAlign = TextAlign.Center)
-              }
-        }
-  }
-}
-
-/**
- * Join with Link Dialog for entering a Group ID to join.
- *
- * State is managed internally to avoid triggering parent recomposition.
- *
- * @param onJoin Callback when join button is clicked, receives the group ID
- * @param onDismiss Callback when dialog is dismissed
- */
-@Composable
-private fun JoinWithLinkDialog(onJoin: (String) -> Unit, onDismiss: () -> Unit) {
-  val context = LocalContext.current
-  val clipboardManager = LocalClipboardManager.current
-
-  // Manage state locally to prevent infinite recomposition
-  var groupIdInput by remember { mutableStateOf("") }
-
-  // Use Box with scrim instead of Dialog to avoid Robolectric test issues
-  Box(
-      modifier =
-          Modifier.fillMaxSize()
-              .background(MaterialTheme.customColors.scrimOverlay)
-              .clickable(
-                  interactionSource = remember { MutableInteractionSource() },
-                  indication = null,
-                  onClick = onDismiss)
-              .zIndex(100f)) {
-        Card(
-            modifier =
-                Modifier.fillMaxWidth(0.9f)
-                    .align(Alignment.Center)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = { /* Prevent clicks from dismissing */})
-                    .testTag(GroupListScreenTestTags.JOIN_WITH_LINK_DIALOG),
-            shape = RoundedCornerShape(Dimens.CornerRadius.extraLarge),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-              Column(
-                  modifier = Modifier.padding(Dimens.Padding.large),
-                  horizontalAlignment = Alignment.CenterHorizontally) {
-                    // Header with close button
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically) {
-                          Spacer(Modifier.width(48.dp)) // Balance the close button
-                          Text(
-                              text = "Join a group",
-                              style = MaterialTheme.typography.titleMedium,
-                              color = MaterialTheme.colorScheme.onSurface,
-                              modifier = Modifier.weight(1f),
-                              textAlign = TextAlign.Center)
-                          IconButton(
-                              onClick = onDismiss,
-                              modifier =
-                                  Modifier.testTag(
-                                      GroupListScreenTestTags.JOIN_WITH_LINK_CLOSE_BUTTON)) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Close",
-                                    tint = MaterialTheme.colorScheme.onSurface)
-                              }
-                        }
-
-                    Spacer(Modifier.height(16.dp))
-
-                    // Instructions
-                    Text(
-                        text = "Enter the Group ID to join",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth())
-
-                    Spacer(Modifier.height(16.dp))
-
-                    // Group ID input field
-                    TextField(
-                        value = groupIdInput,
-                        onValueChange = { groupIdInput = it },
-                        label = { Text("Group ID") },
-                        singleLine = true,
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .testTag(GroupListScreenTestTags.JOIN_WITH_LINK_INPUT))
-
-                    Spacer(Modifier.height(8.dp))
-
-                    // Paste button
-                    Button(
-                        onClick = {
-                          val clipboardText = clipboardManager.getText()?.text
-                          if (clipboardText != null) {
-                            groupIdInput = clipboardText
-                            Toast.makeText(context, "Pasted from clipboard", Toast.LENGTH_SHORT)
-                                .show()
-                          } else {
-                            Toast.makeText(context, "Clipboard is empty", Toast.LENGTH_SHORT).show()
-                          }
-                        },
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .height(Dimens.Button.minHeight)
-                                .testTag(GroupListScreenTestTags.JOIN_WITH_LINK_PASTE_BUTTON),
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondary),
-                        shape = RoundedCornerShape(Dimens.CornerRadius.extraLarge)) {
-                          Row(
-                              horizontalArrangement = Arrangement.Center,
-                              verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.ContentCopy,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSecondary,
-                                    modifier = Modifier.size(20.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = "Paste Group ID",
-                                    color = MaterialTheme.colorScheme.onSecondary)
-                              }
-                        }
-
-                    Spacer(Modifier.height(24.dp))
-
-                    // Join button
-                    Button(
-                        onClick = {
-                          if (groupIdInput.trim().isNotEmpty()) {
-                            onJoin(groupIdInput.trim())
-                          } else {
-                            Toast.makeText(context, "Please enter a Group ID", Toast.LENGTH_SHORT)
-                                .show()
-                          }
-                        },
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .height(Dimens.Button.minHeight)
-                                .testTag(GroupListScreenTestTags.JOIN_WITH_LINK_JOIN_BUTTON),
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary),
-                        shape = RoundedCornerShape(Dimens.CornerRadius.extraLarge)) {
-                          Text(text = "Join Group", color = MaterialTheme.colorScheme.onPrimary)
-                        }
-                  }
-            }
-      }
 }

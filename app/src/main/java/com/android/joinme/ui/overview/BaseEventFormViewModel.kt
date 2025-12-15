@@ -139,8 +139,8 @@ abstract class BaseEventFormViewModel(protected val locationRepository: Location
     }
   }
 
-  /** Updates the location query and fetches suggestions. */
-  fun setLocationQuery(query: String) {
+  /** Helper function to update location query in state. */
+  private fun updateLocationQueryInState(query: String) {
     updateState { state ->
       when (state) {
         is CreateEventUIState -> state.copy(locationQuery = query)
@@ -148,36 +148,39 @@ abstract class BaseEventFormViewModel(protected val locationRepository: Location
         else -> state
       }
     }
+  }
+
+  /** Helper function to update location suggestions in state. */
+  private fun updateLocationSuggestionsInState(suggestions: List<Location>) {
+    updateState { state ->
+      when (state) {
+        is CreateEventUIState -> state.copy(locationSuggestions = suggestions)
+        is EditEventUIState -> state.copy(locationSuggestions = suggestions)
+        else -> state
+      }
+    }
+  }
+
+  /** Updates the location query and fetches suggestions. */
+  fun setLocationQuery(query: String) {
+    updateLocationQueryInState(query)
 
     if (query.isNotEmpty()) {
-      viewModelScope.launch {
-        try {
-          val results = locationRepository.search(query)
-          updateState { state ->
-            when (state) {
-              is CreateEventUIState -> state.copy(locationSuggestions = results)
-              is EditEventUIState -> state.copy(locationSuggestions = results)
-              else -> state
-            }
-          }
-        } catch (e: Exception) {
-          Log.e("BaseEventFormVM", "Error fetching location suggestions", e)
-          updateState { state ->
-            when (state) {
-              is CreateEventUIState -> state.copy(locationSuggestions = emptyList())
-              is EditEventUIState -> state.copy(locationSuggestions = emptyList())
-              else -> state
-            }
-          }
-        }
-      }
+      fetchLocationSuggestions(query)
     } else {
-      updateState { state ->
-        when (state) {
-          is CreateEventUIState -> state.copy(locationSuggestions = emptyList())
-          is EditEventUIState -> state.copy(locationSuggestions = emptyList())
-          else -> state
-        }
+      updateLocationSuggestionsInState(emptyList())
+    }
+  }
+
+  /** Fetches location suggestions from the repository. */
+  private fun fetchLocationSuggestions(query: String) {
+    viewModelScope.launch {
+      try {
+        val results = locationRepository.search(query)
+        updateLocationSuggestionsInState(results)
+      } catch (e: Exception) {
+        Log.e("BaseEventFormVM", "Error fetching location suggestions", e)
+        updateLocationSuggestionsInState(emptyList())
       }
     }
   }

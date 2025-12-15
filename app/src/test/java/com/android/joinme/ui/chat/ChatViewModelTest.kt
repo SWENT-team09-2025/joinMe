@@ -5,6 +5,9 @@ package com.android.joinme.ui.chat
 import com.android.joinme.model.chat.ChatRepository
 import com.android.joinme.model.chat.Message
 import com.android.joinme.model.chat.MessageType
+import com.android.joinme.model.map.UserLocation
+import com.android.joinme.model.profile.Profile
+import com.android.joinme.model.profile.ProfileRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -26,6 +29,59 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChatViewModelTest {
+
+  private class FakeProfileRepository : ProfileRepository {
+    private val profiles = mutableMapOf<String, Profile>()
+    var shouldThrowError = false
+
+    fun addProfile(profile: Profile) {
+      profiles[profile.uid] = profile
+    }
+
+    override suspend fun getProfile(uid: String): Profile? {
+      if (shouldThrowError) throw Exception("Profile fetch error")
+      return profiles[uid]
+    }
+
+    override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? {
+      if (shouldThrowError) throw Exception("Profiles fetch error")
+      return uids.mapNotNull { profiles[it] }
+    }
+
+    override suspend fun createOrUpdateProfile(profile: Profile) {
+      profiles[profile.uid] = profile
+    }
+
+    override suspend fun deleteProfile(uid: String) {
+      profiles.remove(uid)
+    }
+
+    override suspend fun uploadProfilePhoto(
+        context: android.content.Context,
+        uid: String,
+        imageUri: android.net.Uri
+    ): String {
+      return "https://example.com/photo.jpg"
+    }
+
+    override suspend fun deleteProfilePhoto(uid: String) {
+      profiles[uid]?.let { profiles[uid] = it.copy(photoUrl = null) }
+    }
+
+    // Stub implementations for follow methods
+    override suspend fun followUser(followerId: String, followedId: String) {}
+
+    override suspend fun unfollowUser(followerId: String, followedId: String) {}
+
+    override suspend fun isFollowing(followerId: String, followedId: String): Boolean = false
+
+    override suspend fun getFollowing(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getFollowers(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getMutualFollowing(userId1: String, userId2: String): List<Profile> =
+        emptyList()
+  }
 
   private class FakeChatRepository : ChatRepository {
     var shouldThrowError = false
@@ -116,9 +172,22 @@ class ChatViewModelTest {
         }
       }
     }
+
+    override suspend fun uploadChatImage(
+        context: android.content.Context,
+        conversationId: String,
+        messageId: String,
+        imageUri: android.net.Uri
+    ): String {
+      if (shouldThrowError) {
+        throw Exception(errorMessage)
+      }
+      return "https://storage.example.com/$conversationId/$messageId.jpg"
+    }
   }
 
   private lateinit var fakeRepo: FakeChatRepository
+  private lateinit var fakeProfileRepo: FakeProfileRepository
   private lateinit var viewModel: ChatViewModel
   private val testDispatcher = StandardTestDispatcher()
   private val testChatId = "chat123"
@@ -128,7 +197,8 @@ class ChatViewModelTest {
   fun setUp() {
     Dispatchers.setMain(testDispatcher)
     fakeRepo = FakeChatRepository()
-    viewModel = ChatViewModel(fakeRepo)
+    fakeProfileRepo = FakeProfileRepository()
+    viewModel = ChatViewModel(fakeRepo, fakeProfileRepo)
   }
 
   @After
@@ -744,5 +814,305 @@ class ChatViewModelTest {
     val state = viewModel.uiState.value
     assertEquals(1, state.messages.size)
     assertEquals("Chat 1 message", state.messages[0].content)
+  }
+
+  @Test
+  fun fetchSenderProfiles_loadsProfilesCorrectlyAndHandlesErrors() = runTest {
+    // Test 1: Load profiles for multiple senders (including one with no photo)
+    fakeProfileRepo.addProfile(
+        Profile(uid = "user1", photoUrl = "https://example.com/user1.jpg", username = "Alice"))
+    fakeProfileRepo.addProfile(Profile(uid = "user2", photoUrl = null, username = "Bob"))
+
+    val testMessages =
+        listOf(
+            Message(
+                id = "1",
+                conversationId = testChatId,
+                senderId = "user1",
+                senderName = "Alice",
+                content = "Hello",
+                timestamp = 1000L),
+            Message(
+                id = "2",
+                conversationId = testChatId,
+                senderId = "user2",
+                senderName = "Bob",
+                content = "Hi",
+                timestamp = 2000L),
+            Message(
+                id = "3",
+                conversationId = testChatId,
+                senderId = "user3", // This user doesn't have a profile
+                senderName = "Charlie",
+                content = "Hey",
+                timestamp = 3000L))
+    fakeRepo.setMessages(testChatId, testMessages)
+
+    viewModel.initializeChat(testChatId, testUserId)
+    advanceUntilIdle()
+
+    var state = viewModel.uiState.value
+    // Should have profiles for user1 and user2 (user3 not found is handled gracefully)
+    assertEquals(2, state.senderProfiles.size)
+    assertEquals("https://example.com/user1.jpg", state.senderProfiles["user1"]?.photoUrl)
+    assertNull(state.senderProfiles["user2"]?.photoUrl) // Bob has no photo
+    assertNull(state.senderProfiles["user3"]) // Charlie not found
+    assertNull(state.errorMsg) // No error shown for missing profiles
+
+    // Test 2: Verify deduplication - same sender with multiple messages
+    val moreMessages =
+        listOf(
+            Message(
+                id = "4",
+                conversationId = testChatId,
+                senderId = "user1",
+                senderName = "Alice",
+                content = "Another message",
+                timestamp = 4000L))
+    fakeRepo.setMessages(testChatId, testMessages + moreMessages)
+    advanceUntilIdle()
+
+    state = viewModel.uiState.value
+    // Should still have only 2 profiles (user1 profile not duplicated)
+    assertEquals(2, state.senderProfiles.size)
+
+    // Test 3: Handles repository error gracefully
+    fakeProfileRepo.shouldThrowError = true
+    fakeRepo.setMessages(testChatId, emptyList())
+    val newMessages =
+        listOf(
+            Message(
+                id = "5",
+                conversationId = testChatId,
+                senderId = "user4",
+                senderName = "Dave",
+                content = "Test",
+                timestamp = 5000L))
+    fakeRepo.setMessages(testChatId, newMessages)
+    advanceUntilIdle()
+
+    state = viewModel.uiState.value
+    // Should not crash, profiles may be empty or unchanged
+    assertNull(state.errorMsg) // Profile errors should not be shown to user
+  }
+
+  // ============================================================================
+  // uploadAndSendImage Tests
+  // ============================================================================
+
+  @Test
+  fun uploadAndSendImage_successfullyUploadsWithCorrectStateAndUniqueIds() = runTest {
+    // Given
+    viewModel.initializeChat(testChatId, testUserId)
+    advanceUntilIdle()
+
+    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
+    val mockImageUri1 = io.mockk.mockk<android.net.Uri>(relaxed = true)
+    val mockImageUri2 = io.mockk.mockk<android.net.Uri>(relaxed = true)
+    val senderName = "Alice"
+
+    var successCount = 0
+
+    // When - upload two images
+    viewModel.uploadAndSendImage(
+        context = mockContext,
+        imageUri = mockImageUri1,
+        senderName = senderName,
+        onSuccess = { successCount++ })
+    advanceUntilIdle()
+    viewModel.uploadAndSendImage(
+        context = mockContext,
+        imageUri = mockImageUri2,
+        senderName = senderName,
+        onSuccess = { successCount++ })
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+
+    // Verify state
+    assertFalse(state.isUploadingImage)
+    assertNull(state.imageUploadError)
+    assertEquals(2, successCount)
+
+    // Verify messages
+    assertEquals(2, state.messages.size)
+    state.messages.forEach { message ->
+      assertEquals(MessageType.IMAGE, message.type)
+      assertEquals(testUserId, message.senderId)
+      assertEquals(senderName, message.senderName)
+      assertTrue(message.content.startsWith("https://storage.example.com/"))
+    }
+
+    // Verify uniqueness
+    assertNotEquals(state.messages[0].id, state.messages[1].id)
+    assertNotEquals(state.messages[0].content, state.messages[1].content)
+  }
+
+  @Test
+  fun uploadAndSendImage_handlesUploadErrorCorrectly() = runTest {
+    // Given
+    viewModel.initializeChat(testChatId, testUserId)
+    advanceUntilIdle()
+
+    fakeRepo.shouldThrowError = true
+    fakeRepo.errorMessage = "Upload failed"
+
+    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
+    val mockImageUri = io.mockk.mockk<android.net.Uri>(relaxed = true)
+
+    var successCalled = false
+    var errorCalled = false
+    var errorMessage = ""
+
+    // When
+    viewModel.uploadAndSendImage(
+        context = mockContext,
+        imageUri = mockImageUri,
+        senderName = "Alice",
+        onSuccess = { successCalled = true },
+        onError = {
+          errorCalled = true
+          errorMessage = it
+        })
+    advanceUntilIdle()
+
+    // Then - verify error state
+    val state = viewModel.uiState.value
+    assertFalse(state.isUploadingImage) // Upload finished (with error)
+    assertNotNull(state.imageUploadError)
+    assertTrue(state.imageUploadError!!.contains("Upload failed"))
+    assertFalse(successCalled)
+    assertTrue(errorCalled)
+    assertTrue(errorMessage.contains("Upload failed"))
+
+    // Verify no message was added
+    assertEquals(0, state.messages.size)
+  }
+
+  @Test
+  fun clearImageUploadError_clearsErrorState() = runTest {
+    // Given
+    viewModel.initializeChat(testChatId, testUserId)
+    advanceUntilIdle()
+
+    fakeRepo.shouldThrowError = true
+    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
+    val mockImageUri = io.mockk.mockk<android.net.Uri>(relaxed = true)
+
+    // Upload to generate error
+    viewModel.uploadAndSendImage(mockContext, mockImageUri, "Alice")
+    advanceUntilIdle()
+
+    var state = viewModel.uiState.value
+    assertNotNull(state.imageUploadError)
+
+    // When
+    viewModel.clearImageUploadError()
+
+    // Then
+    state = viewModel.uiState.value
+    assertNull(state.imageUploadError)
+  }
+
+  @Test
+  fun sendCurrentLocation_createsLocationMessageWithAllProperties() = runTest {
+    // Given
+    viewModel.initializeChat(testChatId, testUserId)
+    advanceUntilIdle()
+
+    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
+    io.mockk.every { mockContext.getString(com.android.joinme.R.string.current_location) } returns
+        "Current Location"
+
+    val userLocation = UserLocation(latitude = 46.5197, longitude = 6.6323)
+    var successCalled = false
+
+    // When
+    viewModel.sendCurrentLocation(
+        context = mockContext,
+        userLocation = userLocation,
+        senderName = "Alice",
+        onSuccess = { successCalled = true })
+    advanceUntilIdle()
+
+    // Then
+    val messages = viewModel.uiState.value.messages
+    assertEquals(1, messages.size)
+
+    val locationMessage = messages[0]
+    assertEquals(MessageType.LOCATION, locationMessage.type)
+    assertNotNull(locationMessage.location)
+    assertEquals(46.5197, locationMessage.location!!.latitude, 0.0001)
+    assertEquals(6.6323, locationMessage.location!!.longitude, 0.0001)
+    assertEquals("Current Location", locationMessage.location!!.name)
+    assertEquals("Alice", locationMessage.senderName)
+    assertEquals(testUserId, locationMessage.senderId)
+    // Content now contains coordinates as text (not static map URL)
+    assertEquals("46.5197, 6.6323", locationMessage.content)
+    assertTrue(successCalled)
+  }
+
+  @Test
+  fun sendCurrentLocation_onError_callsErrorCallback() = runTest {
+    // Given
+    viewModel.initializeChat(testChatId, testUserId)
+    advanceUntilIdle()
+
+    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
+    io.mockk.every { mockContext.getString(com.android.joinme.R.string.current_location) } returns
+        "Current Location"
+    io.mockk.every {
+      mockContext.getString(com.android.joinme.R.string.failed_to_send_location, any())
+    } returns "Failed to send location: Test error"
+
+    fakeRepo.shouldThrowError = true
+    fakeRepo.errorMessage = "Test error"
+
+    val userLocation = UserLocation(latitude = 46.5197, longitude = 6.6323)
+    var errorMsg: String? = null
+
+    // When
+    viewModel.sendCurrentLocation(
+        context = mockContext,
+        userLocation = userLocation,
+        senderName = "Alice",
+        onError = { errorMsg = it })
+    advanceUntilIdle()
+
+    // Then
+    assertNotNull(viewModel.uiState.value.errorMsg)
+    assertTrue(viewModel.uiState.value.errorMsg!!.contains("Failed to send location"))
+    assertNotNull(errorMsg)
+    assertEquals(0, viewModel.uiState.value.messages.size) // No message added on error
+  }
+
+  @Test
+  fun sendCurrentLocation_withInvalidCoordinates_callsErrorCallback() = runTest {
+    // Given
+    viewModel.initializeChat(testChatId, testUserId)
+    advanceUntilIdle()
+
+    val mockContext = io.mockk.mockk<android.content.Context>(relaxed = true)
+    io.mockk.every {
+      mockContext.getString(com.android.joinme.R.string.invalid_location_coordinates)
+    } returns "Invalid location coordinates"
+
+    val invalidLocation = UserLocation(latitude = 91.0, longitude = 6.6323) // Invalid latitude
+    var errorMsg: String? = null
+
+    // When
+    viewModel.sendCurrentLocation(
+        context = mockContext,
+        userLocation = invalidLocation,
+        senderName = "Alice",
+        onError = { errorMsg = it })
+    advanceUntilIdle()
+
+    // Then
+    assertNotNull(viewModel.uiState.value.errorMsg)
+    assertEquals("Invalid location coordinates", viewModel.uiState.value.errorMsg)
+    assertNotNull(errorMsg)
+    assertEquals("Invalid location coordinates", errorMsg)
+    assertEquals(0, viewModel.uiState.value.messages.size) // No message added on error
   }
 }

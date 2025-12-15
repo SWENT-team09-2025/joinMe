@@ -119,6 +119,70 @@ class ProfileRepositoryLocalTest {
     assertNull("Non-existent profile should be null", profile)
   }
 
+  // ==================== GET PROFILES BY IDS TESTS ====================
+
+  @Test
+  fun testGetProfilesByIds_emptyList_returnsEmptyList() = runTest {
+    val profiles = repository.getProfilesByIds(emptyList())
+    assertNotNull("Should return empty list, not null", profiles)
+    assertTrue("List should be empty", profiles!!.isEmpty())
+  }
+
+  @Test
+  fun testGetProfilesByIds_singleExistingProfile_returnsProfile() = runTest {
+    val profiles = repository.getProfilesByIds(listOf("test-user-123"))
+    assertNotNull("Should return list with profile", profiles)
+    assertEquals(1, profiles!!.size)
+    assertEquals("test-user-123", profiles[0].uid)
+  }
+
+  @Test
+  fun testGetProfilesByIds_multipleExistingProfiles_returnsAllProfiles() = runTest {
+    // Create additional test profiles
+    val now = Timestamp.now()
+    val profile2 =
+        Profile(
+            uid = "user-2",
+            username = "User 2",
+            email = "user2@test.com",
+            createdAt = now,
+            updatedAt = now)
+    val profile3 =
+        Profile(
+            uid = "user-3",
+            username = "User 3",
+            email = "user3@test.com",
+            createdAt = now,
+            updatedAt = now)
+
+    repository.createOrUpdateProfile(profile2)
+    repository.createOrUpdateProfile(profile3)
+
+    val profiles = repository.getProfilesByIds(listOf("test-user-123", "user-2", "user-3"))
+    assertNotNull("Should return list with all profiles", profiles)
+    assertEquals(3, profiles!!.size)
+  }
+
+  @Test
+  fun testGetProfilesByIds_someProfilesNotFound_returnsNull() = runTest {
+    val profiles = repository.getProfilesByIds(listOf("test-user-123", "non-existent-uid"))
+    assertNull("Should return null when some profiles not found", profiles)
+  }
+
+  @Test
+  fun testGetProfilesByIds_allProfilesNotFound_returnsNull() = runTest {
+    val profiles = repository.getProfilesByIds(listOf("non-existent-1", "non-existent-2"))
+    assertNull("Should return null when all profiles not found", profiles)
+  }
+
+  @Test
+  fun testGetProfilesByIds_duplicateIds_returnsCorrectCount() = runTest {
+    // Even with duplicates in the request, we should get correct results
+    val profiles = repository.getProfilesByIds(listOf("test-user-123", "test-user-123"))
+    assertNotNull("Should return profiles", profiles)
+    assertEquals(2, profiles!!.size)
+  }
+
   // ==================== PHOTO UPLOAD TESTS ====================
 
   @Test
@@ -349,6 +413,586 @@ class ProfileRepositoryLocalTest {
     // Then
     val profile = repository.getProfile(uid)
     assertNull("PhotoUrl should be cleared", profile?.photoUrl)
+  }
+
+  // ==================== FOLLOW USER TESTS ====================
+
+  @Test
+  fun followUser_success_createsFollowRelationship() = runTest {
+    val now = Timestamp.now()
+    val user1 =
+        Profile(
+            uid = "user-1",
+            username = "User 1",
+            email = "user1@test.com",
+            createdAt = now,
+            updatedAt = now,
+            followingCount = 0,
+            followersCount = 0)
+    val user2 =
+        Profile(
+            uid = "user-2",
+            username = "User 2",
+            email = "user2@test.com",
+            createdAt = now,
+            updatedAt = now,
+            followingCount = 0,
+            followersCount = 0)
+
+    repository.createOrUpdateProfile(user1)
+    repository.createOrUpdateProfile(user2)
+
+    // When
+    repository.followUser("user-1", "user-2")
+
+    // Then
+    assertTrue("User 1 should be following User 2", repository.isFollowing("user-1", "user-2"))
+
+    // Check counts updated
+    val updatedUser1 = repository.getProfile("user-1")
+    val updatedUser2 = repository.getProfile("user-2")
+    assertEquals(1, updatedUser1?.followingCount)
+    assertEquals(1, updatedUser2?.followersCount)
+  }
+
+  @Test
+  fun followUser_throwsException_whenFollowingSelf() = runTest {
+    val exception =
+        assertThrows(Exception::class.java) {
+          runBlocking { repository.followUser("test-user-123", "test-user-123") }
+        }
+
+    assertTrue(exception.message?.contains("Cannot follow yourself") == true)
+  }
+
+  @Test
+  fun followUser_throwsException_whenAlreadyFollowing() = runTest {
+    val now = Timestamp.now()
+    val user1 =
+        Profile(
+            uid = "user-1",
+            username = "User 1",
+            email = "user1@test.com",
+            createdAt = now,
+            updatedAt = now)
+    val user2 =
+        Profile(
+            uid = "user-2",
+            username = "User 2",
+            email = "user2@test.com",
+            createdAt = now,
+            updatedAt = now)
+
+    repository.createOrUpdateProfile(user1)
+    repository.createOrUpdateProfile(user2)
+
+    // First follow
+    repository.followUser("user-1", "user-2")
+
+    // Try to follow again
+    val exception =
+        assertThrows(Exception::class.java) {
+          runBlocking { repository.followUser("user-1", "user-2") }
+        }
+
+    assertTrue(exception.message?.contains("Already following this user") == true)
+  }
+
+  @Test
+  fun followUser_updatesCountsCorrectly_forMultipleFollows() = runTest {
+    val now = Timestamp.now()
+    val user1 =
+        Profile(
+            uid = "user-1",
+            username = "User 1",
+            email = "user1@test.com",
+            createdAt = now,
+            updatedAt = now,
+            followingCount = 0,
+            followersCount = 0)
+    val user2 =
+        Profile(
+            uid = "user-2",
+            username = "User 2",
+            email = "user2@test.com",
+            createdAt = now,
+            updatedAt = now,
+            followingCount = 0,
+            followersCount = 0)
+    val user3 =
+        Profile(
+            uid = "user-3",
+            username = "User 3",
+            email = "user3@test.com",
+            createdAt = now,
+            updatedAt = now,
+            followingCount = 0,
+            followersCount = 0)
+
+    repository.createOrUpdateProfile(user1)
+    repository.createOrUpdateProfile(user2)
+    repository.createOrUpdateProfile(user3)
+
+    // User 1 follows User 2 and User 3
+    repository.followUser("user-1", "user-2")
+    repository.followUser("user-1", "user-3")
+
+    val updatedUser1 = repository.getProfile("user-1")
+    assertEquals(2, updatedUser1?.followingCount)
+
+    // User 2 follows User 1
+    repository.followUser("user-2", "user-1")
+
+    val finalUser1 = repository.getProfile("user-1")
+    val finalUser2 = repository.getProfile("user-2")
+
+    assertEquals(2, finalUser1?.followingCount)
+    assertEquals(1, finalUser1?.followersCount)
+    assertEquals(1, finalUser2?.followingCount)
+    assertEquals(1, finalUser2?.followersCount)
+  }
+
+  // ==================== UNFOLLOW USER TESTS ====================
+
+  @Test
+  fun unfollowUser_success_removesFollowRelationship() = runTest {
+    val now = Timestamp.now()
+    val user1 =
+        Profile(
+            uid = "user-1",
+            username = "User 1",
+            email = "user1@test.com",
+            createdAt = now,
+            updatedAt = now,
+            followingCount = 0,
+            followersCount = 0)
+    val user2 =
+        Profile(
+            uid = "user-2",
+            username = "User 2",
+            email = "user2@test.com",
+            createdAt = now,
+            updatedAt = now,
+            followingCount = 0,
+            followersCount = 0)
+
+    repository.createOrUpdateProfile(user1)
+    repository.createOrUpdateProfile(user2)
+
+    // Follow first
+    repository.followUser("user-1", "user-2")
+    assertTrue(repository.isFollowing("user-1", "user-2"))
+
+    // When: Unfollow
+    repository.unfollowUser("user-1", "user-2")
+
+    // Then
+    assertFalse(repository.isFollowing("user-1", "user-2"))
+
+    // Check counts updated
+    val updatedUser1 = repository.getProfile("user-1")
+    val updatedUser2 = repository.getProfile("user-2")
+    assertEquals(0, updatedUser1?.followingCount)
+    assertEquals(0, updatedUser2?.followersCount)
+  }
+
+  @Test
+  fun unfollowUser_throwsException_whenNotFollowing() = runTest {
+    val now = Timestamp.now()
+    val user1 =
+        Profile(
+            uid = "user-1",
+            username = "User 1",
+            email = "user1@test.com",
+            createdAt = now,
+            updatedAt = now)
+    val user2 =
+        Profile(
+            uid = "user-2",
+            username = "User 2",
+            email = "user2@test.com",
+            createdAt = now,
+            updatedAt = now)
+
+    repository.createOrUpdateProfile(user1)
+    repository.createOrUpdateProfile(user2)
+
+    // Try to unfollow without following first
+    val exception =
+        assertThrows(Exception::class.java) {
+          runBlocking { repository.unfollowUser("user-1", "user-2") }
+        }
+
+    assertTrue(exception.message?.contains("Not currently following this user") == true)
+  }
+
+  @Test
+  fun unfollowUser_canRefollow_afterUnfollowing() = runTest {
+    val now = Timestamp.now()
+    val user1 =
+        Profile(
+            uid = "user-1",
+            username = "User 1",
+            email = "user1@test.com",
+            createdAt = now,
+            updatedAt = now,
+            followingCount = 0,
+            followersCount = 0)
+    val user2 =
+        Profile(
+            uid = "user-2",
+            username = "User 2",
+            email = "user2@test.com",
+            createdAt = now,
+            updatedAt = now,
+            followingCount = 0,
+            followersCount = 0)
+
+    repository.createOrUpdateProfile(user1)
+    repository.createOrUpdateProfile(user2)
+
+    // Follow, unfollow, then follow again
+    repository.followUser("user-1", "user-2")
+    repository.unfollowUser("user-1", "user-2")
+    repository.followUser("user-1", "user-2")
+
+    assertTrue(repository.isFollowing("user-1", "user-2"))
+    val updatedUser1 = repository.getProfile("user-1")
+    val updatedUser2 = repository.getProfile("user-2")
+    assertEquals(1, updatedUser1?.followingCount)
+    assertEquals(1, updatedUser2?.followersCount)
+  }
+
+  // ==================== IS FOLLOWING TESTS ====================
+
+  @Test
+  fun isFollowing_returnsFalse_whenNotFollowing() = runTest {
+    val now = Timestamp.now()
+    val user1 =
+        Profile(
+            uid = "user-1",
+            username = "User 1",
+            email = "user1@test.com",
+            createdAt = now,
+            updatedAt = now)
+    val user2 =
+        Profile(
+            uid = "user-2",
+            username = "User 2",
+            email = "user2@test.com",
+            createdAt = now,
+            updatedAt = now)
+
+    repository.createOrUpdateProfile(user1)
+    repository.createOrUpdateProfile(user2)
+
+    assertFalse(repository.isFollowing("user-1", "user-2"))
+  }
+
+  @Test
+  fun isFollowing_isNotSymmetric() = runTest {
+    val now = Timestamp.now()
+    val user1 =
+        Profile(
+            uid = "user-1",
+            username = "User 1",
+            email = "user1@test.com",
+            createdAt = now,
+            updatedAt = now)
+    val user2 =
+        Profile(
+            uid = "user-2",
+            username = "User 2",
+            email = "user2@test.com",
+            createdAt = now,
+            updatedAt = now)
+
+    repository.createOrUpdateProfile(user1)
+    repository.createOrUpdateProfile(user2)
+
+    repository.followUser("user-1", "user-2")
+
+    assertTrue(repository.isFollowing("user-1", "user-2"))
+    assertFalse(repository.isFollowing("user-2", "user-1"))
+  }
+
+  // ==================== GET FOLLOWERS TESTS ====================
+
+  @Test
+  fun getFollowers_getFollowing_and_getMutualFollowing_returnEmptyList_whenNoRelationships() =
+      runTest {
+        val now = Timestamp.now()
+        val user1 =
+            Profile(
+                uid = "user-1",
+                username = "User 1",
+                email = "user1@test.com",
+                createdAt = now,
+                updatedAt = now)
+        val user2 =
+            Profile(
+                uid = "user-2",
+                username = "User 2",
+                email = "user2@test.com",
+                createdAt = now,
+                updatedAt = now)
+
+        repository.createOrUpdateProfile(user1)
+        repository.createOrUpdateProfile(user2)
+
+        // Test getFollowers
+        val followers = repository.getFollowers("user-1")
+        assertTrue(followers.isEmpty())
+
+        // Test getFollowing
+        val following = repository.getFollowing("user-1")
+        assertTrue(following.isEmpty())
+
+        // Test getMutualFollowing
+        val mutual = repository.getMutualFollowing("user-1", "user-2")
+        assertTrue(mutual.isEmpty())
+      }
+
+  @Test
+  fun getFollowers_returnsCorrectFollowers() = runTest {
+    val now = Timestamp.now()
+    val targetUser =
+        Profile(
+            uid = "target",
+            username = "Target User",
+            email = "target@test.com",
+            createdAt = now,
+            updatedAt = now)
+    val follower1 =
+        Profile(
+            uid = "follower-1",
+            username = "Follower 1",
+            email = "follower1@test.com",
+            createdAt = now,
+            updatedAt = now)
+    val follower2 =
+        Profile(
+            uid = "follower-2",
+            username = "Follower 2",
+            email = "follower2@test.com",
+            createdAt = now,
+            updatedAt = now)
+
+    repository.createOrUpdateProfile(targetUser)
+    repository.createOrUpdateProfile(follower1)
+    repository.createOrUpdateProfile(follower2)
+
+    repository.followUser("follower-1", "target")
+    repository.followUser("follower-2", "target")
+
+    val followers = repository.getFollowers("target")
+    assertEquals(2, followers.size)
+    assertTrue(followers.any { it.uid == "follower-1" })
+    assertTrue(followers.any { it.uid == "follower-2" })
+  }
+
+  @Test
+  fun getFollowers_respectsLimit() = runTest {
+    val now = Timestamp.now()
+    val targetUser =
+        Profile(
+            uid = "target",
+            username = "Target User",
+            email = "target@test.com",
+            createdAt = now,
+            updatedAt = now)
+
+    repository.createOrUpdateProfile(targetUser)
+
+    // Create 5 followers
+    for (i in 1..5) {
+      val follower =
+          Profile(
+              uid = "follower-$i",
+              username = "Follower $i",
+              email = "follower$i@test.com",
+              createdAt = now,
+              updatedAt = now)
+      repository.createOrUpdateProfile(follower)
+      repository.followUser("follower-$i", "target")
+    }
+
+    val followers = repository.getFollowers("target", limit = 3)
+    assertEquals(3, followers.size)
+  }
+
+  // ==================== GET FOLLOWING TESTS ====================
+
+  @Test
+  fun getFollowing_returnsCorrectFollowing() = runTest {
+    val now = Timestamp.now()
+    val user =
+        Profile(
+            uid = "user",
+            username = "User",
+            email = "user@test.com",
+            createdAt = now,
+            updatedAt = now)
+    val target1 =
+        Profile(
+            uid = "target-1",
+            username = "Target 1",
+            email = "target1@test.com",
+            createdAt = now,
+            updatedAt = now)
+    val target2 =
+        Profile(
+            uid = "target-2",
+            username = "Target 2",
+            email = "target2@test.com",
+            createdAt = now,
+            updatedAt = now)
+
+    repository.createOrUpdateProfile(user)
+    repository.createOrUpdateProfile(target1)
+    repository.createOrUpdateProfile(target2)
+
+    repository.followUser("user", "target-1")
+    repository.followUser("user", "target-2")
+
+    val following = repository.getFollowing("user")
+    assertEquals(2, following.size)
+    assertTrue(following.any { it.uid == "target-1" })
+    assertTrue(following.any { it.uid == "target-2" })
+  }
+
+  @Test
+  fun getFollowing_respectsLimit() = runTest {
+    val now = Timestamp.now()
+    val user =
+        Profile(
+            uid = "user",
+            username = "User",
+            email = "user@test.com",
+            createdAt = now,
+            updatedAt = now)
+
+    repository.createOrUpdateProfile(user)
+
+    // Follow 5 users
+    for (i in 1..5) {
+      val target =
+          Profile(
+              uid = "target-$i",
+              username = "Target $i",
+              email = "target$i@test.com",
+              createdAt = now,
+              updatedAt = now)
+      repository.createOrUpdateProfile(target)
+      repository.followUser("user", "target-$i")
+    }
+
+    val following = repository.getFollowing("user", limit = 3)
+    assertEquals(3, following.size)
+  }
+
+  // ==================== GET MUTUAL FOLLOWING TESTS ====================
+
+  @Test
+  fun getMutualFollowing_returnsCorrectMutualFollowing() = runTest {
+    val now = Timestamp.now()
+    val user1 =
+        Profile(
+            uid = "user-1",
+            username = "User 1",
+            email = "user1@test.com",
+            createdAt = now,
+            updatedAt = now)
+    val user2 =
+        Profile(
+            uid = "user-2",
+            username = "User 2",
+            email = "user2@test.com",
+            createdAt = now,
+            updatedAt = now)
+    val mutual1 =
+        Profile(
+            uid = "mutual-1",
+            username = "Mutual 1",
+            email = "mutual1@test.com",
+            createdAt = now,
+            updatedAt = now)
+    val mutual2 =
+        Profile(
+            uid = "mutual-2",
+            username = "Mutual 2",
+            email = "mutual2@test.com",
+            createdAt = now,
+            updatedAt = now)
+    val onlyUser1 =
+        Profile(
+            uid = "only-user1",
+            username = "Only User1",
+            email = "onlyuser1@test.com",
+            createdAt = now,
+            updatedAt = now)
+
+    repository.createOrUpdateProfile(user1)
+    repository.createOrUpdateProfile(user2)
+    repository.createOrUpdateProfile(mutual1)
+    repository.createOrUpdateProfile(mutual2)
+    repository.createOrUpdateProfile(onlyUser1)
+
+    // Both follow mutual1 and mutual2
+    repository.followUser("user-1", "mutual-1")
+    repository.followUser("user-1", "mutual-2")
+    repository.followUser("user-2", "mutual-1")
+    repository.followUser("user-2", "mutual-2")
+
+    // Only user1 follows onlyUser1
+    repository.followUser("user-1", "only-user1")
+
+    val mutual = repository.getMutualFollowing("user-1", "user-2")
+    assertEquals(2, mutual.size)
+    assertTrue(mutual.any { it.uid == "mutual-1" })
+    assertTrue(mutual.any { it.uid == "mutual-2" })
+    assertFalse(mutual.any { it.uid == "only-user1" })
+  }
+
+  @Test
+  fun getMutualFollowing_isSymmetric() = runTest {
+    val now = Timestamp.now()
+    val user1 =
+        Profile(
+            uid = "user-1",
+            username = "User 1",
+            email = "user1@test.com",
+            createdAt = now,
+            updatedAt = now)
+    val user2 =
+        Profile(
+            uid = "user-2",
+            username = "User 2",
+            email = "user2@test.com",
+            createdAt = now,
+            updatedAt = now)
+    val mutual =
+        Profile(
+            uid = "mutual",
+            username = "Mutual",
+            email = "mutual@test.com",
+            createdAt = now,
+            updatedAt = now)
+
+    repository.createOrUpdateProfile(user1)
+    repository.createOrUpdateProfile(user2)
+    repository.createOrUpdateProfile(mutual)
+
+    repository.followUser("user-1", "mutual")
+    repository.followUser("user-2", "mutual")
+
+    val mutual1to2 = repository.getMutualFollowing("user-1", "user-2")
+    val mutual2to1 = repository.getMutualFollowing("user-2", "user-1")
+
+    assertEquals(mutual1to2.size, mutual2to1.size)
+    assertEquals(1, mutual1to2.size)
+    assertTrue(mutual1to2.any { it.uid == "mutual" })
+    assertTrue(mutual2to1.any { it.uid == "mutual" })
   }
 
   // ==================== HELPER METHODS ====================

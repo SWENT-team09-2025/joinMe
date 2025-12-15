@@ -1,5 +1,7 @@
 package com.android.joinme.ui.groups
 
+import android.content.Context
+import android.net.Uri
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.groups.Group
 import com.android.joinme.model.groups.GroupRepository
@@ -66,6 +68,10 @@ class EditGroupViewModelTest {
     assertNull(state.errorMsg)
     assertFalse(state.isValid)
     assertNull(state.editedGroupId)
+    assertNull(state.pendingPhotoUri)
+    assertFalse(state.pendingPhotoDelete)
+    assertFalse(state.isUploadingPhoto)
+    assertNull(state.photoError)
   }
 
   // =======================================
@@ -729,5 +735,281 @@ class EditGroupViewModelTest {
     state = viewModel.uiState.value
     assertNull(state.descriptionError)
     assertTrue(state.isValid)
+  }
+
+  // =======================================
+  // Pending Photo Upload Tests
+  // =======================================
+
+  @Test
+  fun `setPendingPhoto stores photo URI locally without uploading`() = runTest {
+    val mockUri = mockk<Uri>()
+
+    viewModel.setPendingPhoto(mockUri)
+
+    val state = viewModel.uiState.value
+    assertEquals(mockUri, state.pendingPhotoUri)
+    assertFalse(state.pendingPhotoDelete)
+    assertNull(state.photoError)
+
+    // Verify no upload happened
+    coVerify(exactly = 0) { mockRepository.uploadGroupPhoto(any(), any(), any()) }
+  }
+
+  @Test
+  fun `setPendingPhoto clears pending delete flag`() = runTest {
+    val mockUri = mockk<Uri>()
+
+    // First mark for deletion
+    viewModel.markPhotoForDeletion()
+    assertTrue(viewModel.uiState.value.pendingPhotoDelete)
+
+    // Then set pending photo
+    viewModel.setPendingPhoto(mockUri)
+
+    val state = viewModel.uiState.value
+    assertEquals(mockUri, state.pendingPhotoUri)
+    assertFalse(state.pendingPhotoDelete)
+  }
+
+  @Test
+  fun `markPhotoForDeletion sets delete flag without deleting from storage`() = runTest {
+    viewModel.markPhotoForDeletion()
+
+    val state = viewModel.uiState.value
+    assertTrue(state.pendingPhotoDelete)
+    assertNull(state.pendingPhotoUri)
+    assertNull(state.photoError)
+
+    // Verify no deletion happened
+    coVerify(exactly = 0) { mockRepository.deleteGroupPhoto(any()) }
+  }
+
+  @Test
+  fun `markPhotoForDeletion clears pending photo URI`() = runTest {
+    val mockUri = mockk<Uri>()
+
+    // First set pending photo
+    viewModel.setPendingPhoto(mockUri)
+    assertEquals(mockUri, viewModel.uiState.value.pendingPhotoUri)
+
+    // Then mark for deletion
+    viewModel.markPhotoForDeletion()
+
+    val state = viewModel.uiState.value
+    assertTrue(state.pendingPhotoDelete)
+    assertNull(state.pendingPhotoUri)
+  }
+
+  @Test
+  fun `clearPendingPhotoChanges clears both pending upload and delete`() = runTest {
+    val mockUri = mockk<Uri>()
+
+    // Set pending photo
+    viewModel.setPendingPhoto(mockUri)
+    viewModel.clearPendingPhotoChanges()
+
+    var state = viewModel.uiState.value
+    assertNull(state.pendingPhotoUri)
+    assertFalse(state.pendingPhotoDelete)
+
+    // Mark for deletion
+    viewModel.markPhotoForDeletion()
+    viewModel.clearPendingPhotoChanges()
+
+    state = viewModel.uiState.value
+    assertNull(state.pendingPhotoUri)
+    assertFalse(state.pendingPhotoDelete)
+  }
+
+  // =======================================
+  // Update Group with Photo Tests
+  // =======================================
+
+  @Test
+  fun `updateGroup uploads pending photo when context provided`() = runTest {
+    val mockContext = mockk<Context>()
+    val mockUri = mockk<Uri>()
+    val downloadUrl = "https://storage.example.com/photo.jpg"
+
+    coEvery { mockRepository.getGroup(testGroup.id) } returns testGroup
+    coEvery { mockRepository.editGroup(testGroup.id, any()) } just Runs
+    coEvery { mockRepository.uploadGroupPhoto(mockContext, testGroup.id, mockUri) } returns
+        downloadUrl
+
+    viewModel.setName("Test Group")
+    viewModel.setPendingPhoto(mockUri)
+    viewModel.updateGroup(testGroup.id, mockContext)
+
+    advanceUntilIdle()
+
+    // Verify photo was uploaded
+    coVerify { mockRepository.uploadGroupPhoto(mockContext, testGroup.id, mockUri) }
+
+    val state = viewModel.uiState.value
+    assertNull(state.pendingPhotoUri) // Cleared after upload
+    assertFalse(state.pendingPhotoDelete)
+    assertNull(state.photoError)
+    assertEquals(testGroup.id, state.editedGroupId)
+  }
+
+  @Test
+  fun `updateGroup deletes photo when marked for deletion`() = runTest {
+    coEvery { mockRepository.getGroup(testGroup.id) } returns testGroup
+    coEvery { mockRepository.editGroup(testGroup.id, any()) } just Runs
+    coEvery { mockRepository.deleteGroupPhoto(testGroup.id) } just Runs
+
+    viewModel.setName("Test Group")
+    viewModel.markPhotoForDeletion()
+    viewModel.updateGroup(testGroup.id)
+
+    advanceUntilIdle()
+
+    // Verify photo was deleted
+    coVerify { mockRepository.deleteGroupPhoto(testGroup.id) }
+
+    val state = viewModel.uiState.value
+    assertNull(state.pendingPhotoUri)
+    assertFalse(state.pendingPhotoDelete) // Cleared after delete
+    assertNull(state.photoError)
+    assertEquals(testGroup.id, state.editedGroupId)
+  }
+
+  @Test
+  fun `updateGroup without pending photo changes does not call photo operations`() = runTest {
+    coEvery { mockRepository.getGroup(testGroup.id) } returns testGroup
+    coEvery { mockRepository.editGroup(testGroup.id, any()) } just Runs
+
+    viewModel.setName("Test Group")
+    viewModel.updateGroup(testGroup.id)
+
+    advanceUntilIdle()
+
+    // Verify no photo operations
+    coVerify(exactly = 0) { mockRepository.uploadGroupPhoto(any(), any(), any()) }
+    coVerify(exactly = 0) { mockRepository.deleteGroupPhoto(any()) }
+
+    val state = viewModel.uiState.value
+    assertEquals(testGroup.id, state.editedGroupId)
+  }
+
+  @Test
+  fun `updateGroup handles photo upload failure gracefully`() = runTest {
+    val mockContext = mockk<Context>()
+    val mockUri = mockk<Uri>()
+
+    coEvery { mockRepository.getGroup(testGroup.id) } returns testGroup
+    coEvery { mockRepository.editGroup(testGroup.id, any()) } just Runs
+    coEvery { mockRepository.uploadGroupPhoto(mockContext, testGroup.id, mockUri) } throws
+        Exception("Upload failed")
+
+    viewModel.setName("Test Group")
+    viewModel.setPendingPhoto(mockUri)
+    viewModel.updateGroup(testGroup.id, mockContext)
+
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    // Group should still be updated
+    assertEquals(testGroup.id, state.editedGroupId)
+    // But photo error should be set
+    assertNotNull(state.photoError)
+    assertTrue(state.photoError!!.contains("photo upload failed"))
+    // Pending state should be cleared
+    assertNull(state.pendingPhotoUri)
+    assertFalse(state.pendingPhotoDelete)
+  }
+
+  @Test
+  fun `updateGroup handles photo deletion failure gracefully`() = runTest {
+    coEvery { mockRepository.getGroup(testGroup.id) } returns testGroup
+    coEvery { mockRepository.editGroup(testGroup.id, any()) } just Runs
+    coEvery { mockRepository.deleteGroupPhoto(testGroup.id) } throws Exception("Delete failed")
+
+    viewModel.setName("Test Group")
+    viewModel.markPhotoForDeletion()
+    viewModel.updateGroup(testGroup.id)
+
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    // Group should still be updated
+    assertEquals(testGroup.id, state.editedGroupId)
+    // But photo error should be set
+    assertNotNull(state.photoError)
+    assertTrue(state.photoError!!.contains("photo deletion failed"))
+    // Pending state should be cleared
+    assertNull(state.pendingPhotoUri)
+    assertFalse(state.pendingPhotoDelete)
+  }
+
+  @Test
+  fun `updateGroup without context does not upload pending photo`() = runTest {
+    val mockUri = mockk<Uri>()
+
+    coEvery { mockRepository.getGroup(testGroup.id) } returns testGroup
+    coEvery { mockRepository.editGroup(testGroup.id, any()) } just Runs
+
+    viewModel.setName("Test Group")
+    viewModel.setPendingPhoto(mockUri)
+    viewModel.updateGroup(testGroup.id) // No context
+
+    advanceUntilIdle()
+
+    // Verify photo was NOT uploaded
+    coVerify(exactly = 0) { mockRepository.uploadGroupPhoto(any(), any(), any()) }
+
+    val state = viewModel.uiState.value
+    assertEquals(testGroup.id, state.editedGroupId)
+    // Pending photo should be cleared even though upload didn't happen
+    assertNull(state.pendingPhotoUri)
+  }
+
+  // =======================================
+  // Photo State Management Tests
+  // =======================================
+
+  @Test
+  fun `clearPhotoError clears photo error`() = runTest {
+    val mockContext = mockk<Context>()
+    val mockUri = mockk<Uri>()
+
+    coEvery { mockRepository.getGroup(testGroup.id) } returns testGroup
+    coEvery { mockRepository.editGroup(testGroup.id, any()) } just Runs
+    coEvery { mockRepository.uploadGroupPhoto(mockContext, testGroup.id, mockUri) } throws
+        Exception("Upload error")
+
+    viewModel.setName("Test Group")
+    viewModel.setPendingPhoto(mockUri)
+    viewModel.updateGroup(testGroup.id, mockContext)
+    advanceUntilIdle()
+
+    assertNotNull(viewModel.uiState.value.photoError)
+
+    viewModel.clearPhotoError()
+
+    assertNull(viewModel.uiState.value.photoError)
+  }
+
+  @Test
+  fun `loadGroup loads photoUrl from group`() = runTest {
+    val groupWithPhoto = testGroup.copy(photoUrl = "https://example.com/group-photo.jpg")
+    coEvery { mockRepository.getGroup(testGroup.id) } returns groupWithPhoto
+
+    viewModel.loadGroup(testGroup.id)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.value
+    assertEquals("https://example.com/group-photo.jpg", state.photoUrl)
+  }
+
+  @Test
+  fun `initial state has null photoUrl and no pending photo changes`() = runTest {
+    val state = viewModel.uiState.value
+    assertNull(state.photoUrl)
+    assertNull(state.pendingPhotoUri)
+    assertFalse(state.pendingPhotoDelete)
+    assertFalse(state.isUploadingPhoto)
+    assertNull(state.photoError)
   }
 }

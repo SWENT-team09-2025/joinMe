@@ -78,6 +78,23 @@ private class FakeGroupDetailRepository : GroupRepository {
     val updatedGroup = group.copy(memberIds = updatedMemberIds)
     editGroup(groupId, updatedGroup)
   }
+
+  override suspend fun getCommonGroups(userIds: List<String>): List<Group> {
+    if (shouldThrowError) throw Exception("Failed to load group")
+    if (userIds.isEmpty()) return emptyList()
+    return groups.values.filter { group ->
+      userIds.all { userId -> group.memberIds.contains(userId) }
+    }
+  }
+
+  override suspend fun uploadGroupPhoto(context: Context, groupId: String, imageUri: Uri): String {
+    // Not needed for these tests
+    return "http://fakeurl.com/photo.jpg"
+  }
+
+  override suspend fun deleteGroupPhoto(groupId: String) {
+    // Not needed for these tests
+  }
 }
 
 /** Fake ProfileRepository for testing GroupDetailScreen. */
@@ -96,6 +113,12 @@ private class FakeProfileDetailRepository : ProfileRepository {
     return profiles[uid]
   }
 
+  override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? {
+    if (uids.isEmpty()) return emptyList()
+    val result = uids.mapNotNull { getProfile(it) }
+    return if (result.size == uids.size) result else null
+  }
+
   override suspend fun createOrUpdateProfile(profile: Profile) {
     profiles[profile.uid] = profile
   }
@@ -111,6 +134,20 @@ private class FakeProfileDetailRepository : ProfileRepository {
   override suspend fun deleteProfilePhoto(uid: String) {
     // No-op for fake
   }
+
+  // Stub implementations for follow methods
+  override suspend fun followUser(followerId: String, followedId: String) {}
+
+  override suspend fun unfollowUser(followerId: String, followedId: String) {}
+
+  override suspend fun isFollowing(followerId: String, followedId: String): Boolean = false
+
+  override suspend fun getFollowing(userId: String, limit: Int): List<Profile> = emptyList()
+
+  override suspend fun getFollowers(userId: String, limit: Int): List<Profile> = emptyList()
+
+  override suspend fun getMutualFollowing(userId1: String, userId2: String): List<Profile> =
+      emptyList()
 }
 
 @RunWith(RobolectricTestRunner::class)
@@ -148,11 +185,11 @@ class GroupDetailScreenTest {
     // The loading indicator itself doesn't have a testTag, so we verify by checking
     // that success-state content doesn't exist yet
     val groupEventsExists =
-        composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
+        composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
 
     if (groupEventsExists) {
       // Loading was too fast, wait and verify success state loaded instead
-      composeTestRule.onNodeWithText("Group Events").assertIsDisplayed()
+      composeTestRule.onNodeWithText("Group Activities").assertIsDisplayed()
     } else {
       // We caught the loading state - verify error content also doesn't exist
       composeTestRule.onNodeWithText("Retry").assertDoesNotExist()
@@ -486,11 +523,11 @@ class GroupDetailScreenTest {
     composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
 
     composeTestRule.waitUntil(timeoutMillis = 3000) {
-      composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
     }
 
-    composeTestRule.onNodeWithText("Group Events").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Group Events").assertHasClickAction()
+    composeTestRule.onNodeWithText("Group Activities").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Group Activities").assertHasClickAction()
   }
 
   @Test
@@ -504,14 +541,16 @@ class GroupDetailScreenTest {
 
     composeTestRule.setContent {
       GroupDetailScreen(
-          groupId = "group1", viewModel = viewModel, onGroupEventsClick = { buttonClicked = true })
+          groupId = "group1",
+          viewModel = viewModel,
+          onActivityGroupClick = { buttonClicked = true })
     }
 
     composeTestRule.waitUntil(timeoutMillis = 3000) {
-      composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
     }
 
-    composeTestRule.onNodeWithText("Group Events").performClick()
+    composeTestRule.onNodeWithText("Group Activities").performClick()
 
     assertTrue(buttonClicked)
   }
@@ -701,8 +740,8 @@ class GroupDetailScreenTest {
       composeTestRule.onAllNodesWithText("Failed to load group").fetchSemanticsNodes().isNotEmpty()
     }
 
-    // Group Events button should not be visible
-    composeTestRule.onNodeWithText("Group Events").assertDoesNotExist()
+    // Group Activities button should not be visible
+    composeTestRule.onNodeWithText("Group Activities").assertDoesNotExist()
   }
 
   @Test
@@ -716,23 +755,6 @@ class GroupDetailScreenTest {
     composeTestRule.onNodeWithText("Sports").assertDoesNotExist()
     composeTestRule.onNodeWithText("Activity").assertDoesNotExist()
     composeTestRule.onNodeWithText("Social").assertDoesNotExist()
-  }
-
-  @Test
-  fun successfulLoad_showsGroupLogo() {
-    setup()
-    fakeGroupRepo.setGroup(
-        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS))
-
-    val viewModel = createViewModel()
-    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
-
-    composeTestRule.waitUntil(timeoutMillis = 3000) {
-      composeTestRule.onAllNodesWithText("Test Group").fetchSemanticsNodes().isNotEmpty()
-    }
-
-    // The logo image should be displayed
-    composeTestRule.onNodeWithContentDescription("Group picture").assertIsDisplayed()
   }
 
   @Test
@@ -890,18 +912,135 @@ class GroupDetailScreenTest {
 
     composeTestRule.setContent {
       GroupDetailScreen(
-          groupId = "group1", viewModel = viewModel, onGroupEventsClick = { clickCount++ })
+          groupId = "group1", viewModel = viewModel, onActivityGroupClick = { clickCount++ })
     }
 
     composeTestRule.waitUntil(timeoutMillis = 3000) {
-      composeTestRule.onAllNodesWithText("Group Events").fetchSemanticsNodes().isNotEmpty()
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
     }
 
-    composeTestRule.onNodeWithText("Group Events").performClick()
-    composeTestRule.onNodeWithText("Group Events").performClick()
-    composeTestRule.onNodeWithText("Group Events").performClick()
+    composeTestRule.onNodeWithText("Group Activities").performClick()
+    composeTestRule.onNodeWithText("Group Activities").performClick()
+    composeTestRule.onNodeWithText("Group Activities").performClick()
 
     assertEquals(3, clickCount)
+  }
+
+  // ========== Chat FAB Tests ==========
+
+  @Test
+  fun chatFab_isDisplayed() {
+    setup()
+    fakeGroupRepo.setGroup(
+        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS))
+
+    val viewModel = createViewModel()
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag("chatFabBottom").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("chatFabBottom").assertHasClickAction()
+  }
+
+  @Test
+  fun chatFab_triggersCallback() {
+    setup()
+    fakeGroupRepo.setGroup(
+        Group(id = "group1", name = "Chat Group", ownerId = "owner1", category = EventType.SPORTS))
+
+    var chatId: String? = null
+    var chatTitle: String? = null
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      GroupDetailScreen(
+          groupId = "group1",
+          viewModel = viewModel,
+          onNavigateToChat = { id, title, _ ->
+            chatId = id
+            chatTitle = title
+          })
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag("chatFabBottom").performClick()
+
+    assertEquals("group1", chatId)
+    assertEquals("Chat Group", chatTitle)
+  }
+
+  @Test
+  fun chatFab_hasMessageIcon() {
+    setup()
+    fakeGroupRepo.setGroup(
+        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS))
+
+    val viewModel = createViewModel()
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithContentDescription("Open Chat").assertIsDisplayed()
+  }
+
+  @Test
+  fun chatFab_canBeClickedMultipleTimes() {
+    setup()
+    fakeGroupRepo.setGroup(
+        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS))
+
+    var clickCount = 0
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      GroupDetailScreen(
+          groupId = "group1", viewModel = viewModel, onNavigateToChat = { _, _, _ -> clickCount++ })
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag("chatFabBottom").performClick()
+    composeTestRule.onNodeWithTag("chatFabBottom").performClick()
+    composeTestRule.onNodeWithTag("chatFabBottom").performClick()
+
+    assertEquals(3, clickCount)
+  }
+
+  @Test
+  fun chatFab_notDisplayedInLoadingState() {
+    setup()
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    // Chat FAB should not be visible during loading
+    composeTestRule.onNodeWithTag("chatFabBottom").assertDoesNotExist()
+  }
+
+  @Test
+  fun chatFab_notDisplayedInErrorState() {
+    setup()
+    fakeGroupRepo.shouldThrowError = true
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Failed to load group").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    // Chat FAB should not be visible in error state
+    composeTestRule.onNodeWithTag("chatFabBottom").assertDoesNotExist()
   }
 
   @Test
@@ -927,5 +1066,229 @@ class GroupDetailScreenTest {
     // Button should still be visible and clickable
     composeTestRule.onNodeWithText("Retry").assertIsDisplayed()
     composeTestRule.onNodeWithText("Retry").assertHasClickAction()
+  }
+
+  // ==============================
+  // Group Photo Tests
+  // ==============================
+
+  @Test
+  fun groupPhoto_whenUrlIsNull_displaysDefaultPlaceholder() {
+    setup()
+    // Group with NO photo URL
+    fakeGroupRepo.setGroup(
+        Group(
+            id = "group1",
+            name = "No Photo Group",
+            ownerId = "owner1",
+            category = EventType.SPORTS,
+            photoUrl = null))
+
+    val viewModel = createViewModel()
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("No Photo Group").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    // Use test tag for reliable detection in Robolectric tests
+    composeTestRule
+        .onNodeWithTag(GroupPhotoImageTestTags.GROUP_PHOTO_PLACEHOLDER)
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun groupPhoto_whenUrlIsPresent_displaysPhotoComponent() {
+    setup()
+    // Group WITH photo URL
+    fakeGroupRepo.setGroup(
+        Group(
+            id = "group1",
+            name = "Photo Group",
+            ownerId = "owner1",
+            category = EventType.SPORTS,
+            photoUrl = "https://example.com/photo.jpg"))
+
+    val viewModel = createViewModel()
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Photo Group").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    // In Robolectric, Coil image loading fails, so it shows placeholder on error
+    // We verify the photo component is rendered (either real image or error fallback)
+    composeTestRule.onNodeWithTag(GroupPhotoImageTestTags.GROUP_PHOTO).assertExists()
+  }
+
+  @Test
+  fun groupPhoto_whenUrlIsEmpty_displaysPlaceholder() {
+    setup()
+    // Group with EMPTY photo URL
+    fakeGroupRepo.setGroup(
+        Group(
+            id = "group1",
+            name = "Empty Photo URL Group",
+            ownerId = "owner1",
+            category = EventType.SPORTS,
+            photoUrl = ""))
+
+    val viewModel = createViewModel()
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Empty Photo URL Group").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    // Should fall back to placeholder - use test tag for reliable detection
+    composeTestRule
+        .onNodeWithTag(GroupPhotoImageTestTags.GROUP_PHOTO_PLACEHOLDER)
+        .assertIsDisplayed()
+  }
+
+  // Add these tests to GroupDetailScreenTest.kt
+
+  // ========== Leaderboard Button Tests ==========
+
+  @Test
+  fun leaderboardButton_isDisplayed() {
+    setup()
+    fakeGroupRepo.setGroup(
+        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS))
+
+    val viewModel = createViewModel()
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD)
+        .assertHasClickAction()
+  }
+
+  @Test
+  fun leaderboardButton_triggersCallback() {
+    setup()
+    fakeGroupRepo.setGroup(
+        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS))
+
+    var leaderboardGroupId: String? = null
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      GroupDetailScreen(
+          groupId = "group1",
+          viewModel = viewModel,
+          onNavigateToLeaderboard = { groupId -> leaderboardGroupId = groupId })
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).performClick()
+
+    assertEquals("group1", leaderboardGroupId)
+  }
+
+  @Test
+  fun leaderboardButton_hasLeaderboardIcon() {
+    setup()
+    fakeGroupRepo.setGroup(
+        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS))
+
+    val viewModel = createViewModel()
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithContentDescription("Leaderboard").assertIsDisplayed()
+  }
+
+  @Test
+  fun leaderboardButton_canBeClickedMultipleTimes() {
+    setup()
+    fakeGroupRepo.setGroup(
+        Group(id = "group1", name = "Test Group", ownerId = "owner1", category = EventType.SPORTS))
+
+    var clickCount = 0
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      GroupDetailScreen(
+          groupId = "group1", viewModel = viewModel, onNavigateToLeaderboard = { clickCount++ })
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).performClick()
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).performClick()
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).performClick()
+
+    assertEquals(3, clickCount)
+  }
+
+  @Test
+  fun leaderboardButton_notDisplayedInLoadingState() {
+    setup()
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    // Leaderboard button should not be visible during loading
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).assertDoesNotExist()
+  }
+
+  @Test
+  fun leaderboardButton_notDisplayedInErrorState() {
+    setup()
+    fakeGroupRepo.shouldThrowError = true
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent { GroupDetailScreen(groupId = "group1", viewModel = viewModel) }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Failed to load group").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    // Leaderboard button should not be visible in error state
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).assertDoesNotExist()
+  }
+
+  @Test
+  fun leaderboardButton_passesCorrectGroupId() {
+    setup()
+    val testGroupId = "special-group-id-123"
+    fakeGroupRepo.setGroup(
+        Group(
+            id = testGroupId,
+            name = "Special Group",
+            ownerId = "owner1",
+            category = EventType.SOCIAL))
+
+    var receivedGroupId: String? = null
+    val viewModel = createViewModel()
+
+    composeTestRule.setContent {
+      GroupDetailScreen(
+          groupId = testGroupId,
+          viewModel = viewModel,
+          onNavigateToLeaderboard = { groupId -> receivedGroupId = groupId })
+    }
+
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithText("Group Activities").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD).performClick()
+
+    assertEquals(testGroupId, receivedGroupId)
   }
 }

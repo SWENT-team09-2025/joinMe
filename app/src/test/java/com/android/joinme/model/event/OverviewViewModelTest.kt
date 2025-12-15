@@ -517,6 +517,14 @@ class OverviewViewModelTest {
       if (shouldThrow) throw RuntimeException("Event repository error")
       return "new_event_id"
     }
+
+    override suspend fun getCommonEvents(userIds: List<String>): List<Event> {
+      if (shouldThrow) throw RuntimeException("Event repository error")
+      if (userIds.isEmpty()) return emptyList()
+      return events
+          .filter { event -> userIds.all { userId -> event.participants.contains(userId) } }
+          .sortedBy { it.date.toDate().time }
+    }
   }
 
   /** Fake implementation of [SeriesRepository] for isolated ViewModel testing. */
@@ -559,6 +567,11 @@ class OverviewViewModelTest {
     override suspend fun getAllSeries(serieFilter: SerieFilter): List<Serie> {
       if (shouldThrow) throw RuntimeException("Serie repository error")
       return series.toList()
+    }
+
+    override suspend fun getSeriesByIds(seriesIds: List<String>): List<Serie> {
+      if (shouldThrow) throw RuntimeException("Serie repository error")
+      return series.filter { seriesIds.contains(it.serieId) }
     }
 
     override suspend fun getSerie(serieId: String): Serie {

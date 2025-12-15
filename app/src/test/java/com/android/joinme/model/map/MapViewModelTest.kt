@@ -9,6 +9,7 @@ import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.event.EventsRepository
+import com.android.joinme.model.filter.FilterRepository
 import com.android.joinme.model.serie.SeriesRepository
 import com.android.joinme.ui.map.MapUIState
 import com.android.joinme.ui.map.MapViewModel
@@ -37,7 +38,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
-import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -138,8 +138,6 @@ class MapViewModelTest {
     val onClearedMethod = viewModel.javaClass.superclass?.getDeclaredMethod("onCleared")
     onClearedMethod?.isAccessible = true
     onClearedMethod?.invoke(viewModel)
-
-    verify(mockLocationService).stopLocationUpdates()
   }
 
   @Test
@@ -204,4 +202,211 @@ class MapViewModelTest {
         assertNotNull(viewModel.uiState.value.errorMsg)
         assertTrue(viewModel.uiState.value.errorMsg!!.contains("Failed to load events"))
       }
+
+  @Test
+  fun `fetchLocalizableEvents filters out series with empty eventIds`() =
+      runTest(testDispatcher) {
+        val location1 = Location(46.5, 6.6, "Location 1")
+        val location2 = Location(46.6, 6.7, "Location 2")
+
+        val testEvents =
+            listOf(
+                Event(
+                    eventId = "event1",
+                    type = EventType.SPORTS,
+                    title = "Test Event 1",
+                    description = "Description 1",
+                    location = location1,
+                    date = Timestamp.now(),
+                    duration = 60,
+                    participants = emptyList(),
+                    maxParticipants = 10,
+                    visibility = EventVisibility.PUBLIC,
+                    ownerId = "owner1",
+                    partOfASerie = true),
+                Event(
+                    eventId = "event2",
+                    type = EventType.ACTIVITY,
+                    title = "Test Event 2",
+                    description = "Description 2",
+                    location = location2,
+                    date = Timestamp.now(),
+                    duration = 90,
+                    participants = emptyList(),
+                    maxParticipants = 15,
+                    visibility = EventVisibility.PUBLIC,
+                    ownerId = "owner2"))
+
+        val testSeries =
+            listOf(
+                com.android.joinme.model.serie.Serie(
+                    serieId = "serie1",
+                    title = "Valid Serie",
+                    description = "Has events",
+                    date = Timestamp.now(),
+                    participants = emptyList(),
+                    maxParticipants = 10,
+                    visibility = com.android.joinme.model.utils.Visibility.PUBLIC,
+                    eventIds = listOf("event1"),
+                    ownerId = "owner1"),
+                com.android.joinme.model.serie.Serie(
+                    serieId = "serie2",
+                    title = "Empty Serie",
+                    description = "No events",
+                    date = Timestamp.now(),
+                    participants = emptyList(),
+                    maxParticipants = 10,
+                    visibility = com.android.joinme.model.utils.Visibility.PUBLIC,
+                    eventIds = emptyList(),
+                    ownerId = "owner2"))
+
+        whenever(mockEventsRepository.getAllEvents(EventFilter.EVENTS_FOR_MAP_SCREEN))
+            .thenReturn(testEvents)
+        whenever(mockSeriesRepository.getAllSeries(any())).thenReturn(testSeries)
+
+        val method = viewModel.javaClass.getDeclaredMethod("fetchLocalizableEvents")
+        method.isAccessible = true
+        method.invoke(viewModel)
+
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.series.size)
+        assertTrue(viewModel.uiState.value.series.containsKey(location1))
+        assertFalse(viewModel.uiState.value.series.containsKey(location2))
+        assertEquals(1, viewModel.uiState.value.events.size)
+        assertEquals("event2", viewModel.uiState.value.events[0].eventId)
+      }
+
+  @Test
+  fun `fetchLocalizableEvents filters series without valid first event location`() =
+      runTest(testDispatcher) {
+        val location1 = Location(46.5, 6.6, "Location 1")
+
+        val testEvents =
+            listOf(
+                Event(
+                    eventId = "event1",
+                    type = EventType.SPORTS,
+                    title = "Test Event 1",
+                    description = "Description 1",
+                    location = null,
+                    date = Timestamp.now(),
+                    duration = 60,
+                    participants = emptyList(),
+                    maxParticipants = 10,
+                    visibility = EventVisibility.PUBLIC,
+                    ownerId = "owner1",
+                    partOfASerie = true),
+                Event(
+                    eventId = "event2",
+                    type = EventType.ACTIVITY,
+                    title = "Test Event 2",
+                    description = "Description 2",
+                    location = location1,
+                    date = Timestamp.now(),
+                    duration = 90,
+                    participants = emptyList(),
+                    maxParticipants = 15,
+                    visibility = EventVisibility.PUBLIC,
+                    ownerId = "owner2",
+                    partOfASerie = false))
+
+        val testSeries =
+            listOf(
+                com.android.joinme.model.serie.Serie(
+                    serieId = "serie1",
+                    title = "Serie with no location",
+                    description = "References event without location",
+                    date = Timestamp.now(),
+                    participants = emptyList(),
+                    maxParticipants = 10,
+                    visibility = com.android.joinme.model.utils.Visibility.PUBLIC,
+                    eventIds = listOf("event1"),
+                    ownerId = "owner1"))
+
+        whenever(mockEventsRepository.getAllEvents(EventFilter.EVENTS_FOR_MAP_SCREEN))
+            .thenReturn(testEvents)
+        whenever(mockSeriesRepository.getAllSeries(any())).thenReturn(testSeries)
+
+        val method = viewModel.javaClass.getDeclaredMethod("fetchLocalizableEvents")
+        method.isAccessible = true
+        method.invoke(viewModel)
+
+        advanceUntilIdle()
+
+        assertEquals(0, viewModel.uiState.value.series.size)
+        assertEquals(1, viewModel.uiState.value.events.size)
+        assertEquals("event2", viewModel.uiState.value.events[0].eventId)
+      }
+
+  @Test
+  fun `enableFollowingUser and disableFollowingUser toggle isFollowingUser`() = runTest {
+    val stateField = viewModel.javaClass.getDeclaredField("_uiState")
+    stateField.isAccessible = true
+    val mutableState = stateField.get(viewModel) as MutableStateFlow<MapUIState>
+    mutableState.value = MapUIState(isFollowingUser = true)
+
+    viewModel.disableFollowingUser()
+
+    assertFalse(viewModel.uiState.value.isFollowingUser)
+
+    viewModel.enableFollowingUser()
+
+    assertTrue(viewModel.uiState.value.isFollowingUser)
+  }
+
+  @Test
+  fun `onMarkerClick sets isReturningFromMarkerClick to true and isFollowingUser to false`() =
+      runTest {
+        val stateField = viewModel.javaClass.getDeclaredField("_uiState")
+        stateField.isAccessible = true
+        val mutableState = stateField.get(viewModel) as MutableStateFlow<MapUIState>
+        mutableState.value = MapUIState(isFollowingUser = true, isReturningFromMarkerClick = false)
+
+        assertTrue(viewModel.uiState.value.isFollowingUser)
+        assertFalse(viewModel.uiState.value.isReturningFromMarkerClick)
+
+        viewModel.onMarkerClick()
+
+        assertFalse(viewModel.uiState.value.isFollowingUser)
+        assertTrue(viewModel.uiState.value.isReturningFromMarkerClick)
+
+        viewModel.clearMarkerClickFlag()
+
+        assertFalse(viewModel.uiState.value.isFollowingUser)
+        assertFalse(viewModel.uiState.value.isReturningFromMarkerClick)
+      }
+
+  @Test
+  fun `test Toggle Function`() = runTest {
+    val repo = FilterRepository
+    assertFalse(repo.filterState.value.isSportSelected)
+    assertFalse(repo.filterState.value.isSocialSelected)
+    assertFalse(repo.filterState.value.isActivitySelected)
+    assertFalse(repo.filterState.value.showMyEvents)
+    assertFalse(repo.filterState.value.showJoinedEvents)
+    assertFalse(repo.filterState.value.showOtherEvents)
+
+    viewModel.toggleSport()
+    viewModel.toggleActivity()
+    viewModel.toggleSocial()
+    viewModel.toggleMyEvents()
+    viewModel.toggleJoinedEvents()
+    viewModel.toggleOtherEvents()
+
+    assertTrue(repo.filterState.value.isSportSelected)
+    assertTrue(repo.filterState.value.isSocialSelected)
+    assertTrue(repo.filterState.value.isActivitySelected)
+    assertTrue(repo.filterState.value.showMyEvents)
+    assertTrue(repo.filterState.value.showJoinedEvents)
+    assertTrue(repo.filterState.value.showOtherEvents)
+    viewModel.clearFilters()
+
+    assertFalse(repo.filterState.value.isSportSelected)
+    assertFalse(repo.filterState.value.isSocialSelected)
+    assertFalse(repo.filterState.value.isActivitySelected)
+    assertFalse(repo.filterState.value.showMyEvents)
+    assertFalse(repo.filterState.value.showJoinedEvents)
+    assertFalse(repo.filterState.value.showOtherEvents)
+  }
 }

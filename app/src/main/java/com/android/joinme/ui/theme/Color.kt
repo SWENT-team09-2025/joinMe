@@ -108,4 +108,30 @@ val onSerieContainerDark = Color(0xFFFFFFFF)
 
 val seriePinMark = Color(0xFF000000)
 
+// Chat default colors - using primary color scheme for neutral, universal look
+val chatDefaultLight = primaryContainerLight
+val onChatDefaultLight = onPrimaryContainerLight
+
+val chatDefaultDark = primaryContainerDark
+val onChatDefaultDark = onPrimaryContainerDark
+
 val TransparentColor = Color.Transparent
+
+// Online/Offline status indicator colors
+val onlineIndicator = Color(0xFF4CAF50) // Green
+val offlineIndicator = Color(0xFFF44336) // Red
+
+// Leaderboard badge colors
+val goldLight = Color(0xFFFFD700)
+val goldDark = Color(0xFFFFD700)
+
+val silverLight = Color(0xFFC0C0C0)
+val silverDark = Color(0xFFD4D4D4)
+
+val bronzeLight = Color(0xFFCD7F32)
+val bronzeDark = Color(0xFFE8A854)
+
+val badgeMarkerColor = Color(0xFF2196F3)
+val white = Color(0xFFFFFFFF)
+val black = Color(0xFF000000)
+val gray = Color(0xFF888888)

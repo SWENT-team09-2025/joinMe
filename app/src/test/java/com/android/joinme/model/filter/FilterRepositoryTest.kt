@@ -27,17 +27,6 @@ class FilterRepositoryTest {
   }
 
   @Test
-  fun `initial state has no filters selected`() = runTest {
-    val state = FilterRepository.filterState.first()
-
-    assertFalse(state.isSocialSelected)
-    assertFalse(state.isActivitySelected)
-    assertFalse(state.isSelectAllChecked)
-    assertEquals(0, state.selectedSportsCount)
-    assertTrue(state.sportCategories.none { it.isChecked })
-  }
-
-  @Test
   fun `reset restores default state`() = runTest {
     // Modify state by selecting some filters
     FilterRepository.toggleSocial()
@@ -49,7 +38,7 @@ class FilterRepositoryTest {
     val state = FilterRepository.filterState.first()
     assertFalse(state.isSocialSelected)
     assertFalse(state.isActivitySelected)
-    assertFalse(state.isSelectAllChecked)
+    assertFalse(state.isSportSelected)
   }
 
   @Test
@@ -77,75 +66,14 @@ class FilterRepositoryTest {
   }
 
   @Test
-  fun `toggleSelectAll selects all sports`() = runTest {
-    FilterRepository.toggleSelectAll()
+  fun `toggleSport twice returns to initial state`() = runTest {
+    FilterRepository.toggleSport()
+    val firstToggle = FilterRepository.filterState.first()
+    assertTrue(firstToggle.isSportSelected)
 
-    val state = FilterRepository.filterState.first()
-    assertTrue(state.isSelectAllChecked)
-    assertEquals(4, state.selectedSportsCount)
-    assertTrue(state.sportCategories.all { it.isChecked })
-  }
-
-  @Test
-  fun `toggleSelectAll twice returns sports to initial state`() = runTest {
-    FilterRepository.toggleSelectAll()
-    FilterRepository.toggleSelectAll()
-
-    val state = FilterRepository.filterState.first()
-    assertFalse(state.isSelectAllChecked)
-    assertEquals(0, state.selectedSportsCount)
-    assertTrue(state.sportCategories.none { it.isChecked })
-  }
-
-  @Test
-  fun `toggleSport selects specific sport`() = runTest {
-    FilterRepository.toggleSport("basket")
-
-    val state = FilterRepository.filterState.first()
-    val basketSport = state.sportCategories.find { it.id == "basket" }
-    assertNotNull(basketSport)
-    assertTrue(basketSport!!.isChecked)
-    assertEquals(1, state.selectedSportsCount)
-    assertFalse(state.isSelectAllChecked)
-  }
-
-  @Test
-  fun `toggleSport twice returns sport to initial state`() = runTest {
-    FilterRepository.toggleSport("football")
-    FilterRepository.toggleSport("football")
-
-    val state = FilterRepository.filterState.first()
-    val footballSport = state.sportCategories.find { it.id == "football" }
-    assertFalse(footballSport!!.isChecked)
-    assertEquals(0, state.selectedSportsCount)
-  }
-
-  @Test
-  fun `toggleSport with invalid id does nothing`() = runTest {
-    FilterRepository.toggleSport("invalid_sport")
-
-    val state = FilterRepository.filterState.first()
-    assertEquals(0, state.selectedSportsCount)
-  }
-
-  @Test
-  fun `sportCategories contains correct sports`() = runTest {
-    val state = FilterRepository.filterState.first()
-    val sportIds = state.sportCategories.map { it.id }
-
-    assertTrue(sportIds.contains("basket"))
-    assertTrue(sportIds.contains("football"))
-    assertTrue(sportIds.contains("tennis"))
-    assertTrue(sportIds.contains("running"))
-  }
-
-  @Test
-  fun `selectedSportsCount is computed correctly`() = runTest {
-    FilterRepository.toggleSport("basket")
-    FilterRepository.toggleSport("tennis")
-
-    val state = FilterRepository.filterState.first()
-    assertEquals(2, state.selectedSportsCount)
+    FilterRepository.toggleSport()
+    val secondToggle = FilterRepository.filterState.first()
+    assertFalse(secondToggle.isSportSelected)
   }
 
   @Test
@@ -156,7 +84,7 @@ class FilterRepositoryTest {
             createTestEvent("2", EventType.SOCIAL),
             createTestEvent("3", EventType.ACTIVITY))
 
-    val filteredEvents = FilterRepository.applyFilters(events)
+    val filteredEvents = FilterRepository.applyFiltersToEvents(events)
 
     assertEquals(3, filteredEvents.size)
   }
@@ -172,7 +100,7 @@ class FilterRepositoryTest {
             createTestEvent("2", EventType.SOCIAL),
             createTestEvent("3", EventType.ACTIVITY))
 
-    val filteredEvents = FilterRepository.applyFilters(events)
+    val filteredEvents = FilterRepository.applyFiltersToEvents(events)
 
     assertEquals(1, filteredEvents.size)
     assertEquals(EventType.SOCIAL, filteredEvents[0].type)
@@ -189,16 +117,16 @@ class FilterRepositoryTest {
             createTestEvent("2", EventType.SOCIAL),
             createTestEvent("3", EventType.ACTIVITY))
 
-    val filteredEvents = FilterRepository.applyFilters(events)
+    val filteredEvents = FilterRepository.applyFiltersToEvents(events)
 
     assertEquals(1, filteredEvents.size)
     assertEquals(EventType.ACTIVITY, filteredEvents[0].type)
   }
 
   @Test
-  fun `applyFilters returns sports events when any sport is selected`() = runTest {
-    // Select only one sport
-    FilterRepository.toggleSport("basket")
+  fun `applyFilters returns sports events when sport filter is selected`() = runTest {
+    // Select sport filter
+    FilterRepository.toggleSport()
 
     val events =
         listOf(
@@ -206,7 +134,7 @@ class FilterRepositoryTest {
             createTestEvent("2", EventType.SOCIAL),
             createTestEvent("3", EventType.ACTIVITY))
 
-    val filteredEvents = FilterRepository.applyFilters(events)
+    val filteredEvents = FilterRepository.applyFiltersToEvents(events)
 
     assertEquals(1, filteredEvents.size)
     assertEquals(EventType.SPORTS, filteredEvents[0].type)
@@ -224,7 +152,7 @@ class FilterRepositoryTest {
             createTestEvent("2", EventType.SOCIAL),
             createTestEvent("3", EventType.ACTIVITY))
 
-    val filteredEvents = FilterRepository.applyFilters(events)
+    val filteredEvents = FilterRepository.applyFiltersToEvents(events)
 
     assertEquals(2, filteredEvents.size)
     assertTrue(filteredEvents.any { it.type == EventType.SOCIAL })
@@ -233,26 +161,399 @@ class FilterRepositoryTest {
 
   @Test
   fun `applyFilters returns empty list when input is empty`() = runTest {
-    val filteredEvents = FilterRepository.applyFilters(emptyList())
+    val filteredEvents = FilterRepository.applyFiltersToEvents(emptyList())
 
     assertEquals(0, filteredEvents.size)
   }
 
   @Test
   fun `complex filter scenario works correctly`() = runTest {
-    // Select activity and some sports
+    // Select activity and sport
     FilterRepository.toggleActivity()
-    FilterRepository.toggleSport("basket")
-    FilterRepository.toggleSport("football")
+    FilterRepository.toggleSport()
 
     val state = FilterRepository.filterState.first()
     assertFalse(state.isSocialSelected)
     assertTrue(state.isActivitySelected)
-    assertEquals(2, state.selectedSportsCount)
-    assertFalse(state.isSelectAllChecked)
+    assertTrue(state.isSportSelected)
   }
 
-  private fun createTestEvent(id: String, type: EventType): Event {
+  @Test
+  fun `toggleMyEvents toggles showMyEvents state`() = runTest {
+    // Initially false
+    var state = FilterRepository.filterState.first()
+    assertFalse(state.showMyEvents)
+
+    // Toggle on
+    FilterRepository.toggleMyEvents()
+    state = FilterRepository.filterState.first()
+    assertTrue(state.showMyEvents)
+
+    // Toggle off
+    FilterRepository.toggleMyEvents()
+    state = FilterRepository.filterState.first()
+    assertFalse(state.showMyEvents)
+  }
+
+  @Test
+  fun `toggleJoinedEvents toggles showJoinedEvents state`() = runTest {
+    // Initially false
+    var state = FilterRepository.filterState.first()
+    assertFalse(state.showJoinedEvents)
+
+    // Toggle on
+    FilterRepository.toggleJoinedEvents()
+    state = FilterRepository.filterState.first()
+    assertTrue(state.showJoinedEvents)
+
+    // Toggle off
+    FilterRepository.toggleJoinedEvents()
+    state = FilterRepository.filterState.first()
+    assertFalse(state.showJoinedEvents)
+  }
+
+  @Test
+  fun `toggleOtherEvents toggles showOtherEvents state`() = runTest {
+    // Initially false
+    var state = FilterRepository.filterState.first()
+    assertFalse(state.showOtherEvents)
+
+    // Toggle on
+    FilterRepository.toggleOtherEvents()
+    state = FilterRepository.filterState.first()
+    assertTrue(state.showOtherEvents)
+
+    // Toggle off
+    FilterRepository.toggleOtherEvents()
+    state = FilterRepository.filterState.first()
+    assertFalse(state.showOtherEvents)
+  }
+
+  @Test
+  fun `applyFilters returns only my events when showMyEvents is selected`() = runTest {
+    FilterRepository.toggleMyEvents()
+
+    val events =
+        listOf(
+            createTestEvent("1", EventType.SPORTS, ownerId = "user1", participants = emptyList()),
+            createTestEvent(
+                "2", EventType.SOCIAL, ownerId = "user2", participants = listOf("user1")),
+            createTestEvent("3", EventType.ACTIVITY, ownerId = "user2", participants = emptyList()))
+
+    val filteredEvents = FilterRepository.applyFiltersToEvents(events, currentUserId = "user1")
+
+    assertEquals(1, filteredEvents.size)
+    assertEquals("1", filteredEvents[0].eventId)
+  }
+
+  @Test
+  fun `applyFilters returns only joined events when showJoinedEvents is selected`() = runTest {
+    FilterRepository.toggleJoinedEvents()
+
+    val events =
+        listOf(
+            createTestEvent("1", EventType.SPORTS, ownerId = "user1", participants = emptyList()),
+            createTestEvent(
+                "2", EventType.SOCIAL, ownerId = "user2", participants = listOf("user1")),
+            createTestEvent("3", EventType.ACTIVITY, ownerId = "user2", participants = emptyList()))
+
+    val filteredEvents = FilterRepository.applyFiltersToEvents(events, currentUserId = "user1")
+
+    assertEquals(1, filteredEvents.size)
+    assertEquals("2", filteredEvents[0].eventId)
+  }
+
+  @Test
+  fun `applyFilters returns only other events when showOtherEvents is selected`() = runTest {
+    FilterRepository.toggleOtherEvents()
+
+    val events =
+        listOf(
+            createTestEvent(
+                "1", EventType.SPORTS, ownerId = "user1", participants = listOf("user1")),
+            createTestEvent(
+                "2", EventType.SOCIAL, ownerId = "user2", participants = listOf("user1")),
+            createTestEvent("3", EventType.ACTIVITY, ownerId = "user2", participants = emptyList()))
+
+    val filteredEvents = FilterRepository.applyFiltersToEvents(events, currentUserId = "user1")
+
+    // Should only return event 3 (not owned by user, and user not participating)
+    assertEquals(1, filteredEvents.size)
+    assertEquals("3", filteredEvents[0].eventId)
+  }
+
+  @Test
+  fun `applyFilters returns combined results when multiple participation filters selected`() =
+      runTest {
+        FilterRepository.toggleMyEvents()
+        FilterRepository.toggleOtherEvents()
+
+        val events =
+            listOf(
+                createTestEvent(
+                    "1", EventType.SPORTS, ownerId = "user1", participants = emptyList()),
+                createTestEvent(
+                    "2", EventType.SOCIAL, ownerId = "user2", participants = listOf("user1")),
+                createTestEvent(
+                    "3", EventType.ACTIVITY, ownerId = "user2", participants = emptyList()))
+
+        val filteredEvents = FilterRepository.applyFiltersToEvents(events, currentUserId = "user1")
+
+        assertEquals(2, filteredEvents.size)
+        assertTrue(filteredEvents.any { it.eventId == "1" })
+        assertTrue(filteredEvents.any { it.eventId == "3" })
+      }
+
+  @Test
+  fun `applyFilters returns all events when no participation filters and no userId`() = runTest {
+    val events =
+        listOf(
+            createTestEvent("1", EventType.SPORTS, ownerId = "user1", participants = emptyList()),
+            createTestEvent(
+                "2", EventType.SOCIAL, ownerId = "user2", participants = listOf("user1")),
+            createTestEvent("3", EventType.ACTIVITY, ownerId = "user2", participants = emptyList()))
+
+    val filteredEvents = FilterRepository.applyFiltersToEvents(events, currentUserId = "")
+
+    assertEquals(3, filteredEvents.size)
+  }
+
+  @Test
+  fun `applyFilters returns all events when participation filters set but userId empty`() =
+      runTest {
+        FilterRepository.toggleMyEvents()
+
+        val events =
+            listOf(
+                createTestEvent(
+                    "1", EventType.SPORTS, ownerId = "user1", participants = emptyList()),
+                createTestEvent(
+                    "2", EventType.SOCIAL, ownerId = "user2", participants = emptyList()))
+
+        val filteredEvents = FilterRepository.applyFiltersToEvents(events, currentUserId = "")
+
+        assertEquals(2, filteredEvents.size)
+      }
+
+  @Test
+  fun `applyFilters combines type and participation filters correctly`() = runTest {
+    FilterRepository.toggleSocial()
+    FilterRepository.toggleMyEvents()
+
+    val events =
+        listOf(
+            createTestEvent("1", EventType.SPORTS, ownerId = "user1", participants = emptyList()),
+            createTestEvent("2", EventType.SOCIAL, ownerId = "user1", participants = emptyList()),
+            createTestEvent("3", EventType.SOCIAL, ownerId = "user2", participants = emptyList()))
+
+    val filteredEvents = FilterRepository.applyFiltersToEvents(events, currentUserId = "user1")
+
+    // Should only return social events owned by user1
+    assertEquals(1, filteredEvents.size)
+    assertEquals("2", filteredEvents[0].eventId)
+  }
+
+  @Test
+  fun `applyFiltersToSeries returns all series when no filters selected`() = runTest {
+    val events =
+        listOf(createTestEvent("e1", EventType.SPORTS), createTestEvent("e2", EventType.SOCIAL))
+    val series = listOf(createTestSerie("s1", listOf("e1")), createTestSerie("s2", listOf("e2")))
+
+    val filteredSeries = FilterRepository.applyFiltersToSeries(series, events)
+
+    assertEquals(2, filteredSeries.size)
+  }
+
+  @Test
+  fun `applyFiltersToSeries filters by event type correctly`() = runTest {
+    FilterRepository.toggleSocial()
+
+    val events =
+        listOf(
+            createTestEvent("e1", EventType.SPORTS),
+            createTestEvent("e2", EventType.SOCIAL),
+            createTestEvent("e3", EventType.ACTIVITY))
+    val series =
+        listOf(
+            createTestSerie("s1", listOf("e1")), // sports only
+            createTestSerie("s2", listOf("e2")), // social only
+            createTestSerie("s3", listOf("e1", "e2")) // mixed
+            )
+
+    val filteredSeries = FilterRepository.applyFiltersToSeries(series, events)
+
+    // Should return series with at least one social event
+    assertEquals(2, filteredSeries.size)
+    assertTrue(filteredSeries.any { it.serieId == "s2" })
+    assertTrue(filteredSeries.any { it.serieId == "s3" })
+  }
+
+  @Test
+  fun `applyFiltersToSeries returns empty when no events match filter`() = runTest {
+    FilterRepository.toggleActivity()
+
+    val events =
+        listOf(createTestEvent("e1", EventType.SPORTS), createTestEvent("e2", EventType.SOCIAL))
+    val series = listOf(createTestSerie("s1", listOf("e1")), createTestSerie("s2", listOf("e2")))
+
+    val filteredSeries = FilterRepository.applyFiltersToSeries(series, events)
+
+    assertEquals(0, filteredSeries.size)
+  }
+
+  @Test
+  fun `applyFiltersToSeries returns only my series when showMyEvents is selected`() = runTest {
+    FilterRepository.toggleMyEvents()
+
+    val events = listOf(createTestEvent("e1", EventType.SPORTS))
+    val series =
+        listOf(
+            createTestSerie("s1", listOf("e1"), ownerId = "user1", participants = emptyList()),
+            createTestSerie("s2", listOf("e1"), ownerId = "user2", participants = listOf("user1")),
+            createTestSerie("s3", listOf("e1"), ownerId = "user2", participants = emptyList()))
+
+    val filteredSeries =
+        FilterRepository.applyFiltersToSeries(series, events, currentUserId = "user1")
+
+    assertEquals(1, filteredSeries.size)
+    assertEquals("s1", filteredSeries[0].serieId)
+  }
+
+  @Test
+  fun `applyFiltersToSeries returns only joined series when showJoinedEvents is selected`() =
+      runTest {
+        FilterRepository.toggleJoinedEvents()
+
+        val events = listOf(createTestEvent("e1", EventType.SPORTS))
+        val series =
+            listOf(
+                createTestSerie("s1", listOf("e1"), ownerId = "user1", participants = emptyList()),
+                createTestSerie(
+                    "s2", listOf("e1"), ownerId = "user2", participants = listOf("user1")),
+                createTestSerie("s3", listOf("e1"), ownerId = "user2", participants = emptyList()))
+
+        val filteredSeries =
+            FilterRepository.applyFiltersToSeries(series, events, currentUserId = "user1")
+
+        assertEquals(1, filteredSeries.size)
+        assertEquals("s2", filteredSeries[0].serieId)
+      }
+
+  @Test
+  fun `applyFiltersToSeries returns only other series when showOtherEvents is selected`() =
+      runTest {
+        FilterRepository.toggleOtherEvents()
+
+        val events = listOf(createTestEvent("e1", EventType.SPORTS))
+        val series =
+            listOf(
+                createTestSerie(
+                    "s1", listOf("e1"), ownerId = "user1", participants = listOf("user1")),
+                createTestSerie(
+                    "s2", listOf("e1"), ownerId = "user2", participants = listOf("user1")),
+                createTestSerie("s3", listOf("e1"), ownerId = "user2", participants = emptyList()))
+
+        val filteredSeries =
+            FilterRepository.applyFiltersToSeries(series, events, currentUserId = "user1")
+
+        // Should only return s3 (not owned by user, and user not participating)
+        assertEquals(1, filteredSeries.size)
+        assertEquals("s3", filteredSeries[0].serieId)
+      }
+
+  @Test
+  fun `applyFiltersToSeries combines type and participation filters correctly`() = runTest {
+    FilterRepository.toggleSocial()
+    FilterRepository.toggleMyEvents()
+
+    val events =
+        listOf(createTestEvent("e1", EventType.SPORTS), createTestEvent("e2", EventType.SOCIAL))
+    val series =
+        listOf(
+            createTestSerie(
+                "s1", listOf("e1"), ownerId = "user1", participants = emptyList()), // Sports, owned
+            createTestSerie(
+                "s2", listOf("e2"), ownerId = "user1", participants = emptyList()), // Social, owned
+            createTestSerie(
+                "s3",
+                listOf("e2"),
+                ownerId = "user2",
+                participants = emptyList()) // Social, not owned
+            )
+
+    val filteredSeries =
+        FilterRepository.applyFiltersToSeries(series, events, currentUserId = "user1")
+
+    // Should only return social series owned by user1
+    assertEquals(1, filteredSeries.size)
+    assertEquals("s2", filteredSeries[0].serieId)
+  }
+
+  @Test
+  fun `applyFiltersToSeries returns all series when participation filters set but userId empty`() =
+      runTest {
+        FilterRepository.toggleMyEvents()
+
+        val events = listOf(createTestEvent("e1", EventType.SPORTS))
+        val series =
+            listOf(
+                createTestSerie("s1", listOf("e1"), ownerId = "user1", participants = emptyList()),
+                createTestSerie("s2", listOf("e1"), ownerId = "user2", participants = emptyList()))
+
+        val filteredSeries =
+            FilterRepository.applyFiltersToSeries(series, events, currentUserId = "")
+
+        assertEquals(2, filteredSeries.size)
+      }
+
+  @Test
+  fun `applyFiltersToSeries returns combined results when multiple participation filters selected`() =
+      runTest {
+        FilterRepository.toggleMyEvents()
+        FilterRepository.toggleOtherEvents()
+
+        val events = listOf(createTestEvent("e1", EventType.SPORTS))
+        val series =
+            listOf(
+                createTestSerie("s1", listOf("e1"), ownerId = "user1", participants = emptyList()),
+                createTestSerie(
+                    "s2", listOf("e1"), ownerId = "user2", participants = listOf("user1")),
+                createTestSerie("s3", listOf("e1"), ownerId = "user2", participants = emptyList()))
+
+        val filteredSeries =
+            FilterRepository.applyFiltersToSeries(series, events, currentUserId = "user1")
+
+        // Should return s1 (my series) and s3 (other series)
+        assertEquals(2, filteredSeries.size)
+        assertTrue(filteredSeries.any { it.serieId == "s1" })
+        assertTrue(filteredSeries.any { it.serieId == "s3" })
+      }
+
+  @Test
+  fun `applyFiltersToSeries applies participation filters even with no type filters`() = runTest {
+    // This is the bug we fixed - participation filters should apply even without type filters
+    FilterRepository.toggleMyEvents()
+
+    val events = listOf(createTestEvent("e1", EventType.SPORTS))
+    val series =
+        listOf(
+            createTestSerie("s1", listOf("e1"), ownerId = "user1", participants = emptyList()),
+            createTestSerie("s2", listOf("e1"), ownerId = "user2", participants = emptyList()))
+
+    val filteredSeries =
+        FilterRepository.applyFiltersToSeries(series, events, currentUserId = "user1")
+
+    // Should only return my series, even though no type filters are selected
+    assertEquals(1, filteredSeries.size)
+    assertEquals("s1", filteredSeries[0].serieId)
+  }
+
+  private fun createTestEvent(
+      id: String,
+      type: EventType,
+      ownerId: String = "owner1",
+      participants: List<String> = emptyList()
+  ): Event {
     return Event(
         eventId = id,
         type = type,
@@ -261,9 +562,27 @@ class FilterRepositoryTest {
         location = Location(46.5191, 6.5668, "EPFL"),
         date = Timestamp.now(),
         duration = 60,
-        participants = emptyList(),
+        participants = participants,
         maxParticipants = 10,
         visibility = EventVisibility.PUBLIC,
-        ownerId = "owner1")
+        ownerId = ownerId)
+  }
+
+  private fun createTestSerie(
+      id: String,
+      eventIds: List<String>,
+      ownerId: String = "owner1",
+      participants: List<String> = emptyList()
+  ): com.android.joinme.model.serie.Serie {
+    return com.android.joinme.model.serie.Serie(
+        serieId = id,
+        title = "Test Serie $id",
+        description = "Test description",
+        date = Timestamp.now(),
+        participants = participants,
+        maxParticipants = 10,
+        visibility = com.android.joinme.model.utils.Visibility.PUBLIC,
+        eventIds = eventIds,
+        ownerId = ownerId)
   }
 }

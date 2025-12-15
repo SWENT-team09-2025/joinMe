@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.test.core.app.ApplicationProvider
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import com.google.firebase.FirebaseApp
@@ -57,7 +56,8 @@ class EditProfileScreenTest {
       private var failOnce: Boolean = false,
       private var photoUploadShouldFail: Boolean = false,
       private var simulateUploadDelay: Boolean = false,
-      private var simulateDeleteDelay: Boolean = false
+      private var simulateDeleteDelay: Boolean = false,
+      var shouldFailOnSave: Boolean = false
   ) : ProfileRepository {
 
     override suspend fun getProfile(uid: String): Profile? {
@@ -68,7 +68,16 @@ class EditProfileScreenTest {
       return stored?.takeIf { it.uid == uid }
     }
 
+    override suspend fun getProfilesByIds(uids: List<String>): List<Profile>? {
+      if (uids.isEmpty()) return emptyList()
+      val result = uids.mapNotNull { stored?.takeIf { p -> p.uid == it } }
+      return if (result.size == uids.size) result else null
+    }
+
     override suspend fun createOrUpdateProfile(profile: Profile) {
+      if (shouldFailOnSave) {
+        throw RuntimeException("Save failed")
+      }
       stored = profile
     }
 
@@ -99,6 +108,20 @@ class EditProfileScreenTest {
       }
       stored = stored?.copy(photoUrl = null)
     }
+
+    // Stub implementations for follow methods - not used in EditProfile tests
+    override suspend fun followUser(followerId: String, followedId: String) {}
+
+    override suspend fun unfollowUser(followerId: String, followedId: String) {}
+
+    override suspend fun isFollowing(followerId: String, followedId: String): Boolean = false
+
+    override suspend fun getFollowing(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getFollowers(userId: String, limit: Int): List<Profile> = emptyList()
+
+    override suspend fun getMutualFollowing(userId1: String, userId2: String): List<Profile> =
+        emptyList()
   }
 
   // --- Helper: scroll a child into view, then assert it's visible ---
@@ -565,47 +588,41 @@ class EditProfileScreenTest {
   }
 
   @Test
-  fun editProfile_editPhotoButton_hidesDuringUpload() = runTest {
-    val repo = FakeProfileRepository(createTestProfile(), simulateUploadDelay = true)
+  fun editProfile_editPhotoButton_isVisibleWhenNotUploading() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
     val vm = ProfileViewModel(repo)
 
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
-    // Simulate starting an upload by directly calling the ViewModel
-    vm.uploadProfilePhoto(
-        context = ApplicationProvider.getApplicationContext(),
-        imageUri = Uri.parse("content://test/image.jpg"),
-        onSuccess = {},
-        onError = {})
+    // Edit button should be visible when not uploading
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertIsDisplayed()
 
-    // Wait a moment for state to update
+    // Set pending photo - button should still be visible (upload only happens on save)
+    vm.setPendingPhoto(Uri.parse("content://test/image.jpg"))
     composeTestRule.waitForIdle()
 
-    // During upload, the button should be hidden
-    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertDoesNotExist()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertIsDisplayed()
   }
 
   @Test
-  fun editProfile_photoUploadIndicator_showsDuringUpload() = runTest {
-    val repo = FakeProfileRepository(createTestProfile(), simulateUploadDelay = true)
+  fun editProfile_photoUploadIndicator_notShownWhenNotUploading() = runTest {
+    val repo = FakeProfileRepository(createTestProfile())
     val vm = ProfileViewModel(repo)
 
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
-    // Trigger upload via ViewModel
-    vm.uploadProfilePhoto(
-        context = ApplicationProvider.getApplicationContext(),
-        imageUri = Uri.parse("content://test/image.jpg"),
-        onSuccess = {},
-        onError = {})
+    // Upload indicator should not be visible when not uploading
+    composeTestRule
+        .onNodeWithTag(EditProfileTestTags.PHOTO_UPLOADING_INDICATOR)
+        .assertDoesNotExist()
 
+    // Set pending photo - still no upload indicator (upload only happens on save)
+    vm.setPendingPhoto(Uri.parse("content://test/image.jpg"))
     composeTestRule.waitForIdle()
 
-    // Upload indicator should be visible during upload
-    composeTestRule.onNodeWithTag(EditProfileTestTags.PHOTO_UPLOADING_INDICATOR).assertIsDisplayed()
-    // Buttons should be hidden
-    composeTestRule.onNodeWithTag(EditProfileTestTags.EDIT_PHOTO_BUTTON).assertDoesNotExist()
-    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertDoesNotExist()
+    composeTestRule
+        .onNodeWithTag(EditProfileTestTags.PHOTO_UPLOADING_INDICATOR)
+        .assertDoesNotExist()
   }
 
   @Test
@@ -825,26 +842,133 @@ class EditProfileScreenTest {
   }
 
   @Test
-  fun editProfile_deletePhotoButton_hidesDuringUpload() = runTest {
+  fun editProfile_deletePhotoButton_behavesCorrectly() = runTest {
     val profileWithPhoto = createTestProfile().copy(photoUrl = "https://example.com/photo.jpg")
-    val repo = FakeProfileRepository(profileWithPhoto, simulateUploadDelay = true)
+    val repo = FakeProfileRepository(profileWithPhoto)
+    val vm = ProfileViewModel(repo)
+    vm.loadProfile(testUid)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
+
+    // Delete button is visible and enabled when there's a photo
+    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertIsEnabled()
+
+    // After marking for deletion, button should be hidden (pending delete shows no photo)
+    vm.markPhotoForDeletion()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertDoesNotExist()
+  }
+
+  // ==================== SAVE CALLBACK TESTS ====================
+
+  @Test
+  fun editProfileScreen_callsOnSuccessCallback_afterSaveCompletes() = runTest {
+    val profile = createTestProfile()
+    val repo = FakeProfileRepository(profile)
+    val vm = ProfileViewModel(repo)
+
+    var successCallbackCalled = false
+    val onSaveSuccess = { successCallbackCalled = true }
+
+    composeTestRule.setContent {
+      EditProfileScreen(uid = testUid, profileViewModel = vm, onSaveSuccess = onSaveSuccess)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Modify username
+    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performTextClearance()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performTextInput("Updated")
+
+    // Click save
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performScrollTo()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify onSuccess was called
+    assert(successCallbackCalled) { "onSaveSuccess callback should be called after save completes" }
+  }
+
+  @Test
+  fun editProfileScreen_doesNotCallOnSuccess_whenSaveFails() = runTest {
+    val profile = createTestProfile()
+    val repo = FakeProfileRepository(profile, shouldFailOnSave = true)
+    val vm = ProfileViewModel(repo)
+
+    var successCallbackCalled = false
+    val onSaveSuccess = { successCallbackCalled = true }
+
+    composeTestRule.setContent {
+      EditProfileScreen(uid = testUid, profileViewModel = vm, onSaveSuccess = onSaveSuccess)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Modify username
+    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performTextClearance()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performTextInput("Updated")
+
+    // Click save
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performScrollTo()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify onSuccess was NOT called
+    assert(!successCallbackCalled) { "onSaveSuccess should not be called when save fails" }
+  }
+
+  @Test
+  fun editProfileScreen_showsToast_whenSaveFails() = runTest {
+    val profile = createTestProfile()
+    val repo = FakeProfileRepository(profile, shouldFailOnSave = true)
     val vm = ProfileViewModel(repo)
 
     composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
-    // Delete button is visible and enabled
-    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertIsEnabled()
+    composeTestRule.waitForIdle()
 
-    // Start upload
-    vm.uploadProfilePhoto(
-        context = ApplicationProvider.getApplicationContext(),
-        imageUri = Uri.parse("content://test/image.jpg"),
-        onSuccess = {},
-        onError = {})
+    // Modify username
+    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performTextClearance()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performTextInput("Updated")
+
+    // Click save
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performScrollTo()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Note: Toast verification in Robolectric is limited, but save should not crash
+    // The error callback will be invoked with the error message
+  }
+
+  @Test
+  fun editProfileScreen_updatesViewModelState_afterSuccessfulSave() = runTest {
+    val profile = createTestProfile()
+    val repo = FakeProfileRepository(profile)
+    val vm = ProfileViewModel(repo)
+    vm.loadProfile(testUid)
+    composeTestRule.waitForIdle()
+
+    composeTestRule.setContent { EditProfileScreen(uid = testUid, profileViewModel = vm) }
 
     composeTestRule.waitForIdle()
 
-    // Delete button should now be hidden
-    composeTestRule.onNodeWithTag(EditProfileTestTags.DELETE_PHOTO_BUTTON).assertDoesNotExist()
+    // Modify username
+    composeTestRule.onNodeWithTag(EditProfileTestTags.USERNAME_FIELD).performTextClearance()
+    composeTestRule
+        .onNodeWithTag(EditProfileTestTags.USERNAME_FIELD)
+        .performTextInput("New Username")
+
+    // Click save
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performScrollTo()
+    composeTestRule.onNodeWithTag(EditProfileTestTags.SAVE_BUTTON).performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify ViewModel state updated
+    assert(vm.profile.value?.username == "New Username") {
+      "ViewModel should have updated profile after save"
+    }
   }
 }

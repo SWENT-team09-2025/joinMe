@@ -26,7 +26,8 @@ data class Event(
     val maxParticipants: Int,
     val visibility: EventVisibility,
     val ownerId: String,
-    val isPartOfASerie: Boolean = false
+    val partOfASerie: Boolean = false,
+    val groupId: String? = null
 )
 
 /**

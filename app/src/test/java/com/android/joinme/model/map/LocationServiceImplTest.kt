@@ -159,13 +159,6 @@ class LocationServiceImplTest {
     assertNull(result)
   }
 
-  @Test
-  fun `start and stop LocationUpdates does nothing`() {
-    locationService.startLocationUpdates()
-    locationService.stopLocationUpdates()
-    // Just check it doesn't crash
-  }
-
   @OptIn(ExperimentalCoroutinesApi::class)
   @Test
   fun `getUserLocationFlow handles null lastLocation in result`() = runTest {

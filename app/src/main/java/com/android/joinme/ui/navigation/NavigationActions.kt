@@ -1,6 +1,7 @@
 package com.android.joinme.ui.navigation
 
 import androidx.navigation.NavHostController
+import com.android.joinme.ui.profile.FollowTab
 
 /**
  * Sealed class representing all navigation destinations in the JoinMe application.
@@ -128,8 +129,45 @@ sealed class Screen(
   // Map
   // ============================================================================
 
-  /** Map screen showing events geographically (Top-level destination) */
-  object Map : Screen(route = "map", name = "Map", isTopLevelDestination = true)
+  /**
+   * Map screen showing events geographically (Top-level destination)
+   *
+   * @param latitude Optional latitude to center the map on
+   * @param longitude Optional longitude to center the map on
+   * @param showMarker Whether to show a marker at the specified location
+   * @param userId User ID of the person who shared the location (for marker color)
+   */
+  data class Map(
+      val latitude: Double? = null,
+      val longitude: Double? = null,
+      val showMarker: Boolean = false,
+      val userId: String? = null
+  ) :
+      Screen(
+          route =
+              if (latitude != null && longitude != null) {
+                if (userId != null) {
+                  "map?lat=$latitude&lon=$longitude&marker=$showMarker&userId=$userId"
+                } else {
+                  "map?lat=$latitude&lon=$longitude&marker=$showMarker"
+                }
+              } else "map",
+          name = "Map",
+          isTopLevelDestination = true) {
+    companion object {
+      // Route pattern for navigation graph (with parameter placeholders)
+      const val route = "map?lat={lat}&lon={lon}&marker={marker}&userId={userId}"
+      // Default route for bottom navigation (without parameters)
+      const val defaultRoute = "map"
+    }
+  }
+
+  // ============================================================================
+  // Calendar
+  // ============================================================================
+
+  /** Calendar screen showing events in calendar view */
+  object Calendar : Screen(route = "calendar", name = "Calendar")
 
   // ============================================================================
   // Profile & Groups
@@ -137,6 +175,26 @@ sealed class Screen(
 
   /** User profile view screen (Top-level destination) */
   object Profile : Screen(route = "profile", name = "Profile", isTopLevelDestination = true)
+
+  data class PublicProfile(val userId: String) :
+      Screen(route = "public_profile/${userId}", name = "Public Profile") {
+    companion object {
+      const val route = "public_profile/{userId}"
+    }
+  }
+
+  /**
+   * Screen for viewing a user's followers/following lists with tab switching
+   *
+   * @param userId The ID of the user whose followers/following to display
+   * @param initialTab The tab to show initially (FollowTab enum name, defaults to FOLLOWERS)
+   */
+  data class FollowList(val userId: String, val initialTab: String = FollowTab.FOLLOWERS.name) :
+      Screen(route = "follow_list/${userId}?initialTab=${initialTab}", name = "Follow List") {
+    companion object {
+      const val route = "follow_list/{userId}?initialTab={initialTab}"
+    }
+  }
 
   /** Profile editing screen */
   object EditProfile : Screen(route = "edit_profile", name = "Edit Profile")
@@ -159,10 +217,57 @@ sealed class Screen(
     }
   }
 
+  /**
+   * Screen for viewing group details
+   *
+   * @param groupId The ID of the group to display
+   */
   data class GroupDetail(val groupId: String) :
       Screen(route = "groupId/${groupId}", name = "Group Detail") {
     companion object {
       const val route = "groupId/{groupId}"
+    }
+  }
+
+  /**
+   * Screen for viewing activities (events + series) within a group
+   *
+   * @param groupId The ID of the group whose activities to display
+   */
+  data class ActivityGroup(val groupId: String) :
+      Screen(route = "activity_group/${groupId}", name = "Activity Group") {
+    companion object {
+      const val route = "activity_group/{groupId}"
+    }
+  }
+
+  /**
+   * Screen for viewing the group leaderboard with streak rankings
+   *
+   * @param groupId The ID of the group whose leaderboard to display
+   */
+  data class GroupLeaderboard(val groupId: String) :
+      Screen(route = "group/${groupId}/leaderboard", name = "Group Leaderboard") {
+    companion object {
+      const val route = "group/{groupId}/leaderboard"
+    }
+  }
+
+  // ============================================================================
+  // Chat
+  // ============================================================================
+
+  /**
+   * Screen for viewing and participating in a chat conversation
+   *
+   * @param chatId The ID of the chat/conversation to display
+   * @param chatTitle The title to display in the chat (e.g., group name or event name)
+   * @param totalParticipants Total number of participants in the event/group
+   */
+  data class Chat(val chatId: String, val chatTitle: String, val totalParticipants: Int = 1) :
+      Screen(route = "chat/${chatId}/${chatTitle}/${totalParticipants}", name = "Chat") {
+    companion object {
+      const val route = "chat/{chatId}/{chatTitle}/{totalParticipants}"
     }
   }
 }
@@ -203,6 +308,27 @@ open class NavigationActions(
         // Restore state when navigating to a previously selected item
         restoreState = true
       }
+    }
+  }
+
+  /**
+   * Navigate to a screen and clear the back stack up to a specific route.
+   *
+   * This is useful when you want to navigate to a screen and remove intermediate screens from the
+   * back stack (e.g., after creating a group, go to Groups and remove CreateGroup).
+   *
+   * @param screen The screen to navigate to
+   * @param popUpToRoute The route to pop up to (this route will remain in the stack)
+   * @param inclusive If true, also pop the popUpToRoute from the stack
+   */
+  open fun navigateAndClearBackStackTo(
+      screen: Screen,
+      popUpToRoute: String,
+      inclusive: Boolean = false
+  ) {
+    navController.navigate(screen.route) {
+      popUpTo(popUpToRoute) { this.inclusive = inclusive }
+      launchSingleTop = true
     }
   }
 

@@ -1,5 +1,6 @@
 package com.android.joinme.ui.profile
 
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -64,6 +65,8 @@ fun EditProfileScreen(
   val isLoading by profileViewModel.isLoading.collectAsState()
   val isUploadingPhoto by profileViewModel.isUploadingPhoto.collectAsState()
   val photoUploadError by profileViewModel.photoUploadError.collectAsState()
+  val pendingPhotoUri by profileViewModel.pendingPhotoUri.collectAsState()
+  val pendingPhotoDelete by profileViewModel.pendingPhotoDelete.collectAsState()
 
   var username by remember { mutableStateOf("") }
   var dateOfBirth by remember { mutableStateOf("") }
@@ -79,13 +82,8 @@ fun EditProfileScreen(
   val photoPicker =
       rememberPhotoPickerLauncher(
           onPhotoPicked = { uri ->
-            profileViewModel.uploadProfilePhoto(
-                context = context,
-                imageUri = uri,
-                onSuccess = {
-                  Toast.makeText(context, "Photo uploaded successfully", Toast.LENGTH_SHORT).show()
-                },
-                onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
+            // Store pending photo - don't upload yet
+            profileViewModel.setPendingPhoto(uri)
           },
           onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() })
 
@@ -124,7 +122,10 @@ fun EditProfileScreen(
       topBar = {
         ProfileTopBar(
             currentScreen = ProfileScreen.EDIT_PROFILE,
-            onBackClick = onBackClick,
+            onBackClick = {
+              profileViewModel.clearPendingPhotoChanges()
+              onBackClick()
+            },
             onProfileClick = onProfileClick,
             onGroupClick = onGroupClick,
             onEditClick = {})
@@ -140,16 +141,13 @@ fun EditProfileScreen(
             profile != null -> {
               EditProfileContent(
                   profile = profile!!,
+                  pendingPhotoUri = pendingPhotoUri,
+                  pendingPhotoDelete = pendingPhotoDelete,
                   isUploadingPhoto = isUploadingPhoto,
                   onPictureEditClick = { photoPicker.launch() },
                   onPictureDeleteClick = {
-                    profileViewModel.deleteProfilePhoto(
-                        onSuccess = {
-                          Toast.makeText(context, "Photo deleted", Toast.LENGTH_SHORT).show()
-                        },
-                        onError = { error ->
-                          Toast.makeText(context, error, Toast.LENGTH_LONG).show()
-                        })
+                    // Mark for deletion - don't delete yet
+                    profileViewModel.markPhotoForDeletion()
                   },
                   username = username,
                   onUsernameChange = {
@@ -180,8 +178,13 @@ fun EditProfileScreen(
                               interests =
                                   interests.split(",").map { it.trim() }.filter { it.isNotEmpty() },
                               bio = bio.ifBlank { null })
-                      profileViewModel.createOrUpdateProfile(updatedProfile)
-                      onSaveSuccess()
+                      profileViewModel.createOrUpdateProfile(
+                          profile = updatedProfile,
+                          context = context,
+                          onSuccess = { onSaveSuccess() },
+                          onError = { error ->
+                            Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                          })
                     }
                   })
             }
@@ -201,6 +204,8 @@ fun EditProfileScreen(
 @Composable
 private fun EditProfileContent(
     profile: Profile,
+    pendingPhotoUri: Uri?,
+    pendingPhotoDelete: Boolean,
     isUploadingPhoto: Boolean,
     onPictureEditClick: () -> Unit,
     onPictureDeleteClick: () -> Unit,
@@ -234,7 +239,12 @@ private fun EditProfileContent(
                     .testTag(EditProfileTestTags.TITLE))
 
         ProfilePictureSection(
-            photoUrl = profile.photoUrl,
+            photoUrl =
+                when {
+                  pendingPhotoDelete -> null
+                  pendingPhotoUri != null -> pendingPhotoUri.toString()
+                  else -> profile.photoUrl
+                },
             isUploadingPhoto = isUploadingPhoto,
             onPictureEditClick = onPictureEditClick,
             onPictureDeleteClick = onPictureDeleteClick)

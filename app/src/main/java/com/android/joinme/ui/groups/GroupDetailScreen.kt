@@ -1,7 +1,8 @@
 package com.android.joinme.ui.groups
 
+// AI-assisted implementation — reviewed and adapted for project standards.
+
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,14 +13,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.R
@@ -34,14 +36,26 @@ import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColorsForEventType
 import com.android.joinme.ui.theme.customColors
 
+/** Test tags for GroupDetailScreen components. */
+object GroupDetailScreenTestTags {
+  const val BUTTON_ACTIVITIES = "buttonActivities"
+  const val BUTTON_LEADERBOARD = "buttonLeaderboard"
+
+  fun memberItemTag(userId: String) = "memberItem:$userId"
+}
+
 /**
  * Main screen for displaying group details including members and events.
  *
  * @param groupId The unique identifier of the group to display.
  * @param viewModel The ViewModel managing the screen state and data.
  * @param onBackClick Callback when the back button is clicked.
- * @param onGroupEventsClick Callback when the "Group Events" button is clicked.
+ * @param onActivityGroupClick Callback when the "Group Activities" button is clicked.
  * @param onMemberClick Callback when a member profile is clicked, receives the member's UID.
+ * @param onNavigateToChat Callback invoked when the user wants to navigate to the group chat,
+ *   receives chatId and chatTitle.
+ * @param onNavigateToLeaderboard Callback invoked when the user wants to navigate to the group
+ *   leaderboard, receives groupId.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,8 +63,10 @@ fun GroupDetailScreen(
     groupId: String,
     viewModel: GroupDetailViewModel = viewModel(factory = GroupDetailViewModelFactory()),
     onBackClick: () -> Unit = {},
-    onGroupEventsClick: () -> Unit = {},
-    onMemberClick: (String) -> Unit = {}
+    onActivityGroupClick: () -> Unit = {},
+    onMemberClick: (String) -> Unit = {},
+    onNavigateToChat: (String, String, Int) -> Unit = { _, _, _ -> },
+    onNavigateToLeaderboard: (String) -> Unit = {}
 ) {
   LaunchedEffect(groupId) { viewModel.loadGroupDetails(groupId) }
 
@@ -94,13 +110,17 @@ fun GroupDetailScreen(
             }
             uiState.group != null -> {
               GroupContent(
+                  groupId = groupId,
                   groupCategory = uiState.group!!.category,
                   groupName = uiState.group!!.name,
                   groupDescription = uiState.group!!.description,
+                  groupPhotoUrl = uiState.group!!.photoUrl,
                   members = uiState.members,
                   membersCount = uiState.group!!.membersCount,
-                  onGroupEventsClick = onGroupEventsClick,
-                  onMemberClick = onMemberClick)
+                  onGroupEventsClick = onActivityGroupClick,
+                  onMemberClick = onMemberClick,
+                  onNavigateToChat = onNavigateToChat,
+                  onNavigateToLeaderboard = onNavigateToLeaderboard)
             }
           }
         }
@@ -110,13 +130,17 @@ fun GroupDetailScreen(
 /** Main content displaying group information and members. */
 @Composable
 private fun GroupContent(
+    groupId: String,
     groupCategory: EventType,
     groupName: String,
     groupDescription: String,
+    groupPhotoUrl: String?,
     members: List<Profile>,
     membersCount: Int,
     onGroupEventsClick: () -> Unit,
-    onMemberClick: (String) -> Unit
+    onMemberClick: (String) -> Unit,
+    onNavigateToChat: (String, String, Int) -> Unit,
+    onNavigateToLeaderboard: (String) -> Unit
 ) {
   Column(modifier = Modifier.fillMaxSize().background(groupCategory.getColor())) {
     Column(modifier = Modifier.fillMaxWidth().padding(Dimens.Padding.large)) {
@@ -126,11 +150,10 @@ private fun GroupContent(
                   .clip(CircleShape)
                   .background(MaterialTheme.colorScheme.surface),
           contentAlignment = Alignment.Center) {
-            Image(
-                painter = painterResource(id = R.drawable.group_default_picture),
+            GroupPhotoImage(
+                photoUrl = groupPhotoUrl,
                 contentDescription = "Group picture",
-                modifier = Modifier.size(Dimens.GroupDetail.pictureImageSize),
-                contentScale = ContentScale.Fit)
+                size = Dimens.GroupDetail.pictureImageSize)
           }
 
       Spacer(modifier = Modifier.height(Dimens.Spacing.large))
@@ -169,7 +192,8 @@ private fun GroupContent(
                   MemberItem(
                       profile = member,
                       categoryColor = groupCategory,
-                      onClick = { onMemberClick(member.uid) })
+                      onClick = { onMemberClick(member.uid) },
+                      testTag = GroupDetailScreenTestTags.memberItemTag(member.uid))
                 }
               }
         }
@@ -177,18 +201,56 @@ private fun GroupContent(
     Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.Padding.large)) {
-      Button(
-          onClick = onGroupEventsClick,
-          modifier = Modifier.fillMaxWidth().height(Dimens.Button.standardHeight),
-          colors = MaterialTheme.customColors.buttonColorsForEventType(groupCategory),
-          border =
-              BorderStroke(width = Dimens.BorderWidth.medium, color = groupCategory.getOnColor()),
-          shape = RoundedCornerShape(Dimens.GroupDetail.eventsButtonCornerRadius)) {
-            Text(
-                text = "Group Events",
-                style = MaterialTheme.typography.headlineSmall,
-                color = groupCategory.getOnColor(),
-                fontWeight = FontWeight.Medium)
+      // Row to hold chat FAB, Group Activities button, and Leaderboard FAB
+      Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.small),
+          verticalAlignment = Alignment.CenterVertically) {
+            // Chat FAB positioned to the left
+            FloatingActionButton(
+                onClick = { onNavigateToChat(groupId, groupName, membersCount) },
+                containerColor = groupCategory.getColor(),
+                contentColor = groupCategory.getOnColor(),
+                shape = RoundedCornerShape(Dimens.GroupDetail.eventsButtonCornerRadius),
+                modifier = Modifier.testTag("chatFabBottom")) {
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Filled.Message,
+                      contentDescription = stringResource(R.string.open_chat),
+                  )
+                }
+
+            // Group Activities button - using weight to fill remaining space
+            Button(
+                onClick = onGroupEventsClick,
+                colors = MaterialTheme.customColors.buttonColorsForEventType(groupCategory),
+                border =
+                    BorderStroke(
+                        width = Dimens.BorderWidth.medium, color = groupCategory.getOnColor()),
+                shape = RoundedCornerShape(Dimens.GroupDetail.eventsButtonCornerRadius),
+                modifier =
+                    Modifier.weight(1f)
+                        .height(Dimens.Button.standardHeight)
+                        .testTag(GroupDetailScreenTestTags.BUTTON_ACTIVITIES),
+            ) {
+              Text(
+                  text = stringResource(R.string.group_activities),
+                  style = MaterialTheme.typography.titleMedium,
+                  color = groupCategory.getOnColor(),
+                  fontWeight = FontWeight.Medium)
+            }
+
+            // Leaderboard FAB positioned to the right
+            FloatingActionButton(
+                onClick = { onNavigateToLeaderboard(groupId) },
+                containerColor = groupCategory.getColor(),
+                contentColor = groupCategory.getOnColor(),
+                shape = RoundedCornerShape(Dimens.GroupDetail.eventsButtonCornerRadius),
+                modifier = Modifier.testTag(GroupDetailScreenTestTags.BUTTON_LEADERBOARD)) {
+                  Icon(
+                      imageVector = Icons.Filled.Leaderboard,
+                      contentDescription = stringResource(R.string.leaderboard_button),
+                  )
+                }
           }
 
       Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
@@ -205,11 +267,17 @@ private fun GroupContent(
 }
 
 @Composable
-private fun MemberItem(profile: Profile, categoryColor: EventType, onClick: () -> Unit = {}) {
+private fun MemberItem(
+    profile: Profile,
+    categoryColor: EventType,
+    onClick: () -> Unit = {},
+    testTag: String = ""
+) {
   Row(
       modifier =
           Modifier.fillMaxWidth()
               .clickable { onClick() }
+              .testTag(testTag)
               .padding(vertical = Dimens.Padding.extraSmall),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.Start) {

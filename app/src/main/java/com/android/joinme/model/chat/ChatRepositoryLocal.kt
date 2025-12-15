@@ -2,11 +2,16 @@ package com.android.joinme.model.chat
 
 // Implemented with help of Claude AI
 
+import android.content.Context
+import android.net.Uri
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+
+/** Exception message for when a message is not found in the local repository. */
+const val MESSAGE_NOT_FOUND = "ChatRepositoryLocal: Message not found"
 
 /**
  * In-memory implementation of [ChatRepository] for offline mode or testing.
@@ -48,7 +53,7 @@ class ChatRepositoryLocal : ChatRepository {
         messages[index] = newValue
         messagesFlow.value = messages.toList()
       } else {
-        throw Exception("ChatRepositoryLocal: Message not found")
+        throw Exception(MESSAGE_NOT_FOUND)
       }
     }
   }
@@ -61,7 +66,7 @@ class ChatRepositoryLocal : ChatRepository {
         messages.removeAt(index)
         messagesFlow.value = messages.toList()
       } else {
-        throw Exception("ChatRepositoryLocal: Message not found")
+        throw Exception(MESSAGE_NOT_FOUND)
       }
     }
   }
@@ -81,8 +86,18 @@ class ChatRepositoryLocal : ChatRepository {
           messagesFlow.value = messages.toList()
         }
       } else {
-        throw Exception("ChatRepositoryLocal: Message not found")
+        throw Exception(MESSAGE_NOT_FOUND)
       }
     }
+  }
+
+  override suspend fun uploadChatImage(
+      context: Context,
+      conversationId: String,
+      messageId: String,
+      imageUri: Uri
+  ): String {
+    // For local/testing implementation, return a mock URL
+    return "mock://chat-image/$conversationId/$messageId.jpg"
   }
 }

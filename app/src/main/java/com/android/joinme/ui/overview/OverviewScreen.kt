@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
@@ -24,6 +25,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -41,7 +43,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.eventItem.EventItem
@@ -66,6 +67,7 @@ import com.android.joinme.ui.theme.Dimens
 object OverviewScreenTestTags {
   const val CREATE_EVENT_BUTTON = "createEventFab"
   const val HISTORY_BUTTON = "historyButton"
+  const val CALENDAR_BUTTON = "calendarButton"
   const val EMPTY_EVENT_LIST_MSG = "emptyEventList"
   const val EVENT_LIST = "eventList"
   const val ONGOING_EVENTS_TITLE = "ongoingEventsTitle"
@@ -90,6 +92,115 @@ object OverviewScreenTestTags {
    */
   fun getTestTagForSerie(serie: Serie): String = "serieItem${serie.serieId}"
 }
+/** Renders a single event item (either SingleEvent or EventSerie). */
+@Composable
+private fun RenderEventItem(
+    item: EventItem,
+    onSelectEvent: (Event) -> Unit,
+    onSelectedSerie: (Serie) -> Unit
+) {
+  when (item) {
+    is EventItem.SingleEvent -> {
+      EventCard(
+          modifier = Modifier.padding(vertical = Dimens.Padding.small),
+          event = item.event,
+          onClick = { onSelectEvent(item.event) },
+          testTag = OverviewScreenTestTags.getTestTagForEvent(item.event))
+    }
+    is EventItem.EventSerie -> {
+      SerieCard(
+          modifier = Modifier.padding(vertical = Dimens.Padding.small),
+          serie = item.serie,
+          onClick = { onSelectedSerie(item.serie) },
+          testTag = OverviewScreenTestTags.getTestTagForSerie(item.serie))
+    }
+  }
+}
+
+/** Displays the list of ongoing and upcoming activities. */
+@Composable
+private fun OverviewContentList(
+    ongoingItems: List<EventItem>,
+    upcomingItems: List<EventItem>,
+    onSelectEvent: (Event) -> Unit,
+    onSelectedSerie: (Serie) -> Unit
+) {
+  LazyColumn(
+      contentPadding =
+          PaddingValues(vertical = Dimens.Padding.small, horizontal = Dimens.Padding.medium),
+      modifier = Modifier.fillMaxWidth().testTag(OverviewScreenTestTags.EVENT_LIST)) {
+        // Ongoing activities section
+        if (ongoingItems.isNotEmpty()) {
+          item {
+            Text(
+                text =
+                    if (ongoingItems.size == 1) "Your ongoing activity :"
+                    else "Your ongoing activities :",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier =
+                    Modifier.padding(Dimens.Padding.small)
+                        .testTag(OverviewScreenTestTags.ONGOING_EVENTS_TITLE))
+          }
+
+          // Render each ongoing item (event or serie)
+          items(ongoingItems.size) { index ->
+            RenderEventItem(
+                item = ongoingItems[index],
+                onSelectEvent = onSelectEvent,
+                onSelectedSerie = onSelectedSerie)
+          }
+
+          item { Spacer(modifier = Modifier.height(Dimens.Padding.medium)) }
+        }
+
+        // Upcoming activities section
+        if (upcomingItems.isNotEmpty()) {
+          item {
+            Text(
+                text =
+                    if (upcomingItems.size == 1) "Your upcoming activity :"
+                    else "Your upcoming activities :",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier =
+                    Modifier.padding(Dimens.Padding.small)
+                        .testTag(OverviewScreenTestTags.UPCOMING_EVENTS_TITLE))
+          }
+
+          // Render each upcoming item (event or serie)
+          items(upcomingItems.size) { index ->
+            RenderEventItem(
+                item = upcomingItems[index],
+                onSelectEvent = onSelectEvent,
+                onSelectedSerie = onSelectedSerie)
+          }
+        }
+      }
+}
+
+/** Displays empty state when there are no activities. */
+@Composable
+private fun EmptyStateMessage() {
+  Column(
+      modifier = Modifier.fillMaxSize(),
+      verticalArrangement = Arrangement.Center,
+      horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = "You have no events yet. Join one, or create your own event.",
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.testTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG))
+      }
+}
+
+/** Displays loading indicator. */
+@Composable
+private fun LoadingIndicator() {
+  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    CircularProgressIndicator(modifier = Modifier.testTag(OverviewScreenTestTags.LOADING_INDICATOR))
+  }
+}
 
 /**
  * Main overview screen displaying both ongoing and upcoming activities.
@@ -113,22 +224,22 @@ object OverviewScreenTestTags {
  * - Pattern matching to render EventCard or SerieCard based on item type
  *
  * @param overviewViewModel ViewModel managing the screen state and business logic
- * @param credentialManager Credential manager for authentication (currently unused)
  * @param onSelectEvent Callback invoked when a standalone event is clicked
  * @param onAddEvent Callback invoked when the create event FAB is clicked
  * @param onSelectedSerie Callback invoked when a serie is clicked
  * @param onGoToHistory Callback invoked when the history FAB is clicked
+ * @param onGoToCalendar Callback invoked when the calendar icon button is clicked
  * @param navigationActions Navigation controller for bottom navigation menu
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OverviewScreen(
     overviewViewModel: OverviewViewModel = viewModel(),
-    credentialManager: CredentialManager = CredentialManager.create(LocalContext.current),
     onSelectEvent: (Event) -> Unit = {},
     onAddEvent: () -> Unit = {},
     onAddSerie: () -> Unit = {},
     onGoToHistory: () -> Unit = {},
+    onGoToCalendar: () -> Unit = {},
     onSelectedSerie: (Serie) -> Unit = {},
     navigationActions: NavigationActions? = null,
     enableNotificationPermissionRequest: Boolean = true,
@@ -184,6 +295,16 @@ fun OverviewScreen(
           CenterAlignedTopAppBar(
               modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
               title = { Text(text = "Overview", style = MaterialTheme.typography.titleLarge) },
+              actions = {
+                IconButton(
+                    onClick = onGoToCalendar,
+                    modifier = Modifier.testTag(OverviewScreenTestTags.CALENDAR_BUTTON)) {
+                      Icon(
+                          imageVector = Icons.Default.CalendarToday,
+                          contentDescription = "Calendar",
+                          tint = MaterialTheme.colorScheme.onSurface)
+                    }
+              },
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))
@@ -210,106 +331,14 @@ fun OverviewScreen(
       }) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
           when {
-            isLoading -> {
-              // Loading state
-              Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(
-                    modifier = Modifier.testTag(OverviewScreenTestTags.LOADING_INDICATOR))
-              }
-            }
-            ongoingItems.isEmpty() && upcomingItems.isEmpty() -> {
-              // Empty state
-              Column(
-                  modifier = Modifier.fillMaxSize(),
-                  verticalArrangement = Arrangement.Center,
-                  horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "You have no events yet. Join one, or create your own event.",
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.testTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG))
-                  }
-            }
-            else -> {
-              // Content state: Display ongoing and upcoming activities
-              LazyColumn(
-                  contentPadding =
-                      PaddingValues(
-                          vertical = Dimens.Padding.small, horizontal = Dimens.Padding.medium),
-                  modifier = Modifier.fillMaxWidth().testTag(OverviewScreenTestTags.EVENT_LIST)) {
-                    // Ongoing activities section
-                    if (ongoingItems.isNotEmpty()) {
-                      item {
-                        Text(
-                            text =
-                                if (ongoingItems.size == 1) "Your ongoing activity :"
-                                else "Your ongoing activities :",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier =
-                                Modifier.padding(Dimens.Padding.small)
-                                    .testTag(OverviewScreenTestTags.ONGOING_EVENTS_TITLE))
-                      }
-
-                      // Render each ongoing item (event or serie)
-                      items(ongoingItems.size) { index ->
-                        when (val item = ongoingItems[index]) {
-                          is EventItem.SingleEvent -> {
-                            EventCard(
-                                modifier = Modifier.padding(vertical = Dimens.Padding.small),
-                                event = item.event,
-                                onClick = { onSelectEvent(item.event) },
-                                testTag = OverviewScreenTestTags.getTestTagForEvent(item.event))
-                          }
-                          is EventItem.EventSerie -> {
-                            SerieCard(
-                                modifier = Modifier.padding(vertical = Dimens.Padding.small),
-                                serie = item.serie,
-                                onClick = { onSelectedSerie(item.serie) },
-                                testTag = OverviewScreenTestTags.getTestTagForSerie(item.serie))
-                          }
-                        }
-                      }
-
-                      item { Spacer(modifier = Modifier.height(Dimens.Padding.medium)) }
-                    }
-
-                    // Upcoming activities section
-                    if (upcomingItems.isNotEmpty()) {
-                      item {
-                        Text(
-                            text =
-                                if (upcomingItems.size == 1) "Your upcoming activity :"
-                                else "Your upcoming activities :",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier =
-                                Modifier.padding(Dimens.Padding.small)
-                                    .testTag(OverviewScreenTestTags.UPCOMING_EVENTS_TITLE))
-                      }
-
-                      // Render each upcoming item (event or serie)
-                      items(upcomingItems.size) { index ->
-                        when (val item = upcomingItems[index]) {
-                          is EventItem.SingleEvent -> {
-                            EventCard(
-                                modifier = Modifier.padding(vertical = Dimens.Padding.small),
-                                event = item.event,
-                                onClick = { onSelectEvent(item.event) },
-                                testTag = OverviewScreenTestTags.getTestTagForEvent(item.event))
-                          }
-                          is EventItem.EventSerie -> {
-                            SerieCard(
-                                modifier = Modifier.padding(vertical = Dimens.Padding.small),
-                                serie = item.serie,
-                                onClick = { onSelectedSerie(item.serie) },
-                                testTag = OverviewScreenTestTags.getTestTagForSerie(item.serie))
-                          }
-                        }
-                      }
-                    }
-                  }
-            }
+            isLoading -> LoadingIndicator()
+            ongoingItems.isEmpty() && upcomingItems.isEmpty() -> EmptyStateMessage()
+            else ->
+                OverviewContentList(
+                    ongoingItems = ongoingItems,
+                    upcomingItems = upcomingItems,
+                    onSelectEvent = onSelectEvent,
+                    onSelectedSerie = onSelectedSerie)
           }
 
           // FAB History on bottom left

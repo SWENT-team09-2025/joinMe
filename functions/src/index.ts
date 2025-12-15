@@ -1,10 +1,94 @@
 import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 
+// Implemented with the help of Claud AI
+
 // Initialize Firebase Admin
 admin.initializeApp();
 
 const db = admin.firestore();
+
+const S_TO_MS = 1000;
+const MIN_TO_S = 60;
+const HOUR_TO_MIN = 60;
+const DAY_TO_HOUR = 24;
+const NUMBER_OF_DAYS = 30;
+const RECURRENCE = "0 0 * * *";
+const TIME_ZONE = "UTC";
+
+const SERIES = "series";
+const EVENTS = "events";
+const INVITATIONS = "invitations";
+const CONVERSATIONS_PATH = "conversations";
+const MESSAGES_PATH = "messages";
+const IMAGES_PATH = "images";
+const FIELD_TYPE = "type";
+const MESSAGE_TYPE_IMAGE = "IMAGE";
+
+
+// Notification type constants
+const NOTIFICATION_TYPE_EVENT_CHAT_MESSAGE = "event_chat_message";
+const NOTIFICATION_TYPE_GROUP_CHAT_MESSAGE = "group_chat_message";
+
+/**
+ * Helper function to cleanup a conversation (messages and images).
+ * This function deletes all images from Storage and removes the conversation
+ * from Realtime Database.
+ * @param {string} conversationId - The ID of the conversation to cleanup
+ */
+async function cleanupConversation(conversationId: string): Promise<void> {
+  try {
+    const database = admin.database();
+    const storage = admin.storage();
+    const bucket = storage.bucket();
+    const conversationRef = database.ref(CONVERSATIONS_PATH).child(conversationId);
+
+    // Step 1: Get all messages to find IMAGE type messages
+    const messagesSnapshot = await conversationRef.child(MESSAGES_PATH).get();
+
+    const imageMessageIds: string[] = [];
+    messagesSnapshot.forEach((messageSnapshot) => {
+      const messageData = messageSnapshot.val();
+      if (messageData && messageData[FIELD_TYPE] === MESSAGE_TYPE_IMAGE) {
+        const messageId = messageSnapshot.key;
+        if (messageId) {
+          imageMessageIds.push(messageId);
+        }
+      }
+    });
+
+    // Step 2: Delete all images from Firebase Storage in parallel
+    const imagesPath = `${CONVERSATIONS_PATH}/${conversationId}/${IMAGES_PATH}`;
+
+    await Promise.all(
+      imageMessageIds.map(async (messageId) => {
+        try {
+          // Delete all files with this prefix (handles different formats)
+          await bucket.deleteFiles({
+            prefix: `${imagesPath}/${messageId}`,
+          });
+        } catch (err) {
+          // Image might not exist, continue with other deletions
+          console.warn("cleanup_image_skipped", {
+            conversationId,
+            messageId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      })
+    );
+
+    // Step 3: Delete the entire conversation node
+    await conversationRef.remove();
+    console.info("cleanup_conversation_success", {conversationId});
+  } catch (error) {
+    console.error("cleanup_conversation_failed", {
+      conversationId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    // Don't throw - we want to continue with other deletions
+  }
+}
 
 /**
  * Helper function to send FCM notification to a user
@@ -213,6 +297,7 @@ export const onEventUpdated = functions.firestore
 /**
  * Triggered when an event document is deleted.
  * Notifies all participants that the event was cancelled.
+ * Skips notifications if the event is already expired (automatic cleanup).
  */
 export const onEventDeleted = functions.firestore
   .document("events/{eventId}")
@@ -220,6 +305,23 @@ export const onEventDeleted = functions.firestore
     const eventId = context.params.eventId;
     const eventData = snap.data();
 
+    // Check if event is already expired (indicates automatic cleanup)
+    const eventDate = eventData.date;
+    const durationMinutes = eventData.duration || 0;
+
+    if (eventDate && eventDate.seconds) {
+      const eventStartMs = eventDate.seconds * S_TO_MS;
+      const durationMs = durationMinutes * MIN_TO_S * S_TO_MS;
+      const eventEndMs = eventStartMs + durationMs;
+      const now = Date.now();
+
+      // If event already ended, don't send notifications (automatic cleanup)
+      if (eventEndMs < now) {
+        return;
+      }
+    }
+
+    // Event is still upcoming or active, send cancellation notifications
     const ownerId = eventData.ownerId;
     const participants: string[] = eventData.participants || [];
     const eventTitle = eventData.title || "An event";
@@ -242,4 +344,455 @@ export const onEventDeleted = functions.firestore
     );
 
     await Promise.all(notificationPromises);
+  });
+
+/**
+ * Helper function to process items in parallel with concurrency limit.
+ * @param {T[]} items - Array of items to process
+ * @param {number} concurrency - Maximum number of parallel operations
+ * @param {Function} fn - Async function to apply to each item
+ */
+async function processConcurrently<T>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<void>
+): Promise<void> {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += concurrency) {
+    chunks.push(items.slice(i, i + concurrency));
+  }
+
+  for (const chunk of chunks) {
+    await Promise.all(chunk.map(fn));
+  }
+}
+
+/**
+ * Scheduled function that runs daily at midnight (UTC).
+ * Cleans up old events and series that are expired for more than 30 days.
+ *
+ * Logic:
+ * 1. Fetch all series
+ * 2. If lastEventEndTime < now - 30 days, mark series and its events for deletion
+ * 3. Delete all marked series (batched)
+ * 4. Cleanup conversations for all events from expired series (parallel with limit)
+ * 5. Delete all events from those series (batched)
+ * 6. Fetch remaining events and check if they are expired (date + duration < now - 30 days)
+ * 7. Cleanup conversations for expired standalone events (parallel with limit)
+ * 8. Delete expired standalone events (batched)
+ */
+export const cleanupOldEventsAndSeries = functions.pubsub
+  .schedule(RECURRENCE)
+  .timeZone(TIME_ZONE)
+  .onRun(async (context) => {
+    const now = Date.now();
+    const thirtyDaysInMs = NUMBER_OF_DAYS * DAY_TO_HOUR * HOUR_TO_MIN * MIN_TO_S * S_TO_MS;
+    const cutoffTime = now - thirtyDaysInMs;
+
+    try {
+      const seriesEventsToDelete: string[] = [];
+      const seriesToDelete: string[] = [];
+
+      // Step 1: Fetch all series
+      const seriesSnapshot = await db.collection(SERIES).get();
+      console.info("cleanup_series_fetched", {count: seriesSnapshot.size});
+
+      // Step 2: Check each series
+      for (const serieDoc of seriesSnapshot.docs) {
+        const serieData = serieDoc.data();
+        const lastEventEndTime = serieData.lastEventEndTime;
+
+        if (lastEventEndTime && lastEventEndTime.seconds) {
+          const lastEventEndMs = lastEventEndTime.seconds * S_TO_MS;
+
+          if (lastEventEndMs < cutoffTime) {
+            seriesToDelete.push(serieDoc.id);
+            const eventIds: string[] = serieData.eventIds || [];
+            seriesEventsToDelete.push(...eventIds);
+          }
+        }
+      }
+
+      console.info("cleanup_expired_series_identified", {
+        seriesCount: seriesToDelete.length,
+        eventsCount: seriesEventsToDelete.length,
+      });
+
+      // Step 3: Delete all marked series (batched)
+      const BATCH_SIZE = 500; // Firestore batch limit
+      for (let i = 0; i < seriesToDelete.length; i += BATCH_SIZE) {
+        const batch = db.batch();
+        const chunk = seriesToDelete.slice(i, i + BATCH_SIZE);
+
+        chunk.forEach((serieId) => {
+          batch.delete(db.collection(SERIES).doc(serieId));
+        });
+
+        try {
+          await batch.commit();
+          console.info("cleanup_series_batch_deleted", {count: chunk.length});
+        } catch (err) {
+          console.error("cleanup_series_batch_failed", {
+            count: chunk.length,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+
+      // Step 4: Cleanup conversations for all events from expired series (parallel with limit)
+      const CONCURRENCY_LIMIT = 10;
+      await processConcurrently(
+        seriesEventsToDelete,
+        CONCURRENCY_LIMIT,
+        cleanupConversation
+      );
+
+      // Step 5: Delete all events from expired series (batched)
+      for (let i = 0; i < seriesEventsToDelete.length; i += BATCH_SIZE) {
+        const batch = db.batch();
+        const chunk = seriesEventsToDelete.slice(i, i + BATCH_SIZE);
+
+        chunk.forEach((eventId) => {
+          batch.delete(db.collection(EVENTS).doc(eventId));
+        });
+
+        try {
+          await batch.commit();
+          console.info("cleanup_series_events_batch_deleted", {count: chunk.length});
+        } catch (err) {
+          console.error("cleanup_series_events_batch_failed", {
+            count: chunk.length,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+
+      // Step 6: Fetch remaining events and check if they are expired
+      const eventsSnapshot = await db.collection(EVENTS).get();
+      const standaloneEventsToDelete: string[] = [];
+
+      console.info("cleanup_events_fetched", {count: eventsSnapshot.size});
+
+      for (const eventDoc of eventsSnapshot.docs) {
+        const eventData = eventDoc.data();
+        const eventDate = eventData.date;
+        const durationMinutes = eventData.duration || 0;
+
+        if (eventDate && eventDate.seconds) {
+          const eventStartMs = eventDate.seconds * S_TO_MS;
+          const durationMs = durationMinutes * MIN_TO_S * S_TO_MS;
+          const eventEndMs = eventStartMs + durationMs;
+
+          if (eventEndMs < cutoffTime) {
+            standaloneEventsToDelete.push(eventDoc.id);
+          }
+        }
+      }
+
+      console.info("cleanup_expired_standalone_events_identified", {
+        count: standaloneEventsToDelete.length,
+      });
+
+      // Step 7: Cleanup conversations for expired standalone events (parallel with limit)
+      await processConcurrently(
+        standaloneEventsToDelete,
+        CONCURRENCY_LIMIT,
+        cleanupConversation
+      );
+
+      // Step 8: Delete expired standalone events (batched)
+      for (let i = 0; i < standaloneEventsToDelete.length; i += BATCH_SIZE) {
+        const batch = db.batch();
+        const chunk = standaloneEventsToDelete.slice(i, i + BATCH_SIZE);
+
+        chunk.forEach((eventId) => {
+          batch.delete(db.collection(EVENTS).doc(eventId));
+        });
+
+        try {
+          await batch.commit();
+          console.info("cleanup_standalone_events_batch_deleted", {count: chunk.length});
+        } catch (err) {
+          console.error("cleanup_standalone_events_batch_failed", {
+            count: chunk.length,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+
+      console.info("cleanup_completed", {
+        seriesDeleted: seriesToDelete.length,
+        seriesEventsDeleted: seriesEventsToDelete.length,
+        standaloneEventsDeleted: standaloneEventsToDelete.length,
+        totalEventsDeleted: seriesEventsToDelete.length + standaloneEventsToDelete.length,
+      });
+
+      return null;
+    } catch (error) {
+      console.error("cleanup_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  });
+
+/**
+ * Triggered when a new follow relationship is created.
+ * Sends a push notification to the user being followed.
+ */
+export const onUserFollowed = functions.firestore
+  .document("follows/{followId}")
+  .onCreate(async (snap, context) => {
+    try {
+      const followData = snap.data();
+      const followerId = followData.followerId;
+
+      console.log(`User ${followerId} followed user ${followedId}`);
+
+      // Get the follower's username
+      const followerUsername = await getUsername(followerId);
+
+      // Get user's FCM token from their profile
+      const userDoc = await db.collection("profiles").doc(followedId).get();
+
+      if (!userDoc.exists) {
+        console.log(`User ${followedId} not found`);
+        return null;
+      }
+
+      const userData = userDoc.data();
+      const fcmToken = userData?.fcmToken;
+
+      if (!fcmToken) {
+        console.log(`User ${followedId} does not have an FCM token`);
+        return null;
+      }
+
+      // Send notification with follower info
+      const message: admin.messaging.Message = {
+        token: fcmToken,
+        notification: {
+          title: "New follower",
+          body: `${followerUsername} started following you`,
+        },
+        data: {
+          type: "new_follower",
+          followerId: followerId,
+          followerUsername: followerUsername,
+        },
+        android: {
+          priority: "high",
+          notification: {
+            channelId: "joinme_notifications",
+            priority: "high",
+          },
+        },
+      };
+
+      await admin.messaging().send(message);
+      console.log(`Follow notification sent to user ${followedId}`);
+      return null;
+    } catch (error) {
+      console.error("Error in onUserFollowed:", error);
+      return null;
+    }
+  });
+
+/**
+ * Triggered when a new message is created in a group or event chat.
+ * Sends push notifications to all members/participants except the sender.
+ */
+export const onChatMessageCreated = functions.database
+  .ref("conversations/{conversationId}/messages/{messageId}")
+  .onCreate(async (snapshot, context) => {
+    try {
+      const conversationId = context.params.conversationId;
+      const messageId = context.params.messageId;
+      const messageData = snapshot.val();
+
+      console.log(`New message in conversation ${conversationId}`);
+
+      // Get message details
+      const senderId = messageData.senderId;
+      const senderName = messageData.senderName || "Someone";
+      const messageContent = messageData.content || "New message";
+      const messageType = messageData.type || "TEXT";
+
+      // Skip system messages (like "User joined")
+      if (messageType === "SYSTEM") {
+        console.log("Skipping notification for system message");
+        return null;
+      }
+
+      // STEP 1: Try to fetch as a group first
+      const groupDoc = await db.collection("groups").doc(conversationId).get();
+
+      let memberIds: string[] = [];
+      let chatName = "Chat";
+      let isEventChat = false;
+
+      if (groupDoc.exists) {
+        // It's a group chat
+        const groupData = groupDoc.data();
+        if (!groupData) {
+          return null;
+        }
+        memberIds = groupData.memberIds || [];
+        chatName = groupData.name || "Group Chat";
+        console.log(`Group "${chatName}" has ${memberIds.length} members`);
+      } else {
+        // STEP 2: Try to fetch as an event
+        const eventDoc = await db.collection("events").doc(conversationId).get();
+
+        if (!eventDoc.exists) {
+          console.log(`Neither group nor event found: ${conversationId}`);
+          return null;
+        }
+
+        const eventData = eventDoc.data();
+        if (!eventData) {
+          return null;
+        }
+
+        isEventChat = true;
+        memberIds = eventData.participants || [];
+        chatName = eventData.title || "Event Chat";
+        console.log(`Event "${chatName}" has ${memberIds.length} participants`);
+      }
+
+      // STEP 2: Filter out the sender (don't notify yourself)
+      const recipientIds = memberIds.filter((userId) => userId !== senderId);
+
+      if (recipientIds.length === 0) {
+        console.log("No recipients to notify");
+        return null;
+      }
+
+      // STEP 3: Truncate long messages for notification
+      const truncatedContent =
+        messageContent.length > 100
+          ? messageContent.substring(0, 100) + "..."
+          : messageContent;
+
+      // STEP 4: Send notification to each recipient
+      const notificationPromises = recipientIds.map(async (userId) => {
+        try {
+          // Get user's FCM token
+          const userDoc = await db.collection("profiles").doc(userId).get();
+
+          if (!userDoc.exists) {
+            console.log(`User ${userId} not found`);
+            return;
+          }
+
+          const userData = userDoc.data();
+          const fcmToken = userData?.fcmToken;
+
+          if (!fcmToken) {
+            console.log(`User ${userId} does not have an FCM token`);
+            return;
+          }
+
+          // Build notification payload
+          const notificationData: {[key: string]: string} = {
+            type: isEventChat ? NOTIFICATION_TYPE_EVENT_CHAT_MESSAGE : NOTIFICATION_TYPE_GROUP_CHAT_MESSAGE,
+            conversationId: conversationId,
+            messageId: messageId,
+            senderId: senderId,
+            senderName: senderName,
+            chatName: chatName,
+          };
+
+          // Add eventId or groupId based on chat type
+          if (isEventChat) {
+            notificationData.eventId = conversationId;
+          } else {
+            notificationData.groupId = conversationId;
+          }
+
+          const message: admin.messaging.Message = {
+            token: fcmToken,
+            notification: {
+              title: `${chatName}: ${senderName}`,
+              body: truncatedContent,
+            },
+            data: notificationData,
+            android: {
+              priority: "high",
+              notification: {
+                channelId: "joinme_notifications",
+                priority: "high",
+                sound: "default",
+              },
+            },
+          };
+
+          // Send the notification
+          await admin.messaging().send(message);
+          console.log(`Notification sent to user ${userId}`);
+        } catch (error) {
+          console.error(`Error sending notification to user ${userId}:`, error);
+        }
+      });
+
+      // Wait for all notifications to be sent
+      await Promise.all(notificationPromises);
+
+      console.log(
+        `Successfully sent notifications to ${recipientIds.length} recipients`
+      );
+      return null;
+    } catch (error) {
+      console.error("Error in onChatMessageCreated:", error);
+      return null;
+    }
+  });
+
+/**
+ * Scheduled function that runs daily at midnight (UTC).
+ * Cleans up expired invitations from the database.
+ *
+ * Logic:
+ * 1. Fetch all invitations
+ * 2. Check each invitation's expiresAt timestamp
+ * 3. Delete invitations where expiresAt < now
+ */
+export const cleanupExpiredInvitations = functions.pubsub
+  .schedule(RECURRENCE)
+  .timeZone(TIME_ZONE)
+  .onRun(async (context) => {
+    const now = Date.now();
+
+    try {
+      const expiredInvitations: string[] = [];
+
+      // Step 1: Fetch all invitations
+      const invitationsSnapshot = await db.collection(INVITATIONS).get();
+
+      // Step 2: Check each invitation
+      for (const invitationDoc of invitationsSnapshot.docs) {
+        const invitationData = invitationDoc.data();
+        const expiresAt = invitationData.expiresAt;
+
+        if (expiresAt && expiresAt.seconds) {
+          const expiresAtMs = expiresAt.seconds * S_TO_MS;
+
+          if (expiresAtMs < now) {
+            expiredInvitations.push(invitationDoc.id);
+          }
+        }
+      }
+
+      // Step 3: Delete all expired invitations
+      for (const token of expiredInvitations) {
+        try {
+          await db.collection(INVITATIONS).doc(token).delete();
+        } catch (err) {
+          console.error(`Failed to delete invitation ${token}:`, err);
+        }
+      }
+      return null;
+    } catch (error) {
+      throw error;
+    }
   });

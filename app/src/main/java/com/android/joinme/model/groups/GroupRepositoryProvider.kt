@@ -1,24 +1,81 @@
 package com.android.joinme.model.groups
 
+import android.content.Context
+import com.android.joinme.network.NetworkMonitor
+import com.android.joinme.util.TestEnvironmentDetector
 import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.firestore
+import com.google.firebase.storage.storage
 
 /**
- * Provides a singleton instance of the GroupRepository for dependency injection.
- *
- * This provider follows the repository pattern and enables easy testing by allowing the repository
- * instance to be swapped with a mock or fake implementation. By default, it provides a Firestore-
- * backed implementation.
+ * Provides the correct [GroupRepository] implementation depending on the environment.
+ * - Test environment: Uses local (in-memory) repository
+ * - Production: Uses cached repository with offline support
  */
 object GroupRepositoryProvider {
-  /**
-   * Lazily initialized private instance of the repository using Firebase Firestore as the backend.
-   */
-  private val _repository: GroupRepository by lazy { GroupRepositoryFirestore(Firebase.firestore) }
+
+  // Local repository (in-memory, for testing only)
+  private val localRepo: GroupRepository by lazy { GroupRepositoryLocal() }
+
+  // Firestore repository (initialized lazily)
+  private var firestoreRepo: GroupRepository? = null
+
+  // Cached repository (initialized lazily)
+  private var cachedRepo: GroupRepository? = null
 
   /**
-   * The current repository instance used throughout the application. Can be reassigned for testing
-   * purposes to inject fake or mock implementations.
+   * Returns the appropriate repository implementation.
+   *
+   * @param context Application context (if null, attempts to get from Firebase)
+   * @return GroupRepository implementation
    */
-  var repository: GroupRepository = _repository
+  fun getRepository(context: Context? = null): GroupRepository {
+    // Test environment: use local repository
+    if (TestEnvironmentDetector.isTestEnvironment()) return localRepo
+
+    // Production: use cached repository with offline support
+    // Try to get context from Firebase if not provided
+    val ctx =
+        context
+            ?: try {
+              FirebaseApp.getInstance().applicationContext
+            } catch (e: Exception) {
+              null
+            }
+    requireNotNull(ctx) { "Context is required for production repository" }
+    return getCachedRepo(ctx)
+  }
+
+  // For backward compatibility and explicit test injection
+  var repository: GroupRepository
+    get() {
+      return if (TestEnvironmentDetector.isTestEnvironment()) localRepo else getRepository()
+    }
+    set(value) {
+      // Allows tests to inject custom repository
+    }
+
+  private fun getFirestoreRepo(): GroupRepository {
+    if (firestoreRepo == null) {
+      firestoreRepo = GroupRepositoryFirestore(Firebase.firestore, Firebase.storage)
+    }
+    return firestoreRepo!!
+  }
+
+  private fun getCachedRepo(context: Context): GroupRepository {
+    if (cachedRepo == null) {
+      val firestore = getFirestoreRepo()
+      val networkMonitor = NetworkMonitor(context)
+      cachedRepo = GroupRepositoryCached(context, firestore, networkMonitor)
+    }
+    return cachedRepo!!
+  }
+
+  /** For testing only - allows resetting the singleton state. */
+  @androidx.annotation.VisibleForTesting
+  fun resetForTesting() {
+    firestoreRepo = null
+    cachedRepo = null
+  }
 }
