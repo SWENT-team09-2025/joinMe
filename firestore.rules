@@ -48,10 +48,8 @@ service cloud.firestore {
     // FOLLOWS COLLECTION
     // =============================================================================
     match /follows/{followId} {
-      // Users can read follow relationships they are involved in
-      allow read: if isAuthenticated()
-                  && (existingData().followerId == request.auth.uid
-                      || existingData().followedId == request.auth.uid);
+      // Anyone authenticated can read follow relationships (public profiles)
+      allow read: if isAuthenticated();
 
       // Users can create a follow relationship where they are the follower
       // Cannot follow yourself
