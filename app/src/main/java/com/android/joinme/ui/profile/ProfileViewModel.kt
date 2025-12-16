@@ -87,11 +87,6 @@ class ProfileViewModel(
    */
   fun loadProfile(uid: String) {
     viewModelScope.launch(Dispatchers.Main) {
-      // Skip if already loaded for this UID
-      if (_profile.value?.uid == uid) {
-        return@launch
-      }
-
       _isLoading.value = true
       clearError()
       clearProfile()

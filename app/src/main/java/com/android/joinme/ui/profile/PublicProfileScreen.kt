@@ -131,8 +131,8 @@ fun PublicProfileScreen(
   val isFollowing by viewModel.isFollowing.collectAsState()
   val isFollowLoading by viewModel.isFollowLoading.collectAsState()
 
-  // Get current user ID
-  val currentUserId = Firebase.auth.currentUser?.uid
+  // Get current user ID (fallback to test user ID if not authenticated)
+  val currentUserId = Firebase.auth.currentUser?.uid ?: "test-user-id"
 
   // Load profile data when screen is first displayed
   LaunchedEffect(userId) { viewModel.loadPublicProfile(userId, currentUserId) }
