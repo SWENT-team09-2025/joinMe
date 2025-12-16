@@ -37,7 +37,7 @@ import org.junit.runner.RunWith
  * Uses FakeCredentialManager to simulate Google Sign-In without requiring manual authentication.
  */
 @RunWith(AndroidJUnit4::class)
-class JoinMeE2ETest {
+class M1JoinMeE2ETest {
 
   @get:Rule
   val permissionRule: GrantPermissionRule =

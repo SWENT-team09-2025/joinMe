@@ -72,9 +72,7 @@ fun ViewProfileScreen(
   val error by profileViewModel.error.collectAsState()
 
   // Load profile when screen is displayed or uid changes
-  LaunchedEffect(uid) {
-    profileViewModel.loadProfile(uid)
-  }
+  LaunchedEffect(uid) { profileViewModel.loadProfile(uid) }
 
   Scaffold(
       modifier = Modifier.testTag(ViewProfileTestTags.SCREEN),
