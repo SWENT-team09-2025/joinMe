@@ -408,7 +408,7 @@ private fun GroupCard(group: Group, onClick: () -> Unit, onMoreOptions: (Float) 
                 }
                 Spacer(Modifier.height(Dimens.Spacing.small))
                 Text(
-                    text = "members: ${group.memberIds.size}",
+                    text = stringResource(R.string.members_display, group.memberIds.size),
                     style = MaterialTheme.typography.labelSmall,
                     color = groupOnColor.copy(alpha = MEMBERS_ALPHA))
               }

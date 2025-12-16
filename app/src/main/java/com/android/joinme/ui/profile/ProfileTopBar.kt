@@ -11,7 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.android.joinme.R
 
 /** Navigation icon button with active/inactive states. */
 @Composable
@@ -39,7 +41,7 @@ private fun BackButtonOrSpacer(showBackButton: Boolean, onBackClick: () -> Unit)
     IconButton(onClick = onBackClick) {
       Icon(
           imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-          contentDescription = "Back",
+          contentDescription = stringResource(R.string.back),
           modifier = Modifier.size(24.dp),
           tint = MaterialTheme.colorScheme.primary)
     }
@@ -94,19 +96,19 @@ fun ProfileTopBar(
           Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             ProfileNavigationIconButton(
                 imageVector = Icons.Default.Person,
-                contentDescription = "Profile",
+                contentDescription = stringResource(R.string.profile_title),
                 isActive = currentScreen == ProfileScreen.VIEW_PROFILE,
                 onClick = onProfileClick)
 
             ProfileNavigationIconButton(
                 imageVector = Icons.Filled.Group,
-                contentDescription = "Group",
+                contentDescription = stringResource(R.string.group_label),
                 isActive = currentScreen == ProfileScreen.GROUPS,
                 onClick = onGroupClick)
 
             ProfileNavigationIconButton(
                 imageVector = Icons.Default.Edit,
-                contentDescription = "Edit",
+                contentDescription = stringResource(R.string.edit),
                 isActive = currentScreen == ProfileScreen.EDIT_PROFILE,
                 onClick = onEditClick)
           }

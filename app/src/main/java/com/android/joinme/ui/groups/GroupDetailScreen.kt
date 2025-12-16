@@ -78,7 +78,9 @@ fun GroupDetailScreen(
             title = {},
             navigationIcon = {
               IconButton(onClick = onBackClick) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back))
               }
             },
             actions = {
@@ -104,7 +106,7 @@ fun GroupDetailScreen(
             }
             uiState.error != null -> {
               ErrorContent(
-                  message = uiState.error ?: "Unknown error",
+                  message = uiState.error ?: stringResource(R.string.unknown_error),
                   onRetry = { viewModel.loadGroupDetails(groupId) },
                   modifier = Modifier.align(Alignment.Center))
             }
@@ -152,7 +154,7 @@ private fun GroupContent(
           contentAlignment = Alignment.Center) {
             GroupPhotoImage(
                 photoUrl = groupPhotoUrl,
-                contentDescription = "Group picture",
+                contentDescription = stringResource(R.string.group_picture),
                 size = Dimens.GroupDetail.pictureImageSize)
           }
 
@@ -256,7 +258,7 @@ private fun GroupContent(
       Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
       Text(
-          text = "members : $membersCount",
+          text = stringResource(R.string.members_display, membersCount),
           style = MaterialTheme.typography.bodyMedium,
           color = groupCategory.getOnContainerColor(),
           modifier = Modifier.align(Alignment.End))
@@ -284,7 +286,7 @@ private fun MemberItem(
         // Profile photo
         ProfilePhotoImage(
             photoUrl = profile.photoUrl,
-            contentDescription = "Profile photo of ${profile.username}",
+            contentDescription = stringResource(R.string.profile_photo_of, profile.username),
             modifier = Modifier.size(Dimens.GroupDetail.memberProfilePictureSize))
 
         Spacer(modifier = Modifier.width(Dimens.Spacing.medium))
@@ -308,6 +310,6 @@ private fun ErrorContent(message: String, onRetry: () -> Unit, modifier: Modifie
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.error)
         Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
-        Button(onClick = onRetry) { Text("Retry") }
+        Button(onClick = onRetry) { Text(stringResource(R.string.retry)) }
       }
 }

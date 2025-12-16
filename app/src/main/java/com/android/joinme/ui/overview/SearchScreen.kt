@@ -36,9 +36,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.R
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.eventItem.EventItem
 import com.android.joinme.model.filter.FilterState
@@ -59,7 +61,7 @@ private fun SearchTextField(query: String, onQueryChange: (String) -> Unit) {
   OutlinedTextField(
       value = query,
       onValueChange = onQueryChange,
-      placeholder = { Text("Search an event") },
+      placeholder = { Text(stringResource(R.string.search_an_event)) },
       shape = RoundedCornerShape(Dimens.IconSize.large),
       leadingIcon = {
         IconButton(
@@ -68,13 +70,17 @@ private fun SearchTextField(query: String, onQueryChange: (String) -> Unit) {
                 focusManager.clearFocus()
               }
             }) {
-              Icon(imageVector = Icons.Default.Search, contentDescription = "Search")
+              Icon(
+                  imageVector = Icons.Default.Search,
+                  contentDescription = stringResource(R.string.search))
             }
       },
       trailingIcon = {
         if (query.isNotEmpty()) {
           IconButton(onClick = { onQueryChange("") }) {
-            Icon(imageVector = Icons.Default.Clear, contentDescription = "Clear")
+            Icon(
+                imageVector = Icons.Default.Clear,
+                contentDescription = stringResource(R.string.clear))
           }
         }
       },
@@ -106,19 +112,19 @@ private fun FilterChipsRow(
         FilterChip(
             selected = filterState.isSocialSelected,
             onClick = onToggleSocial,
-            label = { Text("Social") },
+            label = { Text(stringResource(R.string.social)) },
             colors = MaterialTheme.customColors.filterChip)
 
         FilterChip(
             selected = filterState.isActivitySelected,
             onClick = onToggleActivity,
-            label = { Text("Activity") },
+            label = { Text(stringResource(R.string.activity)) },
             colors = MaterialTheme.customColors.filterChip)
 
         FilterChip(
             selected = filterState.isSportSelected,
             onClick = onToggleSport,
-            label = { Text("Sport") },
+            label = { Text(stringResource(R.string.sport)) },
             colors = MaterialTheme.customColors.filterChip)
       }
 }
@@ -167,7 +173,7 @@ private fun ColumnScope.EmptySearchMessage() {
       verticalArrangement = Arrangement.Center,
       horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = "No events or series found. Try adjusting your filters or search query.",
+            text = stringResource(R.string.no_search_results),
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.testTag(SearchScreenTestTags.EMPTY_EVENT_LIST_MSG))
@@ -223,7 +229,11 @@ fun SearchScreen(
         Column {
           CenterAlignedTopAppBar(
               modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
-              title = { Text(text = "Search", style = MaterialTheme.typography.titleLarge) },
+              title = {
+                Text(
+                    text = stringResource(R.string.search),
+                    style = MaterialTheme.typography.titleLarge)
+              },
               colors =
                   TopAppBarDefaults.topAppBarColors(
                       containerColor = MaterialTheme.colorScheme.surface))

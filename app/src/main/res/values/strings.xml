@@ -69,6 +69,7 @@
     <string name="fetching_location">Fetching your location…</string>
     <string name="location_message">Location</string>
     <string name="view_on_map">View on map</string>
+    <string name="directions">Directions</string>
     <string name="location_permission_required">Location permission required to share location</string>
     <string name="sign_in_to_send_message">Please sign in to send messages</string>
     <string name="cannot_message_yourself">Cannot send messages to yourself</string>
@@ -281,4 +282,157 @@
 
     <!-- Notification Types -->
     <string name="notification_type_new_follower">new_follower</string>
+
+    <!-- Common UI Strings -->
+    <string name="ok">OK</string>
+    <string name="retry">Retry</string>
+    <string name="next">NEXT</string>
+    <string name="save_button">SAVE</string>
+
+    <!-- Event Form Strings -->
+    <string name="event_type">Event Type</string>
+    <string name="select_event_type">Select event type</string>
+    <string name="title">Title</string>
+    <string name="enter_event_title">Enter event title</string>
+    <string name="description">Description</string>
+    <string name="describe_your_event">Describe your event</string>
+    <string name="duration_min">Duration (min)</string>
+    <string name="select_duration">Select duration</string>
+    <string name="select_duration_min">Select Duration (min)</string>
+    <string name="max_participants">Max Participants</string>
+    <string name="select_number">Select number</string>
+    <string name="select_max_participants">Select Max Participants</string>
+    <string name="date">Date</string>
+    <string name="select_date">Select date</string>
+    <string name="time">Time</string>
+    <string name="select_time">Select time</string>
+    <string name="event_visibility">Event Visibility</string>
+    <string name="select_visibility">Select visibility</string>
+    <string name="visibility">Visibility</string>
+    <string name="location_label">Location</string>
+
+    <!-- Show Event Screen -->
+    <string name="delete_event">Delete Event</string>
+    <string name="delete_event_confirmation">Are you sure you want to delete this event? This action cannot be undone.</string>
+    <string name="edit_event">EDIT EVENT</string>
+    <string name="delete_event_button">DELETE EVENT</string>
+    <string name="quit_event">QUIT EVENT</string>
+    <string name="join_event">JOIN EVENT</string>
+    <string name="event_full">Sorry this event is full</string>
+    <string name="task_title">Task title</string>
+    <string name="event_chat">Event Chat</string>
+    <string name="members_count">MEMBERS : %1$s/%2$s</string>
+    <string name="duration_display">%1$smin</string>
+
+    <!-- Serie Details Screen -->
+    <string name="meeting_info">MEETING: %1$s</string>
+    <string name="members_label">MEMBERS : %1$s</string>
+    <string name="no_events_in_serie">No events in this serie yet</string>
+    <string name="created_by">Created by %1$s</string>
+    <string name="add_event">ADD EVENT</string>
+    <string name="edit_serie">EDIT SERIE</string>
+    <string name="delete_serie">DELETE SERIE</string>
+    <string name="delete_serie_title">Delete Serie</string>
+    <string name="delete_serie_confirmation">Are you sure you want to delete this serie? This action cannot be undone.</string>
+    <string name="quit_serie">QUIT SERIE</string>
+    <string name="join_serie">JOIN SERIE</string>
+    <string name="serie_full">Sorry this serie is full</string>
+
+    <!-- Profile Screen -->
+    <string name="no_profile_data">No profile data available</string>
+    <string name="profile_title">Profile</string>
+    <string name="log_out">LOG OUT</string>
+    <string name="log_out_title">Log Out</string>
+    <string name="log_out_confirmation">Are you sure you want to log out?</string>
+    <string name="username">Username</string>
+    <string name="email">Email</string>
+    <string name="date_of_birth">Date of Birth</string>
+    <string name="date_not_specified">Date not specified</string>
+    <string name="country_region">Country/Region</string>
+    <string name="country_not_specified">Country not specified</string>
+    <string name="none">None</string>
+    <string name="error_logging_out">Error while logging out</string>
+
+    <!-- Edit Profile Screen -->
+    <string name="edit_profile">Edit Profile</string>
+    <string name="profile_picture">Profile Picture</string>
+    <string name="edit_photo">Edit Photo</string>
+    <string name="delete_photo">Delete Photo</string>
+    <string name="interests_placeholder">Golf, Nature</string>
+    <string name="country_placeholder">Nigeria</string>
+    <string name="bio_placeholder">Tell others a bit about yourself – your passions, what you enjoy doing, or what you\'re looking for on JoinMe.</string>
+    <string name="username_supporting_text">3-30 characters. Letters, numbers, spaces, or underscores only</string>
+    <string name="date_format_hint">dd/mm/yyyy</string>
+
+    <!-- Overview Screen -->
+    <string name="overview">Overview</string>
+    <string name="no_events_message">You have no events yet. Join one, or create your own event.</string>
+    <string name="ongoing_activity_singular">Your ongoing activity :</string>
+    <string name="ongoing_activities_plural">Your ongoing activities :</string>
+    <string name="upcoming_activity_singular">Your upcoming activity :</string>
+    <string name="upcoming_activities_plural">Your upcoming activities :</string>
+    <string name="add_event_fab">Add Event</string>
+    <string name="view_history">View History</string>
+    <string name="add_an_event">Add an event</string>
+    <string name="add_a_serie">Add a serie</string>
+    <string name="notification_permission_denied">Notification permission denied. You won\'t receive event reminders.</string>
+
+    <!-- Search Screen -->
+    <string name="search_an_event">Search an event</string>
+    <string name="search">Search</string>
+    <string name="clear">Clear</string>
+    <string name="social">Social</string>
+    <string name="activity">Activity</string>
+    <string name="sport">Sport</string>
+    <string name="no_search_results">No events or series found. Try adjusting your filters or search query.</string>
+
+    <!-- Group Detail Screen -->
+    <string name="group_picture">Group picture</string>
+    <string name="members_display">members : %1$d</string>
+    <string name="profile_photo_of">Profile photo of %1$s</string>
+
+    <!-- Group Form Screen -->
+    <string name="edit_picture">Edit Picture</string>
+    <string name="delete_picture">Delete Picture</string>
+    <string name="group_name_label">Group name</string>
+    <string name="category">Category</string>
+    <string name="group_type">Group Type</string>
+    <string name="group_description_placeholder">Tell us what your group is about</string>
+    <string name="group_name_supporting_text">3-30 characters. Letters, numbers, spaces, or underscores only</string>
+    <string name="group_description_supporting_text">0-300 characters. Letters, numbers, spaces, or underscores only</string>
+
+    <!-- Sign In Screen -->
+    <string name="app_logo">App Logo</string>
+    <string name="google_logo">Google Logo</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="login_successful">Login successful!</string>
+
+    <!-- Event Card -->
+    <string name="place_label">Place : %1$s</string>
+    <string name="unknown">Unknown</string>
+    <string name="view_event_details">View event details</string>
+
+    <!-- Serie Card -->
+    <string name="serie_badge">Serie 🔥</string>
+    <string name="view_serie_details">View serie details</string>
+
+    <!-- History Screen -->
+    <string name="history">History</string>
+    <string name="go_back">Go back</string>
+    <string name="empty_history">You have nothing in your history yet. Participate at an event to see it here!</string>
+
+    <!-- Activity Group Screen -->
+    <string name="no_group_activities">This group has no activities yet</string>
+
+    <!-- Serie Form Screen -->
+    <string name="group_optional">Group (Optional)</string>
+    <string name="none_standalone">None (Standalone)</string>
+    <string name="unknown_group">Unknown Group</string>
+
+    <!-- Create Event Screen -->
+    <string name="group_label">Group</string>
+    <string name="select_group_or_standalone">Select group or standalone</string>
+
+    <!-- Event For Serie Form Screen -->
+    <string name="event_type_from_group">Event Type (from Group)</string>
 </resources>

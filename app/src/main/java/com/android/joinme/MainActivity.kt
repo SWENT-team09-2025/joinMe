@@ -38,14 +38,11 @@ import com.android.joinme.model.invitation.InvitationRepositoryProvider
 import com.android.joinme.model.invitation.InvitationType
 import com.android.joinme.model.invitation.deepLink.DeepLinkService
 import com.android.joinme.model.notification.FCMTokenManager
-import com.android.joinme.model.presence.PresenceRepositoryProvider
 import com.android.joinme.model.profile.ProfileRepositoryProvider
 import com.android.joinme.ui.calendar.CalendarScreen
 import com.android.joinme.ui.chat.ChatScreen
-import com.android.joinme.ui.chat.ChatType
 import com.android.joinme.ui.chat.ChatViewModel
 import com.android.joinme.ui.chat.PollViewModel
-import com.android.joinme.ui.chat.PresenceViewModel
 import com.android.joinme.ui.groups.ActivityGroupScreen
 import com.android.joinme.ui.groups.CreateGroupScreen
 import com.android.joinme.ui.groups.EditGroupScreen
@@ -975,9 +972,7 @@ private fun NavGraphBuilder.chatScreen(
       return@composable
     }
 
-    val chatType =
-        if (totalParticipants <= MAX_INDIVIDUAL_CHAT_PARTICIPANTS) ChatType.INDIVIDUAL
-        else ChatType.GROUP
+    val isGroupChat = totalParticipants > MAX_INDIVIDUAL_CHAT_PARTICIPANTS
 
     val chatViewModel: ChatViewModel =
         viewModel(
@@ -987,13 +982,8 @@ private fun NavGraphBuilder.chatScreen(
                       ChatRepositoryProvider.repository, ProfileRepositoryProvider.repository)
                 })
 
-    val presenceViewModel: PresenceViewModel =
-        viewModel(
-            factory =
-                createViewModelFactory { PresenceViewModel(PresenceRepositoryProvider.repository) })
-
     val pollViewModel: PollViewModel? =
-        if (chatType == ChatType.GROUP) {
+        if (isGroupChat) {
           viewModel(
               factory =
                   createViewModelFactory {
@@ -1011,9 +1001,7 @@ private fun NavGraphBuilder.chatScreen(
         currentUserId = currentUserId,
         currentUserName = currentUserName,
         viewModel = chatViewModel,
-        presenceViewModel = presenceViewModel,
         pollViewModel = pollViewModel,
-        chatType = chatType,
         totalParticipants = totalParticipants,
         onLeaveClick = { navigationActions.goBack() },
         onNavigateToMap = { location, senderId ->

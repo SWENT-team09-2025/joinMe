@@ -19,7 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.android.joinme.R
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.displayString
 import com.android.joinme.ui.theme.Dimens
@@ -107,7 +109,7 @@ fun GroupFormScreen(
                 IconButton(onClick = onGoBack) {
                   Icon(
                       imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                      contentDescription = "Back",
+                      contentDescription = stringResource(R.string.back),
                       tint = MaterialTheme.colorScheme.primary)
                 }
               },
@@ -246,7 +248,7 @@ private fun GroupPictureSection(
 
                       GroupPhotoImage(
                           photoUrl = groupPictureUrl,
-                          contentDescription = "Group picture",
+                          contentDescription = stringResource(R.string.group_picture),
                           size = Dimens.Group.pictureLarge,
                           showLoadingIndicator = false)
                     }
@@ -270,7 +272,7 @@ private fun GroupPictureSection(
                           contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Outlined.Edit,
-                                contentDescription = "Edit Picture",
+                                contentDescription = stringResource(R.string.edit_picture),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(Dimens.Group.editIconSize))
                           }
@@ -293,7 +295,7 @@ private fun GroupPictureSection(
                               .testTag(testTags.deletePhotoButton)) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Picture",
+                            contentDescription = stringResource(R.string.delete_picture),
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(Dimens.Group.deleteIconSize))
                       }
@@ -325,7 +327,7 @@ private fun GroupNameInput(
 ) {
   Column(modifier = Modifier.fillMaxWidth()) {
     Text(
-        text = "Group name",
+        text = stringResource(R.string.group_name_label),
         style = MaterialTheme.typography.bodyLarge,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurface,
@@ -335,13 +337,17 @@ private fun GroupNameInput(
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth().testTag(testTags.groupNameTextField),
-        placeholder = { Text("Group name", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+        placeholder = {
+          Text(
+              stringResource(R.string.group_name_label),
+              color = MaterialTheme.colorScheme.onSurfaceVariant)
+        },
         isError = error != null,
         singleLine = true,
         colors = MaterialTheme.customColors.outlinedTextField())
 
     Text(
-        text = error ?: "3-30 characters. Letters, numbers, spaces, or underscores only",
+        text = error ?: stringResource(R.string.group_name_supporting_text),
         style = MaterialTheme.typography.bodySmall,
         color =
             if (error != null) MaterialTheme.colorScheme.error
@@ -379,7 +385,7 @@ private fun CategoryDropdown(
 
   Column(modifier = Modifier.fillMaxWidth()) {
     Text(
-        text = "Category",
+        text = stringResource(R.string.category),
         style = MaterialTheme.typography.bodyLarge,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurface,
@@ -391,7 +397,11 @@ private fun CategoryDropdown(
           onValueChange = {},
           modifier = Modifier.fillMaxWidth().menuAnchor().testTag(testTags.categoryDropdown),
           readOnly = true,
-          placeholder = { Text("Group Type", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+          placeholder = {
+            Text(
+                stringResource(R.string.group_type),
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+          },
           trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
           colors = MaterialTheme.customColors.outlinedTextField())
 
@@ -446,7 +456,7 @@ private fun DescriptionInput(
 ) {
   Column(modifier = Modifier.fillMaxWidth()) {
     Text(
-        text = "Description",
+        text = stringResource(R.string.description),
         style = MaterialTheme.typography.bodyLarge,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurface,
@@ -461,7 +471,7 @@ private fun DescriptionInput(
                 .testTag(testTags.groupDescriptionTextField),
         placeholder = {
           Text(
-              "Tell us what your group is about",
+              stringResource(R.string.group_description_placeholder),
               color = MaterialTheme.colorScheme.onSurfaceVariant)
         },
         isError = error != null,
@@ -469,7 +479,7 @@ private fun DescriptionInput(
         colors = MaterialTheme.customColors.outlinedTextField())
 
     Text(
-        text = error ?: "0-300 characters. Letters, numbers, spaces, or underscores only",
+        text = error ?: stringResource(R.string.group_description_supporting_text),
         style = MaterialTheme.typography.bodySmall,
         color =
             if (error != null) MaterialTheme.colorScheme.error

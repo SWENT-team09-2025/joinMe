@@ -11,7 +11,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.android.joinme.R
 import com.android.joinme.model.map.Location
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
@@ -102,7 +104,7 @@ fun EventForSerieFormScreen(
                 IconButton(onClick = onGoBack) {
                   Icon(
                       imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                      contentDescription = "Back")
+                      contentDescription = stringResource(R.string.back))
                 }
               },
               colors =
@@ -125,7 +127,7 @@ fun EventForSerieFormScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally) {
                       Text(
-                          text = "Event Type (from Group)",
+                          text = stringResource(R.string.event_type_from_group),
                           style = MaterialTheme.typography.labelMedium,
                           color = MaterialTheme.colorScheme.onSurfaceVariant)
                       Spacer(modifier = Modifier.height(Dimens.Spacing.extraSmall))
