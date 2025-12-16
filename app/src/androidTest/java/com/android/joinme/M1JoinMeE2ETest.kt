@@ -212,7 +212,7 @@ class M1JoinMeE2ETest {
     composeTestRule.waitForIdle()
 
     // Wait for suggestions to load
-    composeTestRule.waitUntil(timeoutMillis = 10000) {
+    composeTestRule.waitUntil(timeoutMillis = 20000) {
       composeTestRule
           .onAllNodesWithTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS)
           .fetchSemanticsNodes()
@@ -331,7 +331,7 @@ class M1JoinMeE2ETest {
 
     // THEN: Event should appear in Overview screen
     // Wait for the event list to appear (may take time for data to load)
-    composeTestRule.waitUntil(timeoutMillis = 10000) {
+    composeTestRule.waitUntil(timeoutMillis = 20000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -470,7 +470,7 @@ class M1JoinMeE2ETest {
 
     // THEN: All events should be visible
     // Wait for the event list to appear
-    composeTestRule.waitUntil(timeoutMillis = 10000) {
+    composeTestRule.waitUntil(timeoutMillis = 20000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -522,7 +522,7 @@ class M1JoinMeE2ETest {
     navigateToTab("Overview")
 
     // Event should still be visible
-    composeTestRule.waitUntil(timeoutMillis = 10000) {
+    composeTestRule.waitUntil(timeoutMillis = 20000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()

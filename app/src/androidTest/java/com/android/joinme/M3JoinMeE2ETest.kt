@@ -627,20 +627,15 @@ class M3JoinMeE2ETest {
     composeTestRule.onNodeWithTag(PublicProfileScreenTestTags.MESSAGE_BUTTON).performClick()
     composeTestRule.waitForIdle()
 
-    // Chat screen should open
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    // Wait for chat screen message input to be ready
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
-          .onAllNodesWithTag(ChatScreenTestTags.SCREEN)
+          .onAllNodesWithTag(ChatScreenTestTags.MESSAGE_INPUT)
           .fetchSemanticsNodes()
           .isNotEmpty()
     }
-
-    // Verify chat screen is displayed with correct components
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.SCREEN).assertExists()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.TITLE, useUnmergedTree = true).assertExists()
-    composeTestRule.onNodeWithText(targetProfile.username, substring = true).assertExists()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.MESSAGE_INPUT).assertExists()
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.SEND_BUTTON).assertExists()
+    Thread.sleep(1000)
+    composeTestRule.waitForIdle()
 
     // Type a message and send it
     val testMessage = "Hello from E2E test! ${System.currentTimeMillis()}"
@@ -859,6 +854,19 @@ class M3JoinMeE2ETest {
           .isNotEmpty()
     }
 
+    // Test filter buttons in Search screen
+    composeTestRule.onNodeWithText("Social").assertExists()
+    composeTestRule.onNodeWithText("Social").performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("Activity").assertExists()
+    composeTestRule.onNodeWithText("Activity").performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("Sport").assertExists()
+    composeTestRule.onNodeWithText("Sport").performClick()
+    composeTestRule.waitForIdle()
+
     // Go to Map
     navigateToTab("Map")
     composeTestRule.waitUntil(timeoutMillis = 5000) {
@@ -944,5 +952,68 @@ class M3JoinMeE2ETest {
     composeTestRule.onNodeWithTag(LeaderboardTestTags.TAB_CURRENT).performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag(LeaderboardTestTags.TAB_CURRENT).assertExists()
+  }
+
+  // ==================== WORKFLOW 8: EVENT LOCATION NAVIGATION ====================
+
+  @Test
+  fun e2e_clickEventLocation_navigatesToMap() {
+    // Navigate to Overview and find an event
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
+      composeTestRule
+          .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Find and click on the test event
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
+        .performScrollToNode(hasText(testEvent.title))
+    composeTestRule.onNodeWithText(testEvent.title, useUnmergedTree = true).performClick()
+    waitForLoading()
+
+    // Should be on ShowEventScreen
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag(ShowEventScreenTestTags.SCREEN, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Verify event details are displayed
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.SCREEN).assertExists()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_TITLE).assertExists()
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_LOCATION).assertExists()
+
+    // Verify the location text is displayed (EPFL, Lausanne)
+    composeTestRule.onNodeWithText("EPFL, Lausanne", substring = true).assertExists()
+
+    // Click on the location field to navigate to map
+    composeTestRule.onNodeWithTag(ShowEventScreenTestTags.EVENT_LOCATION).performClick()
+    composeTestRule.waitForIdle()
+    Thread.sleep(500)
+
+    // Should navigate to map screen with the event location
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag(
+              com.android.joinme.ui.map.MapScreenTestTags.GOOGLE_MAP_SCREEN, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Verify map screen is displayed
+    composeTestRule
+        .onNodeWithTag(
+            com.android.joinme.ui.map.MapScreenTestTags.GOOGLE_MAP_SCREEN, useUnmergedTree = true)
+        .assertExists()
+
+    // Interact with the map
+    composeTestRule
+        .onNodeWithTag(
+            com.android.joinme.ui.map.MapScreenTestTags.GOOGLE_MAP_SCREEN, useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
   }
 }

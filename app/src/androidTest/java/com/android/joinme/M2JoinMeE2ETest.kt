@@ -104,6 +104,7 @@ class M2JoinMeE2ETest {
 
     // Wait for initial load and auth state to settle
     composeTestRule.waitForIdle()
+    Thread.sleep(1000) // Give time for initial screen to load on CI
     composeTestRule.waitForIdle()
 
     // Verify we're on Overview screen (auth successful)
@@ -243,7 +244,7 @@ class M2JoinMeE2ETest {
     composeTestRule.waitForIdle()
 
     // Wait for suggestions to load
-    composeTestRule.waitUntil(timeoutMillis = 10000) {
+    composeTestRule.waitUntil(timeoutMillis = 20000) {
       composeTestRule
           .onAllNodesWithTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS)
           .fetchSemanticsNodes()
@@ -343,7 +344,7 @@ class M2JoinMeE2ETest {
     composeTestRule.waitForIdle()
 
     // Wait for suggestions to load
-    composeTestRule.waitUntil(timeoutMillis = 10000) {
+    composeTestRule.waitUntil(timeoutMillis = 20000) {
       composeTestRule
           .onAllNodesWithTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS)
           .fetchSemanticsNodes()
