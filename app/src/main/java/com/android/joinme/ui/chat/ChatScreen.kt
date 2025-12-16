@@ -97,8 +97,6 @@ import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
 import com.android.joinme.ui.theme.customColors
 import com.android.joinme.ui.theme.getUserColor
-import com.android.joinme.ui.theme.offlineIndicator
-import com.android.joinme.ui.theme.onlineIndicator
 import com.android.joinme.ui.theme.outlinedTextField
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -113,24 +111,12 @@ import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.launch
 
-/**
- * Type of chat determining UI behavior.
- * - INDIVIDUAL: For one-on-one chats, shows "online"/"offline" status
- * - GROUP: For group/event chats, shows "X users online" count
- */
-enum class ChatType {
-  INDIVIDUAL,
-  GROUP
-}
-
 /** Shared constants for chat screens. */
 private object ChatConstants {
   const val TIMESTAMP_FORMAT = "HH:mm"
   const val SECONDARY_ALPHA = 0.8f
   const val SYSTEM_MESSAGE_ALPHA = 0.9f
   const val DIVIDER_ALPHA = 0.5f
-  const val USERS_OFFLINE = 0
-  const val ONE_USER_ONLINE = 1
   const val IMAGE_ASPECT_RATIO = 0.75f
   const val MAX_INPUT_LINES = 4
   const val BLUR_MULTIPLIER = 2
@@ -216,9 +202,6 @@ object ChatScreenTestTags {
   const val LOCATION_PREVIEW_SEND_BUTTON = "locationPreviewSendButton"
   const val LOCATION_PREVIEW_CANCEL_BUTTON = "locationPreviewCancelButton"
   const val LOCATION_MESSAGE_PREVIEW = "locationMessagePreview"
-  const val ONLINE_USERS_ROW = "onlineUsersRow"
-  const val ONLINE_INDICATOR_DOT = "onlineIndicatorDot"
-  const val ONLINE_USERS_COUNT = "onlineUsersCount"
 }
 
 /**
@@ -242,10 +225,7 @@ object ChatScreenTestTags {
  * @param onChatColor Optional color for text/icons on chat-colored elements. Defaults to
  *   onChatDefault if not provided. Must provide proper contrast with chatColor
  * @param totalParticipants Total number of participants in the event/group
- * @param presenceViewModel Optional presence view model for online tracking
  * @param onNavigateToMap Callback invoked when user clicks on a location message to view on map
- * @param chatType Type of chat (INDIVIDUAL or GROUP), determines UI behavior like online status
- *   display. Defaults to INDIVIDUAL.
  * @param pollViewModel Optional poll view model for group/event chats with poll support
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -260,18 +240,12 @@ fun ChatScreen(
     chatColor: Color? = null,
     onChatColor: Color? = null,
     totalParticipants: Int = 1, // Total number of participants in the event/group
-    presenceViewModel: PresenceViewModel? =
-        null, // Optional presence view model for online tracking
     onNavigateToMap: (Location, String) -> Unit = { _, _ -> },
-    chatType: ChatType = ChatType.INDIVIDUAL,
     pollViewModel: PollViewModel? = null
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val snackbarHostState = remember { SnackbarHostState() }
   val coroutineScope = rememberCoroutineScope()
-
-  // Collect presence state if available
-  val presenceState = presenceViewModel?.presenceState?.collectAsState()
 
   // Use chatDefault colors if no specific colors provided
   val effectiveChatColor = chatColor ?: MaterialTheme.customColors.chatDefault
@@ -279,11 +253,6 @@ fun ChatScreen(
 
   // Initialize chat when screen loads
   LaunchedEffect(chatId, currentUserId) { viewModel.initializeChat(chatId, currentUserId) }
-
-  // Initialize presence tracking when screen loads
-  LaunchedEffect(chatId, currentUserId, presenceViewModel) {
-    presenceViewModel?.initialize(chatId, currentUserId)
-  }
 
   // Initialize poll tracking when screen loads (for group/event chats)
   LaunchedEffect(chatId, currentUserId, pollViewModel) {
@@ -307,9 +276,7 @@ fun ChatScreen(
             chatTitle = chatTitle,
             onLeaveClick = onLeaveClick, // Leave chat navigates back
             topBarColor = effectiveChatColor,
-            onTopBarColor = effectiveOnChatColor,
-            onlineUsersCount = presenceState?.value?.onlineUsersCount ?: 0,
-            chatType = chatType)
+            onTopBarColor = effectiveOnChatColor)
       },
       snackbarHost = { SnackbarHost(snackbarHostState) },
       contentWindowInsets = WindowInsets.systemBars, // Only consume system bars, not IME
@@ -348,8 +315,6 @@ fun ChatScreen(
  * @param topBarColor Color for the top bar background
  * @param onTopBarColor Color for text/icons on the top bar (must provide proper contrast with
  *   topBarColor)
- * @param onlineUsersCount Number of users currently online in the chat
- * @param chatType Type of chat (INDIVIDUAL or GROUP), determines online status display format
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -357,9 +322,7 @@ private fun ChatTopBar(
     chatTitle: String,
     onLeaveClick: () -> Unit,
     topBarColor: Color,
-    onTopBarColor: Color,
-    onlineUsersCount: Int = 0,
-    chatType: ChatType = ChatType.INDIVIDUAL
+    onTopBarColor: Color
 ) {
   Surface(
       modifier = Modifier.fillMaxWidth().testTag(ChatScreenTestTags.TOP_BAR),
@@ -370,20 +333,14 @@ private fun ChatTopBar(
                 Modifier.fillMaxWidth()
                     .padding(horizontal = Dimens.Padding.medium, vertical = Dimens.Padding.small),
             verticalAlignment = Alignment.CenterVertically) {
-              // Title and online status column
-              Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = chatTitle,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = onTopBarColor,
-                    modifier = Modifier.testTag(ChatScreenTestTags.TITLE))
+              // Title
+              Text(
+                  text = chatTitle,
+                  style = MaterialTheme.typography.titleMedium,
+                  fontWeight = FontWeight.Bold,
+                  color = onTopBarColor,
+                  modifier = Modifier.weight(1f).testTag(ChatScreenTestTags.TITLE))
 
-                OnlineStatusIndicator(
-                    onlineUsersCount = onlineUsersCount,
-                    chatType = chatType,
-                    textColor = onTopBarColor.copy(alpha = ChatConstants.SECONDARY_ALPHA))
-              }
               // Leave button
               IconButton(
                   onClick = onLeaveClick,
@@ -400,61 +357,6 @@ private fun ChatTopBar(
                   }
             }
       }
-}
-
-/**
- * Online status indicator with colored dot and status text.
- *
- * @param onlineUsersCount Number of users currently online
- * @param chatType Type of chat determining status text format
- * @param textColor Color for the status text
- */
-@Composable
-private fun OnlineStatusIndicator(onlineUsersCount: Int, chatType: ChatType, textColor: Color) {
-  val isOnline = onlineUsersCount > 0
-  val indicatorColor = if (isOnline) onlineIndicator else offlineIndicator
-  val statusText = getStatusText(chatType, onlineUsersCount)
-
-  Row(
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.extraSmall),
-      modifier = Modifier.testTag(ChatScreenTestTags.ONLINE_USERS_ROW)) {
-        Box(
-            modifier =
-                Modifier.size(Dimens.Spacing.small)
-                    .background(color = indicatorColor, shape = CircleShape)
-                    .testTag(ChatScreenTestTags.ONLINE_INDICATOR_DOT))
-
-        Text(
-            text = statusText,
-            style = MaterialTheme.typography.bodySmall,
-            color = textColor,
-            modifier = Modifier.testTag(ChatScreenTestTags.ONLINE_USERS_COUNT))
-      }
-}
-
-/** Returns the appropriate status text based on chat type and online user count. */
-@Composable
-private fun getStatusText(chatType: ChatType, onlineUsersCount: Int): String {
-  return when (chatType) {
-    ChatType.INDIVIDUAL -> getIndividualStatusText(onlineUsersCount > 0)
-    ChatType.GROUP -> getGroupStatusText(onlineUsersCount)
-  }
-}
-
-@Composable
-private fun getIndividualStatusText(isOnline: Boolean): String {
-  return if (isOnline) stringResource(R.string.status_online)
-  else stringResource(R.string.status_offline)
-}
-
-@Composable
-private fun getGroupStatusText(count: Int): String {
-  return when (count) {
-    ChatConstants.USERS_OFFLINE -> stringResource(R.string.online_users_zero)
-    ChatConstants.ONE_USER_ONLINE -> stringResource(R.string.online_users_one)
-    else -> stringResource(R.string.online_users_many, count)
-  }
 }
 
 /**
