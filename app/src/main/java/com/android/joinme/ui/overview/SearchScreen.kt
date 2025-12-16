@@ -91,7 +91,6 @@ private fun SearchTextField(query: String, onQueryChange: (String) -> Unit) {
                 if (query.isNotEmpty()) {
                   // Perform search action here
                   focusManager.clearFocus()
-                  // TODO later the search action
                 }
               }),
       singleLine = true,
