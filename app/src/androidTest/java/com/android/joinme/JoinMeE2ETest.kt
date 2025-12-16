@@ -63,7 +63,7 @@ class JoinMeE2ETest {
     // Create fake Google ID token
     val fakeIdToken =
         FakeJwtGenerator.createFakeGoogleIdToken(
-            uid = "test-user-123", name = "Test User", email = "test@joinme.com")
+            uid = "test-user-id", name = "Test User", email = "test@joinme.com")
 
     // Sign in to Firebase with fake token
     val credential = GoogleAuthProvider.getCredential(fakeIdToken, null)
@@ -84,6 +84,27 @@ class JoinMeE2ETest {
         val events =
             repo.getAllEvents(eventFilter = EventFilter.EVENTS_FOR_OVERVIEW_SCREEN).toList()
         events.forEach { repo.deleteEvent(it.eventId) }
+      }
+    }
+
+    // Create test user profiles
+    val profileRepo = com.android.joinme.model.profile.ProfileRepositoryProvider.repository
+    if (profileRepo is com.android.joinme.model.profile.ProfileRepositoryLocal) {
+      runBlocking {
+        // Create profile for test-user-id
+        val testProfile = com.android.joinme.model.profile.Profile(
+            uid = "test-user-id",
+            username = "Test User",
+            email = "test@joinme.com",
+            dateOfBirth = "01/01/2000",
+            country = "Switzerland",
+            interests = listOf("Sports"),
+            bio = "E2E Test User",
+            createdAt = com.google.firebase.Timestamp.now(),
+            updatedAt = com.google.firebase.Timestamp.now()
+        )
+        profileRepo.createOrUpdateProfile(testProfile)
+        composeTestRule.waitForIdle()
       }
     }
 
@@ -296,14 +317,16 @@ class JoinMeE2ETest {
     // 3. Fill out the form
     fillEventForm(title = eventTitle)
 
-    // 4. Save the event
+    // 4. Save the event (scroll to it first to make sure it's visible)
     waitForLoading()
+    composeTestRule
+        .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
+        .performScrollTo()
     composeTestRule
         .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
         .performClick()
     waitForLoading()
     // Give extra time for the async save operation to complete
-    Thread.sleep(1000)
     composeTestRule.waitForIdle()
 
     // THEN: Event should appear in Overview screen
@@ -435,6 +458,9 @@ class JoinMeE2ETest {
       waitForLoading()
       composeTestRule
           .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
+          .performScrollTo()
+      composeTestRule
+          .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
           .performClick()
       waitForLoading()
       // Give extra time for the async save operation to complete
@@ -475,6 +501,9 @@ class JoinMeE2ETest {
     waitForLoading()
     fillEventForm(title = eventTitle)
     waitForLoading()
+    composeTestRule
+        .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
+        .performScrollTo()
     composeTestRule
         .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
         .performClick()
