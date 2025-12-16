@@ -138,7 +138,7 @@ fun ActivityGroupScreen(
                     modifier = Modifier.testTag(ActivityGroupScreenTestTags.BACK_BUTTON)) {
                       Icon(
                           imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                          contentDescription = "Back",
+                          contentDescription = stringResource(R.string.back),
                           tint = MaterialTheme.colorScheme.onSurface)
                     }
               },
@@ -165,7 +165,7 @@ fun ActivityGroupScreen(
                   verticalArrangement = Arrangement.Center,
                   horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "This group has no activities yet",
+                        text = stringResource(R.string.no_group_activities),
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier =

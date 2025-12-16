@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -60,7 +61,8 @@ fun SignInScreen(
   // Navigate to overview screen on successful login
   LaunchedEffect(uiState.user) {
     uiState.user?.let {
-      Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
+      Toast.makeText(context, context.getString(R.string.login_successful), Toast.LENGTH_SHORT)
+          .show()
       onSignedIn()
     }
   }
@@ -80,7 +82,7 @@ fun SignInScreen(
           // App Logo Image
           Image(
               painter = painterResource(id = R.drawable.app_logo),
-              contentDescription = "App Logo",
+              contentDescription = stringResource(R.string.app_logo),
               modifier =
                   Modifier.size(Dimens.SignIn.logoSize).testTag(SignInScreenTestTags.APP_LOGO))
 
@@ -117,14 +119,14 @@ fun GoogleSignInButton(onSignInClick: () -> Unit) {
               // Load the Google logo from resources
               Image(
                   painter = painterResource(id = R.drawable.google_logo),
-                  contentDescription = "Google Logo",
+                  contentDescription = stringResource(R.string.google_logo),
                   modifier =
                       Modifier.size(Dimens.SignIn.googleLogoSize)
                           .padding(end = Dimens.Padding.small))
 
               // Text for the button
               Text(
-                  text = "Sign in with Google",
+                  text = stringResource(R.string.sign_in_with_google),
                   color = MaterialTheme.colorScheme.primary,
                   style = MaterialTheme.typography.bodyLarge,
                   fontWeight = FontWeight.Medium)

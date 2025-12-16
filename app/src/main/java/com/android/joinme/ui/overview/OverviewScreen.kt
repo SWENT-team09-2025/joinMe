@@ -41,9 +41,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.R
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.eventItem.EventItem
 import com.android.joinme.model.serie.Serie
@@ -134,8 +136,8 @@ private fun OverviewContentList(
           item {
             Text(
                 text =
-                    if (ongoingItems.size == 1) "Your ongoing activity :"
-                    else "Your ongoing activities :",
+                    if (ongoingItems.size == 1) stringResource(R.string.ongoing_activity_singular)
+                    else stringResource(R.string.ongoing_activities_plural),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier =
@@ -159,8 +161,8 @@ private fun OverviewContentList(
           item {
             Text(
                 text =
-                    if (upcomingItems.size == 1) "Your upcoming activity :"
-                    else "Your upcoming activities :",
+                    if (upcomingItems.size == 1) stringResource(R.string.upcoming_activity_singular)
+                    else stringResource(R.string.upcoming_activities_plural),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier =
@@ -187,7 +189,7 @@ private fun EmptyStateMessage() {
       verticalArrangement = Arrangement.Center,
       horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = "You have no events yet. Join one, or create your own event.",
+            text = stringResource(R.string.no_events_message),
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.testTag(OverviewScreenTestTags.EMPTY_EVENT_LIST_MSG))
@@ -263,7 +265,7 @@ fun OverviewScreen(
           if (!isGranted) {
             Toast.makeText(
                     context,
-                    "Notification permission denied. You won't receive event reminders.",
+                    context.getString(R.string.notification_permission_denied),
                     Toast.LENGTH_LONG)
                 .show()
           }
@@ -294,14 +296,18 @@ fun OverviewScreen(
         Column {
           CenterAlignedTopAppBar(
               modifier = Modifier.testTag(NavigationTestTags.TOP_BAR_TITLE),
-              title = { Text(text = "Overview", style = MaterialTheme.typography.titleLarge) },
+              title = {
+                Text(
+                    text = stringResource(R.string.overview),
+                    style = MaterialTheme.typography.titleLarge)
+              },
               actions = {
                 IconButton(
                     onClick = onGoToCalendar,
                     modifier = Modifier.testTag(OverviewScreenTestTags.CALENDAR_BUTTON)) {
                       Icon(
                           imageVector = Icons.Default.CalendarToday,
-                          contentDescription = "Calendar",
+                          contentDescription = stringResource(R.string.calendar),
                           tint = MaterialTheme.colorScheme.onSurface)
                     }
               },
@@ -325,7 +331,7 @@ fun OverviewScreen(
             modifier = Modifier.testTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON)) {
               Icon(
                   Icons.Default.Add,
-                  contentDescription = "Add Event",
+                  contentDescription = stringResource(R.string.add_event_fab),
                   tint = MaterialTheme.colorScheme.onPrimary)
             }
       }) { innerPadding ->
@@ -351,7 +357,7 @@ fun OverviewScreen(
                       .testTag(OverviewScreenTestTags.HISTORY_BUTTON)) {
                 Icon(
                     Icons.Default.History,
-                    contentDescription = "View History",
+                    contentDescription = stringResource(R.string.view_history),
                     tint = MaterialTheme.colorScheme.onPrimary)
               }
         }
@@ -362,12 +368,12 @@ fun OverviewScreen(
             actions =
                 listOf(
                     BubbleAction(
-                        text = "Add an event",
+                        text = stringResource(R.string.add_an_event),
                         icon = Icons.Default.Add,
                         onClick = { onAddEvent() },
                         testTag = OverviewScreenTestTags.ADD_EVENT_BUBBLE),
                     BubbleAction(
-                        text = "Add a serie",
+                        text = stringResource(R.string.add_a_serie),
                         icon = Icons.Default.Add,
                         onClick = { onAddSerie() },
                         testTag = OverviewScreenTestTags.ADD_SERIE_BUBBLE)),

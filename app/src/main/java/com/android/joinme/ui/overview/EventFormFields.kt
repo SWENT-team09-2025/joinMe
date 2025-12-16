@@ -10,7 +10,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
+import com.android.joinme.R
 import com.android.joinme.model.event.EventType
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.customColors
@@ -48,8 +50,8 @@ fun EventTypeField(
             value = value,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Event Type") },
-            placeholder = { Text("Select event type") },
+            label = { Text(stringResource(R.string.event_type)) },
+            placeholder = { Text(stringResource(R.string.select_event_type)) },
             isError = isError,
             supportingText = {
               errorMessage?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
@@ -105,8 +107,8 @@ fun EventTitleField(
   OutlinedTextField(
       value = value,
       onValueChange = onValueChange,
-      label = { Text("Title") },
-      placeholder = { Text("Enter event title") },
+      label = { Text(stringResource(R.string.title)) },
+      placeholder = { Text(stringResource(R.string.enter_event_title)) },
       isError = isError,
       supportingText = {
         errorMessage?.let {
@@ -143,8 +145,8 @@ fun EventDescriptionField(
   OutlinedTextField(
       value = value,
       onValueChange = onValueChange,
-      label = { Text("Description") },
-      placeholder = { Text("Describe your event") },
+      label = { Text(stringResource(R.string.description)) },
+      placeholder = { Text(stringResource(R.string.describe_your_event)) },
       isError = isError,
       supportingText = {
         errorMessage?.let {
@@ -190,8 +192,8 @@ fun EventDurationField(
         value = durationValue,
         onValueChange = {},
         readOnly = true,
-        label = { Text("Duration (min)") },
-        placeholder = { Text("Select duration") },
+        label = { Text(stringResource(R.string.duration_min)) },
+        placeholder = { Text(stringResource(R.string.select_duration)) },
         isError = isError,
         supportingText = {
           errorMessage?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
@@ -204,7 +206,7 @@ fun EventDurationField(
   if (showDialog) {
     AlertDialog(
         onDismissRequest = { showDialog = false },
-        title = { Text("Select Duration (min)") },
+        title = { Text(stringResource(R.string.select_duration_min)) },
         text = {
           AndroidView(
               factory = { context ->
@@ -225,9 +227,11 @@ fun EventDurationField(
                 onValueChange(tempDuration.toString())
                 showDialog = false
               }) {
-                Text("OK")
+                Text(stringResource(R.string.ok))
               }
         },
-        dismissButton = { TextButton(onClick = { showDialog = false }) { Text("Cancel") } })
+        dismissButton = {
+          TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.cancel)) }
+        })
   }
 }

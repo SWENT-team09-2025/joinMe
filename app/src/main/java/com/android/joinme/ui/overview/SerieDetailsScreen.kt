@@ -251,7 +251,9 @@ private fun SerieDetailsTopBar(
           IconButton(
               onClick = onGoBack,
               modifier = Modifier.testTag(SerieDetailsScreenTestTags.BACK_BUTTON)) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back))
               }
         },
         actions = {
@@ -278,7 +280,7 @@ private fun SerieDetailsTopBar(
 @Composable
 private fun SerieInfo(uiState: SerieDetailsUIState) {
   Text(
-      text = "MEETING: ${uiState.formattedDateTime}",
+      text = stringResource(R.string.meeting_info, uiState.formattedDateTime),
       style = MaterialTheme.typography.bodyMedium,
       color = MaterialTheme.colorScheme.onSurface,
       modifier = Modifier.fillMaxWidth().testTag(SerieDetailsScreenTestTags.MEETING_INFO),
@@ -297,7 +299,7 @@ private fun SerieInfo(uiState: SerieDetailsUIState) {
             modifier = Modifier.testTag(SerieDetailsScreenTestTags.VISIBILITY))
 
         Text(
-            text = "MEMBERS : ${uiState.participantsCount}",
+            text = stringResource(R.string.members_label, uiState.participantsCount),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.testTag(SerieDetailsScreenTestTags.MEMBERS_COUNT))
@@ -348,7 +350,7 @@ private fun ColumnScope.EventsList(
             Modifier.fillMaxWidth().weight(1f).testTag(SerieDetailsScreenTestTags.EVENT_LIST),
         contentAlignment = Alignment.Center) {
           Text(
-              text = "No events in this serie yet",
+              text = stringResource(R.string.no_events_in_serie),
               style = MaterialTheme.typography.bodyMedium,
               color = MaterialTheme.colorScheme.onSurfaceVariant,
               textAlign = TextAlign.Center)
@@ -421,7 +423,7 @@ private fun SerieDetailsContent(
             thickness = Dimens.BorderWidth.thin, color = MaterialTheme.colorScheme.primary)
 
         Text(
-            text = "Created by $ownerDisplayName",
+            text = stringResource(R.string.created_by, ownerDisplayName),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
             modifier =
@@ -479,7 +481,9 @@ private fun OwnerActionButtons(
               .testTag(SerieDetailsScreenTestTags.BUTTON_ADD_EVENT),
       shape = RoundedCornerShape(Dimens.CornerRadius.medium),
       colors = MaterialTheme.customColors.buttonColors()) {
-        Text(text = "ADD EVENT", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            text = stringResource(R.string.add_event),
+            style = MaterialTheme.typography.headlineSmall)
       }
 
   Button(
@@ -491,7 +495,9 @@ private fun OwnerActionButtons(
       shape = RoundedCornerShape(Dimens.CornerRadius.medium),
       enabled = uiState.isOwner(currentUserId),
       colors = MaterialTheme.customColors.buttonColors()) {
-        Text(text = "EDIT SERIE", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            text = stringResource(R.string.edit_serie),
+            style = MaterialTheme.typography.headlineSmall)
       }
 
   Button(
@@ -504,10 +510,12 @@ private fun OwnerActionButtons(
       colors = MaterialTheme.customColors.buttonColors()) {
         Icon(
             imageVector = Icons.Default.Delete,
-            contentDescription = "Delete",
+            contentDescription = stringResource(R.string.delete),
             tint = MaterialTheme.customColors.deleteButton)
         Spacer(modifier = Modifier.width(Dimens.Spacing.small))
-        Text(text = "DELETE SERIE", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            text = stringResource(R.string.delete_serie),
+            style = MaterialTheme.typography.headlineSmall)
       }
 }
 
@@ -555,12 +563,14 @@ private fun ParticipantActionButtons(
         enabled = uiState.isParticipant(currentUserId) || uiState.canJoin(currentUserId),
         colors = MaterialTheme.customColors.buttonColors()) {
           Text(
-              text = if (uiState.isParticipant(currentUserId)) "QUIT SERIE" else "JOIN SERIE",
+              text =
+                  if (uiState.isParticipant(currentUserId)) stringResource(R.string.quit_serie)
+                  else stringResource(R.string.join_serie),
               style = MaterialTheme.typography.headlineSmall)
         }
   } else {
     Text(
-        text = "Sorry this serie is full",
+        text = stringResource(R.string.serie_full),
         style = MaterialTheme.typography.headlineSmall,
         color = MaterialTheme.colorScheme.error,
         modifier =
@@ -585,10 +595,8 @@ fun ShowDeleteWindow(
   if (showDeleteDialog) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Delete Serie") },
-        text = {
-          Text("Are you sure you want to delete this serie? This action cannot be undone.")
-        },
+        title = { Text(stringResource(R.string.delete_serie_title)) },
+        text = { Text(stringResource(R.string.delete_serie_confirmation)) },
         confirmButton = {
           TextButton(
               onClick = {
@@ -598,9 +606,11 @@ fun ShowDeleteWindow(
                   onGoBack()
                 }
               }) {
-                Text("Delete", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
               }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+        dismissButton = {
+          TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        })
   }
 }

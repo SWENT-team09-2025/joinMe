@@ -44,16 +44,16 @@ private fun DeleteEventDialog(showDialog: Boolean, onDismiss: () -> Unit, onConf
   if (showDialog) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Delete Event") },
-        text = {
-          Text("Are you sure you want to delete this event? This action cannot be undone.")
-        },
+        title = { Text(stringResource(R.string.delete_event)) },
+        text = { Text(stringResource(R.string.delete_event_confirmation)) },
         confirmButton = {
           TextButton(onClick = onConfirm) {
-            Text("Delete", color = MaterialTheme.colorScheme.error)
+            Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
           }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+        dismissButton = {
+          TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        })
   }
 }
 
@@ -85,7 +85,7 @@ private fun ChatFloatingActionButton(
         contentColor = MaterialTheme.colorScheme.onPrimary) {
           Icon(
               imageVector = Icons.AutoMirrored.Filled.Message,
-              contentDescription = "Open Chat",
+              contentDescription = stringResource(R.string.open_chat),
           )
         }
   }
@@ -116,7 +116,7 @@ private fun OwnerActionButtons(
       shape = RoundedCornerShape(Dimens.CornerRadius.medium),
       colors = MaterialTheme.customColors.buttonColors()) {
         Text(
-            text = "EDIT EVENT",
+            text = stringResource(R.string.edit_event),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Medium)
       }
@@ -131,11 +131,11 @@ private fun OwnerActionButtons(
       colors = MaterialTheme.customColors.buttonColors()) {
         Icon(
             imageVector = Icons.Default.Delete,
-            contentDescription = "Delete",
+            contentDescription = stringResource(R.string.delete),
             tint = MaterialTheme.customColors.deleteButton)
         Spacer(modifier = Modifier.width(Dimens.Spacing.small))
         Text(
-            text = "DELETE EVENT",
+            text = stringResource(R.string.delete_event_button),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Medium)
       }
@@ -166,7 +166,9 @@ private fun ParticipantActionButtons(
           colors = MaterialTheme.customColors.buttonColors()) {
             Text(
                 text =
-                    if (eventUIState.isParticipant(currentUserId)) "QUIT EVENT" else "JOIN EVENT",
+                    if (eventUIState.isParticipant(currentUserId))
+                        stringResource(R.string.quit_event)
+                    else stringResource(R.string.join_event),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Medium)
           }
@@ -176,7 +178,7 @@ private fun ParticipantActionButtons(
               Modifier.fillMaxWidth()
                   .padding(bottom = Dimens.Padding.extraLarge)
                   .testTag(ShowEventScreenTestTags.FULL_EVENT_MESSAGE),
-          text = "Sorry this event is full",
+          text = stringResource(R.string.event_full),
           style = MaterialTheme.typography.headlineSmall,
           textAlign = TextAlign.Center,
           color = MaterialTheme.colorScheme.error,
@@ -291,7 +293,7 @@ fun ShowEventScreen(
                 IconButton(onClick = onGoBack) {
                   Icon(
                       imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                      contentDescription = "Back",
+                      contentDescription = stringResource(R.string.back),
                       tint = MaterialTheme.colorScheme.primary)
                 }
               },
@@ -416,14 +418,17 @@ fun ShowEventScreen(
                   horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(
                         text =
-                            "MEMBERS : ${eventUIState.participantsCount}/${eventUIState.maxParticipants}",
+                            stringResource(
+                                R.string.members_count,
+                                eventUIState.participantsCount,
+                                eventUIState.maxParticipants),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.testTag(ShowEventScreenTestTags.EVENT_MEMBERS))
 
                     Text(
-                        text = "${eventUIState.duration}min",
+                        text = stringResource(R.string.duration_display, eventUIState.duration),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface,

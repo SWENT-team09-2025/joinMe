@@ -19,7 +19,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
+import com.android.joinme.R
 import com.android.joinme.model.event.EventType
 import com.android.joinme.model.event.EventVisibility
 import com.android.joinme.model.map.Location
@@ -46,8 +48,8 @@ private fun EventTypeDropdown(
             value = formState.type,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Event Type") },
-            placeholder = { Text("Select event type") },
+            label = { Text(stringResource(R.string.event_type)) },
+            placeholder = { Text(stringResource(R.string.select_event_type)) },
             isError = formState.invalidTypeMsg != null,
             supportingText = {
               if (formState.invalidTypeMsg != null) {
@@ -101,8 +103,8 @@ private fun MaxParticipantsField(
         value = formState.maxParticipants,
         onValueChange = {},
         readOnly = true,
-        label = { Text("Max Participants") },
-        placeholder = { Text("Select number") },
+        label = { Text(stringResource(R.string.max_participants)) },
+        placeholder = { Text(stringResource(R.string.select_number)) },
         isError = formState.invalidMaxParticipantsMsg != null,
         supportingText = {
           if (formState.invalidMaxParticipantsMsg != null) {
@@ -125,7 +127,7 @@ private fun MaxParticipantsField(
   if (showParticipantsDialog) {
     AlertDialog(
         onDismissRequest = { showParticipantsDialog = false },
-        title = { Text("Select Max Participants") },
+        title = { Text(stringResource(R.string.select_max_participants)) },
         text = {
           AndroidView(
               factory = { context ->
@@ -146,11 +148,13 @@ private fun MaxParticipantsField(
                 onMaxParticipantsChange(tempParticipants.toString())
                 showParticipantsDialog = false
               }) {
-                Text("OK")
+                Text(stringResource(R.string.ok))
               }
         },
         dismissButton = {
-          TextButton(onClick = { showParticipantsDialog = false }) { Text("Cancel") }
+          TextButton(onClick = { showParticipantsDialog = false }) {
+            Text(stringResource(R.string.cancel))
+          }
         })
   }
 }
@@ -171,8 +175,8 @@ private fun DurationField(
         value = formState.duration,
         onValueChange = {},
         readOnly = true,
-        label = { Text("Duration (min)") },
-        placeholder = { Text("Select duration") },
+        label = { Text(stringResource(R.string.duration_min)) },
+        placeholder = { Text(stringResource(R.string.select_duration)) },
         isError = formState.invalidDurationMsg != null,
         supportingText = {
           if (formState.invalidDurationMsg != null) {
@@ -187,7 +191,7 @@ private fun DurationField(
   if (showDurationDialog) {
     AlertDialog(
         onDismissRequest = { showDurationDialog = false },
-        title = { Text("Select Duration (min)") },
+        title = { Text(stringResource(R.string.select_duration_min)) },
         text = {
           AndroidView(
               factory = { context ->
@@ -208,10 +212,14 @@ private fun DurationField(
                 onDurationChange(tempDuration.toString())
                 showDurationDialog = false
               }) {
-                Text("OK")
+                Text(stringResource(R.string.ok))
               }
         },
-        dismissButton = { TextButton(onClick = { showDurationDialog = false }) { Text("Cancel") } })
+        dismissButton = {
+          TextButton(onClick = { showDurationDialog = false }) {
+            Text(stringResource(R.string.cancel))
+          }
+        })
   }
 }
 
@@ -257,8 +265,8 @@ private fun DateTimePickerRow(
               value = formState.date,
               onValueChange = {},
               readOnly = true,
-              label = { Text("Date") },
-              placeholder = { Text("Select date") },
+              label = { Text(stringResource(R.string.date)) },
+              placeholder = { Text(stringResource(R.string.select_date)) },
               isError = formState.invalidDateMsg != null,
               supportingText = {
                 if (formState.invalidDateMsg != null) {
@@ -287,8 +295,8 @@ private fun DateTimePickerRow(
               value = formState.time,
               onValueChange = {},
               readOnly = true,
-              label = { Text("Time") },
-              placeholder = { Text("Select time") },
+              label = { Text(stringResource(R.string.time)) },
+              placeholder = { Text(stringResource(R.string.select_time)) },
               colors = MaterialTheme.customColors.outlinedTextField(),
               enabled = false,
               modifier = Modifier.fillMaxWidth().testTag(testTags.inputEventTime))
@@ -314,8 +322,8 @@ private fun EventVisibilityDropdown(
             value = formState.visibility,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Event Visibility") },
-            placeholder = { Text("Select visibility") },
+            label = { Text(stringResource(R.string.event_visibility)) },
+            placeholder = { Text(stringResource(R.string.select_visibility)) },
             isError = formState.invalidVisibilityMsg != null,
             supportingText = {
               if (formState.invalidVisibilityMsg != null) {
@@ -444,7 +452,7 @@ fun EventFormScreen(
                 IconButton(onClick = onGoBack) {
                   Icon(
                       imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                      contentDescription = "Back")
+                      contentDescription = stringResource(R.string.back))
                 }
               },
               colors =
@@ -474,8 +482,8 @@ fun EventFormScreen(
               OutlinedTextField(
                   value = formState.title,
                   onValueChange = onTitleChange,
-                  label = { Text("Title") },
-                  placeholder = { Text("Enter event title") },
+                  label = { Text(stringResource(R.string.title)) },
+                  placeholder = { Text(stringResource(R.string.enter_event_title)) },
                   isError = formState.invalidTitleMsg != null,
                   supportingText = {
                     formState.invalidTitleMsg?.let {
@@ -491,8 +499,8 @@ fun EventFormScreen(
               OutlinedTextField(
                   value = formState.description,
                   onValueChange = onDescriptionChange,
-                  label = { Text("Description") },
-                  placeholder = { Text("Describe your event") },
+                  label = { Text(stringResource(R.string.describe_your_event)) },
+                  placeholder = { Text(stringResource(R.string.describe_your_event)) },
                   isError = formState.invalidDescriptionMsg != null,
                   supportingText = {
                     formState.invalidDescriptionMsg?.let {
@@ -615,7 +623,7 @@ fun LocationField(
       OutlinedTextField(
           value = query,
           onValueChange = { onQueryChange(it) },
-          label = { Text("Location") },
+          label = { Text(stringResource(R.string.location_label)) },
           isError = isError,
           singleLine = true,
           supportingText = {

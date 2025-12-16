@@ -20,8 +20,10 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.R
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.TransparentColor
@@ -190,7 +192,7 @@ fun EditProfileScreen(
             }
             else -> {
               Text(
-                  text = "No profile data available",
+                  text = stringResource(R.string.no_profile_data),
                   modifier =
                       Modifier.align(Alignment.Center)
                           .testTag(EditProfileTestTags.NO_LOADING_PROFILE_MESSAGE))
@@ -230,7 +232,7 @@ private fun EditProfileContent(
               .verticalScroll(rememberScrollState())
               .padding(horizontal = Dimens.Padding.large)) {
         Text(
-            text = "Edit Profile",
+            text = stringResource(R.string.edit_profile),
             fontSize = Dimens.FontSize.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -252,19 +254,19 @@ private fun EditProfileContent(
         Spacer(modifier = Modifier.height(Dimens.Spacing.small))
 
         EditTextField(
-            label = "Username",
+            label = stringResource(R.string.username),
             value = username,
             onValueChange = onUsernameChange,
             isError = usernameError != null,
             errorMessage = usernameError,
-            supportingText = "3-30 characters. Letters, numbers, spaces, or underscores only",
+            supportingText = stringResource(R.string.username_supporting_text),
             testTag = EditProfileTestTags.USERNAME_FIELD,
             errorTestTag = EditProfileTestTags.USERNAME_ERROR)
 
         Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
         EditTextField(
-            label = "Email",
+            label = stringResource(R.string.email),
             value = profile.email,
             onValueChange = {},
             enabled = false,
@@ -277,22 +279,22 @@ private fun EditProfileContent(
             horizontalArrangement = Arrangement.spacedBy(Dimens.Spacing.itemSpacing)) {
               Column(modifier = Modifier.weight(1f)) {
                 EditTextField(
-                    label = "Date of Birth",
+                    label = stringResource(R.string.date_of_birth),
                     value = dateOfBirth,
                     onValueChange = onDateOfBirthChange,
                     isError = dateOfBirthError != null,
                     errorMessage = dateOfBirthError,
-                    supportingText = "dd/mm/yyyy",
+                    supportingText = stringResource(R.string.date_format_hint),
                     testTag = EditProfileTestTags.DATE_OF_BIRTH_FIELD,
                     errorTestTag = EditProfileTestTags.DATE_OF_BIRTH_ERROR)
               }
 
               Column(modifier = Modifier.weight(1f)) {
                 EditTextField(
-                    label = "Interests",
+                    label = stringResource(R.string.interests),
                     value = interests,
                     onValueChange = onInterestsChange,
-                    placeholder = "Golf, Nature",
+                    placeholder = stringResource(R.string.interests_placeholder),
                     testTag = EditProfileTestTags.INTERESTS_FIELD)
               }
             }
@@ -300,10 +302,10 @@ private fun EditProfileContent(
         Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
 
         EditTextField(
-            label = "Country/Region",
+            label = stringResource(R.string.country_region),
             value = country,
             onValueChange = onCountryChange,
-            placeholder = "Nigeria",
+            placeholder = stringResource(R.string.country_placeholder),
             testTag = EditProfileTestTags.COUNTRY_FIELD)
 
         Spacer(modifier = Modifier.height(Dimens.Spacing.medium))
@@ -322,7 +324,7 @@ private fun EditProfileContent(
             colors = MaterialTheme.customColors.buttonColors(),
             shape = RoundedCornerShape(Dimens.Button.cornerRadius)) {
               Text(
-                  "SAVE",
+                  stringResource(R.string.save_button),
                   style = MaterialTheme.typography.headlineSmall,
                   fontWeight = FontWeight.Bold)
             }
@@ -368,7 +370,7 @@ private fun ProfilePictureSection(
 
                       ProfilePhotoImage(
                           photoUrl = photoUrl,
-                          contentDescription = "Profile Picture",
+                          contentDescription = stringResource(R.string.profile_picture),
                           size = Dimens.Profile.photoLarge,
                           showLoadingIndicator = false) // Use our own indicator
                 }
@@ -392,7 +394,7 @@ private fun ProfilePictureSection(
                           contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Outlined.Edit,
-                                contentDescription = "Edit Photo",
+                                contentDescription = stringResource(R.string.edit_photo),
                                 tint = MaterialTheme.customColors.editIcon,
                                 modifier = Modifier.size(Dimens.Profile.editIconSize))
                           }
@@ -415,7 +417,7 @@ private fun ProfilePictureSection(
                               .testTag(EditProfileTestTags.DELETE_PHOTO_BUTTON)) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Photo",
+                            contentDescription = stringResource(R.string.delete_photo),
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(Dimens.Profile.deleteIconSize))
                       }
@@ -430,7 +432,7 @@ private fun ProfilePictureSection(
 private fun BioSection(bio: String, onBioChange: (String) -> Unit) {
   Column {
     Text(
-        text = "Bio",
+        text = stringResource(R.string.bio),
         fontSize = Dimens.FontSize.bodyLarge,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurface,
@@ -444,7 +446,7 @@ private fun BioSection(bio: String, onBioChange: (String) -> Unit) {
                 .testTag(EditProfileTestTags.BIO_FIELD),
         placeholder = {
           Text(
-              "Tell others a bit about yourself – your passions, what you enjoy doing, or what you're looking for on JoinMe.",
+              stringResource(R.string.bio_placeholder),
               fontSize = Dimens.FontSize.bodySmall,
               color = MaterialTheme.colorScheme.onSurfaceVariant)
         },
