@@ -9,6 +9,7 @@ import com.android.joinme.model.authentification.AuthRepository
 import com.android.joinme.model.authentification.AuthRepositoryProvider
 import com.android.joinme.model.event.OfflineException
 import com.android.joinme.model.invitation.InvitationRepositoryProvider
+import com.android.joinme.model.invitation.InvitationsRepository
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import com.android.joinme.model.profile.ProfileRepositoryProvider
@@ -49,9 +50,8 @@ import kotlinx.coroutines.withTimeout
 class ProfileViewModel(
     private val repository: ProfileRepository = ProfileRepositoryProvider.repository,
     private val authRepository: AuthRepository = AuthRepositoryProvider.repository,
+    private val invitationalRepo: InvitationsRepository = InvitationRepositoryProvider.repository,
 ) : ViewModel() {
-
-  val invitationalRepo = InvitationRepositoryProvider.repository
 
   private val _profile = MutableStateFlow<Profile?>(null)
   val profile: StateFlow<Profile?> = _profile.asStateFlow()

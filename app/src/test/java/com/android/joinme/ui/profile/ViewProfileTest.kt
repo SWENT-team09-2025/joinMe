@@ -642,7 +642,7 @@ class ViewProfileScreenTest {
   // ==================== LAUNCHED EFFECT OPTIMIZATION TESTS ====================
 
   @Test
-  fun viewProfileScreen_skipsReload_whenProfileAlreadyLoadedForSameUid() = runTest {
+  fun viewProfileScreen_alwaysReloadsProfile_forSameUid() = runTest {
     var loadCount = 0
     val countingRepo =
         object : ProfileRepository by FakeProfileRepository(createTestProfile()) {
@@ -660,7 +660,8 @@ class ViewProfileScreenTest {
     composeTestRule.setContent { ViewProfileScreen(uid = testUid, profileViewModel = viewModel) }
     composeTestRule.waitForIdle()
 
-    assert(loadCount == 0) { "Profile should not reload when already loaded for same UID" }
+    // ProfileViewModel always reloads - no caching behavior
+    assert(loadCount >= 1) { "Profile should reload when ViewProfileScreen is displayed" }
   }
 
   @Test

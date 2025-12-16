@@ -3,6 +3,7 @@ package com.android.joinme.ui.profile
 import android.content.Context
 import android.net.Uri
 import com.android.joinme.model.authentification.AuthRepository
+import com.android.joinme.model.invitation.InvitationsRepository
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.model.profile.ProfileRepository
 import com.google.firebase.Timestamp
@@ -22,6 +23,7 @@ class ProfileViewModelTest {
 
   private lateinit var mockProfileRepository: ProfileRepository
   private lateinit var mockAuthRepository: AuthRepository
+  private lateinit var mockInvitationRepository: InvitationsRepository
   private lateinit var viewModel: ProfileViewModel
 
   private val testProfile =
@@ -42,7 +44,9 @@ class ProfileViewModelTest {
     Dispatchers.setMain(testDispatcher)
     mockProfileRepository = mockk(relaxed = true)
     mockAuthRepository = mockk(relaxed = true)
-    viewModel = ProfileViewModel(mockProfileRepository, mockAuthRepository)
+    mockInvitationRepository = mockk(relaxed = true)
+    viewModel =
+        ProfileViewModel(mockProfileRepository, mockAuthRepository, mockInvitationRepository)
   }
 
   @After
@@ -161,23 +165,20 @@ class ProfileViewModelTest {
   }
 
   @Test
-  fun `loadProfile skips loading if profile already loaded for same uid`() = runTest {
+  fun `loadProfile always reloads profile even for same uid`() = runTest {
     // First load
     coEvery { mockProfileRepository.getProfile("test-uid") } returns testProfile
     viewModel.loadProfile("test-uid")
     testScheduler.advanceUntilIdle()
     assertEquals(testProfile, viewModel.profile.value)
 
-    // Clear the mock to verify it's not called again
-    clearMocks(mockProfileRepository, answers = false)
-
-    // Second load with same uid should skip
+    // Second load with same uid should still call repository (no caching)
     viewModel.loadProfile("test-uid")
     testScheduler.advanceUntilIdle()
 
-    // Profile should still be there, but repository should not be called again
+    // Profile should still be there, repository should be called twice
     assertEquals(testProfile, viewModel.profile.value)
-    coVerify(exactly = 0) { mockProfileRepository.getProfile(any()) }
+    coVerify(exactly = 2) { mockProfileRepository.getProfile("test-uid") }
   }
 
   @Test
@@ -283,6 +284,8 @@ class ProfileViewModelTest {
   @Test
   fun `deleteProfile deletes profile successfully`() = runTest {
     coEvery { mockProfileRepository.deleteProfile("test-uid") } just Runs
+    coEvery { mockInvitationRepository.getInvitationsByUser("test-uid") } returns
+        Result.success(emptyList())
 
     viewModel.deleteProfile("test-uid")
     testScheduler.advanceUntilIdle()
