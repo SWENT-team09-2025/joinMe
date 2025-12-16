@@ -92,17 +92,17 @@ class JoinMeE2ETest {
     if (profileRepo is com.android.joinme.model.profile.ProfileRepositoryLocal) {
       runBlocking {
         // Create profile for test-user-id
-        val testProfile = com.android.joinme.model.profile.Profile(
-            uid = "test-user-id",
-            username = "Test User",
-            email = "test@joinme.com",
-            dateOfBirth = "01/01/2000",
-            country = "Switzerland",
-            interests = listOf("Sports"),
-            bio = "E2E Test User",
-            createdAt = com.google.firebase.Timestamp.now(),
-            updatedAt = com.google.firebase.Timestamp.now()
-        )
+        val testProfile =
+            com.android.joinme.model.profile.Profile(
+                uid = "test-user-id",
+                username = "Test User",
+                email = "test@joinme.com",
+                dateOfBirth = "01/01/2000",
+                country = "Switzerland",
+                interests = listOf("Sports"),
+                bio = "E2E Test User",
+                createdAt = com.google.firebase.Timestamp.now(),
+                updatedAt = com.google.firebase.Timestamp.now())
         profileRepo.createOrUpdateProfile(testProfile)
         composeTestRule.waitForIdle()
       }

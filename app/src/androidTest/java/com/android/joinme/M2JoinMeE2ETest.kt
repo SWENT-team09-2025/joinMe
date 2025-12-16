@@ -104,7 +104,6 @@ class M2JoinMeE2ETest {
 
     // Wait for initial load and auth state to settle
     composeTestRule.waitForIdle()
-    Thread.sleep(1500) // Increased wait time for auth state propagation
     composeTestRule.waitForIdle()
 
     // Verify we're on Overview screen (auth successful)
@@ -601,7 +600,6 @@ class M2JoinMeE2ETest {
         .performScrollToNode(hasText(serieTitle))
     composeTestRule.onNodeWithText(serieTitle, useUnmergedTree = true).performClick()
     waitForLoading()
-    Thread.sleep(5000)
     // Edit serie
     composeTestRule
         .onNodeWithTag(SerieDetailsScreenTestTags.EDIT_SERIE_BUTTON, useUnmergedTree = true)
@@ -712,11 +710,6 @@ class M2JoinMeE2ETest {
         .performClick()
     waitForLoading()
 
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.CREATE_GROUP_BUBBLE, useUnmergedTree = true)
-        .performClick()
-    waitForLoading()
-
     // Fill group form
     fillGroupForm(name = groupName)
 
@@ -725,7 +718,6 @@ class M2JoinMeE2ETest {
         .onNodeWithTag(CreateGroupScreenTestTags.SAVE_BUTTON, useUnmergedTree = true)
         .performClick()
     waitForLoading()
-    Thread.sleep(1000)
     composeTestRule.waitForIdle()
 
     // THEN: Verify group appears in group list
@@ -766,10 +758,6 @@ class M2JoinMeE2ETest {
     // Create group
     composeTestRule
         .onNodeWithTag(GroupListScreenTestTags.ADD_NEW_GROUP, useUnmergedTree = true)
-        .performClick()
-    waitForLoading()
-    composeTestRule
-        .onNodeWithTag(GroupListScreenTestTags.CREATE_GROUP_BUBBLE, useUnmergedTree = true)
         .performClick()
     waitForLoading()
     fillGroupForm(name = groupName)
@@ -864,6 +852,7 @@ class M2JoinMeE2ETest {
     fillEventForm(title = event1Title)
     composeTestRule
         .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
+        .performScrollTo()
         .performClick()
     waitForLoading()
     Thread.sleep(1000)
@@ -879,8 +868,10 @@ class M2JoinMeE2ETest {
         .performClick()
     waitForLoading()
     fillEventForm(title = event2Title)
+
     composeTestRule
         .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
+        .performScrollTo()
         .performClick()
     waitForLoading()
     Thread.sleep(1000)
@@ -964,7 +955,8 @@ class M2JoinMeE2ETest {
     waitForLoading()
     fillEventForm(title = eventTitle)
     composeTestRule
-        .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
+        .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT)
+        .performScrollTo()
         .performClick()
     waitForLoading()
     Thread.sleep(1000)
@@ -1001,9 +993,9 @@ class M2JoinMeE2ETest {
         .performClick()
     waitForLoading()
     fillEventForm(title = eventTitle)
-    composeTestRule
-        .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
-        .performClick()
+
+    composeTestRule.onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT).performScrollTo()
+    composeTestRule.onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT).performClick()
     waitForLoading()
     Thread.sleep(1000)
     composeTestRule.waitForIdle()

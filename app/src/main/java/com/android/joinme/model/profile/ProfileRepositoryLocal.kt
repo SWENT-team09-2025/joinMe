@@ -22,10 +22,11 @@ class ProfileRepositoryLocal : ProfileRepository {
 
   init {
     // Add a default test user profile
+    // Note: uid must match TestEnvironmentDetector.getTestUserId() = "test-user-id"
     val now = Timestamp.now()
     val testProfile =
         Profile(
-            uid = "test-user-123",
+            uid = "test-user-id",
             username = "Test User",
             email = "test@joinme.com",
             photoUrl = "http://example.com/avatar.png",
