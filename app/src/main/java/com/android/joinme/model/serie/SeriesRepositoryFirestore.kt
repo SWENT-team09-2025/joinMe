@@ -223,7 +223,6 @@ class SeriesRepositoryFirestore(private val db: FirebaseFirestore) : SeriesRepos
         series.filter { serie -> serie.isExpired() }.sortedByDescending { it.date.toDate().time }
       }
       SerieFilter.SERIES_FOR_SEARCH_SCREEN -> {
-        // ToDo review search algorithm for series because type are on events not on series
         series.filter { serie ->
           serie.isUpcoming() && !serie.participants.contains(userId) && serie.ownerId != userId
         }
