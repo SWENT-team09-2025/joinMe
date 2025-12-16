@@ -237,10 +237,18 @@ class M3JoinMeE2ETest {
       JoinMe(startDestination = Screen.Overview.route, enableNotificationPermissionRequest = false)
     }
 
-    // Wait for app to settle
+    // Wait for app to settle - increased for CI environments
     composeTestRule.waitForIdle()
-    Thread.sleep(1000)
+    Thread.sleep(3000) // Give time for initial screen to load (longer for CI)
     composeTestRule.waitForIdle()
+
+    // Ensure Overview screen is fully loaded before tests start
+    composeTestRule.waitUntil(timeoutMillis = 15000) {
+      composeTestRule
+          .onAllNodesWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
   }
 
   // ==================== HELPER METHODS ====================
@@ -358,8 +366,8 @@ class M3JoinMeE2ETest {
         .performTextInput(location)
     composeTestRule.waitForIdle()
 
-    // Wait for suggestions to load
-    composeTestRule.waitUntil(timeoutMillis = 10000) {
+    // Wait for suggestions to load - increased timeout for CI (geocoding can be slow)
+    composeTestRule.waitUntil(timeoutMillis = 30000) {
       composeTestRule
           .onAllNodesWithTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS)
           .fetchSemanticsNodes()

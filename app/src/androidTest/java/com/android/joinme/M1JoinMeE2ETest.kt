@@ -113,10 +113,18 @@ class M1JoinMeE2ETest {
       JoinMe(startDestination = Screen.Overview.route, enableNotificationPermissionRequest = false)
     }
 
-    // Wait for initial load
+    // Wait for initial load - increased for CI environments
     composeTestRule.waitForIdle()
-    Thread.sleep(1000) // Give time for initial screen to load
+    Thread.sleep(3000) // Give time for initial screen to load (longer for CI)
     composeTestRule.waitForIdle()
+
+    // Ensure Overview screen is fully loaded before tests start
+    composeTestRule.waitUntil(timeoutMillis = 15000) {
+      composeTestRule
+          .onAllNodesWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
   }
 
   // ==================== HELPER METHODS ====================
@@ -211,8 +219,8 @@ class M1JoinMeE2ETest {
         .performTextInput(location)
     composeTestRule.waitForIdle()
 
-    // Wait for suggestions to load
-    composeTestRule.waitUntil(timeoutMillis = 20000) {
+    // Wait for suggestions to load - increased timeout for CI (geocoding can be slow)
+    composeTestRule.waitUntil(timeoutMillis = 30000) {
       composeTestRule
           .onAllNodesWithTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS)
           .fetchSemanticsNodes()
@@ -251,13 +259,11 @@ class M1JoinMeE2ETest {
     composeTestRule.waitForIdle()
     // Wait for native date picker dialog and click confirm button
     clickNativeDialogConfirmButton()
-    Thread.sleep(300)
     composeTestRule.waitForIdle()
 
     // Fill time (opens native Android dialog)
     // Note: After filling date, the placeholder might change, so we find by scrolling to last
     // scrollable element
-    Thread.sleep(500) // Let UI settle after date selection
     composeTestRule.waitForIdle()
     // Find time field - it should contain "time" or have a time icon
     composeTestRule
@@ -463,8 +469,6 @@ class M1JoinMeE2ETest {
           .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
           .performClick()
       waitForLoading()
-      // Give extra time for the async save operation to complete
-      Thread.sleep(1000)
       composeTestRule.waitForIdle()
     }
 
@@ -508,8 +512,6 @@ class M1JoinMeE2ETest {
         .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
         .performClick()
     waitForLoading()
-    // Give extra time for the async save operation to complete
-    Thread.sleep(1000)
     composeTestRule.waitForIdle()
 
     // Navigate to Profile

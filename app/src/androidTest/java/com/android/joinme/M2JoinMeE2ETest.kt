@@ -102,15 +102,18 @@ class M2JoinMeE2ETest {
       JoinMe(startDestination = Screen.Overview.route, enableNotificationPermissionRequest = false)
     }
 
-    // Wait for initial load and auth state to settle
+    // Wait for initial load and auth state to settle - increased for CI environments
     composeTestRule.waitForIdle()
-    Thread.sleep(1000) // Give time for initial screen to load on CI
+    Thread.sleep(3000) // Give time for initial screen to load (longer for CI)
     composeTestRule.waitForIdle()
 
-    // Verify we're on Overview screen (auth successful)
-    composeTestRule
-        .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
-        .assertExists("Overview screen should be displayed after successful authentication")
+    // Ensure Overview screen is fully loaded before tests start
+    composeTestRule.waitUntil(timeoutMillis = 15000) {
+      composeTestRule
+          .onAllNodesWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
   }
 
   // ==================== HELPER METHODS ====================
@@ -243,8 +246,8 @@ class M2JoinMeE2ETest {
         .performTextInput(location)
     composeTestRule.waitForIdle()
 
-    // Wait for suggestions to load
-    composeTestRule.waitUntil(timeoutMillis = 20000) {
+    // Wait for suggestions to load - increased timeout for CI (geocoding can be slow)
+    composeTestRule.waitUntil(timeoutMillis = 30000) {
       composeTestRule
           .onAllNodesWithTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS)
           .fetchSemanticsNodes()
@@ -343,8 +346,8 @@ class M2JoinMeE2ETest {
         .performTextInput(location)
     composeTestRule.waitForIdle()
 
-    // Wait for suggestions to load
-    composeTestRule.waitUntil(timeoutMillis = 20000) {
+    // Wait for suggestions to load - increased timeout for CI (geocoding can be slow)
+    composeTestRule.waitUntil(timeoutMillis = 30000) {
       composeTestRule
           .onAllNodesWithTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS)
           .fetchSemanticsNodes()
