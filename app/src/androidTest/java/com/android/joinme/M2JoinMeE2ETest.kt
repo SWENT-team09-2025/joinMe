@@ -898,6 +898,12 @@ class M2JoinMeE2ETest {
           .isNotEmpty()
     }
 
+    // Ensure create button is visible by scrolling to it
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+        .performScrollTo()
+    composeTestRule.waitForIdle()
+
     // Create second event
     composeTestRule
         .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
@@ -1009,6 +1015,12 @@ class M2JoinMeE2ETest {
           .fetchSemanticsNodes()
           .isNotEmpty()
     }
+
+    // Scroll to ensure History button is visible
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON, useUnmergedTree = true)
+        .performScrollTo()
+    composeTestRule.waitForIdle()
 
     // Go to History again
     composeTestRule

@@ -509,6 +509,12 @@ class M1JoinMeE2ETest {
             .fetchSemanticsNodes()
             .isNotEmpty()
       }
+
+      // Ensure create button is visible by scrolling to it
+      composeTestRule
+          .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+          .performScrollTo()
+      composeTestRule.waitForIdle()
     }
 
     // Wait for Overview screen to be visible (increased for CI)
@@ -569,6 +575,12 @@ class M1JoinMeE2ETest {
           .fetchSemanticsNodes()
           .isNotEmpty()
     }
+
+    // Scroll to top of screen to ensure navigation bar is visible
+    composeTestRule
+        .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+        .performScrollTo()
+    composeTestRule.waitForIdle()
 
     // Navigate to Profile
     navigateToTab("Profile")
