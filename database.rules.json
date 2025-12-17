@@ -1,0 +1,110 @@
+{
+  "rules": {
+    "conversations": {
+      "$conversationId": {
+        "messages": {
+          "$messageId": {
+            ".read": "auth != null && (root.child('groups').child($conversationId).child('memberIds').val().contains(auth.uid) || root.child('events').child($conversationId).child('participants').val().contains(auth.uid))",
+            ".write": "auth != null && (root.child('groups').child($conversationId).child('memberIds').val().contains(auth.uid) || root.child('events').child($conversationId).child('participants').val().contains(auth.uid))",
+            ".validate": "newData.hasChildren(['senderId', 'senderName', 'content', 'timestamp', 'type']) && newData.child('senderId').isString() && newData.child('senderName').isString() && newData.child('content').isString() && newData.child('timestamp').isNumber() && newData.child('type').isString() && newData.child('type').val().matches(/^(TEXT|IMAGE|LOCATION|SYSTEM)$/) && (!newData.hasChild('readBy') || newData.child('readBy').hasChildren()) && (!newData.hasChild('isPinned') || newData.child('isPinned').isBoolean()) && (!newData.hasChild('isEdited') || newData.child('isEdited').isBoolean())",
+            "senderId": {
+              ".validate": "newData.isString()"
+            },
+            "senderName": {
+              ".validate": "newData.isString()"
+            },
+            "content": {
+              ".validate": "newData.isString()"
+            },
+            "timestamp": {
+              ".validate": "newData.isNumber()"
+            },
+            "type": {
+              ".validate": "newData.isString() && newData.val().matches(/^(TEXT|IMAGE|LOCATION|SYSTEM)$/)"
+            },
+            "readBy": {
+              ".validate": "newData.hasChildren()"
+            },
+            "isPinned": {
+              ".validate": "newData.isBoolean()"
+            },
+            "isEdited": {
+              ".validate": "newData.isBoolean()"
+            },
+            "location": {
+              ".validate": "newData.hasChildren(['latitude', 'longitude', 'name'])",
+              "latitude": {
+                ".validate": "newData.isNumber()"
+              },
+              "longitude": {
+                ".validate": "newData.isNumber()"
+              },
+              "name": {
+                ".validate": "newData.isString()"
+              }
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "polls": {
+          "$pollId": {
+            ".read": "auth != null && (root.child('groups').child($conversationId).child('memberIds').val().contains(auth.uid) || root.child('events').child($conversationId).child('participants').val().contains(auth.uid))",
+            ".write": "auth != null && ((!data.exists() && (root.child('groups').child($conversationId).child('memberIds').val().contains(auth.uid) || root.child('events').child($conversationId).child('participants').val().contains(auth.uid))) || (data.exists() && data.child('creatorId').val() == auth.uid))",
+            ".validate": "newData.hasChildren(['creatorId', 'creatorName', 'question', 'options', 'isAnonymous', 'allowMultipleAnswers', 'isClosed', 'createdAt']) && newData.child('creatorId').isString() && newData.child('creatorName').isString() && newData.child('question').isString() && newData.child('question').val().length > 0 && newData.child('question').val().length <= 300 && newData.child('options').hasChildren() && newData.child('isAnonymous').isBoolean() && newData.child('allowMultipleAnswers').isBoolean() && newData.child('isClosed').isBoolean() && newData.child('createdAt').isNumber() && (!newData.hasChild('closedAt') || newData.child('closedAt').isNumber())",
+            "creatorId": {
+              ".validate": "newData.isString() && newData.val() == auth.uid"
+            },
+            "creatorName": {
+              ".validate": "newData.isString()"
+            },
+            "question": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 300"
+            },
+            "options": {
+              ".validate": "newData.hasChildren()",
+              "$optionIndex": {
+                ".validate": "newData.hasChildren(['id', 'text']) && newData.child('id').isNumber() && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 100 && (!newData.hasChild('voterIds') || newData.child('voterIds').hasChildren())",
+                "id": {
+                  ".validate": "newData.isNumber()"
+                },
+                "text": {
+                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+                },
+                "voterIds": {
+                  ".validate": "newData.hasChildren()"
+                }
+              }
+            },
+            "isAnonymous": {
+              ".validate": "newData.isBoolean()"
+            },
+            "allowMultipleAnswers": {
+              ".validate": "newData.isBoolean()"
+            },
+            "isClosed": {
+              ".validate": "newData.isBoolean()"
+            },
+            "createdAt": {
+              ".validate": "newData.isNumber()"
+            },
+            "closedAt": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "$other": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}
