@@ -71,13 +71,8 @@ fun ViewProfileScreen(
   val isLoading by profileViewModel.isLoading.collectAsState()
   val error by profileViewModel.error.collectAsState()
 
-  // Load profile only when needed (first time or user changed)
-  LaunchedEffect(uid) {
-    val currentProfile = profile
-    if (currentProfile == null || currentProfile.uid != uid) {
-      profileViewModel.loadProfile(uid)
-    }
-  }
+  // Load profile when screen is displayed or uid changes
+  LaunchedEffect(uid) { profileViewModel.loadProfile(uid) }
 
   Scaffold(
       modifier = Modifier.testTag(ViewProfileTestTags.SCREEN),

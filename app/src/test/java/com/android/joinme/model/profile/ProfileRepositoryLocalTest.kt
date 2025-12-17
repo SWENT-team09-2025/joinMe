@@ -47,10 +47,10 @@ class ProfileRepositoryLocalTest {
 
   @Test
   fun testDefaultTestProfileExists() = runTest {
-    val profile = repository.getProfile("test-user-123")
+    val profile = repository.getProfile("test-user-id")
     assertNotNull("Profile should not be null", profile)
     profile?.let {
-      assertEquals("test-user-123", it.uid)
+      assertEquals("test-user-id", it.uid)
       assertEquals("Test User", it.username)
       assertEquals("test@joinme.com", it.email)
       assertEquals("http://example.com/avatar.png", it.photoUrl)
@@ -85,14 +85,14 @@ class ProfileRepositoryLocalTest {
 
   @Test
   fun testUpdateExistingProfile() = runTest {
-    val profile = repository.getProfile("test-user-123")
+    val profile = repository.getProfile("test-user-id")
     assertNotNull("Initial profile should not be null", profile)
 
     profile?.let {
       val updatedProfile = it.copy(username = "Updated User", bio = "Updated bio")
 
       repository.createOrUpdateProfile(updatedProfile)
-      val retrievedProfile = repository.getProfile("test-user-123")
+      val retrievedProfile = repository.getProfile("test-user-id")
       assertNotNull("Updated profile should not be null", retrievedProfile)
       assertEquals("Updated User", retrievedProfile?.username)
       assertEquals("Updated bio", retrievedProfile?.bio)
@@ -102,14 +102,14 @@ class ProfileRepositoryLocalTest {
   @Test
   fun testDeleteProfile() = runTest {
     // Verify profile exists first
-    val profile = repository.getProfile("test-user-123")
+    val profile = repository.getProfile("test-user-id")
     assertNotNull("Profile should exist before deletion", profile)
 
     // Delete the profile
-    repository.deleteProfile("test-user-123")
+    repository.deleteProfile("test-user-id")
 
     // Verify profile was deleted
-    val deletedProfile = repository.getProfile("test-user-123")
+    val deletedProfile = repository.getProfile("test-user-id")
     assertNull("Profile should be null after deletion", deletedProfile)
   }
 
@@ -130,10 +130,10 @@ class ProfileRepositoryLocalTest {
 
   @Test
   fun testGetProfilesByIds_singleExistingProfile_returnsProfile() = runTest {
-    val profiles = repository.getProfilesByIds(listOf("test-user-123"))
+    val profiles = repository.getProfilesByIds(listOf("test-user-id"))
     assertNotNull("Should return list with profile", profiles)
     assertEquals(1, profiles!!.size)
-    assertEquals("test-user-123", profiles[0].uid)
+    assertEquals("test-user-id", profiles[0].uid)
   }
 
   @Test
@@ -158,14 +158,14 @@ class ProfileRepositoryLocalTest {
     repository.createOrUpdateProfile(profile2)
     repository.createOrUpdateProfile(profile3)
 
-    val profiles = repository.getProfilesByIds(listOf("test-user-123", "user-2", "user-3"))
+    val profiles = repository.getProfilesByIds(listOf("test-user-id", "user-2", "user-3"))
     assertNotNull("Should return list with all profiles", profiles)
     assertEquals(3, profiles!!.size)
   }
 
   @Test
   fun testGetProfilesByIds_someProfilesNotFound_returnsNull() = runTest {
-    val profiles = repository.getProfilesByIds(listOf("test-user-123", "non-existent-uid"))
+    val profiles = repository.getProfilesByIds(listOf("test-user-id", "non-existent-uid"))
     assertNull("Should return null when some profiles not found", profiles)
   }
 
@@ -178,7 +178,7 @@ class ProfileRepositoryLocalTest {
   @Test
   fun testGetProfilesByIds_duplicateIds_returnsCorrectCount() = runTest {
     // Even with duplicates in the request, we should get correct results
-    val profiles = repository.getProfilesByIds(listOf("test-user-123", "test-user-123"))
+    val profiles = repository.getProfilesByIds(listOf("test-user-id", "test-user-id"))
     assertNotNull("Should return profiles", profiles)
     assertEquals(2, profiles!!.size)
   }
@@ -188,7 +188,7 @@ class ProfileRepositoryLocalTest {
   @Test
   fun uploadProfilePhoto_success_returnsFileUrlAndUpdatesProfile() = runTest {
     // Given
-    val uid = "test-user-123"
+    val uid = "test-user-id"
     val originalProfile = repository.getProfile(uid)
     assertNotNull("Test profile should exist", originalProfile)
 
@@ -218,7 +218,7 @@ class ProfileRepositoryLocalTest {
   @Test
   fun uploadProfilePhoto_createsDirectoryIfNotExists() = runTest {
     // Given
-    val uid = "test-user-123"
+    val uid = "test-user-id"
     val profilePhotosDir = File(context.filesDir, "profile_photos")
 
     // Ensure directory doesn't exist
@@ -236,7 +236,7 @@ class ProfileRepositoryLocalTest {
   @Test
   fun uploadProfilePhoto_replacesExistingPhoto() = runTest {
     // Given
-    val uid = "test-user-123"
+    val uid = "test-user-id"
 
     // First upload
     val firstPhotoUrl = repository.uploadProfilePhoto(context, uid, testImageUri)
@@ -286,7 +286,7 @@ class ProfileRepositoryLocalTest {
   @Test
   fun uploadProfilePhoto_invalidUri_throwsException() = runTest {
     // Given
-    val uid = "test-user-123"
+    val uid = "test-user-id"
     val invalidUri = Uri.parse("content://invalid/uri/that/does/not/exist")
 
     // When/Then
@@ -298,7 +298,7 @@ class ProfileRepositoryLocalTest {
   @Test
   fun uploadProfilePhoto_copiesFileContent() = runTest {
     // Given
-    val uid = "test-user-123"
+    val uid = "test-user-id"
     val testContent = "Test image content"
     val testUri = createTestFileWithContent(testContent)
 
@@ -319,7 +319,7 @@ class ProfileRepositoryLocalTest {
   @Test
   fun deleteProfilePhoto_success_removesFileAndClearsUrl() = runTest {
     // Given
-    val uid = "test-user-123"
+    val uid = "test-user-id"
 
     // Upload a photo first
     val photoUrl = repository.uploadProfilePhoto(context, uid, testImageUri)
@@ -351,7 +351,7 @@ class ProfileRepositoryLocalTest {
   @Test
   fun deleteProfilePhoto_profileWithoutPhoto_completesSuccessfully() = runTest {
     // Given
-    val uid = "test-user-123"
+    val uid = "test-user-id"
     val profile = repository.getProfile(uid)!!
     val profileWithoutPhoto = profile.copy(photoUrl = null)
     repository.createOrUpdateProfile(profileWithoutPhoto)
@@ -366,7 +366,7 @@ class ProfileRepositoryLocalTest {
   @Test
   fun deleteProfilePhoto_nonFileUri_completesGracefully() = runTest {
     // Given
-    val uid = "test-user-123"
+    val uid = "test-user-id"
     val profile = repository.getProfile(uid)!!
 
     // Set a non-file URI (e.g., http URL)
@@ -384,7 +384,7 @@ class ProfileRepositoryLocalTest {
   @Test
   fun deleteProfilePhoto_idempotent_canDeleteTwice() = runTest {
     // Given
-    val uid = "test-user-123"
+    val uid = "test-user-id"
     repository.uploadProfilePhoto(context, uid, testImageUri)
 
     // When - Delete twice
@@ -399,7 +399,7 @@ class ProfileRepositoryLocalTest {
   @Test
   fun deleteProfilePhoto_alreadyDeletedFile_completesGracefully() = runTest {
     // Given
-    val uid = "test-user-123"
+    val uid = "test-user-id"
     val photoUrl = repository.uploadProfilePhoto(context, uid, testImageUri)
 
     // Manually delete the file (simulating external deletion)
@@ -459,7 +459,7 @@ class ProfileRepositoryLocalTest {
   fun followUser_throwsException_whenFollowingSelf() = runTest {
     val exception =
         assertThrows(Exception::class.java) {
-          runBlocking { repository.followUser("test-user-123", "test-user-123") }
+          runBlocking { repository.followUser("test-user-id", "test-user-id") }
         }
 
     assertTrue(exception.message?.contains("Cannot follow yourself") == true)

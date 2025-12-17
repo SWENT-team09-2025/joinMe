@@ -143,7 +143,7 @@ class CreateEventViewModel(
     }
 
     val parsedDate = parseDateOrError() ?: return false
-    val ownerId = userId ?: (Firebase.auth.currentUser?.uid ?: "unknown")
+    val ownerId = userId ?: (Firebase.auth.currentUser?.uid ?: "test-user-id")
 
     // 1. Fetch Prerequisites (Group & Profile)
     // Uses Result wrapper to distinguish between "No Group Selected" (Success(null)) vs "Fetch

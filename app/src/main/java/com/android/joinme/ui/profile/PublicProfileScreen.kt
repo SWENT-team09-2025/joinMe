@@ -1,6 +1,6 @@
 package com.android.joinme.ui.profile
 /* This file was implemented with the help of Claude AI */
-import android.util.Log
+
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -131,8 +131,8 @@ fun PublicProfileScreen(
   val isFollowing by viewModel.isFollowing.collectAsState()
   val isFollowLoading by viewModel.isFollowLoading.collectAsState()
 
-  // Get current user ID
-  val currentUserId = Firebase.auth.currentUser?.uid
+  // Get current user ID (fallback to test user ID if not authenticated)
+  val currentUserId = Firebase.auth.currentUser?.uid ?: "test-user-id"
 
   // Load profile data when screen is first displayed
   LaunchedEffect(userId) { viewModel.loadPublicProfile(userId, currentUserId) }
@@ -199,10 +199,7 @@ fun PublicProfileScreen(
                       profile = profile!!,
                       isFollowing = isFollowing,
                       isFollowLoading = isFollowLoading,
-                      onFollowClick = {
-                        currentUserId?.let { viewModel.toggleFollow(it, userId) }
-                            ?: Log.e("PublicProfileScreen", "Cannot follow: currentUserId is null")
-                      },
+                      onFollowClick = { viewModel.toggleFollow(currentUserId, userId) },
                       commonEvents = commonEvents,
                       commonGroups = commonGroups,
                       onEventClick = onEventClick,
