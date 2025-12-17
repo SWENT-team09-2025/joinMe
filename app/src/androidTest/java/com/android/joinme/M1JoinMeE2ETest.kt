@@ -536,7 +536,7 @@ class M1JoinMeE2ETest {
 
     eventTitles.forEach { title ->
       composeTestRule
-          .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
+          .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST)
           .performScrollToNode(hasText(title))
       composeTestRule.onNodeWithText(title, useUnmergedTree = true).assertIsDisplayed()
     }
@@ -606,8 +606,14 @@ class M1JoinMeE2ETest {
           .fetchSemanticsNodes()
           .isNotEmpty()
     }
+    val nodes = composeTestRule.onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST).fetchSemanticsNodes()
+    println("DEBUG_NODES: Found ${nodes.size} nodes")
+    nodes.forEachIndexed { index, node -> 
+        println("DEBUG_NODES: Node $index config: ${node.config}")
+    }
+    
     composeTestRule
-        .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
+        .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST)
         .performScrollToNode(hasText(eventTitle))
     composeTestRule.onNodeWithText(eventTitle, useUnmergedTree = true).assertIsDisplayed()
   }
