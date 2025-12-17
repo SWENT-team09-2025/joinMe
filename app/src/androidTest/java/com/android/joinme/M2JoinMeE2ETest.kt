@@ -619,9 +619,7 @@ class M2JoinMeE2ETest {
           .fetchSemanticsNodes()
           .isNotEmpty()
     }
-    composeTestRule
-        .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
-        .performScrollToNode(hasText(serieTitle))
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
     composeTestRule.onNodeWithText(serieTitle, useUnmergedTree = true).performClick()
     waitForLoading()
     // Edit serie
@@ -652,9 +650,7 @@ class M2JoinMeE2ETest {
           .fetchSemanticsNodes()
           .isNotEmpty()
     }
-    composeTestRule
-        .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
-        .performScrollToNode(hasText(newSerieTitle))
+    composeTestRule.onNodeWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
     composeTestRule.onNodeWithText(newSerieTitle, useUnmergedTree = true).assertIsDisplayed()
   }
 
@@ -748,6 +744,7 @@ class M2JoinMeE2ETest {
     // Save group
     composeTestRule
         .onNodeWithTag(CreateGroupScreenTestTags.SAVE_BUTTON, useUnmergedTree = true)
+        .performScrollTo()
         .performClick()
     waitForLoading()
     composeTestRule.waitForIdle()
@@ -795,6 +792,7 @@ class M2JoinMeE2ETest {
     fillGroupForm(name = groupName)
     composeTestRule
         .onNodeWithTag(CreateGroupScreenTestTags.SAVE_BUTTON, useUnmergedTree = true)
+        .performScrollTo()
         .performClick()
     waitForLoading()
     composeTestRule.waitForIdle()
