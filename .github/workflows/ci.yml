@@ -191,6 +191,14 @@ jobs:
           disable-animations: true
           script: ./gradlew connectedCheck --parallel --build-cache
 
+      - name: Upload test reports
+        if: always()  # Upload even if tests fail
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android Test Reports
+          path: app/build/reports/androidTests/
+
+
       # This step generates the coverage report which will be used later in the semster for monitoring purposes
       - name: Generate coverage
         run: |
