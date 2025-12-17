@@ -113,7 +113,7 @@ class M2JoinMeE2ETest {
     composeTestRule.waitForIdle()
 
     // Ensure Overview screen is fully loaded before tests start
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -534,7 +534,7 @@ class M2JoinMeE2ETest {
     composeTestRule.waitForIdle()
 
     // Step 3: Return to Overview and verify serie card appears
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -605,7 +605,7 @@ class M2JoinMeE2ETest {
     composeTestRule.waitForIdle()
 
     // WHEN: Navigate to serie details and edit serie
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -638,7 +638,7 @@ class M2JoinMeE2ETest {
     Thread.sleep(1000)
     composeTestRule.waitForIdle()
 
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -705,7 +705,7 @@ class M2JoinMeE2ETest {
 
     // WHEN: Navigate to Profile → Groups → Create Group
     navigateToTab("Profile")
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule.onAllNodesWithContentDescription("Profile").fetchSemanticsNodes().isNotEmpty()
     }
 
@@ -737,7 +737,7 @@ class M2JoinMeE2ETest {
     composeTestRule.waitForIdle()
 
     // THEN: Verify group appears in group list
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule
           .onAllNodesWithTag(GroupListScreenTestTags.LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -765,7 +765,7 @@ class M2JoinMeE2ETest {
 
     // Navigate to Profile → Groups
     navigateToTab("Profile")
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule.onAllNodesWithContentDescription("Profile").fetchSemanticsNodes().isNotEmpty()
     }
     composeTestRule.onNodeWithContentDescription("Group").performClick()
@@ -784,7 +784,7 @@ class M2JoinMeE2ETest {
     composeTestRule.waitForIdle()
 
     // WHEN: Edit the group
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule
           .onAllNodesWithTag(GroupListScreenTestTags.LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -807,7 +807,7 @@ class M2JoinMeE2ETest {
 
     // WHEN: Navigate Overview → Profile → Groups → Create Group
     navigateToTab("Profile")
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule.onAllNodesWithContentDescription("Profile").fetchSemanticsNodes().isNotEmpty()
     }
 
@@ -842,7 +842,7 @@ class M2JoinMeE2ETest {
 
     // Back to Profile
     navigateToTab("Profile")
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule.onAllNodesWithContentDescription("Profile").fetchSemanticsNodes().isNotEmpty()
     }
   }
@@ -1028,7 +1028,7 @@ class M2JoinMeE2ETest {
 
     // Navigate to Map tab (verify map loads)
     navigateToTab("Map")
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule
           .onAllNodesWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -1040,7 +1040,7 @@ class M2JoinMeE2ETest {
 
     // Navigate to Profile
     navigateToTab("Profile")
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule.onAllNodesWithContentDescription("Profile").fetchSemanticsNodes().isNotEmpty()
     }
 
@@ -1069,7 +1069,7 @@ class M2JoinMeE2ETest {
 
     // THEN: Verify event still visible and all tabs work
     navigateToTab("Overview")
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()

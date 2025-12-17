@@ -130,8 +130,8 @@ class M1JoinMeE2ETest {
     Thread.sleep(3000) // Give time for initial screen to load (longer for CI)
     composeTestRule.waitForIdle()
 
-    // Ensure Overview screen is fully loaded before tests start
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    // Ensure Overview screen is fully loaded before tests start (increased for CI)
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -353,8 +353,8 @@ class M1JoinMeE2ETest {
     Thread.sleep(2000)
     composeTestRule.waitForIdle()
 
-    // Wait for Overview screen to be visible first
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    // Wait for Overview screen to be visible first (increased for CI)
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -395,7 +395,7 @@ class M1JoinMeE2ETest {
         .assertIsDisplayed()
 
     navigateToTab("Profile")
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule.onAllNodesWithContentDescription("Profile").fetchSemanticsNodes().isNotEmpty()
     }
 
@@ -499,8 +499,8 @@ class M1JoinMeE2ETest {
       composeTestRule.waitForIdle()
     }
 
-    // Wait for Overview screen to be visible
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    // Wait for Overview screen to be visible (increased for CI)
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -559,8 +559,8 @@ class M1JoinMeE2ETest {
     // Return to Overview
     navigateToTab("Overview")
 
-    // Wait for Overview screen to be visible first
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    // Wait for Overview screen to be visible first (increased for CI)
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
           .fetchSemanticsNodes()
