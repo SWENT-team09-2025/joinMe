@@ -1,6 +1,6 @@
 package com.android.joinme.ui.profile
 /* This file was implemented with the help of Claude AI */
-import android.util.Log
+
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -199,10 +199,7 @@ fun PublicProfileScreen(
                       profile = profile!!,
                       isFollowing = isFollowing,
                       isFollowLoading = isFollowLoading,
-                      onFollowClick = {
-                        currentUserId?.let { viewModel.toggleFollow(it, userId) }
-                            ?: Log.e("PublicProfileScreen", "Cannot follow: currentUserId is null")
-                      },
+                      onFollowClick = { viewModel.toggleFollow(currentUserId, userId) },
                       commonEvents = commonEvents,
                       commonGroups = commonGroups,
                       onEventClick = onEventClick,
