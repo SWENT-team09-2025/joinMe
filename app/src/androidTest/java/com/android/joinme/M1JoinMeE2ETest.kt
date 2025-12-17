@@ -231,9 +231,9 @@ class M1JoinMeE2ETest {
         .performTextInput(location)
     composeTestRule.waitForIdle()
 
-    // Try to select location suggestion (geocoding may not work on CI)
+    // Try to select location suggestion (increased timeout for CI - geocoding can be slow)
     try {
-      composeTestRule.waitUntil(timeoutMillis = 10000) {
+      composeTestRule.waitUntil(timeoutMillis = 30000) {
         composeTestRule
             .onAllNodesWithTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS)
             .fetchSemanticsNodes()
@@ -348,12 +348,22 @@ class M1JoinMeE2ETest {
         .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
         .performClick()
     waitForLoading()
-    // Give extra time for the async save operation to complete
+    // Give extra time for the async save operation and navigation back to complete (increased for
+    // CI)
+    Thread.sleep(2000)
     composeTestRule.waitForIdle()
+
+    // Wait for Overview screen to be visible first
+    composeTestRule.waitUntil(timeoutMillis = 15000) {
+      composeTestRule
+          .onAllNodesWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
 
     // THEN: Event should appear in Overview screen
     // Wait for the event list to appear (may take time for data to load)
-    composeTestRule.waitUntil(timeoutMillis = 20000) {
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -485,12 +495,21 @@ class M1JoinMeE2ETest {
           .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
           .performClick()
       waitForLoading()
+      Thread.sleep(1500)
       composeTestRule.waitForIdle()
+    }
+
+    // Wait for Overview screen to be visible
+    composeTestRule.waitUntil(timeoutMillis = 15000) {
+      composeTestRule
+          .onAllNodesWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
 
     // THEN: All events should be visible
     // Wait for the event list to appear
-    composeTestRule.waitUntil(timeoutMillis = 20000) {
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -528,6 +547,7 @@ class M1JoinMeE2ETest {
         .onNodeWithTag(CreateEventScreenTestTags.BUTTON_SAVE_EVENT, useUnmergedTree = true)
         .performClick()
     waitForLoading()
+    Thread.sleep(2000)
     composeTestRule.waitForIdle()
 
     // Navigate to Profile
@@ -539,8 +559,16 @@ class M1JoinMeE2ETest {
     // Return to Overview
     navigateToTab("Overview")
 
+    // Wait for Overview screen to be visible first
+    composeTestRule.waitUntil(timeoutMillis = 15000) {
+      composeTestRule
+          .onAllNodesWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
     // Event should still be visible
-    composeTestRule.waitUntil(timeoutMillis = 20000) {
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
       composeTestRule
           .onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST, useUnmergedTree = true)
           .fetchSemanticsNodes()

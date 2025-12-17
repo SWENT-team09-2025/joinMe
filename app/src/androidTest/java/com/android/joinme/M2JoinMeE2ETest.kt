@@ -250,9 +250,9 @@ class M2JoinMeE2ETest {
         .performTextInput(location)
     composeTestRule.waitForIdle()
 
-    // Try to select location suggestion (geocoding may not work on CI)
+    // Try to select location suggestion (increased timeout for CI - geocoding can be slow)
     try {
-      composeTestRule.waitUntil(timeoutMillis = 10000) {
+      composeTestRule.waitUntil(timeoutMillis = 30000) {
         composeTestRule
             .onAllNodesWithTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS)
             .fetchSemanticsNodes()
@@ -354,9 +354,9 @@ class M2JoinMeE2ETest {
         .performTextInput(location)
     composeTestRule.waitForIdle()
 
-    // Try to select location suggestion (geocoding may not work on CI)
+    // Try to select location suggestion (increased timeout for CI - geocoding can be slow)
     try {
-      composeTestRule.waitUntil(timeoutMillis = 10000) {
+      composeTestRule.waitUntil(timeoutMillis = 30000) {
         composeTestRule
             .onAllNodesWithTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS)
             .fetchSemanticsNodes()
