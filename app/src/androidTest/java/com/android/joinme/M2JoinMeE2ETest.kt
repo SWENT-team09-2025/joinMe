@@ -629,7 +629,6 @@ class M2JoinMeE2ETest {
     waitForLoading()
 
     // Change title
-    composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE).performScrollTo()
     composeTestRule.onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE).performTextClearance()
     composeTestRule
         .onNodeWithTag(EditSerieScreenTestTags.INPUT_SERIE_TITLE)
