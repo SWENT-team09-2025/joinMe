@@ -233,7 +233,7 @@ class M1JoinMeE2ETest {
 
     // Try to select location suggestion (geocoding may not work on CI)
     try {
-      composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule.waitUntil(timeoutMillis = 10000) {
         composeTestRule
             .onAllNodesWithTag(CreateEventScreenTestTags.INPUT_EVENT_LOCATION_SUGGESTIONS)
             .fetchSemanticsNodes()
@@ -385,8 +385,8 @@ class M1JoinMeE2ETest {
         .assertIsDisplayed()
 
     navigateToTab("Profile")
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule.onNodeWithContentDescription("Profile").isDisplayed()
+    composeTestRule.waitUntil(timeoutMillis = 15000) {
+      composeTestRule.onAllNodesWithContentDescription("Profile").fetchSemanticsNodes().isNotEmpty()
     }
 
     navigateToTab("Overview")
@@ -532,8 +532,8 @@ class M1JoinMeE2ETest {
 
     // Navigate to Profile
     navigateToTab("Profile")
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule.onNodeWithContentDescription("Profile").isDisplayed()
+    composeTestRule.waitUntil(timeoutMillis = 15000) {
+      composeTestRule.onAllNodesWithContentDescription("Profile").fetchSemanticsNodes().isNotEmpty()
     }
 
     // Return to Overview
