@@ -509,12 +509,6 @@ class M1JoinMeE2ETest {
             .fetchSemanticsNodes()
             .isNotEmpty()
       }
-
-      // Ensure create button is visible by scrolling to it
-      composeTestRule
-          .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
-          .performScrollTo()
-      composeTestRule.waitForIdle()
     }
 
     // Wait for Overview screen to be visible (increased for CI)
@@ -576,12 +570,6 @@ class M1JoinMeE2ETest {
           .isNotEmpty()
     }
 
-    // Scroll to top of screen to ensure navigation bar is visible
-    composeTestRule
-        .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
-        .performScrollTo()
-    composeTestRule.waitForIdle()
-
     // Navigate to Profile
     navigateToTab("Profile")
     composeTestRule.waitUntil(timeoutMillis = 15000) {
@@ -606,12 +594,13 @@ class M1JoinMeE2ETest {
           .fetchSemanticsNodes()
           .isNotEmpty()
     }
-    val nodes = composeTestRule.onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST).fetchSemanticsNodes()
+    val nodes =
+        composeTestRule.onAllNodesWithTag(OverviewScreenTestTags.EVENT_LIST).fetchSemanticsNodes()
     println("DEBUG_NODES: Found ${nodes.size} nodes")
-    nodes.forEachIndexed { index, node -> 
-        println("DEBUG_NODES: Node $index config: ${node.config}")
+    nodes.forEachIndexed { index, node ->
+      println("DEBUG_NODES: Node $index config: ${node.config}")
     }
-    
+
     composeTestRule
         .onNodeWithTag(OverviewScreenTestTags.EVENT_LIST)
         .performScrollToNode(hasText(eventTitle))
