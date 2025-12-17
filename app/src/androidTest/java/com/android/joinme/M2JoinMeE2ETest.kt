@@ -80,22 +80,29 @@ class M2JoinMeE2ETest {
     // SerieDetailsScreen should also use the same test environment detection
     println("Test environment configured - using test-user-id for all operations")
 
-    // Setup local repositories with clean state
-    val repo = EventsRepositoryProvider.getRepository(isOnline = false)
-    if (repo is EventsRepositoryLocal) {
-      runBlocking {
-        // Clear existing events
+    // IMPORTANT: Clear ALL repositories to prevent test interference
+    runBlocking {
+      // Clear events repository
+      val repo = EventsRepositoryProvider.getRepository(isOnline = false)
+      if (repo is EventsRepositoryLocal) {
         val events =
             repo.getAllEvents(eventFilter = EventFilter.EVENTS_FOR_OVERVIEW_SCREEN).toList()
         events.forEach { repo.deleteEvent(it.eventId) }
       }
-    }
 
-    // Clear series repository
-    val seriesRepo = SeriesRepositoryProvider.repository
-    if (seriesRepo is SeriesRepositoryLocal) {
-      seriesRepo.clear()
+      // Clear series repository
+      val seriesRepo = SeriesRepositoryProvider.repository
+      if (seriesRepo is SeriesRepositoryLocal) {
+        seriesRepo.clear()
+      }
+
+      // Clear groups repository
+      val groupRepo = com.android.joinme.model.groups.GroupRepositoryProvider.repository
+      if (groupRepo is com.android.joinme.model.groups.GroupRepositoryLocal) {
+        groupRepo.clear()
+      }
     }
+    composeTestRule.waitForIdle()
 
     // Start app at Overview screen
     composeTestRule.setContent {

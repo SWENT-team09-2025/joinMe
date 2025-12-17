@@ -11,6 +11,8 @@ import androidx.test.uiautomator.Until
 import com.android.joinme.model.event.EventFilter
 import com.android.joinme.model.event.EventsRepositoryLocal
 import com.android.joinme.model.event.EventsRepositoryProvider
+import com.android.joinme.model.serie.SeriesRepositoryLocal
+import com.android.joinme.model.serie.SeriesRepositoryProvider
 import com.android.joinme.ui.history.HistoryScreenTestTags
 import com.android.joinme.ui.navigation.NavigationTestTags
 import com.android.joinme.ui.navigation.Screen
@@ -76,22 +78,31 @@ class M1JoinMeE2ETest {
       }
     }
 
-    // Setup local repository with clean state
-    val repo = EventsRepositoryProvider.getRepository(isOnline = false)
-    if (repo is EventsRepositoryLocal) {
-      runBlocking {
-        // Clear existing events
+    // IMPORTANT: Clear ALL repositories to prevent test interference
+    runBlocking {
+      // Clear events repository
+      val repo = EventsRepositoryProvider.getRepository(isOnline = false)
+      if (repo is EventsRepositoryLocal) {
         val events =
             repo.getAllEvents(eventFilter = EventFilter.EVENTS_FOR_OVERVIEW_SCREEN).toList()
         events.forEach { repo.deleteEvent(it.eventId) }
       }
-    }
 
-    // Create test user profiles
-    val profileRepo = com.android.joinme.model.profile.ProfileRepositoryProvider.repository
-    if (profileRepo is com.android.joinme.model.profile.ProfileRepositoryLocal) {
-      runBlocking {
-        // Create profile for test-user-id
+      // Clear series repository
+      val seriesRepo = SeriesRepositoryProvider.repository
+      if (seriesRepo is SeriesRepositoryLocal) {
+        seriesRepo.clear()
+      }
+
+      // Clear groups repository
+      val groupRepo = com.android.joinme.model.groups.GroupRepositoryProvider.repository
+      if (groupRepo is com.android.joinme.model.groups.GroupRepositoryLocal) {
+        groupRepo.clear()
+      }
+
+      // Create/update test profile
+      val profileRepo = com.android.joinme.model.profile.ProfileRepositoryProvider.repository
+      if (profileRepo is com.android.joinme.model.profile.ProfileRepositoryLocal) {
         val testProfile =
             com.android.joinme.model.profile.Profile(
                 uid = "test-user-id",
@@ -104,9 +115,9 @@ class M1JoinMeE2ETest {
                 createdAt = com.google.firebase.Timestamp.now(),
                 updatedAt = com.google.firebase.Timestamp.now())
         profileRepo.createOrUpdateProfile(testProfile)
-        composeTestRule.waitForIdle()
       }
     }
+    composeTestRule.waitForIdle()
 
     // Start app at Overview screen since we've already authenticated
     composeTestRule.setContent {
