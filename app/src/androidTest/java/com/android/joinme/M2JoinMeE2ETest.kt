@@ -694,6 +694,14 @@ class M2JoinMeE2ETest {
     Thread.sleep(1000)
     composeTestRule.waitForIdle()
 
+    // Wait for Overview screen and bottom navigation to be visible
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
+      composeTestRule
+          .onAllNodesWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
     navigateToTab("Search")
 
     // THEN: Should be able to find serie in search screen
@@ -882,6 +890,14 @@ class M2JoinMeE2ETest {
     Thread.sleep(1000)
     composeTestRule.waitForIdle()
 
+    // Wait for Overview screen to be visible before creating second event
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
+      composeTestRule
+          .onAllNodesWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
     // Create second event
     composeTestRule
         .onNodeWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
@@ -986,6 +1002,14 @@ class M2JoinMeE2ETest {
     Thread.sleep(1000)
     composeTestRule.waitForIdle()
 
+    // Wait for Overview screen to be visible before clicking History button
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
+      composeTestRule
+          .onAllNodesWithTag(OverviewScreenTestTags.HISTORY_BUTTON, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
     // Go to History again
     composeTestRule
         .onNodeWithTag(OverviewScreenTestTags.HISTORY_BUTTON, useUnmergedTree = true)
@@ -1023,6 +1047,14 @@ class M2JoinMeE2ETest {
     waitForLoading()
     Thread.sleep(1000)
     composeTestRule.waitForIdle()
+
+    // Wait for Overview screen and bottom navigation to be visible
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
+      composeTestRule
+          .onAllNodesWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
 
     // WHEN: Navigate Overview → Search → Find event → Overview
     navigateToTab("Search")

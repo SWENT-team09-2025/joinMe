@@ -501,6 +501,14 @@ class M1JoinMeE2ETest {
       waitForLoading()
       Thread.sleep(1500)
       composeTestRule.waitForIdle()
+
+      // Wait for Overview screen to be visible before next iteration
+      composeTestRule.waitUntil(timeoutMillis = 25000) {
+        composeTestRule
+            .onAllNodesWithTag(OverviewScreenTestTags.CREATE_EVENT_BUTTON, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      }
     }
 
     // Wait for Overview screen to be visible (increased for CI)
@@ -553,6 +561,14 @@ class M1JoinMeE2ETest {
     waitForLoading()
     Thread.sleep(2000)
     composeTestRule.waitForIdle()
+
+    // Wait for Overview screen and bottom navigation to be visible
+    composeTestRule.waitUntil(timeoutMillis = 25000) {
+      composeTestRule
+          .onAllNodesWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
 
     // Navigate to Profile
     navigateToTab("Profile")
