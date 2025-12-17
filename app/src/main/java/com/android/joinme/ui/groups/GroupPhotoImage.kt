@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import coil.compose.SubcomposeAsyncImage
 import com.android.joinme.R
@@ -85,7 +86,7 @@ fun GroupPhotoImage(
 private fun DefaultGroupPlaceholder(modifier: Modifier = Modifier, size: Dp) {
   Image(
       painter = painterResource(id = R.drawable.group_default_picture),
-      contentDescription = "Default group picture",
+      contentDescription = stringResource(R.string.group_picture),
       modifier =
           modifier
               .size(size)

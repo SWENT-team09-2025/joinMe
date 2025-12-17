@@ -389,6 +389,66 @@ class EventsRepositoryFirestoreTest {
   }
 
   @Test
+  fun getAllEvents_searchScreenFiltersPartOfASerieEvents() = runTest {
+    // Given
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns mockUser
+    every { mockUser.uid } returns testUserId
+
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockSnapshot1 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<com.google.firebase.firestore.QueryDocumentSnapshot>(relaxed = true)
+    val mockQuery = mockk<com.google.firebase.firestore.Query>(relaxed = true)
+
+    // Mock whereEqualTo query for search screen
+    every { mockCollection.whereEqualTo("visibility", EventVisibility.PUBLIC.name) } returns
+        mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.iterator() } returns
+        mutableListOf(mockSnapshot1, mockSnapshot2).iterator()
+
+    val futureDate = Timestamp(Date(System.currentTimeMillis() + 86400000)) // Tomorrow
+
+    // Setup first event - standalone event (partOfASerie = false, should be included)
+    every { mockSnapshot1.id } returns "event1"
+    every { mockSnapshot1.getString("type") } returns EventType.SOCIAL.name
+    every { mockSnapshot1.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot1.getString("title") } returns "Standalone Event"
+    every { mockSnapshot1.getString("description") } returns "Description 1"
+    every { mockSnapshot1.getTimestamp("date") } returns futureDate
+    every { mockSnapshot1.getLong("duration") } returns 30L
+    every { mockSnapshot1.get("participants") } returns listOf("otherUser1")
+    every { mockSnapshot1.getLong("maxParticipants") } returns 10L
+    every { mockSnapshot1.getString("ownerId") } returns "otherUser1"
+    every { mockSnapshot1.get("location") } returns null
+    every { mockSnapshot1.getBoolean("partOfASerie") } returns false
+
+    // Setup second event - part of a serie (partOfASerie = true, should be filtered out)
+    every { mockSnapshot2.id } returns "event2"
+    every { mockSnapshot2.getString("type") } returns EventType.SPORTS.name
+    every { mockSnapshot2.getString("visibility") } returns EventVisibility.PUBLIC.name
+    every { mockSnapshot2.getString("title") } returns "Serie Event"
+    every { mockSnapshot2.getString("description") } returns "Description 2"
+    every { mockSnapshot2.getTimestamp("date") } returns futureDate
+    every { mockSnapshot2.getLong("duration") } returns 45L
+    every { mockSnapshot2.get("participants") } returns listOf("otherUser2")
+    every { mockSnapshot2.getLong("maxParticipants") } returns 8L
+    every { mockSnapshot2.getString("ownerId") } returns "otherUser2"
+    every { mockSnapshot2.get("location") } returns null
+    every { mockSnapshot2.getBoolean("partOfASerie") } returns true
+    every { mockSnapshot2.getString("groupId") } returns null
+
+    // When
+    val result = repository.getAllEvents(EventFilter.EVENTS_FOR_SEARCH_SCREEN)
+
+    // Then - only standalone event should be returned, serie event should be filtered out
+    assertEquals(1, result.size)
+    assertEquals("Standalone Event", result[0].title)
+    assertEquals(false, result[0].partOfASerie)
+  }
+
+  @Test
   fun addEvent_addsOwnerToParticipants() = runTest {
     // Given
     val eventWithoutOwnerInParticipants =

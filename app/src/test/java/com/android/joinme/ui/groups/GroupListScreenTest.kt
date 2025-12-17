@@ -173,7 +173,7 @@ class GroupListScreenTest {
 
     composeTestRule.onNodeWithText("Basketball").assertIsDisplayed()
     composeTestRule.onNodeWithText("Weekly games").assertIsDisplayed()
-    composeTestRule.onNodeWithText("members: 15").assertIsDisplayed()
+    composeTestRule.onNodeWithText("members : 15").assertIsDisplayed()
     composeTestRule.onNodeWithTag(GroupListScreenTestTags.moreTag("test1")).assertIsDisplayed()
   }
 
@@ -184,7 +184,7 @@ class GroupListScreenTest {
     composeTestRule.setContent { GroupListScreen(viewModel = createViewModel(listOf(group))) }
 
     composeTestRule.onNodeWithText("Group").assertIsDisplayed()
-    composeTestRule.onNodeWithText("members: 0").assertIsDisplayed()
+    composeTestRule.onNodeWithText("members : 0").assertIsDisplayed()
   }
 
   // =======================================

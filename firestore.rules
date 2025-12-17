@@ -1,0 +1,266 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function existingData() {
+      return resource.data;
+    }
+
+    function incomingData() {
+      return request.resource.data;
+    }
+
+    // =============================================================================
+    // PROFILES COLLECTION
+    // =============================================================================
+    match /profiles/{userId} {
+      // Anyone can read profiles (for displaying user information in the app)
+      allow read: if isAuthenticated();
+
+      // Users can only create their own profile
+      allow create: if isAuthenticated()
+                    && isOwner(userId)
+                    && incomingData().keys().hasAll(['username', 'email'])
+                    && incomingData().username is string
+                    && incomingData().email is string;
+
+      // Users can only update their own profile
+      // Email cannot be changed after creation
+      // Exception: Anyone can decrement eventsJoinedCount (for event deletion cleanup)
+      allow update: if isAuthenticated()
+                    && (
+                      // Owner can update everything except email
+                      (isOwner(userId)
+                       && (!incomingData().keys().hasAny(['email'])
+                           || incomingData().email == existingData().email))
+                      ||
+                      // Anyone authenticated can ONLY modify stat counters (for follows/events)
+                      // This allows: event owners to update participant counts, followers to update follow counts
+                      (!existingData().diff(incomingData()).affectedKeys()
+                          .hasAny(['username', 'email', 'photoUrl', 'country', 'bio',
+                                   'interests', 'dateOfBirth', 'createdAt', 'fcmToken'])
+                       && (!incomingData().keys().hasAny(['eventsJoinedCount']) || (incomingData().eventsJoinedCount is int && incomingData().eventsJoinedCount >= 0))
+                       && (!incomingData().keys().hasAny(['followersCount']) || (incomingData().followersCount is int && incomingData().followersCount >= 0))
+                       && (!incomingData().keys().hasAny(['followingCount']) || (incomingData().followingCount is int && incomingData().followingCount >= 0)))
+                    );
+
+      // Users can only delete their own profile
+      allow delete: if isAuthenticated() && isOwner(userId);
+    }
+
+    // =============================================================================
+    // FOLLOWS COLLECTION
+    // =============================================================================
+    match /follows/{followId} {
+      // Anyone authenticated can read follow relationships (public profiles)
+      allow read: if isAuthenticated();
+
+      // Users can create a follow relationship where they are the follower
+      // Cannot follow yourself
+      allow create: if isAuthenticated()
+                    && incomingData().followerId == request.auth.uid
+                    && incomingData().followedId != request.auth.uid
+                    && incomingData().keys().hasAll(['followerId', 'followedId']);
+
+      // Only the follower can delete the follow relationship
+      allow delete: if isAuthenticated()
+                    && existingData().followerId == request.auth.uid;
+
+      // Follow relationships cannot be updated
+      allow update: if false;
+    }
+
+    // =============================================================================
+    // GROUPS COLLECTION
+    // =============================================================================
+    match /groups/{groupId} {
+      // Users can read groups they are members of
+      // Note: All authenticated users can read group metadata (needed for invitations and discovery)
+      // Sensitive data like messages are protected in separate collections
+      allow read: if isAuthenticated();
+
+      // Authenticated users can create groups
+      // Creator must be the owner and in the member list
+      allow create: if isAuthenticated()
+                    && incomingData().ownerId == request.auth.uid
+                    && request.auth.uid in incomingData().memberIds
+                    && incomingData().keys().hasAll(['name', 'ownerId', 'memberIds', 'category'])
+                    && incomingData().name is string
+                    && incomingData().name.size() > 0;
+
+      // Members can update certain fields, owner can update all fields
+      // Non-members can join by adding themselves to memberIds
+      allow update: if isAuthenticated()
+                    && (
+                      // Existing members can update
+                      (request.auth.uid in existingData().memberIds
+                       && (
+                         // Owner can update everything, including ownerId (owner transfer)
+                         (existingData().ownerId == request.auth.uid
+                          && (incomingData().ownerId == existingData().ownerId
+                              || incomingData().ownerId in existingData().memberIds))
+                         ||
+                         // Members can update memberIds (for joining/leaving) and eventIds/serieIds (for creating events/series)
+                         (!existingData().diff(incomingData()).affectedKeys().hasAny(['name', 'category', 'description', 'ownerId', 'photoUrl']))
+                       ))
+                      ||
+                      // Non-members can ONLY add themselves to memberIds (joining)
+                      (!(request.auth.uid in existingData().memberIds)
+                       && request.auth.uid in incomingData().memberIds
+                       && !existingData().diff(incomingData()).affectedKeys().hasAny(['name', 'category', 'description', 'ownerId', 'eventIds', 'serieIds', 'photoUrl']))
+                    );
+
+      // Only the owner can delete the group
+      allow delete: if isAuthenticated()
+                    && existingData().ownerId == request.auth.uid;
+
+      // Group streaks subcollection
+      match /streaks/{userId} {
+        // Members can read all streaks in their groups
+        allow read: if isAuthenticated()
+                    && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds;
+
+        // Members can write streaks
+        // Users can delete their own streak even after leaving
+        // Owner can delete any streak (cleanup)
+        allow write: if isAuthenticated()
+                     && (request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds
+                         || (request.auth.uid == userId && request.method == 'delete')
+                         || (request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.ownerId && request.method == 'delete'));
+      }
+    }
+
+    // =============================================================================
+    // EVENTS COLLECTION
+    // =============================================================================
+    match /events/{eventId} {
+      function isEventOwner() {
+        return existingData().ownerId == request.auth.uid;
+      }
+
+      // Users can read all events (needed for invitations and discovery)
+      // Note: All authenticated users can read event metadata
+      // Sensitive data like conversations are protected in separate collections
+      allow read: if isAuthenticated();
+
+      // Authenticated users can create events
+      // Creator must be the owner and in the participants list
+      allow create: if isAuthenticated()
+                    && incomingData().ownerId == request.auth.uid
+                    && request.auth.uid in incomingData().participants
+                    && incomingData().keys().hasAll(['title', 'ownerId', 'participants', 'date', 'visibility', 'type'])
+                    && incomingData().title is string
+                    && incomingData().title.size() > 0
+                    && incomingData().date is timestamp
+                    && incomingData().visibility in ['PUBLIC', 'PRIVATE']
+                    && incomingData().type in ['SOCIAL', 'SPORTS', 'ACTIVITY'];
+
+      // Event owner can update the event
+      // Participants can update to join/leave (add/remove themselves from participants list)
+      allow update: if isAuthenticated()
+                    && (
+                      // Owner can update everything except ownerId
+                      (isEventOwner() && incomingData().ownerId == existingData().ownerId)
+                      ||
+                      // Participants can only add/remove themselves from participants list
+                      (!existingData().diff(incomingData()).affectedKeys().hasAny(['title', 'description', 'location', 'date', 'duration', 'maxParticipants', 'visibility', 'type', 'ownerId', 'partOfASerie', 'groupId', 'eventId'])
+                       && (
+                         // Adding themselves
+                         (request.auth.uid in incomingData().participants && !(request.auth.uid in existingData().participants))
+                         ||
+                         // Removing themselves
+                         (!(request.auth.uid in incomingData().participants) && request.auth.uid in existingData().participants)
+                       ))
+                    );
+
+      // Only the owner can delete the event
+      allow delete: if isAuthenticated() && isEventOwner();
+    }
+
+    // =============================================================================
+    // SERIES COLLECTION
+    // =============================================================================
+    match /series/{serieId} {
+      function isSerieOwner() {
+        return existingData().ownerId == request.auth.uid;
+      }
+
+      // Users can read all series (needed for invitations and discovery)
+      // Note: All authenticated users can read series metadata
+      // Sensitive data like conversations are protected in separate collections
+      allow read: if isAuthenticated();
+
+      // Authenticated users can create series
+      // Creator must be the owner and in the participants list
+      allow create: if isAuthenticated()
+                    && incomingData().ownerId == request.auth.uid
+                    && request.auth.uid in incomingData().participants
+                    && incomingData().keys().hasAll(['title', 'ownerId', 'participants', 'date', 'visibility'])
+                    && incomingData().title is string
+                    && incomingData().title.size() > 0
+                    && incomingData().date is timestamp
+                    && incomingData().visibility in ['PUBLIC', 'PRIVATE'];
+
+      // Serie owner can update the serie
+      // Participants can update to join/leave (add/remove themselves from participants list)
+      allow update: if isAuthenticated()
+                    && (
+                      // Owner can update everything except ownerId
+                      (isSerieOwner() && incomingData().ownerId == existingData().ownerId)
+                      ||
+                      // Participants can only add/remove themselves from participants list
+                      (!existingData().diff(incomingData()).affectedKeys().hasAny(['title', 'description', 'date', 'maxParticipants', 'visibility', 'ownerId', 'eventIds', 'lastEventEndTime', 'groupId', 'serieId'])
+                       && (
+                         // Adding themselves
+                         (request.auth.uid in incomingData().participants && !(request.auth.uid in existingData().participants))
+                         ||
+                         // Removing themselves
+                         (!(request.auth.uid in incomingData().participants) && request.auth.uid in existingData().participants)
+                       ))
+                    );
+
+      // Only the owner can delete the serie
+      allow delete: if isAuthenticated() && isSerieOwner();
+    }
+
+    // =============================================================================
+    // INVITATIONS COLLECTION
+    // =============================================================================
+    match /invitations/{token} {
+      // Users can read invitations they created or by providing the token
+      allow read: if isAuthenticated()
+                  && (resource.data.createdBy == request.auth.uid
+                      || token == resource.id);
+
+      // Authenticated users can create invitations
+      allow create: if isAuthenticated()
+                    && incomingData().createdBy == request.auth.uid
+                    && incomingData().keys().hasAll(['token', 'type', 'targetId', 'createdBy', 'createdAt'])
+                    && incomingData().type in ['GROUP', 'EVENT', 'SERIE'];
+
+      // Invitations cannot be updated
+      allow update: if false;
+
+      // Only the creator can delete (revoke) the invitation
+      allow delete: if isAuthenticated()
+                    && existingData().createdBy == request.auth.uid;
+    }
+
+    // =============================================================================
+    // DEFAULT DENY
+    // =============================================================================
+    // Deny all other operations by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -239,7 +239,10 @@ class EventsRepositoryFirestore(
       }
       EventFilter.EVENTS_FOR_SEARCH_SCREEN -> {
         events.filter { event ->
-          event.isUpcoming() && !event.participants.contains(userId) && event.ownerId != userId
+          event.isUpcoming() &&
+              !event.participants.contains(userId) &&
+              event.ownerId != userId &&
+              !event.partOfASerie
         }
       }
       EventFilter.EVENTS_FOR_MAP_SCREEN -> {

@@ -15,10 +15,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.R
 import com.android.joinme.model.profile.Profile
 import com.android.joinme.ui.navigation.BottomNavigationMenu
 import com.android.joinme.ui.navigation.Tab
@@ -69,13 +71,8 @@ fun ViewProfileScreen(
   val isLoading by profileViewModel.isLoading.collectAsState()
   val error by profileViewModel.error.collectAsState()
 
-  // Load profile only when needed (first time or user changed)
-  LaunchedEffect(uid) {
-    val currentProfile = profile
-    if (currentProfile == null || currentProfile.uid != uid) {
-      profileViewModel.loadProfile(uid)
-    }
-  }
+  // Load profile when screen is displayed or uid changes
+  LaunchedEffect(uid) { profileViewModel.loadProfile(uid) }
 
   Scaffold(
       modifier = Modifier.testTag(ViewProfileTestTags.SCREEN),
@@ -115,7 +112,7 @@ fun ViewProfileScreen(
                     Button(
                         onClick = { profileViewModel.loadProfile(uid) },
                         modifier = Modifier.testTag(ViewProfileTestTags.RETRY_BUTTON)) {
-                          Text("Retry")
+                          Text(stringResource(R.string.retry))
                         }
                   }
             }
@@ -131,7 +128,9 @@ fun ViewProfileScreen(
                   onFollowingClick = { onFollowingClick(uid) })
             }
             else -> {
-              Text(text = "No profile data available", modifier = Modifier.align(Alignment.Center))
+              Text(
+                  text = stringResource(R.string.no_profile_data),
+                  modifier = Modifier.align(Alignment.Center))
             }
           }
         }
@@ -162,7 +161,7 @@ private fun ProfileContent(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
               Text(
-                  text = "Profile",
+                  text = stringResource(R.string.profile_title),
                   color = MaterialTheme.colorScheme.onSurface,
                   fontSize = Dimens.FontSize.headlineMedium,
                   fontWeight = FontWeight.Bold,
@@ -178,10 +177,10 @@ private fun ProfileContent(
                   modifier = Modifier.testTag(ViewProfileTestTags.LOGOUT_BUTTON)) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                        contentDescription = "Logout",
+                        contentDescription = stringResource(R.string.log_out_title),
                         modifier = Modifier.size(Dimens.IconSize.medium))
                     Spacer(modifier = Modifier.width(Dimens.Spacing.small))
-                    Text("LOG OUT", fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.log_out), fontWeight = FontWeight.Medium)
                   }
             }
 
@@ -204,26 +203,31 @@ private fun ProfileContent(
                     .padding(bottom = Dimens.Padding.extraLarge),
             verticalArrangement = Arrangement.spacedBy(Dimens.Spacing.fieldSpacing)) {
               ProfileField(
-                  label = "Username",
+                  label = stringResource(R.string.username),
                   value = profile.username,
                   testTag = ViewProfileTestTags.USERNAME_FIELD)
               ProfileField(
-                  label = "Email", value = profile.email, testTag = ViewProfileTestTags.EMAIL_FIELD)
+                  label = stringResource(R.string.email),
+                  value = profile.email,
+                  testTag = ViewProfileTestTags.EMAIL_FIELD)
               ProfileField(
-                  label = "Date of Birth",
-                  value = profile.dateOfBirth ?: "Date not specified",
+                  label = stringResource(R.string.date_of_birth),
+                  value = profile.dateOfBirth ?: stringResource(R.string.date_not_specified),
                   testTag = ViewProfileTestTags.DATE_OF_BIRTH_FIELD)
               ProfileField(
-                  label = "Country/Region",
-                  value = profile.country ?: "Country not specified",
+                  label = stringResource(R.string.country_region),
+                  value = profile.country ?: stringResource(R.string.country_not_specified),
                   testTag = ViewProfileTestTags.COUNTRY_FIELD)
               ProfileField(
-                  label = "Interests",
-                  value = profile.interests.joinToString(", ").ifEmpty { "None" },
+                  label = stringResource(R.string.interests),
+                  value =
+                      profile.interests.joinToString(", ").ifEmpty {
+                        stringResource(R.string.none)
+                      },
                   testTag = ViewProfileTestTags.INTERESTS_FIELD)
               ProfileField(
-                  label = "Bio",
-                  value = profile.bio ?: "No bio available",
+                  label = stringResource(R.string.bio),
+                  value = profile.bio ?: stringResource(R.string.no_bio_available),
                   minHeight = Dimens.Profile.bioMinHeight,
                   testTag = ViewProfileTestTags.BIO_FIELD)
             }
@@ -234,8 +238,8 @@ private fun ProfileContent(
   if (showLogoutDialog) {
     AlertDialog(
         onDismissRequest = { showLogoutDialog = false },
-        title = { Text("Log Out") },
-        text = { Text("Are you sure you want to log out?") },
+        title = { Text(stringResource(R.string.log_out_title)) },
+        text = { Text(stringResource(R.string.log_out_confirmation)) },
         confirmButton = {
           OutlinedButton(
               onClick = {
@@ -244,7 +248,8 @@ private fun ProfileContent(
               },
               modifier = Modifier.testTag(ViewProfileTestTags.LOGOUT_CONFIRM_BUTTON),
               border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)) {
-                Text("Log Out", color = MaterialTheme.colorScheme.error)
+                Text(
+                    stringResource(R.string.log_out_title), color = MaterialTheme.colorScheme.error)
               }
         },
         dismissButton = {
@@ -252,7 +257,7 @@ private fun ProfileContent(
               onClick = { showLogoutDialog = false },
               modifier = Modifier.testTag(ViewProfileTestTags.LOGOUT_CANCEL_BUTTON),
               border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
               }
         },
         modifier = Modifier.testTag(ViewProfileTestTags.LOGOUT_CONFIRM_DIALOG))

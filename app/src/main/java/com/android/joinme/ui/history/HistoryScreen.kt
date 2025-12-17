@@ -30,8 +30,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.joinme.R
 import com.android.joinme.model.event.Event
 import com.android.joinme.model.eventItem.EventItem
 import com.android.joinme.model.serie.Serie
@@ -92,7 +94,7 @@ fun HistoryScreen(
               modifier = Modifier.testTag(HistoryScreenTestTags.TOP_BAR),
               title = {
                 Text(
-                    text = "History",
+                    text = stringResource(R.string.history),
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center)
@@ -103,7 +105,7 @@ fun HistoryScreen(
                     modifier = Modifier.testTag(HistoryScreenTestTags.BACK_BUTTON)) {
                       Icon(
                           imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                          contentDescription = "Go back")
+                          contentDescription = stringResource(R.string.go_back))
                     }
               },
               actions = {
@@ -135,8 +137,7 @@ fun HistoryScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally) {
                   Text(
-                      text =
-                          "You have nothing in your history yet. Participate at an event to see it here!",
+                      text = stringResource(R.string.empty_history),
                       textAlign = TextAlign.Center,
                       style = MaterialTheme.typography.bodyMedium,
                       modifier =

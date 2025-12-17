@@ -1,0 +1,29 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to upload/read/delete their own profile photos
+    match /users/{userId}/profile.jpg {
+      allow read: if true;  // Anyone can read profile photos
+      allow write: if request.auth != null && request.auth.uid == userId;  // Only owner can upload/delete
+    }
+
+    // Allow authenticated users to upload and read chat images
+    match /conversations/{conversationId}/images/{imageId} {
+      allow read: if request.auth != null;  // Authenticated users can read
+      allow write: if request.auth != null;  // Authenticated users can upload
+    }
+
+    // Allow authenticated users to read group photos, only owner can write
+    // Note: Owner validation happens at the application layer via GroupRepository
+    match /groups/{groupId}/group.jpg {
+      allow read: if true;  // Anyone can read group photos
+      allow write: if request.auth != null;  // Authenticated users can upload/delete (ownership checked in app)
+    }
+
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

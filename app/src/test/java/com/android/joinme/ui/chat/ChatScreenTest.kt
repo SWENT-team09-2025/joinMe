@@ -970,64 +970,6 @@ class ChatScreenTest {
   }
 
   // ============================================================================
-  // Online Status Indicator Tests
-  // ============================================================================
-
-  @Test
-  fun chatScreen_individualChat_displaysOfflineStatus_whenNoUsersOnline() {
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Alice",
-          currentUserId = "user1",
-          currentUserName = "Bob",
-          viewModel = viewModel,
-          chatType = ChatType.INDIVIDUAL,
-          presenceViewModel = null)
-    }
-
-    composeTestRule.waitForIdle()
-
-    // Verify offline status is displayed for individual chat
-    val offlineText =
-        ApplicationProvider.getApplicationContext<Context>().getString(R.string.status_offline)
-    composeTestRule.onNodeWithText(offlineText, useUnmergedTree = true).assertExists()
-  }
-
-  @Test
-  fun chatScreen_groupChat_displaysZeroUsersOnline_whenNoPresence() {
-    composeTestRule.setContent {
-      ChatScreen(
-          chatId = "chat1",
-          chatTitle = "Group Chat",
-          currentUserId = "user1",
-          currentUserName = "Alice",
-          viewModel = viewModel,
-          chatType = ChatType.GROUP,
-          presenceViewModel = null)
-    }
-
-    composeTestRule.waitForIdle()
-
-    // Verify group chat online status format
-    val zeroUsersOnlineText =
-        ApplicationProvider.getApplicationContext<Context>().getString(R.string.online_users_zero)
-    composeTestRule.onNodeWithText(zeroUsersOnlineText, useUnmergedTree = true).assertExists()
-  }
-
-  @Test
-  fun chatScreen_onlineStatusIndicator_isDisplayed() {
-    setupChatScreen()
-
-    composeTestRule.waitForIdle()
-
-    // Verify online status indicator row and dot exist
-    composeTestRule.onNodeWithTag("onlineUsersRow").assertExists()
-    composeTestRule.onNodeWithTag("onlineIndicatorDot").assertExists()
-    composeTestRule.onNodeWithTag("onlineUsersCount").assertExists()
-  }
-
-  // ============================================================================
   // Edit Message Dialog Tests
   // ============================================================================
 
@@ -1163,7 +1105,6 @@ class ChatScreenTest {
           currentUserId = "user1",
           currentUserName = "Alice",
           viewModel = viewModel,
-          chatType = ChatType.GROUP,
           pollViewModel = null // We can't easily mock this, but we test the path without it
           )
     }

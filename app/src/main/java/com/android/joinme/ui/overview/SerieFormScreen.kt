@@ -14,7 +14,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
+import com.android.joinme.R
 import com.android.joinme.model.groups.Group
 import com.android.joinme.ui.theme.Dimens
 import com.android.joinme.ui.theme.buttonColors
@@ -182,7 +184,9 @@ private fun SerieFormTopBar(title: String, onGoBack: () -> Unit) {
         title = { Text(title, style = MaterialTheme.typography.titleLarge) },
         navigationIcon = {
           IconButton(onClick = onGoBack) {
-            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.back))
           }
         })
     HorizontalDivider(
@@ -270,8 +274,10 @@ private fun GroupDropdownField(
 ) {
   var expandedGroup by remember { mutableStateOf(false) }
   val selectedGroupName =
-      if (selectedGroupId == null) "None (Standalone)"
-      else availableGroups.find { it.id == selectedGroupId }?.name ?: "Unknown Group"
+      if (selectedGroupId == null) stringResource(R.string.none_standalone)
+      else
+          availableGroups.find { it.id == selectedGroupId }?.name
+              ?: stringResource(R.string.unknown_group)
 
   ExposedDropdownMenuBox(
       expanded = expandedGroup, onExpandedChange = { expandedGroup = !expandedGroup }) {
@@ -279,7 +285,7 @@ private fun GroupDropdownField(
             value = selectedGroupName,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Group (Optional)") },
+            label = { Text(stringResource(R.string.group_optional)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedGroup) },
             modifier = Modifier.fillMaxWidth().menuAnchor().testTag(groupTestTag),
             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors())
@@ -292,7 +298,7 @@ private fun GroupDropdownField(
               DropdownMenuItem(
                   text = {
                     Text(
-                        text = "None (Standalone)",
+                        text = stringResource(R.string.none_standalone),
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         style = MaterialTheme.typography.headlineSmall)
                   },
@@ -338,7 +344,7 @@ private fun TitleField(
   OutlinedTextField(
       value = formState.title,
       onValueChange = onTitleChange,
-      label = { Text("Title") },
+      label = { Text(stringResource(R.string.title)) },
       modifier = Modifier.fillMaxWidth().testTag(testTags.inputSerieTitle),
       isError = formState.invalidTitleMsg != null,
       supportingText = {
@@ -357,7 +363,7 @@ private fun DescriptionField(
   OutlinedTextField(
       value = formState.description,
       onValueChange = onDescriptionChange,
-      label = { Text("Description") },
+      label = { Text(stringResource(R.string.description)) },
       modifier =
           Modifier.fillMaxWidth()
               .height(Dimens.SerieForm.descriptionField)
@@ -391,8 +397,8 @@ private fun MaxParticipantsField(
             onValueChange = {},
             readOnly = true,
             enabled = false,
-            label = { Text("Max Participants") },
-            placeholder = { Text("Select number") },
+            label = { Text(stringResource(R.string.max_participants)) },
+            placeholder = { Text(stringResource(R.string.select_number)) },
             modifier = Modifier.fillMaxWidth().testTag(testTags.inputSerieMaxParticipants),
             isError = formState.invalidMaxParticipantsMsg != null,
             supportingText = {
@@ -462,7 +468,7 @@ private fun VisibilityDropdownField(
             value = formState.visibility,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Visibility") },
+            label = { Text(stringResource(R.string.visibility)) },
             trailingIcon = {
               ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedVisibility)
             },
@@ -542,7 +548,7 @@ private fun MaxParticipantsDialog(
 ) {
   AlertDialog(
       onDismissRequest = onDismiss,
-      title = { Text("Select Max Participants") },
+      title = { Text(stringResource(R.string.select_max_participants)) },
       text = {
         AndroidView(
             factory = { context ->
@@ -557,8 +563,8 @@ private fun MaxParticipantsDialog(
             update = { picker -> picker.value = tempParticipants },
             modifier = Modifier.fillMaxWidth())
       },
-      confirmButton = { TextButton(onClick = onConfirm) { Text("OK") } },
-      dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+      confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.ok)) } },
+      dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } })
 }
 
 /** Date picker field. */
@@ -593,8 +599,8 @@ private fun DatePickerField(
         onValueChange = {},
         readOnly = true,
         enabled = false,
-        label = { Text("Date") },
-        placeholder = { Text("Select date") },
+        label = { Text(stringResource(R.string.date)) },
+        placeholder = { Text(stringResource(R.string.select_date)) },
         modifier = Modifier.fillMaxWidth().testTag(testTag),
         isError = invalidDateMsg != null,
         supportingText = { ErrorText(errorMsg = invalidDateMsg, testTag = errorTestTag) },
@@ -633,8 +639,8 @@ private fun TimePickerField(
         onValueChange = {},
         readOnly = true,
         enabled = false,
-        label = { Text("Time") },
-        placeholder = { Text("Select time") },
+        label = { Text(stringResource(R.string.time)) },
+        placeholder = { Text(stringResource(R.string.select_time)) },
         modifier = Modifier.fillMaxWidth().testTag(testTag),
         isError = invalidTimeMsg != null,
         supportingText = { ErrorText(errorMsg = invalidTimeMsg, testTag = errorTestTag) },
