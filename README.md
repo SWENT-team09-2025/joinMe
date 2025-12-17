@@ -1,4 +1,4 @@
-# JoinMe 🤝
+# JoinMe
 
 **Never miss out on activities again. Find partners for sports, outings, and leisure — instantly.**
 
@@ -6,100 +6,138 @@
 
 ---
 
-## 📱 About JoinMe
+## About JoinMe
 
-Too often, people want to play sports or go out but can't find enough partners — it's hard to complete a soccer team, find a running buddy, or go to the movies alone. 
+We've all been there — you want to play a game of soccer but can't find enough players, you're craving a hike but none of your friends are available, or you'd love to check out that new café but going alone feels awkward.
 
-**JoinMe** solves this problem by letting users create and join spontaneous activities — sports, outings, leisure — geolocated around them. Users specify their interests and skill levels, and receive notifications when a relevant event is created.
+**JoinMe** is your solution. Our app connects you with like-minded people nearby who share your interests and are ready to join you — right now. Whether it's sports, social outings, or spontaneous adventures, JoinMe turns "I wish I could" into "Let's go!"
 
-### 🎯 Target Audience
+Create an activity, set your location, and watch as others join in. Or browse what's happening around you and jump into something new. It's that simple.
 
-- **Students** looking to socialize and meet new people
-- **Young professionals** seeking partners for hobbies
-- **Sports enthusiasts** who need last-minute teammates
+### Target Audience
 
----
-
-## ✨ Key Features
-
-- 📍 **Geolocation-based discovery**: Find activities happening near you
-- 🔔 **Smart notifications**: Get alerted when relevant events are created
-- ⚡ **Spontaneous planning**: Create and join activities in real-time
-- 👤 **Personalized profiles**: Set your interests and skill levels
-- 📱 **Multi-device sync**: Access your events from anywhere
-- 🌐 **Offline mode**: View and prepare events even without internet
+- **Students** — Meet new people, break out of your routine, and make university life unforgettable
+- **Young professionals** — Balance work with play by finding hobby partners who match your schedule
+- **Sports enthusiasts** — Never cancel a game again because you're short on players
 
 ---
 
-## 🏗️ Architecture
+## Features
 
-### Split-App Model
+### Core Experience
 
-JoinMe relies on **Google Firebase** as its cloud backend:
+- **Geolocation-based discovery** — Find activities happening near you on an interactive map
+- **Smart filtering** — Filter events by activity type on both search and map screens
+- **Spontaneous planning** — Create and join activities in real-time
+- **Push notifications** — Get alerted when relevant events are created
+
+### Social and Community
+
+- **Groups** — Create or join communities around shared interests with custom group pictures
+- **Direct messaging** — Chat with other users, share photos and locations
+- **Rich profiles** — View activity history, follower/following counts, and browse user connections
+- **Follow system** — Follow users and build your network within the app
+- **Group leaderboards** — Track engagement with Current and All Time rankings
+- **Streak system** — Maintain weekly activity streaks within your groups
+
+### Events and Series
+
+- **Calendar view** — Browse and manage your upcoming activities
+- **Event series** — Organize events into series for related activities
+- **Invitation links** — Share deep links for events, series, or groups that open directly in the app
+
+### Chat Features
+
+- **Real-time messaging** — Instant communication powered by Firebase Realtime Database
+- **Photo sharing** — Send images directly in conversations
+- **Location sharing** — Share your position or meeting points with other users
+- **Polls** — Create polls to help groups make decisions together
+
+### Reliability
+
+- **Multi-device sync** — Access your events from anywhere
+- **Offline mode** — View events, calendar, groups, and chat history even without internet
+
+---
+
+## Architecture
+
+### Technical Stack
+
+JoinMe is built with modern Android development practices:
+
+- **Kotlin** with **Jetpack Compose** for a declarative UI
+- **MVVM architecture** with clean separation of concerns
+- **Room database** for robust offline-first data persistence
+- **Firebase** suite for cloud backend services
+
+### Firebase Integration
 
 | Service | Purpose |
 |---------|---------|
-| **Firestore** | Store events and user profiles |
-| **Firebase Authentication** | Account management with Google Sign-In |
-| **Firestore storage** | Store profile or group pictures |
-| **Firebase Cloud Messaging** | Push notifications for event updates |
-
-These services ensure real-time synchronization and a seamless experience across devices.
+| Firestore | Storage for events, users, series, and groups |
+| Realtime Database | Real-time chat messaging and synchronization |
+| Firebase Authentication | Secure account management with Google Sign-In |
+| Cloud Storage | Profile pictures, group images, and chat attachments |
+| Cloud Messaging | Push notifications for event updates and messages |
+| Dynamic Links | Deep linking for invitation sharing |
 
 ### Multi-User Support
 
-- Secure authentication through **Firebase Authentication**
-- Each user logs in with their Google account
-- Unique Firebase UID for each profile
-- User data includes preferences, past events, and private group memberships
-- Cross-device availability of all user data
+- Secure authentication through Firebase Authentication
+- Google account integration with unique Firebase UID per user
+- User data includes preferences, activity history, group memberships, and social connections
+- Synchronization across all devices
 
 ---
 
-## 📡 Sensor Usage
+## Sensor Usage
 
 ### GPS
+
 Primary sensor for core functionality:
-- Show nearby events based on your location
+
+- Display nearby events based on current location
 - Filter activities by distance
-- Suggest partners in your area
-- Set precise locations for events
+- Set precise locations when creating events
+- Navigate to event locations via map integration
 
 ### Camera
+
 Secondary sensor for enhanced experience:
-- Upload profile pictures
-- Share photos of meeting spots (sports fields, cafés, etc.)
+
+- Upload and update profile pictures
+- Share photos in chat conversations
+- Capture images of meeting spots and venues
 
 ---
 
-## 🔌 Offline Mode
+## Offline Mode
 
-JoinMe works even without an internet connection:
+JoinMe provides a seamless experience even without internet connectivity:
 
-- ✅ View previously loaded events
-- ✅ Check details of your own activities
-- ✅ Prepare new events (title, location, date, etc.)
-- ✅ Automatic sync when connection is restored
-- ✅ No data loss
+- Browse previously loaded events and event details
+- View your calendar and upcoming activities
+- Access group information and chat history
+- Automatic synchronization when connection is restored
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- Android Studio (latest version)
-- Android SDK (API level XX or higher)
-- Firebase account
+- Android Studio (latest stable version)
+- Firebase project with required services enabled
 - Google Services configuration file
 
 ### Installation
 
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-org/joinme.git
-   cd joinme
-   ```
+```bash
+   git clone https://github.com/SWENT-team09-2025/joinMe.git
+   cd joinMe
+```
 
 2. Add your `google-services.json` file to the `app/` directory
 
@@ -111,27 +149,28 @@ JoinMe works even without an internet connection:
 
 ---
 
-## 👥 Team
+## Team
 
-This project is developed as part of the SwEnt course at EPFL.
+This project is developed as part of the Software Enterprise (SwEnt) course at EPFL.
 
-- Bryan De Matos
-- Saifur Mohammad Rahman
-- Mathieu Arnaud Pfeffer
-- Vincent Adrien Lonfat
-- Atilla Altug Ülkümen
-- Jeremy Kieran Zumstein
-- Alexis Romain Poudens
+| Name | Role |
+|------|------|
+| Bryan De Matos | Developer |
+| Saifur Mohammad Rahman | Developer |
+| Mathieu Arnaud Pfeffer | Developer |
+| Vincent Adrien Lonfat | Developer |
+| Atilla Altug Ülkümen | Developer |
+| Jeremy Kieran Zumstein | Developer |
+| Alexis Romain Poudens | Developer |
 
 ---
 
-## 📄 License
+## License
 
 This project is part of an academic course at EPFL.
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-This is an academic project. For any questions or suggestions, please open an issue or contact the team through our Discord channel.
-
+This is an academic project. For questions or suggestions, please open an issue or contact the team.
