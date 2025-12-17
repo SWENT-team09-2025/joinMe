@@ -262,8 +262,12 @@ class M2JoinMeE2ETest {
       composeTestRule
           .onAllNodesWithTag(CreateEventScreenTestTags.FOR_EACH_INPUT_EVENT_LOCATION_SUGGESTION)[0]
           .performClick()
-    } catch (_: Exception) {
-      // Geocoding not available on CI - continue without selecting suggestion
+    } catch (e: androidx.compose.ui.test.ComposeTimeoutException) {
+      // Geocoding not available - continue without selecting suggestion
+      println("Location suggestions timeout - skipping geocoding (expected in some environments)")
+    } catch (e: Exception) {
+      // Other errors - continue without selecting suggestion
+      println("Error selecting location: ${e.message}")
     }
 
     // Fill max participants
@@ -366,8 +370,12 @@ class M2JoinMeE2ETest {
       composeTestRule
           .onAllNodesWithTag(CreateEventScreenTestTags.FOR_EACH_INPUT_EVENT_LOCATION_SUGGESTION)[0]
           .performClick()
-    } catch (_: Exception) {
-      // Geocoding not available on CI - continue without selecting suggestion
+    } catch (e: androidx.compose.ui.test.ComposeTimeoutException) {
+      // Geocoding not available - continue without selecting suggestion
+      println("Location suggestions timeout - skipping geocoding (expected in some environments)")
+    } catch (e: Exception) {
+      // Other errors - continue without selecting suggestion
+      println("Error selecting location: ${e.message}")
     }
 
     // Fill duration
