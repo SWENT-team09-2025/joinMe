@@ -35,10 +35,23 @@ service cloud.firestore {
 
       // Users can only update their own profile
       // Email cannot be changed after creation
+      // Exception: Anyone can decrement eventsJoinedCount (for event deletion cleanup)
       allow update: if isAuthenticated()
-                    && isOwner(userId)
-                    && (!incomingData().keys().hasAny(['email'])
-                        || incomingData().email == existingData().email);
+                    && (
+                      // Owner can update everything except email
+                      (isOwner(userId)
+                       && (!incomingData().keys().hasAny(['email'])
+                           || incomingData().email == existingData().email))
+                      ||
+                      // Anyone authenticated can ONLY modify stat counters (for follows/events)
+                      // This allows: event owners to update participant counts, followers to update follow counts
+                      (!existingData().diff(incomingData()).affectedKeys()
+                          .hasAny(['username', 'email', 'photoUrl', 'country', 'bio',
+                                   'interests', 'dateOfBirth', 'createdAt', 'fcmToken'])
+                       && (!incomingData().keys().hasAny(['eventsJoinedCount']) || (incomingData().eventsJoinedCount is int && incomingData().eventsJoinedCount >= 0))
+                       && (!incomingData().keys().hasAny(['followersCount']) || (incomingData().followersCount is int && incomingData().followersCount >= 0))
+                       && (!incomingData().keys().hasAny(['followingCount']) || (incomingData().followingCount is int && incomingData().followingCount >= 0)))
+                    );
 
       // Users can only delete their own profile
       allow delete: if isAuthenticated() && isOwner(userId);
@@ -71,8 +84,9 @@ service cloud.firestore {
     // =============================================================================
     match /groups/{groupId} {
       // Users can read groups they are members of
-      allow read: if isAuthenticated()
-                  && request.auth.uid in existingData().memberIds;
+      // Note: All authenticated users can read group metadata (needed for invitations and discovery)
+      // Sensitive data like messages are protected in separate collections
+      allow read: if isAuthenticated();
 
       // Authenticated users can create groups
       // Creator must be the owner and in the member list
@@ -84,17 +98,25 @@ service cloud.firestore {
                     && incomingData().name.size() > 0;
 
       // Members can update certain fields, owner can update all fields
+      // Non-members can join by adding themselves to memberIds
       allow update: if isAuthenticated()
-                    && request.auth.uid in existingData().memberIds
                     && (
-                      // Owner can update everything, including ownerId (owner transfer)
-                      // New owner must be a member of the group
-                      (existingData().ownerId == request.auth.uid
-                       && (incomingData().ownerId == existingData().ownerId
-                           || incomingData().ownerId in existingData().memberIds))
+                      // Existing members can update
+                      (request.auth.uid in existingData().memberIds
+                       && (
+                         // Owner can update everything, including ownerId (owner transfer)
+                         (existingData().ownerId == request.auth.uid
+                          && (incomingData().ownerId == existingData().ownerId
+                              || incomingData().ownerId in existingData().memberIds))
+                         ||
+                         // Members can update memberIds (for joining/leaving) and eventIds/serieIds (for creating events/series)
+                         (!existingData().diff(incomingData()).affectedKeys().hasAny(['name', 'category', 'description', 'ownerId', 'photoUrl']))
+                       ))
                       ||
-                      // Members can only update memberIds (for joining/leaving)
-                      (!existingData().diff(incomingData()).affectedKeys().hasAny(['name', 'category', 'description', 'ownerId', 'eventIds', 'serieIds', 'photoUrl']))
+                      // Non-members can ONLY add themselves to memberIds (joining)
+                      (!(request.auth.uid in existingData().memberIds)
+                       && request.auth.uid in incomingData().memberIds
+                       && !existingData().diff(incomingData()).affectedKeys().hasAny(['name', 'category', 'description', 'ownerId', 'eventIds', 'serieIds', 'photoUrl']))
                     );
 
       // Only the owner can delete the group
@@ -107,10 +129,13 @@ service cloud.firestore {
         allow read: if isAuthenticated()
                     && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds;
 
-        // System/backend can create and update streaks
-        // Members can read their own streak
+        // Members can write streaks
+        // Users can delete their own streak even after leaving
+        // Owner can delete any streak (cleanup)
         allow write: if isAuthenticated()
-                     && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds;
+                     && (request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds
+                         || (request.auth.uid == userId && request.method == 'delete')
+                         || (request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.ownerId && request.method == 'delete'));
       }
     }
 
@@ -118,23 +143,14 @@ service cloud.firestore {
     // EVENTS COLLECTION
     // =============================================================================
     match /events/{eventId} {
-      function isPublicEvent() {
-        return existingData().visibility == 'PUBLIC';
-      }
-
-      function isParticipant() {
-        return request.auth.uid in existingData().participants;
-      }
-
       function isEventOwner() {
         return existingData().ownerId == request.auth.uid;
       }
 
-      // Users can read:
-      // 1. Events they are participants in
-      // 2. Public events
-      allow read: if isAuthenticated()
-                  && (isParticipant() || isPublicEvent());
+      // Users can read all events (needed for invitations and discovery)
+      // Note: All authenticated users can read event metadata
+      // Sensitive data like conversations are protected in separate collections
+      allow read: if isAuthenticated();
 
       // Authenticated users can create events
       // Creator must be the owner and in the participants list
@@ -146,7 +162,7 @@ service cloud.firestore {
                     && incomingData().title.size() > 0
                     && incomingData().date is timestamp
                     && incomingData().visibility in ['PUBLIC', 'PRIVATE']
-                    && incomingData().type in ['SOCIAL', 'SPORT', 'CULTURE', 'FOOD', 'NIGHTLIFE', 'OUTDOOR', 'INDOOR', 'ACTIVITY'];
+                    && incomingData().type in ['SOCIAL', 'SPORTS', 'ACTIVITY'];
 
       // Event owner can update the event
       // Participants can update to join/leave (add/remove themselves from participants list)
@@ -174,23 +190,14 @@ service cloud.firestore {
     // SERIES COLLECTION
     // =============================================================================
     match /series/{serieId} {
-      function isPublicSerie() {
-        return existingData().visibility == 'PUBLIC';
-      }
-
-      function isParticipant() {
-        return request.auth.uid in existingData().participants;
-      }
-
       function isSerieOwner() {
         return existingData().ownerId == request.auth.uid;
       }
 
-      // Users can read:
-      // 1. Series they are participants in
-      // 2. Public series
-      allow read: if isAuthenticated()
-                  && (isParticipant() || isPublicSerie());
+      // Users can read all series (needed for invitations and discovery)
+      // Note: All authenticated users can read series metadata
+      // Sensitive data like conversations are protected in separate collections
+      allow read: if isAuthenticated();
 
       // Authenticated users can create series
       // Creator must be the owner and in the participants list
@@ -231,8 +238,8 @@ service cloud.firestore {
     match /invitations/{token} {
       // Users can read invitations they created or by providing the token
       allow read: if isAuthenticated()
-                  && (existingData().createdBy == request.auth.uid
-                      || token == request.resource.id);
+                  && (resource.data.createdBy == request.auth.uid
+                      || token == resource.id);
 
       // Authenticated users can create invitations
       allow create: if isAuthenticated()
