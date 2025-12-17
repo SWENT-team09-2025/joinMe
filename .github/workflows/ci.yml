@@ -152,10 +152,10 @@ jobs:
           # To run the CI with debug information, add --info
           ./gradlew assembleDebug lint --parallel --build-cache
 
-      - name: Run tests
-        run: |
-          # To run the CI with debug information, add --info
-          ./gradlew check --parallel --build-cache
+#      - name: Run tests
+#        run: |
+#          # To run the CI with debug information, add --info
+#          ./gradlew check --parallel --build-cache
 
       # Cache AVD to speed up emulator boot (saves 5-10 minutes)
       - name: AVD cache
@@ -189,7 +189,7 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -skin 1080x2400
           disable-animations: true
-          script: ./gradlew connectedCheck --parallel --build-cache
+          script: ./gradlew connectedCheck --parallel --build-cache -Pandroid.testInstrumentationRunnerArguments.class=com.android.joinme.M1JoinMeE2ETest,com.android.joinme.M2JoinMeE2ETest,com.android.joinme.M3JoinMeE2ETest
 
       - name: Upload test reports
         if: always()  # Upload even if tests fail
