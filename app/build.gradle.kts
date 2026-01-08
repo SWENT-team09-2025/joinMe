@@ -33,6 +33,27 @@ android {
     }
     val mapsApiKey: String = localProperties.getProperty("MAPS_API_KEY") ?: ""
 
+    // Load signing configuration from local.properties or environment variables
+    val keystorePath: String? = localProperties.getProperty("RELEASE_KEYSTORE_PATH")
+        ?: System.getenv("RELEASE_KEYSTORE_PATH")
+    val keystorePassword: String? = localProperties.getProperty("KEYSTORE_PASSWORD")
+        ?: System.getenv("KEYSTORE_PASSWORD")
+    val keyAlias: String? = localProperties.getProperty("KEY_ALIAS")
+        ?: System.getenv("KEY_ALIAS")
+    val keyPassword: String? = localProperties.getProperty("KEY_PASSWORD")
+        ?: System.getenv("KEY_PASSWORD")
+
+    signingConfigs {
+        create("release") {
+            if (keystorePath != null && keystorePassword != null && keyAlias != null && keyPassword != null) {
+                storeFile = rootProject.file(keystorePath)
+                storePassword = keystorePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+            }
+        }
+    }
+
     defaultConfig {
         applicationId = "com.android.joinme"
         minSdk = 28
@@ -54,6 +75,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
             buildConfigField("String", "DEEPLINK_BASE_URL", "\"https://joinme-aa9e8.web.app\"")
             buildConfigField("String", "DEEPLINK_INVITATION_PATH", "\"invite\"")
         }
